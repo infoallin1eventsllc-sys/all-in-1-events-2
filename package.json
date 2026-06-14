@@ -1,0 +1,31 @@
+{
+  "name": "all-in-1-events",
+  "version": "1.0.0",
+  "description": "Luxury event production website with AI concierge chatbot",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python -m http.server 8000",
+    "start": "netlify dev",
+    "test": "echo 'Run manual tests: see QUICK-REFERENCE.md'",
+    "lint": "echo 'Install ESLint to lint JS files'"
+  },
+  "keywords": [
+    "events",
+    "luxury",
+    "chatbot",
+    "ai",
+    "concierge"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/all-in-1-events"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

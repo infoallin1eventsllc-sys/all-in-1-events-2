@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="All in 1 Events: luxury event production, photo booths, lighting, VIP lounges, and bespoke planning."/>
+  <title>All in 1 Events | Services & Products</title>
+
+  <!-- Tailwind CSS (CDN, production uses purged build) -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600&family=Sora:wght@600;700&display=swap" rel="stylesheet"/>
+
+  <!-- Tailwind config (inline for simplicity; can be extracted to tailwind.config.js for larger projects) -->
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface-container": "#1e2024",
+            "surface-container-highest": "#333539",
+            "tertiary": "#ffb1c3",
+            "surface-bright": "#37393e",
+            "primary": "#ecb2ff",
+            "secondary-container": "#00eefc",
+            "surface-container-low": "#1a1c20",
+            "on-primary": "#520071",
+            "on-surface-variant": "#d4c0d7",
+            "on-surface": "#e2e2e8",
+            "primary-container": "#bd00ff",
+            "secondary-fixed": "#7df4ff",
+            "outline": "#9d8ba0",
+            "outline-variant": "#514255",
+            "error": "#ffb4ab",
+            "background": "#111317",
+            "on-background": "#e2e2e8",
+            "surface": "#111317",
+            "secondary": "#d3fbff",
+            "surface-container-high": "#282a2e",
+            "surface-container-lowest": "#0c0e12",
+            "tertiary-container": "#e7006e"
+          },
+          borderRadius: { DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px" },
+          spacing: { "margin-mobile": "16px", "gutter": "24px", "margin-desktop": "64px", "container-max-width": "1280px" },
+          fontFamily: { "body-md": ["Plus Jakarta Sans"], "headline-lg": ["Sora"], "headline-xl": ["Sora"], "label-sm": ["Plus Jakarta Sans"] },
+          fontSize: {
+            "body-md": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+            "headline-lg": ["32px", { lineHeight: "40px", fontWeight: "600" }],
+            "headline-xl": ["48px", { lineHeight: "56px", letterSpacing: "-0.02em", fontWeight: "700" }],
+            "label-sm": ["12px", { lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "600" }]
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Global styles (animations, theme adjustments) -->
+  <link rel="stylesheet" href="css/styles.css"/>
+</head>
+
+<body class="font-body-md text-body-md">
+
+<!-- ===== HEADER / NAV ===== -->
+<header class="bg-background/80 backdrop-blur-xl border-b border-white/10 top-0 sticky z-40 shadow-xl shadow-primary/5">
+  <div class="flex justify-between items-center px-margin-mobile md:px-margin-desktop py-4 max-w-container-max-width mx-auto">
+    <div class="text-headline-lg font-headline-lg font-bold text-primary tracking-tighter">All in 1 Events</div>
+    <nav class="hidden md:flex items-center gap-8">
+      <a class="text-on-surface-variant hover:text-on-surface transition-colors font-label-sm text-label-sm" href="#portfolio">Portfolio</a>
+      <a class="text-primary border-b-2 border-primary pb-1 font-label-sm text-label-sm" href="#services">Services</a>
+      <a class="text-on-surface-variant hover:text-on-surface transition-colors font-label-sm text-label-sm" href="#vip">VIP Lounge</a>
+      <a class="text-on-surface-variant hover:text-on-surface transition-colors font-label-sm text-label-sm" href="#contact">Contact</a>
+    </nav>
+    <div class="flex items-center gap-4">
+      <button id="header-book-btn" class="primary-gradient-btn px-6 py-2 rounded-full font-label-sm text-label-sm text-on-primary font-bold">Book Now</button>
+    </div>
+  </div>
+</header>
+
+<!-- ===== MAIN CONTENT ===== -->
+<main class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop py-16">
+
+  <!-- Hero -->
+  <section class="mb-16">
+    <h1 class="font-headline-xl text-headline-xl glow-text mb-4">Elevate Your Atmosphere</h1>
+    <p class="text-on-surface-variant max-w-2xl">Precision event production meeting electric nightlife energy. Browse our curated selection of high-end activations and luxury equipment.</p>
+  </section>
+
+  <!-- Services Grid -->
+  <div id="services" class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+
+    <!-- Magic Mirror (Featured) -->
+    <div class="md:col-span-8 glass-card rounded-xl overflow-hidden group mirror-shine">
+      <div class="h-96 relative">
+        <img alt="Magic Mirror Photo Booth" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDuGjPre-e6BK5EIIOxywwN03pHFysa1wGQKgtqsf5F-MsjqNM3U_60OruCWKxL3U8CSTK59l1GsCdejTaSHYjCVJyrJUFk66N7aATg-nw2Umn2xfnkOMNOl8DoK2cvKSsiMVDogoxwOz-ilIotZCcepWRygZ7iL89axncxj0ktpef9Mhn518W5fJXGDqOw2A8pM7_zo7tFLvkCl2yjLnIUhlusmdZEDnWk8z-8qtFduj7JEO3cEbqnfrF0sTZbNfmhPAMls__Rwa4"/>
+        <div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
+        <div class="absolute bottom-8 left-8 right-8">
+          <div class="flex gap-2 mb-4">
+            <span class="iris-chip text-primary px-3 py-1 rounded-full text-label-sm font-label-sm">POPULAR</span>
+            <span class="iris-chip text-secondary-container px-3 py-1 rounded-full text-label-sm font-label-sm">INTERACTIVE</span>
+          </div>
+          <h3 class="font-headline-lg text-headline-lg mb-2">Magic Mirror Photo Booth</h3>
+          <p class="text-on-surface-variant mb-6 max-w-lg">A full-length interactive touch mirror that captures stunning photos with animations, emojis, and digital props.</p>
+          <button class="magic-mirror-btn primary-gradient-btn px-8 py-3 rounded-full font-bold text-on-primary flex items-center gap-2 group/btn">
+            Add to Inquiry
+            <span class="material-symbols-outlined transition-transform group-hover/btn:translate-x-1">arrow_forward</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lighting -->
+    <div class="md:col-span-4 glass-card rounded-xl p-6 flex flex-col justify-between group mirror-shine">
+      <div>
+        <div class="w-full h-48 rounded-lg overflow-hidden mb-6 bg-surface-container-high relative">
+          <img alt="Atmospheric event lighting with neon purple and cyan beams" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBt3d2qP9BPG_yRlUVaVQMiRhsdOYVvYJtnrHCFQi6h3Y0Pv-toaAmyEW1zHmzXdH_k_CsqAIQ16GP94Lw4yZtBRU7gktgEtmPEOwYHGLVnavSCWuqN8BQ2f2wKcULmGMlxpjHJT1U2HREg8t3jqFQaMifBJyD9YJmflOkV1MYfkU-IvwpYQMzE-DenlXyqcGorJxcvy88-gEGBB4ARU_t8J76J9u-_0AS9CXBfz4Yl01I6wLT8qdKU9oN14-pQoJB3Pjaokl8eCp8"/>
+          <div class="absolute inset-0 bg-primary/20 mix-blend-overlay group-hover:bg-primary/40 transition-all"></div>
+        </div>
+        <h3 class="font-headline-lg text-headline-lg mb-2">Atmospheric Lighting</h3>
+        <p class="text-on-surface-variant text-body-md">Custom lighting design with DMX-controlled beam effects, uplighting, and intelligent fixtures.</p>
+      </div>
+      <button class="lighting-btn mt-8 border border-outline-variant hover:border-primary px-6 py-2 rounded-full text-label-sm font-label-sm transition-all text-on-surface-variant hover:text-primary">View Packages</button>
+    </div>
+
+    <!-- Planning -->
+    <div class="md:col-span-4 glass-card rounded-xl p-6 group mirror-shine">
+      <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-6 border border-primary/20">
+        <span class="material-symbols-outlined text-primary">event_seat</span>
+      </div>
+      <h3 class="font-headline-lg text-headline-lg mb-2">Bespoke Planning</h3>
+      <p class="text-on-surface-variant mb-8">From VIP table management to full-scale logistics. We handle the precision so you can handle the party.</p>
+      <div class="space-y-3">
+        <div class="flex items-center gap-3 text-label-sm font-label-sm text-secondary-fixed"><span class="material-symbols-outlined text-sm">check_circle</span> Venue Scouting</div>
+        <div class="flex items-center gap-3 text-label-sm font-label-sm text-secondary-fixed"><span class="material-symbols-outlined text-sm">check_circle</span> Talent Booking</div>
+        <div class="flex items-center gap-3 text-label-sm font-label-sm text-secondary-fixed"><span class="material-symbols-outlined text-sm">check_circle</span> Timeline Management</div>
+      </div>
+    </div>
+
+    <!-- VIP Lounge -->
+    <div id="vip" class="md:col-span-8 glass-card rounded-xl relative overflow-hidden group mirror-shine">
+      <div class="grid grid-cols-1 md:grid-cols-2 h-full">
+        <div class="p-8 flex flex-col justify-center">
+          <h3 class="font-headline-lg text-headline-lg mb-4">VIP Lounge Rentals</h3>
+          <p class="text-on-surface-variant mb-6">Premium white leather seating, LED cocktail tables, and plush velvet decor items to create exclusive zones.</p>
+          <button class="vip-btn w-max px-6 py-2 rounded-full border border-primary text-primary hover:bg-primary/10 transition-all font-label-sm text-label-sm">Browse Catalog</button>
+        </div>
+        <div class="relative overflow-hidden min-h-[220px]">
+          <img alt="Luxury VIP lounge with white leather sofas and LED cocktail tables" class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-1000" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDHuJgGhmJJyNA_I2ceHlCSq4RzT8q016SfG-zfJfi8Ol-wbSTEKMDaNElRAaiiXZPTtu3g62BXSGa4Zm6kN7Y9S8YNjkKXLarcrqQzAyX7fxi723YeMRisRRPXmOjYewSxgmZwp5zIrLmLVPoblwsDUIWqV5wMxevby4AraqegUjUcZpMwSJywV6lFBnq3jbPtQVjuRe2xhumTXSocL-xAQo1aA-HwzcNXQgPZw3mUlmez20hlFYhkXZ18tHw_OSv4U0ro0Zmrl2Y"/>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<!-- ===== FOOTER ===== -->
+<footer class="bg-surface-container-lowest border-t border-white/5 py-12 mt-16">
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-gutter px-margin-mobile md:px-margin-desktop max-w-container-max-width mx-auto">
+    <div>
+      <div class="text-headline-lg font-headline-lg text-on-surface mb-4">All in 1 Events</div>
+      <p class="text-body-md font-body-md text-on-surface-variant">Excellence in nightlife and premium event production.</p>
+    </div>
+    <div>
+      <h5 class="text-primary font-bold mb-4">Navigation</h5>
+      <ul class="space-y-2">
+        <li><a class="text-on-surface-variant hover:text-secondary text-label-sm font-label-sm" href="#privacy">Privacy Policy</a></li>
+        <li><a class="text-on-surface-variant hover:text-secondary text-label-sm font-label-sm" href="#tos">Terms of Service</a></li>
+        <li><a class="text-on-surface-variant hover:text-secondary text-label-sm font-label-sm" href="#press">Press Kit</a></li>
+        <li><a class="text-on-surface-variant hover:text-secondary text-label-sm font-label-sm" href="#careers">Careers</a></li>
+      </ul>
+    </div>
+    <div>
+      <h5 class="text-primary font-bold mb-4">Contact</h5>
+      <p class="text-on-surface-variant text-label-sm mb-2">concierge@allin1events.com</p>
+      <p class="text-on-surface-variant text-label-sm">+1 (800) 555-IRIS</p>
+    </div>
+    <div class="flex flex-col md:items-end justify-between">
+      <div class="flex gap-4">
+        <a href="#social-1" aria-label="Brand awareness"><span class="material-symbols-outlined text-primary cursor-pointer hover:opacity-80">brand_awareness</span></a>
+        <a href="#social-2" aria-label="Camera"><span class="material-symbols-outlined text-primary cursor-pointer hover:opacity-80">camera_alt</span></a>
+        <a href="#social-3" aria-label="Play circle"><span class="material-symbols-outlined text-primary cursor-pointer hover:opacity-80">play_circle</span></a>
+      </div>
+      <p class="text-label-sm font-label-sm text-tertiary mt-8">© 2024 All in 1 Events. Excellence in Nightlife.</p>
+    </div>
+  </div>
+</footer>
+
+<!-- ===== CHAT LAUNCHER (floating button) ===== -->
+<button id="chat-launcher" aria-label="Open Event Concierge" aria-haspopup="dialog"
+  class="fixed right-5 bottom-5 z-50 w-16 h-16 rounded-full primary-gradient-btn flex items-center justify-center shadow-[0_0_40px_rgba(236,178,255,0.35)] hover:scale-110 transition-transform">
+  <span class="material-symbols-outlined text-on-primary" style="font-size:30px">forum</span>
+</button>
+
+<!-- ===== CHAT PANEL (dialog) ===== -->
+<section id="chat-panel" role="dialog" aria-label="Event Concierge" aria-hidden="true"
+  class="chat-panel-closed fixed right-3 bottom-3 sm:right-5 sm:bottom-5 z-50 w-[calc(100vw-24px)] sm:w-96 max-w-md h-[78vh] sm:h-[600px] flex flex-col rounded-xl overflow-hidden bg-surface-container-high/95 backdrop-blur-2xl border border-white/20 shadow-[0_0_40px_rgba(236,178,255,0.25)]">
+
+  <!-- Header -->
+  <div class="flex items-center gap-3 p-4 border-b border-white/10 shrink-0">
+    <div class="w-10 h-10 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center">
+      <span class="material-symbols-outlined text-primary">smart_toy</span>
+    </div>
+    <div class="flex-1">
+      <h4 class="font-headline-lg text-on-surface text-[16px] leading-tight">Event Concierge</h4>
+      <p class="text-label-sm font-label-sm text-secondary">AI-Powered Planning</p>
+    </div>
+    <button id="chat-close-btn" aria-label="Close chat" class="material-symbols-outlined text-on-surface-variant hover:text-primary transition-colors">close</button>
+  </div>
+
+  <!-- Messages -->
+  <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3" role="log" aria-label="Chat messages"></div>
+
+  <!-- Quick Replies -->
+  <div id="quick-replies" class="px-4 pb-2 flex flex-wrap gap-2 shrink-0">
+    <button class="quick-reply-btn iris-chip text-primary px-3 py-1.5 rounded-full text-label-sm font-label-sm" data-action="pricing">Check Pricing</button>
+    <button class="quick-reply-btn iris-chip text-primary px-3 py-1.5 rounded-full text-label-sm font-label-sm" data-action="availability">Availability</button>
+    <button class="quick-reply-btn iris-chip text-primary px-3 py-1.5 rounded-full text-label-sm font-label-sm" data-action="venues">Venue Guide</button>
+    <button id="inquiry-toggle-btn" class="iris-chip text-secondary-container px-3 py-1.5 rounded-full text-label-sm font-label-sm">Start Inquiry</button>
+  </div>
+
+  <!-- Chat Input -->
+  <div id="chat-input-row" class="p-3 border-t border-white/10 flex items-end gap-2 shrink-0">
+    <textarea id="chat-input" rows="1" maxlength="800" placeholder="Ask about our services…"
+      aria-label="Type your message"
+      class="flex-1 resize-none bg-surface-container-lowest border border-outline-variant focus:border-primary rounded-lg px-3 py-2 text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:ring-0 max-h-28"></textarea>
+    <button id="chat-send" aria-label="Send message"
+      class="primary-gradient-btn w-10 h-10 rounded-full flex items-center justify-center shrink-0 hover:scale-110 transition-transform">
+      <span class="material-symbols-outlined text-on-primary" style="font-size:20px">send</span>
+    </button>
+  </div>
+
+  <!-- Inquiry Form (hidden by default) -->
+  <div id="inquiry-form" class="hidden flex-col p-4 gap-3 overflow-y-auto">
+    <p class="text-on-surface-variant text-body-md">Tell us about your event and we'll reply with a custom quote.</p>
+    <input id="iq-name" maxlength="80" placeholder="Your name" aria-label="Your name"
+      class="bg-surface-container-lowest border border-outline-variant focus:border-primary rounded-lg px-3 py-2 text-on-surface focus:outline-none"/>
+    <input id="iq-email" type="email" maxlength="120" placeholder="Email" aria-label="Email address"
+      class="bg-surface-container-lowest border border-outline-variant focus:border-primary rounded-lg px-3 py-2 text-on-surface focus:outline-none"/>
+    <input id="iq-date" type="date" aria-label="Event date"
+      class="bg-surface-container-lowest border border-outline-variant focus:border-primary rounded-lg px-3 py-2 text-on-surface focus:outline-none"/>
+    <textarea id="iq-msg" rows="3" maxlength="1000" placeholder="Event details (type, guest count, services)" aria-label="Event details"
+      class="resize-none bg-surface-container-lowest border border-outline-variant focus:border-primary rounded-lg px-3 py-2 text-on-surface focus:outline-none"></textarea>
+    <p id="iq-error" role="alert" class="text-error text-label-sm hidden"></p>
+    <div class="flex gap-2">
+      <button id="inquiry-submit" class="primary-gradient-btn flex-1 py-2.5 rounded-lg font-bold text-on-primary text-label-sm">Send Inquiry</button>
+      <button id="inquiry-back" class="px-4 py-2.5 rounded-lg border border-outline-variant text-on-surface-variant text-label-sm">Back</button>
+    </div>
+  </div>
+
+</section>
+
+<!-- ===== SCRIPTS ===== -->
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
