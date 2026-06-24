@@ -59,9 +59,19 @@
 
   <!-- Global styles (animations, theme adjustments) -->
   <link rel="stylesheet" href="css/styles.css"/>
+
+  <!-- Preconnect for font performance -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 </head>
 
 <body class="font-body-md text-body-md">
+
+<!-- Ambient background orbs (decorative, aria-hidden) -->
+<div aria-hidden="true" class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+  <div class="orb-primary"></div>
+  <div class="orb-secondary"></div>
+</div>
 
 <!-- ===== HEADER / NAV ===== -->
 <header class="bg-background/80 backdrop-blur-xl border-b border-white/10 top-0 sticky z-40 shadow-xl shadow-primary/5">
@@ -83,9 +93,23 @@
 <main class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop py-16">
 
   <!-- Hero -->
-  <section class="mb-16">
-    <h1 class="font-headline-xl text-headline-xl glow-text mb-4">Elevate Your Atmosphere</h1>
-    <p class="text-on-surface-variant max-w-2xl">Precision event production meeting electric nightlife energy. Browse our curated selection of high-end activations and luxury equipment.</p>
+  <section class="mb-16 relative">
+    <div class="hero-eyebrow iris-chip inline-flex items-center gap-2 text-secondary-fixed px-4 py-1.5 rounded-full text-label-sm font-label-sm mb-6">
+      <span class="material-symbols-outlined text-sm" style="font-size:14px">auto_awesome</span>
+      Luxury Event Production
+    </div>
+    <h1 class="font-headline-xl text-headline-xl glow-text mb-5 max-w-3xl">Elevate Your<br class="hidden sm:block"/> Atmosphere</h1>
+    <p class="text-on-surface-variant max-w-xl text-lg leading-relaxed">Precision event production meets electric nightlife energy. Browse our curated activations and luxury equipment.</p>
+    <div class="flex flex-wrap items-center gap-4 mt-8">
+      <button id="hero-explore-btn" class="primary-gradient-btn px-8 py-3 rounded-full font-bold text-on-primary flex items-center gap-2 group">
+        Explore Services
+        <span class="material-symbols-outlined transition-transform group-hover:translate-x-1">south</span>
+      </button>
+      <button id="hero-inquiry-btn" class="flex items-center gap-2 border border-outline-variant hover:border-primary px-6 py-3 rounded-full text-label-sm font-label-sm transition-all text-on-surface-variant hover:text-primary">
+        <span class="material-symbols-outlined" style="font-size:18px">forum</span>
+        Chat with Concierge
+      </button>
+    </div>
   </section>
 
   <!-- Services Grid -->
