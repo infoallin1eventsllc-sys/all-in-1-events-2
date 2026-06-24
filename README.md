@@ -165,7 +165,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 ## Support & Docs
 
-- **Security:** see `DEPLOY-and-SECURITY.md`
+- **Security:** see `SECURITY-and-DEPLOYMENT.md`
 - **API docs:** [Anthropic Messages API](https://docs.anthropic.com/en/api/messages)
 - **Netlify functions:** [docs](https://docs.netlify.com/functions/overview)
 - **Vercel serverless:** [docs](https://vercel.com/docs/functions/quickstart)
