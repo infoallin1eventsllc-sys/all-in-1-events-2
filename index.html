@@ -6,6 +6,9 @@
   <meta name="description" content="All in 1 Events: luxury event production, photo booths, lighting, VIP lounges, and bespoke planning."/>
   <title>All in 1 Events | Services & Products</title>
 
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23111317'/><text x='16' y='22' text-anchor='middle' font-size='18' fill='%23ecb2ff'>A</text></svg>"/>
+
   <!-- Tailwind CSS (CDN, production uses purged build) -->
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 
@@ -15,7 +18,7 @@
 
   <!-- Tailwind config (inline for simplicity; can be extracted to tailwind.config.js for larger projects) -->
   <script id="tailwind-config">
-    tailwind.config = {
+    if (typeof tailwind !== 'undefined') tailwind.config = {
       darkMode: "class",
       theme: {
         extend: {
