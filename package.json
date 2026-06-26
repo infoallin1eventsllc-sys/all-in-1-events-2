@@ -6,7 +6,6 @@
   "scripts": {
     "dev": "python -m http.server 8000",
     "start": "netlify dev",
-    "test": "echo 'Run manual tests: see QUICK-REFERENCE.md'",
     "lint": "echo 'Install ESLint to lint JS files'"
   },
   "keywords": [
@@ -16,11 +15,11 @@
     "ai",
     "concierge"
   ],
-  "author": "Your Name",
+  "author": "Otis Williams",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/all-in-1-events"
+    "url": "https://github.com/infoallin1eventsllc-sys/all-in-1-events-2"
   },
   "devDependencies": {
     "netlify-cli": "^17.0.0"
