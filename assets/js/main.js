@@ -5,46 +5,49 @@
 (function () {
   "use strict";
 
-  /* ---------- Product catalogue ---------- */
+  /* ---------- Product catalogue (Secrets of Cint) ----------
+     Scents & collections sourced from secretsofcint.com. Product photos
+     are placeholders — replace img values with the brand's real
+     stormy-gray-glass product photography before launch. Confirm prices. */
   var PRODUCTS = [
-    { id: "harlem-smock-santal", name: "Harlem Smock Santal", cat: "candles", label: "Candle",
-      notes: "Sandalwood · Vetiver · Smoked Santal", price: 34, rating: 4.9, reviews: 48,
+    { id: "harlem-smock", name: "Harlem Smock", cat: "candles", label: "Signature Candle",
+      notes: "Santal · Sandalwood · Vetiver", price: 35, rating: 4.9, reviews: 48,
       img: "harlem-smock-santal.jpg", badge: "best" },
-    { id: "exotic-peach-spray", name: "Exotic Peach Spray", cat: "sprays", label: "Room Spray",
+    { id: "inferno-dreams", name: "Inferno Dreams", cat: "candles", label: "Signature Candle",
+      notes: "Saffron · Sandalwood · Smoldering Embers", price: 35, rating: 5.0, reviews: 52,
+      img: "brownstone-smoked-cedar.jpg", badge: "best" },
+    { id: "boho-rose", name: "Boho Rose", cat: "candles", label: "Signature Candle",
+      notes: "Rose · Amber · Sandalwood", price: 35, rating: 4.8, reviews: 31,
+      img: "sugar-hill-velvet.jpg", badge: "new" },
+    { id: "for-him", name: "For Him", cat: "candles", label: "Signature Candle",
+      notes: "Bourbon · Tobacco · Maple Wood", price: 35, rating: 4.9, reviews: 44,
+      img: "damn-that-candle.jpg", badge: null },
+    { id: "moon-flower", name: "Moon Flower", cat: "candles", label: "Signature Candle",
+      notes: "Bergamot · Soft Leather · Labdanum", price: 35, rating: 4.9, reviews: 23,
+      img: "apollo-glow.jpg", badge: null },
+    { id: "fall-whisper", name: "Fall Whisper", cat: "seasonal", label: "Seasonal Collection",
+      notes: "Crisp Apple · Green Leaves · Citrus", price: 38, rating: 5.0, reviews: 19,
+      img: "juneteenth-freedom.jpg", badge: "ltd" },
+    { id: "exotic-peach-spray", name: "Exotic Peach Room Spray", cat: "sprays", label: "Room Spray",
       notes: "Juicy Peach · Coconut · Sweet Mango", price: 22, rating: 5.0, reviews: 36,
       img: "exotic-peach-spray.jpg", badge: "best" },
-    { id: "juneteenth-freedom-day", name: "Juneteenth Freedom Day", cat: "heritage", label: "Heritage",
-      notes: "Hibiscus · Red Currant · Smoked Mahogany", price: 38, rating: 5.0, reviews: 52,
-      img: "juneteenth-freedom.jpg", badge: "ltd" },
-    { id: "damn-that-candle-smell-good", name: "Damn That Candle Smell Good", cat: "candles", label: "Candle",
-      notes: "Amber · Smoked Vanilla · Oak", price: 34, rating: 4.9, reviews: 64,
-      img: "damn-that-candle.jpg", badge: "best" },
-    { id: "sugar-hill-velvet", name: "Sugar Hill Velvet", cat: "heritage", label: "Heritage",
-      notes: "Plum Nectar · Dark Musk · Vintage Leather", price: 36, rating: 4.8, reviews: 29,
-      img: "sugar-hill-velvet.jpg", badge: "new" },
-    { id: "uptown-citrus-basil", name: "Uptown Citrus & Basil", cat: "sprays", label: "Room Spray",
-      notes: "Ruby Grapefruit · Wild Basil · Bergamot", price: 22, rating: 4.9, reviews: 21,
-      img: "uptown-citrus-basil.jpg", badge: null },
-    { id: "brownstone-smoked-cedar", name: "Brownstone Smoked Cedar", cat: "candles", label: "Candle",
-      notes: "Smoked Birch · Cedarwood · Bourbon Vanilla", price: 36, rating: 4.9, reviews: 31,
-      img: "brownstone-smoked-cedar.jpg", badge: null },
-    { id: "apollo-glow", name: "Apollo Glow", cat: "heritage", label: "Heritage",
-      notes: "Eucalyptus · Incense · Bergamot Zest", price: 38, rating: 5.0, reviews: 19,
-      img: "apollo-glow.jpg", badge: "ltd" }
+    { id: "amber-blush-spray", name: "Amber Blush Room Spray", cat: "sprays", label: "Room Spray",
+      notes: "Vanilla · Amber · Sandalwood Musk", price: 24, rating: 4.9, reviews: 21,
+      img: "uptown-citrus-basil.jpg", badge: null }
   ];
 
   var REVIEWS = [
     { author: "Marcus T.", loc: "San Francisco, CA", title: "The Santal scent is out of this world!",
-      body: "I picked up Harlem Smock Santal on a whim and the hot throw fills my entire apartment within 15 minutes. Quality is unbelievable." },
+      body: "I picked up Harlem Smock on a whim and the hot throw fills my entire apartment within 15 minutes. Quality is unbelievable." },
     { author: "Kendra W.", loc: "Oakland, CA", title: "This peach spray smells SO good!",
       body: "Two spritzes of Exotic Peach on my sofa linen and it literally lasts all day. The mango and coconut blend is perfection." },
-    { author: "Darnell R.", loc: "Atlanta, GA", title: "Honoring history with pure luxury",
-      body: "The Juneteenth candle with the crackling wood wick and gold-leaf dusting is pure art. Smoked mahogany with tart hibiscus is unlike anything else." },
-    { author: "Aaliyah M.", loc: "Philadelphia, PA", title: "Living up to its name!",
-      body: "Every guest who walked in asked “What is that candle?!” I smiled and pointed at Secrets of Cint. Ordering 3 more right now." }
+    { author: "Darnell R.", loc: "Sacramento, CA", title: "Inferno Dreams is pure luxury",
+      body: "Spicy saffron melting into warm sandalwood and smoldering embers — the smoky black vessel looks incredible on my mantel, too." },
+    { author: "Aaliyah M.", loc: "San Jose, CA", title: "A brand with real soul",
+      body: "You can feel the love and culture poured into every candle. The gray glass is reusable and gorgeous. Ordering a few more right now." }
   ];
 
-  var BADGE_TEXT = { best: "Best Seller", ltd: "Limited", new: "New" };
+  var BADGE_TEXT = { best: "Best Seller", ltd: "Seasonal", new: "New Arrival" };
 
   /* ---------- Helpers ---------- */
   function el(tag, cls) { var e = document.createElement(tag); if (cls) e.className = cls; return e; }
