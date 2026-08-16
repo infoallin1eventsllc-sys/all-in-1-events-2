@@ -48,6 +48,15 @@ deploy to Netlify or Vercel with a drag-and-drop.
 Mode: **Persuade** (marketing). Motion is purposeful (scroll reveals, hover lifts,
 looping marquee) and respects `prefers-reduced-motion`.
 
+## Design files (editable source)
+
+The website theme is mirrored in two editable design tools for easy iteration and handoff:
+
+- **Figma** — full landing-page frame (sage/cream system, arched product cards, all sections), built to match the live site 1:1:
+  <https://www.figma.com/design/ZywyhvgLhvXvnmFXf1Yp77>
+- **Canva** — an on-brand promotional flyer in the same theme, easy to edit text/images directly:
+  <https://www.canva.com/d/75zJd3Hyw0oXf6p>
+
 ## Run locally
 
 ```bash
