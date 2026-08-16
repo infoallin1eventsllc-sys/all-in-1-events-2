@@ -34,9 +34,9 @@
   ];
 
   var REVIEWS = [
-    { author: "Marcus T.", loc: "Harlem, NY", title: "The Santal scent is out of this world!",
-      body: "I live 4 blocks from Lenox Ave and bought Harlem Smock Santal. The hot throw fills my entire apartment within 15 minutes. Quality is unbelievable." },
-    { author: "Kendra W.", loc: "Brooklyn, NY", title: "This peach spray smells SO good!",
+    { author: "Marcus T.", loc: "San Francisco, CA", title: "The Santal scent is out of this world!",
+      body: "I picked up Harlem Smock Santal on a whim and the hot throw fills my entire apartment within 15 minutes. Quality is unbelievable." },
+    { author: "Kendra W.", loc: "Oakland, CA", title: "This peach spray smells SO good!",
       body: "Two spritzes of Exotic Peach on my sofa linen and it literally lasts all day. The mango and coconut blend is perfection." },
     { author: "Darnell R.", loc: "Atlanta, GA", title: "Honoring history with pure luxury",
       body: "The Juneteenth candle with the crackling wood wick and gold-leaf dusting is pure art. Smoked mahogany with tart hibiscus is unlike anything else." },

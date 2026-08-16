@@ -1,11 +1,11 @@
 # Secrets of Cint — Promotional Website
 
 A beautiful, professional single-page marketing site for **Secrets of Cint**, a
-Harlem-poured luxury soy candle & room spray brand. Built as a fast, dependency-free
+San Francisco luxury soy candle & room spray brand. Built as a fast, dependency-free
 static site — hand-crafted CSS, vanilla JavaScript, real brand photography — ready to
 deploy to Netlify or Vercel with a drag-and-drop.
 
-> *A new life candle experience. Hand-poured in small batches in Harlem, NYC.*
+> *A new life candle experience. Hand-poured in small batches in San Francisco, CA.*
 
 ## What's inside
 
@@ -29,7 +29,7 @@ deploy to Netlify or Vercel with a drag-and-drop.
 - **The Collection** — all 8 signature scents in a filterable product grid
   (All / Candles / Room Sprays / Heritage), each with add-to-cart & wishlist
 - **Signature spotlight** — the hero "Damn That Candle Smell Good" scent, on dark
-- **Our Craft** — the Harlem small-batch story with four quality pillars
+- **Our Craft** — the San Francisco small-batch story with four quality pillars
 - **Reviews** — verified customer quotes
 - **Newsletter** — email capture with client-side validation
 - **Footer** — full navigation, social links, contact
