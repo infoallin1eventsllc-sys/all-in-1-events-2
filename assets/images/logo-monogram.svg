@@ -1,0 +1,21 @@
+<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Secrets of Cint monogram">
+  <g fill="none" stroke="#2a2823" stroke-linecap="round" stroke-linejoin="round">
+    <!-- flowing S swash -->
+    <path d="M74 26
+             C 60 14, 40 18, 37 33
+             C 34 47, 52 50, 58 60
+             C 66 73, 60 96, 44 101
+             C 33 104, 24 98, 22 88"
+          stroke-width="3.4"/>
+    <!-- upper flourish tail of the S -->
+    <path d="M74 26 C 84 22, 92 27, 90 36" stroke-width="3"/>
+    <!-- interlocking C swash -->
+    <path d="M96 40
+             C 78 28, 55 34, 51 55
+             C 47 76, 66 92, 88 84
+             C 96 81, 101 74, 101 66"
+          stroke-width="3.4"/>
+    <!-- lower flourish underscoring the monogram -->
+    <path d="M34 104 C 52 114, 78 114, 98 100" stroke-width="2.4"/>
+  </g>
+</svg>
