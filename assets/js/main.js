@@ -18,7 +18,7 @@
       img: "damn-that-candle.jpg", badge: null },
     { id: "moon-flower", name: "Moon Flower", cat: "candles", label: "Signature Candle",
       notes: "Bergamot · Leather · Labdanum", price: 35, rating: 5.0, reviews: 27,
-      img: "brownstone-smoked-cedar.jpg", badge: "best" },
+      img: "moon-flower.jpg", badge: "best" },
     { id: "vintage-bloom", name: "Vintage Bloom", cat: "candles", label: "Signature Candle",
       notes: "Gardenia · Tuberose · Jasmine", price: 33, rating: 4.8, reviews: 19,
       img: "juneteenth-freedom.jpg", badge: "new" },
@@ -33,7 +33,10 @@
       img: "exotic-peach-spray.jpg", badge: "best" },
     { id: "amber-blush-spray", name: "Amber Blush Room Spray", cat: "sprays", label: "Room Spray",
       notes: "Vanilla · White Amber · Musk", price: 22, rating: 4.9, reviews: 12,
-      img: "uptown-citrus-basil.jpg", badge: null }
+      img: "uptown-citrus-basil.jpg", badge: null },
+    { id: "stress-relief-spray", name: "Stress Relief Room Spray", cat: "sprays", label: "Room Spray",
+      notes: "Cucumber · Lavender · Bamboo", price: 21, rating: 5.0, reviews: 8,
+      img: "stress-relief-spray.jpg", badge: "new" }
   ];
 
   var REVIEWS = [
