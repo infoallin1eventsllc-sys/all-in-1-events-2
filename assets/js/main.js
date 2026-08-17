@@ -5,6 +5,30 @@
 (function () {
   "use strict";
 
+  /* ---------- Owner photo overrides (browser-local, live) ----------
+     The Owner Photo Control panel (assets/js/portal.js) writes chosen
+     images here so they appear on the site instantly for the owner.
+     Applied to any <img data-product="<id>"> and product cards. */
+  var SOC = {
+    KEY: "soc_photos_v1",
+    map: {},
+    load: function () { try { this.map = JSON.parse(localStorage.getItem(this.KEY) || "{}"); } catch (e) { this.map = {}; } return this.map; },
+    save: function () { try { localStorage.setItem(this.KEY, JSON.stringify(this.map)); } catch (e) {} },
+    get: function (id) { return this.map[id]; },
+    set: function (id, src) { this.map[id] = src; this.save(); this.applyOne(id); },
+    remove: function (id) { delete this.map[id]; this.save(); },
+    clear: function () { this.map = {}; try { localStorage.removeItem(this.KEY); } catch (e) {} },
+    applyOne: function (id) {
+      var src = this.map[id];
+      if (!src) return;
+      var imgs = document.querySelectorAll('img[data-product="' + id + '"]');
+      for (var i = 0; i < imgs.length; i++) imgs[i].src = src;
+    },
+    applyAll: function () { var self = this; Object.keys(this.map).forEach(function (id) { self.applyOne(id); }); }
+  };
+  SOC.load();
+  window.SOC = SOC;
+
   /* ---------- Product catalogue (Secrets of Cint) ----------
      Names, prices & scent notes match the live store (shop.app / secretsofcint.com).
      img values are PLACEHOLDERS — swap for the brand's real black-glass /
@@ -27,13 +51,13 @@
       img: "real-brewed-elixir.jpg", badge: "new" },
     { id: "for-him", name: "For Him", cat: "candles", label: "Signature Candle",
       notes: "Bourbon · Whiskey · Tobacco", price: 35, rating: 4.9, reviews: 41,
-      img: "damn-that-candle.jpg", badge: null },
+      img: "for-him.jpg", badge: null },
     { id: "vintage-bloom", name: "Vintage Bloom", cat: "candles", label: "Signature Candle",
       notes: "Gardenia · Tuberose · Jasmine", price: 33, rating: 4.8, reviews: 19,
-      img: "juneteenth-freedom.jpg", badge: null },
+      img: "vintage-bloom.jpg", badge: null },
     { id: "stress-relief", name: "Stress Relief", cat: "candles", label: "Signature Candle",
       notes: "Cucumber · Bamboo · Lavender", price: 35, rating: 4.9, reviews: 22,
-      img: "sugar-hill-velvet.jpg", badge: null },
+      img: "stress-relief.jpg", badge: null },
     { id: "exotic-peach-spray", name: "Exotic Peach Room Spray", cat: "sprays", label: "Room Spray",
       notes: "Peach · Coconut · Mango", price: 22, rating: 5.0, reviews: 1,
       img: "real-exotic-peach-spray.jpg", badge: "best" },
@@ -109,7 +133,8 @@
 
     var media = el("div", "card-media");
     var img = el("img");
-    img.src = "assets/images/" + p.img;
+    img.setAttribute("data-product", p.id);
+    img.src = SOC.get(p.id) || ("assets/images/" + p.img);
     img.alt = p.name + " — " + p.notes;
     img.loading = "lazy";
     img.width = 1000; img.height = 1000;
@@ -272,4 +297,5 @@
   renderReviews();
   observeReveals();
   onScroll();
+  SOC.applyAll();   // apply any owner photo overrides to hero/spotlight/static imgs
 })();
