@@ -61,6 +61,28 @@ supabase secrets set TWILIO_ACCOUNT_SID=AC... TWILIO_AUTH_TOKEN=... TWILIO_FROM_
 
 ---
 
+## Web dashboard
+
+A live, Meridian-branded dashboard (server-rendered, no build step) shows the
+CRM, the approval queue with post images, drafted messages, recent leads, and
+agent activity:
+
+```
+https://glzodwhyavexpuusbqjy.supabase.co/functions/v1/dashboard?key=<PASSCODE>
+```
+
+The passcode is stored in the database, not a Supabase secret. Retrieve or
+rotate it:
+
+```sql
+-- view current passcode
+select value->>'passcode' from settings where key = 'dashboard';
+-- set a new one
+update settings set value = jsonb_build_object('passcode','your-new-code') where key = 'dashboard';
+```
+
+The dashboard is read-only; approve/publish/send from the CLI below.
+
 ## Run it from the terminal
 
 The operator CLI drives the whole loop. From `system/`:
