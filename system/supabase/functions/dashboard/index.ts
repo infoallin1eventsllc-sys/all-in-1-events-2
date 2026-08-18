@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
       <div class="content-body">
         <div class="row"><span class="pill">${esc(c.channel)}</span><span class="pill ghost">${esc(c.kind)}</span><span class="pill amber">awaiting approval</span></div>
         <h4>${esc(c.title ?? "Untitled")}</h4>
-        <p>${esc(c.body).slice(0, 240)}</p>
+        <p>${esc(String(c.body ?? "").slice(0, 240))}</p>
       </div>
     </article>`).join("") || `<p class="empty">Nothing awaiting approval right now.</p>`;
 
@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
       <div class="row"><span class="pill">${esc(m.channel)}</span><span class="pill ${m.status === "sent" ? "green" : "amber"}">${esc(m.status)}</span>
         <span class="to">→ ${esc(m.to_addr ?? "?")}</span></div>
       <strong>${esc(m.subject ?? "")}</strong>
-      <p>${esc(m.body ?? "").slice(0, 180)}</p>
+      <p>${esc(String(m.body ?? "").slice(0, 180))}</p>
     </div>`).join("") || `<p class="empty">No messages yet.</p>`;
 
   // --- recent leads ---
@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
     <span class="run-sum">${esc(r.summary ?? r.status)}</span></div>`).join("") || `<p class="empty">No runs yet.</p>`;
 
   const reportBlock = report.data ? `<section class="panel"><h3>Latest owner summary</h3>
-    <div class="report"><strong>${esc(report.data.title)}</strong><p>${esc(report.data.body).slice(0, 600)}</p></div></section>` : "";
+    <div class="report"><strong>${esc(report.data.title)}</strong><p>${esc(String(report.data.body ?? "").slice(0, 600))}</p></div></section>` : "";
 
   return html(page(`
     <header class="top">
@@ -103,18 +103,23 @@ Deno.serve(async (req) => {
 });
 
 function html(body: string, status = 200): Response {
-  return new Response(body, { status, headers: { "Content-Type": "text/html; charset=utf-8" } });
+  const headers = new Headers();
+  // Supabase's functions domain rewrites text/html -> text/plain (anti-phishing),
+  // which makes browsers show source. application/xhtml+xml is served as-is and
+  // rendered as a page by modern browsers.
+  headers.set("content-type", "application/xhtml+xml; charset=utf-8");
+  return new Response(body, { status, headers });
 }
 
 const MONO = `<svg width="30" height="30" viewBox="0 0 64 64" fill="none"><defs><linearGradient id="m" x1="8" y1="12" x2="56" y2="52" gradientUnits="userSpaceOnUse"><stop stop-color="#3E4C63"/><stop offset="1" stop-color="#5B6472"/></linearGradient></defs><path d="M11 52V16.5C11 13.5 14.7 12.2 16.6 14.5L32 33L47.4 14.5C49.3 12.2 53 13.5 53 16.5V52H45V27L34.8 39.2C33.4 40.9 30.6 40.9 29.2 39.2L19 27V52H11Z" fill="url(#m)"/></svg>`;
 
 function page(inner: string): string {
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"/>
+  return `<html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="robots" content="noindex"/>
 <title>Meridian Marketing Dashboard</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700;800&display=swap" rel="stylesheet"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Sora:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
 <style>
 :root{--paper:#F5F4EF;--card:#fff;--ink:#23262B;--soft:#5B626C;--faint:#8A8F98;--line:#E7E5DD;--slate:#3E4C63;--slate2:#5B6472;--steel:#4F6D8C;--amber:#B4791F;--green:#3E7C86;}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(900px 500px at 12% -8%,rgba(62,76,99,.06),transparent 60%),#F5F4EF;font-family:Inter,system-ui,sans-serif;color:var(--ink);}
