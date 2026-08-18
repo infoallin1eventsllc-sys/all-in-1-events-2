@@ -68,6 +68,20 @@ async function handle(sb: SupabaseClient, task: Task): Promise<Record<string, un
   }
 }
 
+// Pick the media asset whose tags best match the given text; random fallback.
+async function pickImage(sb: SupabaseClient, text: string): Promise<string | null> {
+  const { data: media } = await sb.from("media_assets").select("url, tags");
+  if (!media || !media.length) return null;
+  const hay = text.toLowerCase();
+  let best = media[0], bestScore = -1;
+  for (const m of media) {
+    const score = (m.tags ?? []).reduce((s: number, t: string) => s + (hay.includes(String(t).toLowerCase()) ? 1 : 0), 0);
+    if (score > bestScore) { bestScore = score; best = m; }
+  }
+  if (bestScore <= 0) best = media[Math.floor(Math.random() * media.length)];
+  return best.url;
+}
+
 async function agentCfg(sb: SupabaseClient) {
   const [profile, agent] = await Promise.all([
     getSetting(sb, "business_profile", { name: "Your Business", voice: "warm, professional" }),
@@ -99,9 +113,10 @@ async function generateContent(sb: SupabaseClient, task: Task) {
     body = j.body ?? out.text;
   } catch { /* keep raw text as body */ }
 
+  const imageUrl = await pickImage(sb, `${topic} ${kind} ${channel}`);
   const autonomy = String(agent.autonomy || "draft");
   const { data } = await sb.from("content_items").insert({
-    channel, kind, title, body,
+    channel, kind, title, body, image_url: imageUrl,
     status: autonomy === "auto" ? "approved" : "pending_approval",
     created_by: "agent",
     meta: { mocked: out.mocked, topic },
