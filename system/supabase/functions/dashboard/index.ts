@@ -27,8 +27,8 @@ Deno.serve(async (req) => {
     sb.from("contacts").select("full_name,email,source,lifecycle_stage,created_at").order("created_at", { ascending: false }).limit(8),
     sb.from("deals").select("stage,amount"),
     sb.from("tasks").select("status"),
-    sb.from("content_items").select("channel,kind,title,body,image_url,status,created_at").order("created_at", { ascending: false }).limit(12),
-    sb.from("messages").select("channel,to_addr,subject,body,status,created_at").order("created_at", { ascending: false }).limit(6),
+    sb.from("content_items").select("channel,kind,title,body,image_url,status,meta,created_at").order("created_at", { ascending: false }).limit(12),
+    sb.from("messages").select("channel,to_addr,subject,body,status,meta,created_at").order("created_at", { ascending: false }).limit(6),
     sb.from("agent_runs").select("status,summary,tasks_created,started_at").order("started_at", { ascending: false }).limit(5),
     sb.from("reports").select("title,body,created_at").order("created_at", { ascending: false }).limit(1).maybeSingle(),
     sb.from("media_assets").select("id"),
@@ -40,7 +40,8 @@ Deno.serve(async (req) => {
   const pendingContent = CO.filter((c) => c.status === "pending_approval").length;
   const draftMsgs = M.filter((m) => m.status === "draft").length;
   const pendingTasks = T.filter((t) => t.status === "pending").length;
-  const liveAI = !!Deno.env.get("ANTHROPIC_API_KEY");
+  // "Live AI" only if real (non-mock) output actually exists — not merely a key present.
+  const liveAI = [...CO, ...M].some((x) => (x.meta as { mocked?: boolean } | null)?.mocked === false);
 
   // --- KPI tiles ---
   const kpis = [
