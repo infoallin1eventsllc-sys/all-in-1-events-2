@@ -126,16 +126,21 @@
 <header class="bg-paper/85 backdrop-blur-xl border-b border-line sticky top-0 z-40">
   <div class="flex justify-between items-center px-margin-mobile md:px-margin-desktop py-3.5 max-w-container mx-auto">
     <a href="#top" class="flex items-center gap-3">
-      <!-- Meridian "M" monogram -->
-      <svg width="34" height="34" viewBox="0 0 64 64" fill="none" aria-hidden="true" class="shrink-0">
-        <defs>
-          <linearGradient id="mg" x1="8" y1="12" x2="56" y2="52" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#3E4C63"/><stop offset="1" stop-color="#5B6472"/>
-          </linearGradient>
-        </defs>
-        <path d="M11 52V16.5C11 13.5 14.7 12.2 16.6 14.5L32 33L47.4 14.5C49.3 12.2 53 13.5 53 16.5V52H45V27L34.8 39.2C33.4 40.9 30.6 40.9 29.2 39.2L19 27V52H11Z" fill="url(#mg)"/>
-        <rect x="31" y="12" width="2" height="40" rx="1" fill="#5B6472" opacity="0.55"/>
-      </svg>
+      <!-- Real logo when present; SVG monogram fallback until assets/meridian-logo.png is added -->
+      <span class="shrink-0 inline-flex items-center justify-center" style="width:34px;height:34px">
+        <img src="assets/meridian-logo.png" alt="Meridian Interface logo" width="34" height="34"
+             class="object-contain w-[34px] h-[34px]"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='block';"/>
+        <svg width="34" height="34" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="display:none">
+          <defs>
+            <linearGradient id="mg" x1="8" y1="12" x2="56" y2="52" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#3E4C63"/><stop offset="1" stop-color="#5B6472"/>
+            </linearGradient>
+          </defs>
+          <path d="M11 52V16.5C11 13.5 14.7 12.2 16.6 14.5L32 33L47.4 14.5C49.3 12.2 53 13.5 53 16.5V52H45V27L34.8 39.2C33.4 40.9 30.6 40.9 29.2 39.2L19 27V52H11Z" fill="url(#mg)"/>
+          <rect x="31" y="12" width="2" height="40" rx="1" fill="#5B6472" opacity="0.55"/>
+        </svg>
+      </span>
       <span class="font-head font-bold text-[19px] tracking-tight text-ink">Meridian Interface</span>
     </a>
     <nav class="hidden md:flex items-center gap-8">
@@ -363,11 +368,16 @@
   <div class="grid grid-cols-1 md:grid-cols-3 gap-gutter px-margin-mobile md:px-margin-desktop max-w-container mx-auto">
     <div>
       <div class="flex items-center gap-2.5 mb-3">
-        <svg width="26" height="26" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-          <defs><linearGradient id="mg2" x1="8" y1="12" x2="56" y2="52" gradientUnits="userSpaceOnUse"><stop stop-color="#3E4C63"/><stop offset="1" stop-color="#5B6472"/></linearGradient></defs>
-          <path d="M11 52V16.5C11 13.5 14.7 12.2 16.6 14.5L32 33L47.4 14.5C49.3 12.2 53 13.5 53 16.5V52H45V27L34.8 39.2C33.4 40.9 30.6 40.9 29.2 39.2L19 27V52H11Z" fill="url(#mg2)"/>
-          <rect x="31" y="12" width="2" height="40" rx="1" fill="#5B6472" opacity="0.55"/>
-        </svg>
+        <span class="inline-flex items-center justify-center" style="width:26px;height:26px">
+          <img src="assets/meridian-logo.png" alt="Meridian Interface logo" width="26" height="26"
+               class="object-contain w-[26px] h-[26px]"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='block';"/>
+          <svg width="26" height="26" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="display:none">
+            <defs><linearGradient id="mg2" x1="8" y1="12" x2="56" y2="52" gradientUnits="userSpaceOnUse"><stop stop-color="#3E4C63"/><stop offset="1" stop-color="#5B6472"/></linearGradient></defs>
+            <path d="M11 52V16.5C11 13.5 14.7 12.2 16.6 14.5L32 33L47.4 14.5C49.3 12.2 53 13.5 53 16.5V52H45V27L34.8 39.2C33.4 40.9 30.6 40.9 29.2 39.2L19 27V52H11Z" fill="url(#mg2)"/>
+            <rect x="31" y="12" width="2" height="40" rx="1" fill="#5B6472" opacity="0.55"/>
+          </svg>
+        </span>
         <span class="font-head font-bold text-ink">Meridian Interface</span>
       </div>
       <p class="text-sm text-ink-soft leading-relaxed">Websites, applications, and always-on marketing systems for growing businesses.</p>
