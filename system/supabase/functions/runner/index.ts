@@ -6,6 +6,7 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { serviceClient, getSetting } from "../_shared/supabase.ts";
 import { callClaude, DEFAULT_MODEL } from "../_shared/claude.ts";
 import { sendEmail, sendSms, publishContent } from "../_shared/channels.ts";
+import { cardDataUri, kickerFor } from "../_shared/card.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
 
 type Task = {
@@ -68,18 +69,18 @@ async function handle(sb: SupabaseClient, task: Task): Promise<Record<string, un
   }
 }
 
-// Pick the media asset whose tags best match the given text; random fallback.
-async function pickImage(sb: SupabaseClient, text: string): Promise<string | null> {
+// (A) Pick a library image whose tags actually match the text. Returns null
+// when nothing genuinely matches, so the caller can generate a branded card.
+async function pickLibraryImage(sb: SupabaseClient, text: string): Promise<string | null> {
   const { data: media } = await sb.from("media_assets").select("url, tags");
   if (!media || !media.length) return null;
   const hay = text.toLowerCase();
-  let best = media[0], bestScore = -1;
+  let best: string | null = null, bestScore = 0;
   for (const m of media) {
     const score = (m.tags ?? []).reduce((s: number, t: string) => s + (hay.includes(String(t).toLowerCase()) ? 1 : 0), 0);
-    if (score > bestScore) { bestScore = score; best = m; }
+    if (score > bestScore) { bestScore = score; best = m.url; }
   }
-  if (bestScore <= 0) best = media[Math.floor(Math.random() * media.length)];
-  return best.url;
+  return best; // null unless a real tag match was found
 }
 
 async function agentCfg(sb: SupabaseClient) {
@@ -113,7 +114,9 @@ async function generateContent(sb: SupabaseClient, task: Task) {
     body = j.body ?? out.text;
   } catch { /* keep raw text as body */ }
 
-  const imageUrl = await pickImage(sb, `${topic} ${kind} ${channel}`);
+  // (A) real library photo if one truly matches; (B) else a generated branded card.
+  const imageUrl = (await pickLibraryImage(sb, `${topic} ${kind} ${channel}`))
+    ?? cardDataUri({ title: title ?? topic, kicker: kickerFor(kind) });
   const autonomy = String(agent.autonomy || "draft");
   const { data } = await sb.from("content_items").insert({
     channel, kind, title, body, image_url: imageUrl,
