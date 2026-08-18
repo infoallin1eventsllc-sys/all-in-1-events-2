@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Meridian Interface — Marketing System Tech Stack: an always-on, AI-orchestrated growth engine spanning social, local SEO, ads, content, and operations, feeding one CRM and reporting dashboard."/>
+  <title>Meridian Interface | Marketing System — Tech Stack</title>
+
+  <!-- Tailwind CSS (CDN) -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700;800&display=swap" rel="stylesheet"/>
+
+  <script id="tailwind-config">
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            paper:      "#F5F4EF",   /* warm ivory page */
+            "paper-2":  "#EFEDE6",   /* slightly deeper ivory */
+            card:       "#FFFFFF",
+            ink:        "#23262B",   /* charcoal text */
+            "ink-soft": "#5B626C",   /* muted body */
+            "ink-faint":"#8A8F98",
+            line:       "#E3E1D8",   /* warm hairline */
+            "line-2":   "#DCE0E7",   /* cool hairline */
+            slate:      "#3E4C63",   /* deep slate blue (logo left) */
+            "slate-2":  "#5B6472",   /* gray-blue (logo right) */
+            steel:      "#4F6D8C",   /* accent steel blue */
+            "steel-soft":"#7C96AE",
+            teal:       "#3E7C86"    /* secondary accent */
+          },
+          borderRadius: { DEFAULT: "0.375rem", lg: "0.5rem", xl: "0.75rem", "2xl": "1rem", full: "9999px" },
+          spacing: { "margin-mobile": "16px", "gutter": "24px", "margin-desktop": "64px" },
+          maxWidth: { container: "1200px" },
+          fontFamily: {
+            sans: ["Inter", "system-ui", "sans-serif"],
+            head: ["Sora", "system-ui", "sans-serif"]
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    :root { color-scheme: light; }
+    html { scroll-behavior: smooth; }
+    body {
+      background:
+        radial-gradient(900px 500px at 12% -8%, rgba(62,76,99,0.06), transparent 60%),
+        radial-gradient(760px 460px at 92% 0%, rgba(79,109,140,0.06), transparent 55%),
+        #F5F4EF;
+      background-attachment: fixed;
+      -webkit-font-smoothing: antialiased;
+    }
+    .material-symbols-outlined { font-variation-settings: "FILL" 0, "wght" 300, "GRAD" 0, "opsz" 24; }
+
+    .slate-gradient { background-image: linear-gradient(135deg, #3E4C63, #5B6472); }
+    .slate-text {
+      background-image: linear-gradient(120deg, #3E4C63, #5B6472);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+
+    .card {
+      background: #FFFFFF;
+      border: 1px solid #E7E5DD;
+      box-shadow: 0 1px 2px rgba(35,38,43,0.04), 0 18px 40px -28px rgba(35,38,43,0.30);
+      transition: transform .35s cubic-bezier(.2,.7,.2,1), border-color .35s, box-shadow .35s;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+      border-color: #C9D0DA;
+      box-shadow: 0 1px 2px rgba(35,38,43,0.05), 0 26px 50px -28px rgba(62,76,99,0.35);
+    }
+
+    /* Node tile inside a layer */
+    .node {
+      background: #FAFAF7;
+      border: 1px solid #EAE8E0;
+      transition: transform .3s, border-color .3s, background .3s, box-shadow .3s;
+    }
+    .node:hover {
+      transform: translateY(-2px);
+      border-color: #B9C4D3;
+      background: #FFFFFF;
+      box-shadow: 0 12px 24px -18px rgba(62,76,99,0.45);
+    }
+
+    .chip { background: rgba(62,76,99,0.06); border: 1px solid rgba(62,76,99,0.16); }
+    .chip-steel { background: rgba(79,109,140,0.08); border: 1px solid rgba(79,109,140,0.22); }
+
+    /* Vertical flow connector between layers */
+    .flow-rail { position: relative; height: 46px; }
+    .flow-rail::before {
+      content: ""; position: absolute; left: 50%; top: 0; bottom: 10px; width: 2px; transform: translateX(-50%);
+      background: linear-gradient(to bottom, rgba(62,76,99,0.55), rgba(79,109,140,0.12));
+      border-radius: 2px;
+    }
+    .flow-rail::after {
+      content: ""; position: absolute; left: 50%; bottom: 4px; width: 9px; height: 9px; transform: translate(-50%,0) rotate(45deg);
+      border-right: 2px solid rgba(79,109,140,0.75); border-bottom: 2px solid rgba(79,109,140,0.75);
+    }
+    .flow-dot {
+      position: absolute; left: 50%; top: -3px; width: 7px; height: 7px; margin-left: -3.5px; border-radius: 9999px;
+      background: #4F6D8C; box-shadow: 0 0 10px rgba(79,109,140,0.7);
+      animation: flowDown 2.8s linear infinite;
+    }
+    @keyframes flowDown { 0% { top: -4px; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { top: 34px; opacity: 0; } }
+
+    @media (prefers-reduced-motion: reduce) {
+      .flow-dot { animation: none; display: none; }
+      .card, .node { transition: none; }
+      html { scroll-behavior: auto; }
+    }
+    a:focus-visible, button:focus-visible { outline: 2px solid #4F6D8C; outline-offset: 3px; border-radius: 8px; }
+  </style>
+</head>
+
+<body id="top" class="font-sans text-ink min-h-screen">
+
+<!-- ===== HEADER / NAV ===== -->
+<header class="bg-paper/85 backdrop-blur-xl border-b border-line sticky top-0 z-40">
+  <div class="flex justify-between items-center px-margin-mobile md:px-margin-desktop py-3.5 max-w-container mx-auto">
+    <a href="#top" class="flex items-center gap-3">
+      <!-- Meridian "M" monogram -->
+      <svg width="34" height="34" viewBox="0 0 64 64" fill="none" aria-hidden="true" class="shrink-0">
+        <defs>
+          <linearGradient id="mg" x1="8" y1="12" x2="56" y2="52" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#3E4C63"/><stop offset="1" stop-color="#5B6472"/>
+          </linearGradient>
+        </defs>
+        <path d="M11 52V16.5C11 13.5 14.7 12.2 16.6 14.5L32 33L47.4 14.5C49.3 12.2 53 13.5 53 16.5V52H45V27L34.8 39.2C33.4 40.9 30.6 40.9 29.2 39.2L19 27V52H11Z" fill="url(#mg)"/>
+        <rect x="31" y="12" width="2" height="40" rx="1" fill="#5B6472" opacity="0.55"/>
+      </svg>
+      <span class="font-head font-bold text-[19px] tracking-tight text-ink">Meridian Interface</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-8">
+      <a class="text-ink-soft hover:text-ink transition-colors text-sm font-medium" href="#core-heading">Architecture</a>
+      <a class="text-ink-soft hover:text-ink transition-colors text-sm font-medium" href="#loop-heading">How It Works</a>
+      <a class="text-ink-soft hover:text-ink transition-colors text-sm font-medium" href="#contact">Contact</a>
+    </nav>
+    <a href="mailto:otis@meridianinterface.com" class="slate-gradient text-white px-5 py-2 rounded-full text-sm font-semibold hover:shadow-lg hover:shadow-slate/20 transition-shadow">Get in Touch</a>
+  </div>
+</header>
+
+<main class="max-w-container mx-auto px-margin-mobile md:px-margin-desktop py-14">
+
+  <!-- ===== HERO ===== -->
+  <section class="mb-14 text-center max-w-3xl mx-auto">
+    <span class="inline-flex items-center gap-2 chip text-slate px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide uppercase mb-6">
+      <span class="material-symbols-outlined" style="font-size:16px">bolt</span> Always-On Growth Engine
+    </span>
+    <h1 class="font-head font-extrabold text-4xl md:text-5xl leading-[1.08] tracking-tight mb-5">
+      Marketing System <span class="slate-text">Tech Stack</span>
+    </h1>
+    <p class="text-ink-soft text-lg leading-relaxed">
+      A single AI-orchestrated system that runs marketing 24/7 — posting to social, managing local SEO and
+      reviews, running ads, writing content, and following up with customers over SMS and email — all feeding
+      one CRM and reporting dashboard. This is the architecture <span class="text-ink font-medium">Meridian Interface</span> designs and builds for its clients.
+    </p>
+    <div class="flex flex-wrap justify-center gap-2.5 mt-8">
+      <span class="chip-steel text-steel px-4 py-1.5 rounded-full text-sm font-medium">Claude-Orchestrated</span>
+      <span class="chip-steel text-steel px-4 py-1.5 rounded-full text-sm font-medium">6 Channels</span>
+      <span class="chip-steel text-steel px-4 py-1.5 rounded-full text-sm font-medium">15+ Integrations</span>
+      <span class="chip-steel text-steel px-4 py-1.5 rounded-full text-sm font-medium">One Source of Truth</span>
+    </div>
+  </section>
+
+  <!-- ===== LAYER 1: CORE / ORCHESTRATION ===== -->
+  <section aria-labelledby="core-heading" class="card rounded-2xl p-6 md:p-8 relative overflow-hidden scroll-mt-24">
+    <div class="absolute -top-24 -right-16 w-72 h-72 slate-gradient opacity-[0.06] blur-3xl rounded-full pointer-events-none"></div>
+    <div class="flex items-center gap-3 mb-1">
+      <span class="material-symbols-outlined text-slate">hub</span>
+      <h2 id="core-heading" class="font-head font-bold text-2xl">Core / Orchestration Layer</h2>
+    </div>
+    <p class="text-ink-soft mb-7 max-w-2xl">The brain. An always-on agent plans the work, remembers context, queues jobs, and routes events to every channel below.</p>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div class="node rounded-xl p-4 flex flex-col items-center text-center gap-3">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center bg-slate/8 border border-slate/15 text-slate"><span class="material-symbols-outlined">all_inclusive</span></div>
+        <div><p class="font-semibold text-sm text-ink leading-tight">Always-On Orchestration</p><p class="text-xs text-ink-faint mt-1">Scheduler + agent loop</p></div>
+      </div>
+      <div class="node rounded-xl p-4 flex flex-col items-center text-center gap-3">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center bg-slate/8 border border-slate/15 text-slate"><span class="material-symbols-outlined">auto_awesome</span></div>
+        <div><p class="font-semibold text-sm text-ink leading-tight">Claude API</p><p class="text-xs text-ink-faint mt-1">Reasoning &amp; copy</p></div>
+      </div>
+      <div class="node rounded-xl p-4 flex flex-col items-center text-center gap-3">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center bg-slate/8 border border-slate/15 text-slate"><span class="material-symbols-outlined">database</span></div>
+        <div><p class="font-semibold text-sm text-ink leading-tight">Vector Database</p><p class="text-xs text-ink-faint mt-1">Context memory</p></div>
+      </div>
+      <div class="node rounded-xl p-4 flex flex-col items-center text-center gap-3">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center bg-slate/8 border border-slate/15 text-slate"><span class="material-symbols-outlined">format_list_bulleted_add</span></div>
+        <div><p class="font-semibold text-sm text-ink leading-tight">Task Queue</p><p class="text-xs text-ink-faint mt-1">Jobs &amp; retries</p></div>
+      </div>
+      <div class="node rounded-xl p-4 flex flex-col items-center text-center gap-3">
+        <div class="w-12 h-12 rounded-full flex items-center justify-center bg-slate/8 border border-slate/15 text-slate"><span class="material-symbols-outlined">account_tree</span></div>
+        <div><p class="font-semibold text-sm text-ink leading-tight">Webhook Router</p><p class="text-xs text-ink-faint mt-1">Event fan-out</p></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="flow-rail" aria-hidden="true"><span class="flow-dot"></span></div>
+
+  <!-- ===== LAYER 2: CHANNELS ===== -->
+  <section aria-label="Marketing channels" class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+
+    <!-- Social Media -->
+    <div class="card rounded-2xl p-6">
+      <div class="flex items-center gap-2 mb-1">
+        <span class="material-symbols-outlined text-steel">share</span>
+        <h3 class="font-head font-bold text-xl text-ink">Social Media</h3>
+      </div>
+      <p class="text-ink-soft text-sm mb-5">Plan, schedule &amp; publish across every platform.</p>
+      <ul class="space-y-2.5">
+        <li class="node rounded-lg px-3 py-2.5 flex items-center gap-3"><span class="material-symbols-outlined text-steel text-[20px]">business_center</span><span class="text-sm text-ink">Meta Business API</span></li>
+        <li class="node rounded-lg px-3 py-2.5 flex items-center gap-3"><span class="material-symbols-outlined text-steel text-[20px]">schedule_send</span><span class="text-sm text-ink">Buffer / Later</span></li>
+        <li class="node rounded-lg px-3 py-2.5 flex items-center gap-3"><span class="material-symbols-outlined text-steel text-[20px]">photo_camera</span><span class="text-sm text-ink">Instagram</span></li>
+        <li class="node rounded-lg px-3 py-2.5 flex items-center gap-3"><span class="material-symbols-outlined text-steel text-[20px]">music_note</span><span class="text-sm text-ink">TikTok</span></li>
+        <li class="node rounded-lg px-3 py-2.5 flex items-center gap-3"><span class="material-symbols-outlined text-steel text-[20px]">smart_display</span><span class="text-sm text-ink">YouTube</span></li>
+      </ul>
+    </div>
+
+    <!-- Local SEO -->
+    <div class="card rounded-2xl p-6">
+      <div class="flex items-center gap-2 mb-1">
+        <span class="material-symbols-outlined text-teal">travel_explore</span>
+        <h3 class="font-head font-bold text-xl text-ink">Local SEO</h3>
+      </div>
+      <p class="text-ink-soft text-sm mb-5">Own the map pack and manage reputation.</p>
+      <ul class="space-y-2.5">
+        <li class="node rounded-lg px-3 py-2.5 flex items-center gap-3"><span class="material-symbols-outlined text-teal text-[20px]">storefront</span><span class="text-sm text-ink">Google Business Profile API</span></li>
+        <li class="node rounded-lg px-3 py-2.5 flex items-center gap-3"><span class="material-symbols-outlined text-teal text-[20px]">map</span><span class="text-sm text-ink">Google Maps Platform</span></li>
+        <li class="node rounded-lg px-3 py-2.5 flex items-center gap-3"><span class="material-symbols-outlined text-teal text-[20px]">reviews</span><span class="text-sm text-ink">Reviews &amp; Ratings</span></li>
+        <li class="node rounded-lg px-3 py-2.5 flex items-center gap-3"><span class="material-symbols-outlined text-teal text-[20px]">pin_drop</span><span class="text-sm text-ink">Citations &amp; NAP</span></li>
+      </ul>
+    </div>
+
+    <!-- Ads -->
+    <div class="card rounded-2xl p-6">
+      <div class="flex items-center gap-2 mb-1">
+        <span class="material-symbols-outlined text-slate">ads_click</span>
+        <h3 class="font-head font-bold text-xl text-ink">Ads</h3>
+      </div>
+      <p class="text-ink-soft text-sm mb-5">Launch, optimize &amp; report on paid campaigns.</p>
+      <ul class="space-y-2.5">
+        <li class="node rounded-lg px-3 py-2.5 flex items-center gap-3"><span class="material-symbols-outlined text-slate text-[20px]">campaign</span><span class="text-sm text-ink">Meta Ads Manager</span></li>
+        <li class="node rounded-lg px-3 py-2.5 flex items-center gap-3"><span class="material-symbols-outlined text-slate text-[20px]">search</span><span class="text-sm text-ink">Google Ads API</span></li>
+        <li class="node rounded-lg px-3 py-2.5 flex items-center gap-3"><span class="material-symbols-outlined text-slate text-[20px]">query_stats</span><span class="text-sm text-ink">Conversion Tracking</span></li>
+        <li class="node rounded-lg px-3 py-2.5 flex items-center gap-3"><span class="material-symbols-outlined text-slate text-[20px]">tune</span><span class="text-sm text-ink">Budget Optimizer</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="flow-rail" aria-hidden="true"><span class="flow-dot"></span></div>
+
+  <!-- ===== LAYER 3: CONTENT + OPERATIONS ===== -->
+  <section aria-label="Content and operations" class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+
+    <!-- Content -->
+    <div class="card rounded-2xl p-6">
+      <div class="flex items-center gap-2 mb-1">
+        <span class="material-symbols-outlined text-slate">edit_note</span>
+        <h3 class="font-head font-bold text-xl text-ink">Content</h3>
+      </div>
+      <p class="text-ink-soft text-sm mb-5">AI drafts, human approves, CMS publishes.</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="node rounded-lg px-3 py-3 flex items-center gap-3"><span class="material-symbols-outlined text-slate text-[20px]">draw</span><span class="text-sm text-ink">AI Writing Assistant</span></div>
+        <div class="node rounded-lg px-3 py-3 flex items-center gap-3"><span class="material-symbols-outlined text-slate text-[20px]">public</span><span class="text-sm text-ink">WordPress / CMS API</span></div>
+        <div class="node rounded-lg px-3 py-3 flex items-center gap-3"><span class="material-symbols-outlined text-slate text-[20px]">article</span><span class="text-sm text-ink">Blog &amp; Landing Pages</span></div>
+        <div class="node rounded-lg px-3 py-3 flex items-center gap-3"><span class="material-symbols-outlined text-slate text-[20px]">approval</span><span class="text-sm text-ink">Approval Workflow</span></div>
+      </div>
+    </div>
+
+    <!-- Operations -->
+    <div class="card rounded-2xl p-6">
+      <div class="flex items-center gap-2 mb-1">
+        <span class="material-symbols-outlined text-teal">settings_suggest</span>
+        <h3 class="font-head font-bold text-xl text-ink">Operations</h3>
+      </div>
+      <p class="text-ink-soft text-sm mb-5">Turn interest into booked business, automatically.</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="node rounded-lg px-3 py-3 flex items-center gap-3"><span class="material-symbols-outlined text-teal text-[20px]">sms</span><span class="text-sm text-ink">Twilio SMS API</span></div>
+        <div class="node rounded-lg px-3 py-3 flex items-center gap-3"><span class="material-symbols-outlined text-teal text-[20px]">mail</span><span class="text-sm text-ink">SendGrid Email API</span></div>
+        <div class="node rounded-lg px-3 py-3 flex items-center gap-3"><span class="material-symbols-outlined text-teal text-[20px]">contacts</span><span class="text-sm text-ink">CRM &amp; Lead Routing</span></div>
+        <div class="node rounded-lg px-3 py-3 flex items-center gap-3"><span class="material-symbols-outlined text-teal text-[20px]">event_available</span><span class="text-sm text-ink">Booking &amp; Follow-up</span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="flow-rail" aria-hidden="true"><span class="flow-dot"></span></div>
+
+  <!-- ===== LAYER 4: DATA FOUNDATION ===== -->
+  <section aria-labelledby="data-heading" class="card rounded-2xl p-6 md:p-8 relative overflow-hidden">
+    <div class="absolute -bottom-24 -left-16 w-72 h-72 opacity-[0.06] blur-3xl rounded-full pointer-events-none" style="background:linear-gradient(135deg,#4F6D8C,#3E7C86)"></div>
+    <div class="flex items-center gap-3 mb-1">
+      <span class="material-symbols-outlined text-steel">insights</span>
+      <h2 id="data-heading" class="font-head font-bold text-2xl">Data &amp; Reporting Foundation</h2>
+    </div>
+    <p class="text-ink-soft mb-7 max-w-2xl">Everything writes back to one place, so the owner sees the whole picture at a glance.</p>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="node rounded-xl p-5 flex items-start gap-4">
+        <div class="w-12 h-12 shrink-0 rounded-lg flex items-center justify-center bg-steel/8 border border-steel/18 text-steel"><span class="material-symbols-outlined">dns</span></div>
+        <div><p class="font-semibold text-ink">CRM Database</p><p class="text-sm text-ink-soft mt-1 leading-relaxed">Single source of truth for every lead, customer, and job.</p></div>
+      </div>
+      <div class="node rounded-xl p-5 flex items-start gap-4">
+        <div class="w-12 h-12 shrink-0 rounded-lg flex items-center justify-center bg-steel/8 border border-steel/18 text-steel"><span class="material-symbols-outlined">monitoring</span></div>
+        <div><p class="font-semibold text-ink">Analytics Dashboard</p><p class="text-sm text-ink-soft mt-1 leading-relaxed">Live view of reach, leads, spend, and ROI by channel.</p></div>
+      </div>
+      <div class="node rounded-xl p-5 flex items-start gap-4">
+        <div class="w-12 h-12 shrink-0 rounded-lg flex items-center justify-center bg-steel/8 border border-steel/18 text-steel"><span class="material-symbols-outlined">summarize</span></div>
+        <div><p class="font-semibold text-ink">Owner Summary Reports</p><p class="text-sm text-ink-soft mt-1 leading-relaxed">Plain-language weekly recap, auto-written by Claude.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== HOW IT FLOWS ===== -->
+  <section class="mt-16 scroll-mt-24">
+    <h2 id="loop-heading" class="font-head font-bold text-2xl mb-6 text-center">How the loop runs</h2>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="card rounded-xl p-5">
+        <div class="flex items-center gap-2 text-slate mb-3"><span class="text-2xl font-head font-bold">1</span><span class="material-symbols-outlined">lightbulb</span></div>
+        <p class="font-semibold mb-1 text-ink">Plan</p>
+        <p class="text-ink-soft text-sm leading-relaxed">The agent reviews goals and memory, then decides what to post, run, and send today.</p>
+      </div>
+      <div class="card rounded-xl p-5">
+        <div class="flex items-center gap-2 text-slate mb-3"><span class="text-2xl font-head font-bold">2</span><span class="material-symbols-outlined">rocket_launch</span></div>
+        <p class="font-semibold mb-1 text-ink">Execute</p>
+        <p class="text-ink-soft text-sm leading-relaxed">Jobs fan out to social, SEO, ads, content, and messaging through their APIs.</p>
+      </div>
+      <div class="card rounded-xl p-5">
+        <div class="flex items-center gap-2 text-slate mb-3"><span class="text-2xl font-head font-bold">3</span><span class="material-symbols-outlined">forum</span></div>
+        <p class="font-semibold mb-1 text-ink">Capture</p>
+        <p class="text-ink-soft text-sm leading-relaxed">Replies, leads, and results flow back through webhooks into the CRM.</p>
+      </div>
+      <div class="card rounded-xl p-5">
+        <div class="flex items-center gap-2 text-slate mb-3"><span class="text-2xl font-head font-bold">4</span><span class="material-symbols-outlined">insights</span></div>
+        <p class="font-semibold mb-1 text-ink">Learn</p>
+        <p class="text-ink-soft text-sm leading-relaxed">Analytics update memory so the next cycle doubles down on what works.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CTA ===== -->
+  <section id="contact" class="mt-16 card rounded-2xl p-8 md:p-10 text-center relative overflow-hidden scroll-mt-24">
+    <div class="absolute inset-0 slate-gradient opacity-[0.05] pointer-events-none"></div>
+    <h2 class="font-head font-bold text-2xl md:text-3xl mb-3">Want a system like this for your business?</h2>
+    <p class="text-ink-soft max-w-xl mx-auto mb-7">Meridian Interface designs and builds always-on marketing systems tailored to your brand — from architecture to launch.</p>
+    <div class="flex flex-wrap justify-center gap-3">
+      <a href="mailto:otis@meridianinterface.com" class="slate-gradient text-white px-8 py-3 rounded-full font-semibold hover:shadow-lg hover:shadow-slate/25 transition-shadow">Start a Conversation</a>
+      <a href="tel:+12818829198" class="px-8 py-3 rounded-full border border-line-2 text-ink-soft hover:text-slate hover:border-slate/40 transition-all">Call (281) 882-9198</a>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===== FOOTER ===== -->
+<footer class="bg-paper-2 border-t border-line py-12 mt-16">
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-gutter px-margin-mobile md:px-margin-desktop max-w-container mx-auto">
+    <div>
+      <div class="flex items-center gap-2.5 mb-3">
+        <svg width="26" height="26" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+          <defs><linearGradient id="mg2" x1="8" y1="12" x2="56" y2="52" gradientUnits="userSpaceOnUse"><stop stop-color="#3E4C63"/><stop offset="1" stop-color="#5B6472"/></linearGradient></defs>
+          <path d="M11 52V16.5C11 13.5 14.7 12.2 16.6 14.5L32 33L47.4 14.5C49.3 12.2 53 13.5 53 16.5V52H45V27L34.8 39.2C33.4 40.9 30.6 40.9 29.2 39.2L19 27V52H11Z" fill="url(#mg2)"/>
+          <rect x="31" y="12" width="2" height="40" rx="1" fill="#5B6472" opacity="0.55"/>
+        </svg>
+        <span class="font-head font-bold text-ink">Meridian Interface</span>
+      </div>
+      <p class="text-sm text-ink-soft leading-relaxed">Websites, applications, and always-on marketing systems for growing businesses.</p>
+    </div>
+    <div>
+      <h5 class="text-slate font-semibold mb-3 text-sm">Explore</h5>
+      <ul class="space-y-2 text-sm">
+        <li><a class="text-ink-soft hover:text-slate transition-colors" href="#core-heading">Architecture</a></li>
+        <li><a class="text-ink-soft hover:text-slate transition-colors" href="#loop-heading">How It Works</a></li>
+        <li><a class="text-ink-soft hover:text-slate transition-colors" href="#contact">Contact</a></li>
+      </ul>
+    </div>
+    <div class="md:text-right">
+      <h5 class="text-slate font-semibold mb-3 text-sm">Contact</h5>
+      <p class="text-sm text-ink-soft mb-1"><a class="hover:text-slate transition-colors" href="mailto:otis@meridianinterface.com">otis@meridianinterface.com</a></p>
+      <p class="text-sm text-ink-soft mb-4"><a class="hover:text-slate transition-colors" href="tel:+12818829198">(281) 882-9198</a></p>
+      <p class="text-xs text-ink-faint">© 2026 Meridian Interface. All rights reserved.</p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
