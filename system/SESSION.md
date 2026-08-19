@@ -24,6 +24,8 @@ Compact record of what was built and the current state, so work can resume later
 - **settings rows:** `business_profile`, `goals`, `agent` (model `claude-opus-5`, autonomy `draft`), `dashboard` (holds the dashboard passcode — retrieve with `select value->>'passcode' from settings where key='dashboard'`).
 
 ## Current state
+- **See `system/ARCHITECTURE.md`** — the one map of how the three repos connect,
+  what config joins them, and the go-live order. Start there.
 - **Demo / mock mode.** No valid Anthropic key. Otis decided NOT to use his key for now.
 - An **invalid** `ANTHROPIC_API_KEY` is still set as a Supabase secret. All Claude calls now **degrade to mock gracefully** (try/catch in `_shared/claude.ts`), so nothing errors. Dashboard badge shows "Demo mode" (based on real non-mock output existing, not key presence).
 - Pipeline verified end-to-end in mock: intake → contact+activity → follow_up task → runner drafts email + content post (with tag-matched image) → approval queue. Owner summary + report path work.
@@ -109,6 +111,29 @@ Compact record of what was built and the current state, so work can resume later
   advances usage 61,000 -> 70,000; injecting a 401 on the active key rotates to
   Backup pool and logs it; keys stay masked; the LIVE tab with no backend shows a
   connection error instead of crashing.
+
+## Connected as one system (Aug 19)
+- Otis's intent, in his words: not a repo merge — "when I launched the website
+  that everything will be connected to one another." So: one visual identity,
+  one verified data path, one architecture doc. Repos stay separate.
+- **Key Router console rebranded** into the Meridian system (ivory/slate/steel/
+  teal, Sora over Inter, studio monogram). Also fixed a real defect the dark
+  theme hid: the "Keys routable" gauge measures availability, where high is
+  good, but was coloured by the consumption scale — a fully healthy fleet
+  showed red. PR #2 on key-router.
+- **key-router PR #1 MERGED** (d53468a). main now has the real provider call
+  and the multi-provider fleet.
+- **Edge functions redeployed** so the Key Router seam is live in production,
+  not just in source: runner v7, orchestrator v5, report v5. Before this,
+  setting KEYROUTER_URL would have done nothing.
+- **End-to-end verified live** with the website's exact booking envelope:
+  intake 200 -> contact a6494c62 + deal 5dbaff20 -> runner drained the
+  follow_up_lead task and drafted an email -> a generate_content task produced
+  a valid 2410-char on-brand SVG card -> orchestrator success (1 task) ->
+  report wrote real metrics (3 new leads, $5,000 pipeline).
+- Known mock-only cosmetic: the weekly report body renders a content caption
+  instead of a summary, because the report prompt matches the mock's content
+  branch. Disappears with a real key; metrics in the same report are correct.
 
 ## Open next steps (not done)
 - Wire dashboard into the deployed website so real photos render + it's live.
