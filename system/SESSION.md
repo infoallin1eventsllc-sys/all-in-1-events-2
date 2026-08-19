@@ -63,9 +63,49 @@ Compact record of what was built and the current state, so work can resume later
   own limit — their marketing on their budget, never Otis's. Meridian's OWN
   marketing still needs Otis's key (the `limit` is the spend cap).
 
+## Meridian Interface WEBSITE (separate repo, Aug 19)
+- **Repo:** `infoallin1eventsllc-sys/meridian-interface-website` — React 19 + Vite +
+  Tailwind v4 + TS. Marketing site AND a client booking/invoice portal. Built by
+  Otis in Google AI Studio, pushed by him after granting Claude repo access.
+- **Structure:** `src/components/` (Home/Solutions/Impact/Connect/Dashboard/
+  OwnerInvoice/Modals), `src/lib/leads.ts` (THE lead seam — every booking goes
+  through `submitAppointment()`), `src/lib/imageStore.ts` (owner image overrides).
+  Fonts self-hosted in `public/fonts` (Hanken Grotesk, Inter, Material Symbols).
+- **Wired to the CRM:** `leads.ts` POSTs to the intake webhook by default
+  (`VITE_LEAD_ENDPOINT` overrides). `intake` was extended to accept the site's
+  `{type:'appointment', payload:{...}}` envelope, map clientName/clientEmail/etc,
+  AND open a pipeline deal (amount parsed from budget range). Verified live.
+- **Pre-deploy audit + QA (all fixed, all verified):**
+  1. Bookings did not appear in the client portal — DashboardView read storage
+     only on mount. App now bumps `bookingVersion` which keys the view. Proven 2→3.
+  2. Full appointment (name/email/phone) was logged to the browser console. Removed.
+  3. Footer "Studio login" showed in prod with no passcode configured → now gated
+     on `import.meta.env.DEV || VITE_OWNER_PASSCODE`.
+  4. Booking POST tried once → now retries once before falling back to local save.
+  - Also enabled TS `strict: true` and added aria-labels to booking inputs.
+  - PASSED: no secrets committed, no XSS surface, no third-party scripts, zero JS
+    errors across 8 views, no mobile horizontal scroll at 390px, clean build.
+  - OPEN (Otis's call): 24 images hotlinked from images.unsplash.com — works, but
+    the visual identity depends on a third party. Worth self-hosting.
+- **MERGED TO `main`** (commit 01fa062). main = the fixed, tested version.
+- **Deploy status:** NOT deployed. Next step is Otis doing a Vercel preview
+  deploy (vercel.com → Add New → Project → import the repo → Deploy; Vite is
+  auto-detected, zero config, no env vars needed). Explained to him that a
+  preview deploy ≠ public launch — the URL is live but unlisted.
+
+## Published artifacts (all private, Otis's gallery)
+- Marketing tech-stack page: https://claude.ai/code/artifact/72505b31-cf3b-475a-a635-a9fd7cf53f66
+- Marketing dashboard snapshot: https://claude.ai/code/artifact/31148180-2fe1-49f1-bc19-dfbe2d483031
+- Pre-deploy review (all 8 screens + findings): https://claude.ai/code/artifact/4c53084d-582c-40d3-b0ef-0c3d0353fc00
+- The website itself, single-file & clickable: https://claude.ai/code/artifact/f10cd8e3-c781-46ec-b0ca-4a8ae4fa1071
+  (built by inlining dist CSS/JS/fonts/hero; Unsplash photos and file downloads
+  do not work inside the artifact viewer — that is the viewer, not the site.)
+
 ## Open next steps (not done)
 - Wire dashboard into the deployed website so real photos render + it's live.
 - Phase 2 channels: Meta/Google Business Profile/Google Ads/WordPress publishing (OAuth per platform).
 - Optional hardening: `RUN_SECRET` header on orchestrator/runner/report (currently callable by anyone with the public anon key; only burns idempotent work / would spend tokens once a real key is set).
-- Wire the site inquiry form to the `intake` webhook.
+- Vercel preview deploy of the Meridian website (Otis's step; main is ready).
+- key-router PR #1 is OPEN and unmerged: https://github.com/infoallin1eventsllc-sys/key-router/pull/1
+- Self-host the Unsplash photography on the Meridian site.
 - Swap the SVG monogram for the real logo PNG once provided.
