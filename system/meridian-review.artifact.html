@@ -87,11 +87,11 @@
   <header>
     <p class="eyebrow">Pre-deploy review</p>
     <h1>Meridian Interface, screen by screen</h1>
-    <p class="lede">Every view captured from a production build, the booking flow driven end to end, and the codebase audited for secrets, injection, accessibility and error handling. Four issues found and fixed; two left open for your call.</p>
+    <p class="lede">Every view captured from a production build, the booking flow driven end to end, and the codebase audited for secrets, injection, accessibility and error handling. Four issues found and fixed; one left open for your call.</p>
     <div class="tally">
       <span class="t-fixed">4 fixed</span>
-      <span class="t-pass">6 passed</span>
-      <span class="t-open">2 open</span>
+      <span class="t-pass">8 passed</span>
+      <span class="t-open">1 open</span>
     </div>
   </header>
 
@@ -142,9 +142,13 @@
         <span class="chip c-open">Open</span>
         <div class="f-body"><h3>Photography is hotlinked from Unsplash</h3><p>Twenty-four images load from images.unsplash.com. It works, but your visual identity then depends on a third party staying up and keeping those URLs. Worth self-hosting before you promote the site.</p></div>
       </li>
-      <li class="finding f-open">
-        <span class="chip c-open">Open</span>
-        <div class="f-body"><h3>TypeScript strict mode is off</h3><p>tsconfig has no strict flag, so a class of null and undefined bugs goes uncaught. Not blocking; worth enabling while the codebase is still small.</p></div>
+      <li class="finding f-pass">
+        <span class="chip c-pass">Pass</span>
+        <div class="f-body"><h3>TypeScript strict mode is on</h3><p>Enabled during hardening, and the project still typechecks with zero errors — a whole class of null and undefined bugs is now caught at build time rather than in front of a client.</p></div>
+      </li>
+      <li class="finding f-pass">
+        <span class="chip c-pass">Pass</span>
+        <div class="f-body"><h3>Booking form is labelled for screen readers</h3><p>Every field in the booking form and the quick-book modal carries an accessible label, so the form is usable with a screen reader.</p></div>
       </li>
     </ul>
   </section>
