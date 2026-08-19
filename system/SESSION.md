@@ -39,6 +39,18 @@ Compact record of what was built and the current state, so work can resume later
 - **This sandbox's egress blocks `*.supabase.co` and CDNs** (cdn.tailwindcss.com, Google Fonts, googleusercontent). Work around by invoking functions server-side via the pg `http`/`pg_net` extensions and using MCP tools. Local screenshots can't load those hosts.
 - **Artifacts block remote images** (only Google Fonts allowed) — dashboard post photos show as brand-slate placeholders in the artifact; real photos render when served from a normal host.
 
+## Key Router integration (Aug 19)
+- `key-router` repo (separate) is the API-key failover proxy. Its provider seam
+  was a stub; now implemented against the Anthropic Messages API on branch
+  `claude/implement-anthropic-provider` (31/31 tests, +5 new). `render.yaml`
+  added for one-click Render deploy.
+- `_shared/claude.ts` here now has THREE modes: KEYROUTER_URL → route through
+  Key Router (no local key), ANTHROPIC_API_KEY → direct SDK, neither → mock.
+  Router failure falls back to direct, then mock.
+- To switch on: deploy Key Router, then set KEYROUTER_URL +
+  KEYROUTER_AUTH_TOKEN as Supabase secrets. Edge functions need a redeploy to
+  pick up the new `_shared/claude.ts` (source committed, not yet deployed).
+
 ## Open next steps (not done)
 - Wire dashboard into the deployed website so real photos render + it's live.
 - Phase 2 channels: Meta/Google Business Profile/Google Ads/WordPress publishing (OAuth per platform).

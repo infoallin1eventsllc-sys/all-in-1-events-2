@@ -53,6 +53,26 @@ supabase secrets set SENDGRID_FROM_NAME="Your Business"
 supabase secrets set TWILIO_ACCOUNT_SID=AC... TWILIO_AUTH_TOKEN=... TWILIO_FROM_NUMBER=+1...
 ```
 
+### Option: route through Key Router instead of holding a key
+
+Rather than putting an Anthropic key in this project at all, point it at
+[Key Router](https://github.com/infoallin1eventsllc-sys/key-router) — it holds
+the keys, meters usage per key, and rotates before a quota runs out:
+
+```bash
+supabase secrets set KEYROUTER_URL=https://<your-key-router-host>
+supabase secrets set KEYROUTER_AUTH_TOKEN=<the router's bearer token>
+```
+
+With `KEYROUTER_URL` set, no `ANTHROPIC_API_KEY` is needed here — the secret
+never enters this project. If the router is unreachable the system falls back
+to a direct call when a key is present, otherwise to mock, so a router outage
+degrades marketing rather than breaking it.
+
+This is also the multi-client answer: each client's key lives in their own
+router fleet, metered separately, so you never run a client's marketing on your
+own key (see the `client-handoff-api-keys` skill).
+
 - Only `ANTHROPIC_API_KEY` is needed to see real AI output. Email/SMS keys are
   only needed when you want messages actually delivered.
 - The agent runs in **`draft` autonomy** by default: it drafts, a human approves.

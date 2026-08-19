@@ -1,7 +1,12 @@
 // Thin wrapper around the Anthropic Messages API for edge functions.
-// Uses the official SDK. Degrades to a deterministic mock when
-// ANTHROPIC_API_KEY is not set, so the whole pipeline is testable
-// end-to-end before any key is added.
+//
+// Three modes, picked automatically:
+//   1. KEYROUTER_URL set   → route through Key Router, which holds the keys,
+//      meters usage per key and rotates before a quota runs out. No Anthropic
+//      key lives here at all — that is the point of routing through it.
+//   2. ANTHROPIC_API_KEY   → call Anthropic directly with the SDK.
+//   3. neither             → deterministic mock, so the whole pipeline stays
+//      testable end-to-end before any key exists.
 import Anthropic from "npm:@anthropic-ai/sdk@0.68.0";
 
 export const DEFAULT_MODEL = "claude-opus-5";
@@ -22,19 +27,17 @@ type CallOpts = {
 };
 
 export function hasKey(): boolean {
-  return !!Deno.env.get("ANTHROPIC_API_KEY");
+  return !!Deno.env.get("ANTHROPIC_API_KEY") || !!Deno.env.get("KEYROUTER_URL");
 }
 
-export async function callClaude(opts: CallOpts): Promise<ClaudeResult> {
-  const key = Deno.env.get("ANTHROPIC_API_KEY");
-  const model = opts.model || DEFAULT_MODEL;
+/** Rough token estimate for the pre-flight routing decision (~4 chars/token). */
+function estimateTokens(opts: CallOpts): number {
+  const chars = (opts.system?.length ?? 0) + (opts.prompt?.length ?? 0);
+  return Math.max(1, Math.ceil(chars / 4) + (opts.maxTokens ?? 4000));
+}
 
-  // Mock mode: no key yet. Return something structured so downstream code works.
-  if (!key) {
-    return { text: mockFor(opts.prompt), mocked: true };
-  }
-
-  const client = new Anthropic({ apiKey: key });
+/** Shape the Anthropic Messages body once, for either transport. */
+function buildBody(opts: CallOpts, model: string): Record<string, unknown> {
   const body: Record<string, unknown> = {
     model,
     max_tokens: opts.maxTokens ?? 4000,
@@ -42,6 +45,71 @@ export async function callClaude(opts: CallOpts): Promise<ClaudeResult> {
     messages: [{ role: "user", content: opts.prompt }],
   };
   if (opts.thinking) body.thinking = { type: "adaptive" };
+  return body;
+}
+
+/**
+ * Call Anthropic via Key Router. Key Router owns the secret, so nothing here
+ * needs one; we send the request body as `payload` and it returns Anthropic's
+ * reply untouched under `response`.
+ */
+async function viaKeyRouter(opts: CallOpts, model: string): Promise<ClaudeResult> {
+  const base = Deno.env.get("KEYROUTER_URL")!.replace(/\/$/, "");
+  const token = Deno.env.get("KEYROUTER_AUTH_TOKEN");
+
+  const res = await fetch(`${base}/v1/route`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({
+      tokens: estimateTokens(opts),
+      payload: buildBody(opts, model),
+    }),
+  });
+
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(j?.error || `key router responded ${res.status}`);
+
+  // deno-lint-ignore no-explicit-any
+  const reply: any = j.response ?? {};
+  const text = (reply.content ?? [])
+    .filter((b: { type: string }) => b.type === "text")
+    .map((b: { text: string }) => b.text)
+    .join("\n")
+    .trim();
+  return { text, mocked: false, usage: reply.usage };
+}
+
+export async function callClaude(opts: CallOpts): Promise<ClaudeResult> {
+  const key = Deno.env.get("ANTHROPIC_API_KEY");
+  const routerUrl = Deno.env.get("KEYROUTER_URL");
+  const model = opts.model || DEFAULT_MODEL;
+
+  // Mock mode: nothing configured yet. Structured output keeps downstream code
+  // working so the pipeline can be exercised before any key exists.
+  if (!key && !routerUrl) {
+    return { text: mockFor(opts.prompt), mocked: true };
+  }
+
+  if (routerUrl) {
+    try {
+      return await viaKeyRouter(opts, model);
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      // Key Router being down must not take marketing down with it: fall back
+      // to a direct call when we still hold a key, otherwise to mock.
+      if (!key) return { text: mockFor(opts.prompt), mocked: true, error: reason };
+    }
+  }
+
+  // Unreachable in practice (the router branch returns either way when there is
+  // no key), but it keeps `key` provably defined for the SDK call below.
+  if (!key) return { text: mockFor(opts.prompt), mocked: true };
+
+  const client = new Anthropic({ apiKey: key });
+  const body = buildBody(opts, model);
 
   try {
     // deno-lint-ignore no-explicit-any
