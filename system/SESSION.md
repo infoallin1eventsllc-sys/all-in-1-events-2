@@ -51,6 +51,18 @@ Compact record of what was built and the current state, so work can resume later
   KEYROUTER_AUTH_TOKEN as Supabase secrets. Edge functions need a redeploy to
   pick up the new `_shared/claude.ts` (source committed, not yet deployed).
 
+## Key Router — multi-provider (Aug 19)
+- Each key's `provider` field now drives dispatch (`src/providers.js`):
+  anthropic (`/v1/messages`, x-api-key, input+output tokens) and openai
+  (`/v1/chat/completions`, Bearer, total_tokens). Defaults to anthropic, so old
+  configs are untouched. Unknown provider throws AT BOOT with the known list.
+- `KEYROUTER_URL_<PROVIDER>` overrides an endpoint (Azure/gateway/proxy).
+- Suite 36/36 on branch `claude/implement-anthropic-provider`.
+- WHY this matters: Key Router manages keys, it does not supply them. Every call
+  bills whoever owns that key. The model is one key entry per CLIENT, with their
+  own limit — their marketing on their budget, never Otis's. Meridian's OWN
+  marketing still needs Otis's key (the `limit` is the spend cap).
+
 ## Open next steps (not done)
 - Wire dashboard into the deployed website so real photos render + it's live.
 - Phase 2 channels: Meta/Google Business Profile/Google Ads/WordPress publishing (OAuth per platform).
