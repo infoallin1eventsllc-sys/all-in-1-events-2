@@ -100,6 +100,15 @@ Compact record of what was built and the current state, so work can resume later
 - The website itself, single-file & clickable: https://claude.ai/code/artifact/f10cd8e3-c781-46ec-b0ca-4a8ae4fa1071
   (built by inlining dist CSS/JS/fonts/hero; Unsplash photos and file downloads
   do not work inside the artifact viewer — that is the viewer, not the site.)
+- Key Router console (the API router UI): https://claude.ai/code/artifact/c2b1c27e-9c31-4409-b024-a406d29d4754
+  Source `system/keyrouter-dashboard.artifact.html`, built from
+  `key-router/dashboard` (React 19 + recharts + lucide) via `vite build` with the
+  dist CSS/JS inlined. Opens in DEMO mode — three seeded keys, client-side only,
+  no server needed. Verified headless with all network blocked: mounts clean,
+  zero page errors, no horizontal scroll at 1440px or 390px; streaming traffic
+  advances usage 61,000 -> 70,000; injecting a 401 on the active key rotates to
+  Backup pool and logs it; keys stay masked; the LIVE tab with no backend shows a
+  connection error instead of crashing.
 
 ## Open next steps (not done)
 - Wire dashboard into the deployed website so real photos render + it's live.
