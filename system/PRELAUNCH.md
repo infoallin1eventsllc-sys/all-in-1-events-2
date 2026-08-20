@@ -155,6 +155,50 @@ diagnosed the above.
 
 ---
 
+## 6. Invoice manager diagnostic — four defects, all fixed
+
+**Where:** `meridian-interface-website` → `OwnerInvoiceView.tsx`, `index.css`
+
+Otis reported that some of the invoice pricing components did not work. A full
+diagnostic found four separate faults. Three of them presented identically — the
+Save button doing nothing at all, with no message, no console error, and correct
+figures still on screen.
+
+1. **Decimal tax and discount were rejected.** The percentage inputs are
+   `type="number"` with no `step`, so `step` defaults to `1` and the browser
+   refuses to submit a form containing `8.25` — the Texas rate. The Grand Total
+   recalculated correctly throughout, which is why the arithmetic always looked
+   right and the invoice simply never filed.
+2. **Line rates carried `step="50"`,** so any custom quote that was not a
+   multiple of fifty — $2,875 — blocked the submit the same way.
+   Both failures surfaced only as a native tooltip pinned to a field that is
+   usually scrolled out of sight. The form is `noValidate` now and validates in
+   `handleSaveInvoice`, showing every rejection beside the button pressed.
+3. **Invoice numbers collided after a delete.** The id came from
+   `invoices.length + 1`, so deleting one of three made the next invoice reuse an
+   existing number — and since saving upserts by id, it **overwrote the invoice
+   already filed under it**, silently. Numbers now come from the highest in use.
+4. **The printable invoice trapped the owner inside it.** `.animate-fadeIn` used
+   fill-mode `both`, leaving a permanent `transform` on every page container. An
+   element with a transform becomes the containing block for its `fixed`
+   descendants, so **no overlay on the site was anchored to the window**. On a
+   long invoice the action bar — Print / Save PDF and Close — sat 596px above a
+   scroll area already at `scrollTop: 0`. Measured, not inferred. Escape now
+   closes the preview too, so it never has only one exit.
+
+**Status: FIXED and pushed to `main`** (commit `8fa7292`), so the live site has
+it. Verified by a 26-check diagnostic — every catalogue add path, the discount
+and tax arithmetic, the save/edit round trip with deliverables intact, and a
+regression that deletes the middle invoice and proves nothing is overwritten —
+plus a 10-check site-wide pass confirming overlay anchoring and that the header
+and bottom nav stay pinned on every view. 26/26 and 9/10.
+
+**The one open item from that pass:** the header search overlay closes on a
+backdrop click but not on Escape. Minor, outside the invoice work, noted here so
+it is not lost.
+
+---
+
 ## Not pre-launch
 
 Phase 2 publishing channels — Meta, Google Business Profile, Google Ads,
