@@ -1,0 +1,20 @@
+{
+  "pages": [
+    { "id": "events", "name": "All in 1 Events" },
+    { "id": "meridian", "name": "Meridian console" },
+    { "id": "kit", "name": "Component gallery" }
+  ],
+  "artboards": [
+    { "file": "EventsHero.dc.html", "page": "events", "title": "Hero", "x": 0, "y": 0, "w": 1440, "h": 720 },
+    { "file": "Main.dc.html", "page": "events", "title": "Catalog", "x": 0, "y": 820, "w": 1440, "h": 1120 },
+    { "file": "MeridianConsole.dc.html", "page": "meridian", "title": "Approval queue", "x": 0, "y": 0, "w": 1440, "h": 1000 },
+    { "file": "Gallery.dc.html", "page": "kit", "title": "Gallery", "x": 0, "y": 0, "w": 1440, "h": 1040 },
+    { "file": "ComponentCard.dc.html", "page": "kit", "title": "Card spec", "x": 0, "y": 1140, "w": 1200, "h": 560 }
+  ],
+  "annotations": [
+    { "id": "events-note", "page": "events", "x": 1520, "y": 0, "w": 300, "text": "21st.dev's density language on your own dark tokens — #111317 ground, hairline borders at 7% white, mono metadata, ⌘K search.\n\nCategory tabs on the Catalog actually filter.\n\nDashed [SLOTS] are facts I don't have: rates, event counts, dates." },
+    { "id": "meridian-note", "page": "meridian", "x": 1520, "y": 0, "w": 300, "text": "Same density, flipped to the ivory Meridian palette straight out of marketing-system.html.\n\nThe Demo/Live switch in Tweaks flips the status pill — matching the real demo-vs-live state in your system." },
+    { "id": "kit-note", "page": "kit", "x": 1520, "y": 0, "w": 300, "text": "The component gallery, original rather than a copy of 21st.dev.\n\nEvery preview tile is a real rendered component, not a screenshot. Theme in Tweaks switches the whole gallery light/dark." }
+  ],
+  "launch": { "view": "canvas", "page": "events" }
+}

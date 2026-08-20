@@ -1,0 +1,274 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700;800&display=swap">
+  <style>
+    body { margin: 0; background: #F5F4EF; font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #4F6D8C; text-decoration: none; }
+    a:hover { color: #3E4C63; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    .card { background: #FFFFFF; border: 1px solid #E7E5DD; border-radius: 12px; box-shadow: 0 1px 2px rgba(35,38,43,0.04), 0 18px 40px -28px rgba(35,38,43,0.30); transition: transform .35s cubic-bezier(.2,.7,.2,1), border-color .35s, box-shadow .35s; }
+    .card:hover { transform: translateY(-3px); border-color: #C9D0DA; box-shadow: 0 1px 2px rgba(35,38,43,0.05), 0 26px 50px -28px rgba(62,76,99,0.35); }
+    .slot { border-bottom: 1px dashed #C9D0DA; padding-bottom: 1px; }
+    .tag { font-size: 10px; letter-spacing: 0.12em; font-weight: 600; padding: 3px 8px; border-radius: 9999px; background: rgba(62,76,99,0.06); border: 1px solid rgba(62,76,99,0.16); color: #3E4C63; }
+    .tag.t { background: rgba(62,124,134,0.08); border-color: rgba(62,124,134,0.22); color: #3E7C86; }
+    .act { display: flex; align-items: center; justify-content: center; gap: 6px; height: 30px; border-radius: 8px; font-family: inherit; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; cursor: pointer; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; min-height: 1000px; background: #F5F4EF; color: #23262B; display: flex; flex-direction: column;">
+
+  <!-- top bar -->
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 32px; padding: 0 56px; height: 62px; border-bottom: 1px solid #E3E1D8; background: rgba(255,255,255,0.7); flex-shrink: 0;">
+    <div style="display: flex; align-items: center; gap: 38px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18V9l4.5 5L12 6l4.5 8L21 9v9"></path><path d="M3 21h18"></path></svg>
+        <span style="font-family: Sora, system-ui, sans-serif; font-weight: 700; font-size: 16px; letter-spacing: -0.02em; color: #3E4C63;">Meridian Interface</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 24px;">
+        <a href="#queue" style="font-size: 12px; font-weight: 600; color: #23262B; border-bottom: 2px solid {{accent}}; padding-bottom: 3px;">Queue</a>
+        <a href="#crm" style="font-size: 12px; font-weight: 600; color: #5B626C;">CRM</a>
+        <a href="#channels" style="font-size: 12px; font-weight: 600; color: #5B626C;">Channels</a>
+        <a href="#reports" style="font-size: 12px; font-weight: 600; color: #5B626C;">Reports</a>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 10px; height: 31px; padding: 0 10px 0 12px; border: 1px solid #DCE0E7; border-radius: 8px; background: #FFFFFF; min-width: 200px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8A8F98" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+        <span style="flex-grow: 1; font-size: 12px; color: #8A8F98;">Search leads &amp; drafts</span>
+        <span class="mono" style="font-size: 10px; color: #8A8F98; border: 1px solid #DCE0E7; border-radius: 4px; padding: 2px 5px;">⌘K</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 7px; height: 31px; padding: 0 12px; border-radius: 9999px; border: 1px solid {{stateLine}}; background: {{stateFill}};">
+        <span style="width: 6px; height: 6px; border-radius: 9999px; background: {{stateDot}};"></span>
+        <span class="mono" style="font-size: 10px; letter-spacing: 0.14em; font-weight: 600; color: {{stateInk}};">{{stateLabel}}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- page head + stat strip -->
+  <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 40px; padding: 40px 56px 0;">
+    <div style="display: flex; flex-direction: column; gap: 9px;">
+      <div class="mono" style="font-size: 11px; letter-spacing: 0.18em; color: #8A8F98;">ALWAYS-ON MARKETING SYSTEM</div>
+      <h1 style="margin: 0; font-family: Sora, system-ui, sans-serif; font-weight: 700; font-size: 40px; line-height: 1.05; letter-spacing: -0.03em; color: #23262B;">Approval queue</h1>
+      <p style="margin: 2px 0 0; max-width: 520px; font-size: 14px; line-height: 22px; color: #5B626C; text-wrap: pretty;">Everything the orchestrator drafted since the last run. Nothing leaves this screen without you approving it.</p>
+    </div>
+    <div style="display: flex; align-items: stretch; gap: 0; border: 1px solid #E3E1D8; border-radius: 12px; background: #FFFFFF; overflow: hidden;">
+      <div style="display: flex; flex-direction: column; gap: 5px; padding: 14px 22px;">
+        <span class="mono slot" style="font-family: Sora, system-ui, sans-serif; font-weight: 700; font-size: 22px; color: #23262B;">[N]</span>
+        <span class="mono" style="font-size: 9px; letter-spacing: 0.16em; color: #8A8F98;">LEADS</span>
+      </div>
+      <div style="width: 1px; background: #E3E1D8;"></div>
+      <div style="display: flex; flex-direction: column; gap: 5px; padding: 14px 22px;">
+        <span style="font-family: Sora, system-ui, sans-serif; font-weight: 700; font-size: 22px; color: #23262B;">6</span>
+        <span class="mono" style="font-size: 9px; letter-spacing: 0.16em; color: #8A8F98;">PENDING</span>
+      </div>
+      <div style="width: 1px; background: #E3E1D8;"></div>
+      <div style="display: flex; flex-direction: column; gap: 5px; padding: 14px 22px;">
+        <span class="mono slot" style="font-family: Sora, system-ui, sans-serif; font-weight: 700; font-size: 22px; color: #23262B;">[N]</span>
+        <span class="mono" style="font-size: 9px; letter-spacing: 0.16em; color: #8A8F98;">SCHEDULED</span>
+      </div>
+      <div style="width: 1px; background: #E3E1D8;"></div>
+      <div style="display: flex; flex-direction: column; gap: 5px; padding: 14px 22px;">
+        <span style="font-family: Sora, system-ui, sans-serif; font-weight: 700; font-size: 22px; color: {{accent}};">4</span>
+        <span class="mono" style="font-size: 9px; letter-spacing: 0.16em; color: #8A8F98;">CHANNELS</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- channel tabs -->
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 30px 56px 0;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <button onClick="{{pickAll}}" style="{{tabAll}}">All <span class="mono" style="opacity: .6; margin-left: 5px;">06</span></button>
+      <button onClick="{{pickSocial}}" style="{{tabSocial}}">Social <span class="mono" style="opacity: .6; margin-left: 5px;">03</span></button>
+      <button onClick="{{pickSeo}}" style="{{tabSeo}}">Local SEO <span class="mono" style="opacity: .6; margin-left: 5px;">02</span></button>
+      <button onClick="{{pickEmail}}" style="{{tabEmail}}">Email <span class="mono" style="opacity: .6; margin-left: 5px;">01</span></button>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span class="mono" style="font-size: 10px; letter-spacing: 0.14em; color: #8A8F98;">LAST RUN</span>
+      <span class="mono slot" style="font-size: 12px; color: #5B626C;">[TIMESTAMP]</span>
+    </div>
+  </div>
+
+  <!-- draft grid -->
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; padding: 22px 56px 44px;">
+
+    <sc-if value="{{sSocial}}" hint-placeholder-val="{{true}}">
+    <div class="card" style="display: flex; flex-direction: column;">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px 16px; border-bottom: 1px solid #EFEDE6;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4F6D8C" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.5" cy="6.5" r="1"></circle></svg>
+          <span class="mono" style="font-size: 10px; letter-spacing: 0.14em; color: #5B626C;">INSTAGRAM</span>
+        </div>
+        <span class="mono" style="font-size: 10px; color: #8A8F98;">FRI 18:00</span>
+      </div>
+      <div style="padding: 16px; background: #FAFAF7; border-bottom: 1px solid #EFEDE6; min-height: 128px;">
+        <p style="margin: 0; font-size: 13px; line-height: 21px; color: #23262B; text-wrap: pretty;">The Magic Mirror does not sit in the corner. Full-length, touch-driven, and every guest leaves with the print in hand. Booking spring dates now.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 14px 16px 16px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;"><span class="tag">CATALOG PUSH</span><span class="tag t">DRAFTED</span></div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+          <button class="act" style="border: 0; background: {{accent}}; color: #FFFFFF;">APPROVE</button>
+          <button class="act" style="border: 1px solid #DCE0E7; background: transparent; color: #5B626C;">EDIT</button>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{sSocial}}" hint-placeholder-val="{{true}}">
+    <div class="card" style="display: flex; flex-direction: column;">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px 16px; border-bottom: 1px solid #EFEDE6;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4F6D8C" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2h-3a5 5 0 0 0-5 5v3H6v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
+          <span class="mono" style="font-size: 10px; letter-spacing: 0.14em; color: #5B626C;">FACEBOOK</span>
+        </div>
+        <span class="mono" style="font-size: 10px; color: #8A8F98;">SAT 11:00</span>
+      </div>
+      <div style="padding: 16px; background: #FAFAF7; border-bottom: 1px solid #EFEDE6; min-height: 128px;">
+        <p style="margin: 0; font-size: 13px; line-height: 21px; color: #23262B; text-wrap: pretty;">Planning a 200-guest night? Uplighting sets the room before anyone walks in. Tell us the palette and we match it — wireless, no cable runs across your floor.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 14px 16px 16px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;"><span class="tag">SERVICE SPOTLIGHT</span><span class="tag t">DRAFTED</span></div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+          <button class="act" style="border: 0; background: {{accent}}; color: #FFFFFF;">APPROVE</button>
+          <button class="act" style="border: 1px solid #DCE0E7; background: transparent; color: #5B626C;">EDIT</button>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{sSocial}}" hint-placeholder-val="{{true}}">
+    <div class="card" style="display: flex; flex-direction: column;">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px 16px; border-bottom: 1px solid #EFEDE6;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4F6D8C" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5.5a3 3 0 1 1 3 3H9"></path><path d="M9 18a3 3 0 1 1-3-3h3"></path><path d="M15 9.5a4 4 0 0 0 4 4"></path></svg>
+          <span class="mono" style="font-size: 10px; letter-spacing: 0.14em; color: #5B626C;">TIKTOK</span>
+        </div>
+        <span class="mono" style="font-size: 10px; color: #8A8F98;">SUN 20:30</span>
+      </div>
+      <div style="padding: 16px; background: #FAFAF7; border-bottom: 1px solid #EFEDE6; min-height: 128px;">
+        <p style="margin: 0; font-size: 13px; line-height: 21px; color: #23262B; text-wrap: pretty;">360 booth, slow-motion, one take. Clip needs a load-in shot then the orbit — [ATTACH FOOTAGE FROM LAST EVENT].</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 14px 16px 16px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;"><span class="tag">NEEDS ASSET</span><span class="tag t">DRAFTED</span></div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+          <button class="act" style="border: 0; background: {{accent}}; color: #FFFFFF;">APPROVE</button>
+          <button class="act" style="border: 1px solid #DCE0E7; background: transparent; color: #5B626C;">EDIT</button>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{sSeo}}" hint-placeholder-val="{{true}}">
+    <div class="card" style="display: flex; flex-direction: column;">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px 16px; border-bottom: 1px solid #EFEDE6;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3E7C86" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z"></path><circle cx="12" cy="10" r="2.6"></circle></svg>
+          <span class="mono" style="font-size: 10px; letter-spacing: 0.14em; color: #5B626C;">GOOGLE BUSINESS</span>
+        </div>
+        <span class="mono" style="font-size: 10px; color: #8A8F98;">MON 09:00</span>
+      </div>
+      <div style="padding: 16px; background: #FAFAF7; border-bottom: 1px solid #EFEDE6; min-height: 128px;">
+        <p style="margin: 0; font-size: 13px; line-height: 21px; color: #23262B; text-wrap: pretty;">Business post — VIP Lounge Rentals. Add three photos from the catalog shoot and link the booking form.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 14px 16px 16px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;"><span class="tag">LOCAL SEO</span><span class="tag t">DRAFTED</span></div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+          <button class="act" style="border: 0; background: {{accent}}; color: #FFFFFF;">APPROVE</button>
+          <button class="act" style="border: 1px solid #DCE0E7; background: transparent; color: #5B626C;">EDIT</button>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{sSeo}}" hint-placeholder-val="{{true}}">
+    <div class="card" style="display: flex; flex-direction: column;">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px 16px; border-bottom: 1px solid #EFEDE6;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3E7C86" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.6 6.1.8-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L3.3 9.4l6.1-.8z"></path></svg>
+          <span class="mono" style="font-size: 10px; letter-spacing: 0.14em; color: #5B626C;">REVIEW REPLY</span>
+        </div>
+        <span class="mono" style="font-size: 10px; color: #8A8F98;">READY</span>
+      </div>
+      <div style="padding: 16px; background: #FAFAF7; border-bottom: 1px solid #EFEDE6; min-height: 128px;">
+        <p style="margin: 0; font-size: 13px; line-height: 21px; color: #23262B; text-wrap: pretty;">Reply drafted to a 5-star review mentioning the mirror attendant by name. Reads warm, no boilerplate — check the name before it posts.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 14px 16px 16px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;"><span class="tag">REPUTATION</span><span class="tag t">DRAFTED</span></div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+          <button class="act" style="border: 0; background: {{accent}}; color: #FFFFFF;">APPROVE</button>
+          <button class="act" style="border: 1px solid #DCE0E7; background: transparent; color: #5B626C;">EDIT</button>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{sEmail}}" hint-placeholder-val="{{true}}">
+    <div class="card" style="display: flex; flex-direction: column;">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px 16px; border-bottom: 1px solid #EFEDE6;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4F6D8C" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"></rect><path d="M3.5 7l8.5 6 8.5-6"></path></svg>
+          <span class="mono" style="font-size: 10px; letter-spacing: 0.14em; color: #5B626C;">FOLLOW-UP</span>
+        </div>
+        <span class="mono" style="font-size: 10px; color: #8A8F98;">TUE 08:00</span>
+      </div>
+      <div style="padding: 16px; background: #FAFAF7; border-bottom: 1px solid #EFEDE6; min-height: 128px;">
+        <p style="margin: 0; font-size: 13px; line-height: 21px; color: #23262B; text-wrap: pretty;">Nudge for inquiries that went quiet past 7 days. One question, one link back to the catalog — no discount language.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 14px 16px 16px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;"><span class="tag">CRM SEQUENCE</span><span class="tag t">DRAFTED</span></div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+          <button class="act" style="border: 0; background: {{accent}}; color: #FFFFFF;">APPROVE</button>
+          <button class="act" style="border: 1px solid #DCE0E7; background: transparent; color: #5B626C;">EDIT</button>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"mode":{"editor":"enum","options":["Demo","Live"],"default":"Demo","section":"System"},"accent":{"editor":"color","default":"#4F6D8C","options":["#4F6D8C","#3E4C63","#3E7C86"],"section":"Theme"}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { ch: 'all' };
+  }
+  tabStyle(on, accent) {
+    const base = 'height: 31px; padding: 0 14px; border-radius: 9999px; font-family: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0.03em; cursor: pointer; transition: all .15s ease; ';
+    return on
+      ? base + 'border: 1px solid ' + accent + '; background: rgba(79,109,140,0.10); color: ' + accent + ';'
+      : base + 'border: 1px solid #DCE0E7; background: transparent; color: #5B626C;';
+  }
+  renderVals() {
+    const accent = this.props.accent ?? '#4F6D8C';
+    const live = (this.props.mode ?? 'Demo') === 'Live';
+    const c = this.state.ch;
+    const set = (v) => () => this.setState({ ch: v });
+    return {
+      accent,
+      stateLabel: live ? 'LIVE' : 'DEMO MODE',
+      stateDot:  live ? '#3E7C86' : '#8A8F98',
+      stateInk:  live ? '#3E7C86' : '#5B626C',
+      stateLine: live ? 'rgba(62,124,134,0.30)' : '#DCE0E7',
+      stateFill: live ? 'rgba(62,124,134,0.08)' : '#FFFFFF',
+      sSocial: c === 'all' || c === 'social',
+      sSeo:    c === 'all' || c === 'seo',
+      sEmail:  c === 'all' || c === 'email',
+      tabAll:    this.tabStyle(c === 'all', accent),
+      tabSocial: this.tabStyle(c === 'social', accent),
+      tabSeo:    this.tabStyle(c === 'seo', accent),
+      tabEmail:  this.tabStyle(c === 'email', accent),
+      pickAll: set('all'), pickSocial: set('social'), pickSeo: set('seo'), pickEmail: set('email')
+    };
+  }
+}
+</script>
+</body>
+</html>
