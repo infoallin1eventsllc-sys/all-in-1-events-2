@@ -131,11 +131,27 @@ canary: a service-role row is invisible to anon reads, anon INSERT is rejected
 (42501), and an anon DELETE returns 204 having matched nothing — the canary
 survived. Canaries removed afterwards.
 
-**REMAINING — two steps for Otis:**
-1. Set `OWNER_PASSCODE` as a Supabase Edge Function secret. Until then the
-   portal shows its setup panel and no one can sign in.
-2. Delete `VITE_OWNER_PASSCODE` from the Vercel project. It no longer does
-   anything except sit readable in the shipped bundle.
+**DONE.** `OWNER_PASSCODE` is set and login is confirmed working end to end
+(token issued). PR #2 merged; the live site uses the server-side gate.
+
+One bug surfaced during setup and is fixed in `owner` v7: the stored secret was
+compared untrimmed while the submitted passcode was trimmed. Supabase's secret
+Value field is a multi-line textarea, so a trailing newline saves easily by
+accident — and the mismatch surfaced as "Incorrect passcode", pointing the
+blame at the operator instead of the whitespace. Both sides are trimmed now.
+
+Added a `selfcheck` action that reports the stored secret's SHAPE without
+disclosing it: length, whether stray whitespace was saved around it, whether it
+contains inner whitespace, and its first and last character. Enough to spot a
+paste mishap in one call; far too little to reconstruct the value. This is what
+diagnosed the above.
+
+**Remaining for Otis:**
+1. **Rotate the passcode.** The one in use came from an example in the session
+   transcript, so it is not private. Not urgent — it guards invoices, not money,
+   and the throttle blocks brute force — but it should not stay.
+2. Delete `VITE_OWNER_PASSCODE` from the Vercel project. Inert, but dead
+   credentials should not linger.
 
 ---
 

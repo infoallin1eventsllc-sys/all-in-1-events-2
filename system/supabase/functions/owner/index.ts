@@ -140,7 +140,13 @@ const invoiceToRow = (i: any) => ({
 /* --------------------------------------------------------------- login --- */
 
 async function handleLogin(sb: SupabaseClient, req: Request, passcode: unknown) {
-  const expected = Deno.env.get("OWNER_PASSCODE");
+  // Trim the stored secret. Supabase's secret Value field is a multi-line
+  // textarea, so a trailing newline is easy to save by accident — and since the
+  // submitted passcode is trimmed, an untrimmed secret could never match. That
+  // failure is indistinguishable from a wrong passcode, which makes it a
+  // miserable thing to debug. Leading/trailing whitespace in a passcode carries
+  // no value worth this cost.
+  const expected = Deno.env.get("OWNER_PASSCODE")?.trim();
   if (!expected) {
     // Say so plainly rather than rejecting every attempt as "wrong". A silent
     // permanent failure is exactly the bug this whole change exists to undo.
@@ -160,7 +166,8 @@ async function handleLogin(sb: SupabaseClient, req: Request, passcode: unknown) 
     return json({ ok: false, error: "too_many_attempts", retryAfterMinutes: THROTTLE_WINDOW_MINUTES }, 429);
   }
 
-  const ok = typeof passcode === "string" && constantTimeEqual(passcode, expected);
+  const submitted = typeof passcode === "string" ? passcode.trim() : "";
+  const ok = submitted.length > 0 && constantTimeEqual(submitted, expected);
   await sb.from("owner_login_attempts").insert({ client_hash: hash, succeeded: ok });
 
   if (!ok) {
@@ -188,7 +195,26 @@ Deno.serve(async (req) => {
   if (action === "login") return await handleLogin(sb, req, body.passcode);
 
   if (action === "status") {
-    return json({ ok: true, configured: !!Deno.env.get("OWNER_PASSCODE") });
+    const secret = Deno.env.get("OWNER_PASSCODE")?.trim();
+    return json({ ok: true, configured: !!secret });
+  }
+
+  // A deliberately non-revealing self-check: confirms the stored secret's shape
+  // without disclosing it, so a login that can never succeed is diagnosable
+  // without anyone reading the passcode aloud. It reports length, whether stray
+  // whitespace was saved around it, and its first and last character — enough
+  // to spot a paste mishap, far too little to reconstruct the value.
+  if (action === "selfcheck") {
+    const raw = Deno.env.get("OWNER_PASSCODE") ?? "";
+    return json({
+      ok: true,
+      configured: raw.trim().length > 0,
+      length: raw.trim().length,
+      hadSurroundingWhitespace: raw !== raw.trim(),
+      hasInnerWhitespace: /\s/.test(raw.trim()),
+      firstChar: raw.trim().slice(0, 1),
+      lastChar: raw.trim().slice(-1),
+    });
   }
 
   // Everything past this point needs a valid session.
