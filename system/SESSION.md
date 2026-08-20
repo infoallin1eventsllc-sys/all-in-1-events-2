@@ -24,6 +24,9 @@ Compact record of what was built and the current state, so work can resume later
 - **settings rows:** `business_profile`, `goals`, `agent` (model `claude-opus-5`, autonomy `draft`), `dashboard` (holds the dashboard passcode — retrieve with `select value->>'passcode' from settings where key='dashboard'`).
 
 ## Current state
+- **`system/PRELAUNCH.md` — the fix list to close BEFORE deploying anything.**
+  Otis asked to hold these and do them as one pass before go-live. Note #3
+  (RUN_SECRET) becomes a real spend risk the moment a key is configured.
 - **See `system/ARCHITECTURE.md`** — the one map of how the three repos connect,
   what config joins them, and the go-live order. Start there.
 - **Demo / mock mode.** No valid Anthropic key. Otis decided NOT to use his key for now.
