@@ -199,6 +199,45 @@ it is not lost.
 
 ---
 
+## 7. Client Answers — built, timelines need Otis's eye
+
+**Where:** `meridian-interface-website` → `src/data/clientExplainers.ts`,
+`src/components/ClientExplainers.tsx`
+
+Otis asked for a place to copy-paste an in-depth explanation when a client asks
+what a line on the invoice actually buys. Built as a **Client Answers** tab in
+the owner portal: the written answer for all ten catalogue services — what is
+included and why each piece matters, what it does for their business, what the
+price does **not** cover, typical timeline, and what the studio needs from them.
+Two copy formats (full email text, and three sentences for a text message), plus
+the same answer one click from the invoice line itself, carrying the rate
+actually billed.
+
+**Status: SHIPPED** to `main`, 17/17 diagnostic.
+
+**Open — needs Otis, not code:**
+- **The timelines are drafted, not confirmed.** "2 to 3 weeks" for a landing
+  page, "10 to 16 weeks" for a web app, and so on. These are reasonable but they
+  are mine. Anything pasted into a client email reads as a commitment, so he
+  should check each one against what he actually delivers and tell me what to
+  change. The tab carries an on-screen reminder to check before sending.
+
+---
+
+## 8. Old invoices predate the itemisation
+
+Any invoice created before the itemisation work shipped carries the old studio
+shorthand in its descriptions and has no deliverable bullets — the printable
+view therefore shows a bare one-line description where it should show what the
+client receives. Nothing is broken; the data simply predates the feature.
+
+**Fix:** rebuild those invoices from the catalogue. New ones carry deliverables
+automatically.
+
+**Status:** open, Otis's call — it only matters for invoices he intends to send.
+
+---
+
 ## Not pre-launch
 
 Phase 2 publishing channels — Meta, Google Business Profile, Google Ads,

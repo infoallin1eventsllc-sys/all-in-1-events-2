@@ -2,6 +2,52 @@
 
 Compact record of what was built and the current state, so work can resume later.
 
+---
+
+## ► START HERE (last updated end of Aug 20)
+
+**Read this block first. The sections below it are a running log and some of the
+older entries have been overtaken — where they disagree with this block, this
+block is right.**
+
+### Where things actually stand
+
+| Piece | State |
+|---|---|
+| **meridian-interface-website** | **LIVE** on Vercel at `meridian-interface-website.vercel.app`, deploying from `main`. All work is merged; nothing outstanding on a branch. |
+| **all-in-1-events-2** (this repo) | Working branch `claude/marketing-system-tech-stack-uds0mp`. Holds the marketing system in `system/` **and** the All in 1 Events *client* site at the root. |
+| **key-router** | Both PRs merged to `main`. **Not deployed to Render.** |
+| **Marketing system** | Deployed and scheduled, but in **mock mode** — it has produced **zero real AI outputs**. No API key configured, by Otis's decision. |
+| **Owner invoice portal** | Server-side auth, live and working. Invoices in Postgres behind RLS. |
+
+### ⚠️ Careful with this repo
+
+The **root** of this repo (`index.html`, `netlify.toml`) is the **All in 1 Events
+client site**, and it **auto-deploys to Netlify**. The Meridian work lives in
+`system/`. A change at the root publishes to a client's live site — check what
+you are touching before committing here.
+
+### The two security items still open for Otis
+
+1. **Rotate `OWNER_PASSCODE`.** The one in use came from an example in a session
+   transcript, so it is not private. Not urgent — it guards invoices, not money,
+   and failed logins throttle at 8 per 15 minutes — but it should not stay.
+2. **Delete `VITE_OWNER_PASSCODE` from the Vercel project.** Inert now, but a
+   dead credential sitting readable in a public bundle should not linger.
+
+### What to pick up next
+
+See **Open next steps** at the bottom of this file — it is current as of Aug 20.
+The one with teeth is **RUN_SECRET**: harmless today, a real spend risk the
+moment an API key exists.
+
+### Source-of-truth docs
+
+- **`system/ARCHITECTURE.md`** — how the three repos connect, and the go-live order.
+- **`system/PRELAUNCH.md`** — the numbered fix list, with what is done and what is not.
+
+---
+
 ## Who / what
 - **Owner:** Otis Williams — **Meridian Interface** (web/software studio). otis@meridianinterface.com · (281) 882-9198.
 - **Repo:** `infoallin1eventsllc-sys/all-in-1-events-2`, working branch **`claude/marketing-system-tech-stack-uds0mp`**.
@@ -155,9 +201,12 @@ Compact record of what was built and the current state, so work can resume later
   Project: `infoallin1eventsllc-7684s-projects/meridian-interface-website`.
 - The site is therefore LIVE with: the licensed video hero, the branded image
   fallbacks, the fixed dropdown chevron, and the owner portal reachable again.
-- **ACTION FOR OTIS:** set `VITE_OWNER_PASSCODE` in the Vercel project if he
-  wants the Invoice & Pricing Manager usable in production. Without it the
-  portal shows its setup panel — correct behaviour, but the tool stays locked.
+- ~~**ACTION FOR OTIS:** set `VITE_OWNER_PASSCODE` in the Vercel project.~~
+  **SUPERSEDED the same evening.** The passcode moved server-side entirely —
+  it is now a Supabase Edge Function secret named `OWNER_PASSCODE`, checked by
+  the `owner` function with a constant-time comparison and never sent to a
+  browser. `VITE_OWNER_PASSCODE` is dead and should be deleted from Vercel:
+  anything `VITE_`-prefixed is compiled into the pages the site serves.
 
 ### Two rendering bugs fixed this round
 1. **Every failed image impersonated another service.** All five image call
@@ -250,26 +299,131 @@ connected. ffmpeg + sharp install fine via npm in the scratchpad.
   Five items. Otis asked to hold them and do one pass before go-live.
   #3 (RUN_SECRET) becomes a real SPEND risk the moment a key is configured.
 
+## Aug 20 (late) — invoice manager: itemisation, four bug fixes, Client Answers
+
+All on `meridian-interface-website` `main`, all deployed.
+
+### Itemised what each line actually buys
+Otis, reading a real invoice: *"If a client asks to itemize and explain every
+item and what it does and what it's for, how will I do that? It needs to be
+itemized in letting the client know exactly what they're are getting."*
+
+- `InvoiceLineItem` gained `deliverables?: string[]` and `excluded?: string[]`.
+- Every catalogue add path now carries its deliverables onto the line; the
+  editor has a "What the client receives" row per item; the printable invoice
+  renders them as bullets.
+- Then he asked to rebuild the catalogue wording itself in plain language.
+  `mockData.ts` now carries `plainDeliverables` throughout. **Prices and scope
+  were not touched — only the words.** Studio shorthand ("contact routing, CMS
+  integration") means nothing to someone staring at a four-figure line.
+
+### Four defects found by full diagnostic — all fixed
+He reported "some of the components in the invoice pricing don't work." Three
+of the four presented identically: **Save appears to do nothing.**
+
+1. **Decimal tax/discount silently rejected.** `type="number"` with no `step`
+   defaults to `step=1`, so a browser refuses to submit a form containing
+   `8.25` — the Texas rate. Grand Total updated correctly throughout, which is
+   why the arithmetic always looked fine and the invoice simply never filed.
+2. **`step="50"` on the line rate** rejected any custom quote that was not a
+   multiple of fifty ($2,875) the same way.
+   Both surfaced only as a native tooltip pinned to a field usually scrolled
+   out of view. The form is `noValidate` now and validates in
+   `handleSaveInvoice`, rendering every rejection beside the button pressed.
+3. **Invoice ids collided after a delete.** The id came from
+   `invoices.length + 1`, so deleting one of three made the next invoice reuse
+   an existing number — and since saving upserts by id, it **overwrote the
+   invoice already filed under it**, silently. Now derived from the highest in
+   use, with a collision guard.
+4. **The printable invoice trapped the owner inside it.** `.animate-fadeIn`
+   used fill-mode `both`, which leaves a permanent `transform` on every page
+   container — and **an element with a transform becomes the containing block
+   for its `position: fixed` descendants.** So no overlay on the site was
+   anchored to the window. On a long invoice the action bar (Print / Save PDF
+   and Close) sat 596px above a scroll area already at `scrollTop: 0`.
+   Unreachable. Dropping the fill mode fixed every overlay site-wide; Escape
+   now closes the preview too.
+
+**THE LESSON IN #4 IS WORTH KEEPING:** `transform` on an ancestor silently
+breaks `position: fixed` for everything inside it. Any `animation: … both` or
+`forwards` that ends on a transform will do this permanently. If an overlay is
+mispositioned, check the ancestor chain for a non-`none` computed transform
+before touching the overlay's own CSS.
+
+### Client Answers — copy-ready explanations
+Otis: *"if the client asks for more in-depth on what they're paying for, can we
+create a section to where I can copy paste the information."*
+
+- New **`src/data/clientExplainers.ts`** — the written answer for all ten
+  catalogue services: what is included *and why each piece matters*, what it
+  does for their business, **what the price does not cover**, typical timeline,
+  and what the studio needs from them.
+- New **`src/components/ClientExplainers.tsx`** — a "Client Answers" tab in the
+  portal. Search (covers exclusions, not just titles), category filter, two
+  copy buttons per entry: full email-ready text (~2,600 chars, signed with the
+  studio's details) and a three-sentence version for a text message.
+- The same answer is **one click from the invoice line itself**, carrying the
+  rate actually billed rather than the catalogue range — and rendering nothing
+  when a hand-typed line matches no entry, because a dead button is worse than
+  no button.
+- **The timelines are drafted, not confirmed.** Otis was asked to check them
+  against what he actually commits to. If he has not, that is still open.
+
+### Diagnostics written (in scratchpad, not committed — rewrite if needed)
+`diag5.mjs` 26/26 on the invoice manager, `diag-answers.mjs` 17/17 on Client
+Answers, `regress-fixed.mjs` 9/10 site-wide on overlay anchoring.
+
+**METHOD NOTE, repeated enough times to be a rule:** across this session,
+**six** reported test failures were bad selectors in my own harness, not defects
+in the app — a regex that missed "Add Basic Logo", a too-broad `/ADD|\+/i`
+matching 23 elements, a delete selector reaching into the wrong table, a
+`/Copied/` that was case-sensitive against CSS-uppercased text, a button label
+guessed rather than read. **Read the real markup before believing a failure,
+and measure rather than reason** — the same discipline that corrected an
+earlier claim of "21 broken icons" down to the one that was real.
+
 ## Open next steps (not done)
 
-**Blocking, before any deploy — see `system/PRELAUNCH.md` for detail:**
-1. Mock-mode weekly report prints a content caption instead of a summary.
-2. 24 Unsplash images on the website are still hotlinked; self-host them.
-3. `RUN_SECRET` header on orchestrator/runner/report. Today they only burn
-   idempotent work; **once a key is configured, every unsolicited call spends
-   money.** Close this before go-live step 3, not after.
-4. Real logo PNG at `assets/meridian-logo.png` (card generator + console mark
-   still render the built monogram).
-5. Owner invoices live in browser `localStorage` with a client-side passcode —
-   one browser, no backup, not real access control. Move to Supabase before
-   real client pricing goes in.
+*(Current as of end of Aug 20. The site is already live, so these are live-site
+items, not pre-deploy ones.)*
 
-**Then, Otis's deploy steps (order in `system/ARCHITECTURE.md`):**
-- Merge `meridian-interface-website` PR #1 (owner-portal fix + video hero).
-- Vercel: import `meridian-interface-website`, Deploy. Zero config.
+**For Otis, no code needed:**
+1. **Rotate `OWNER_PASSCODE`** (Supabase → Edge Functions → Secrets). The value
+   in use came from a session transcript and is not private.
+2. **Delete `VITE_OWNER_PASSCODE` from Vercel.** Inert, but readable.
+3. **Check the Client Answers timelines** against what he actually commits to.
+   They were drafted, not confirmed with him.
+4. **Rebuild any invoice created before the itemisation shipped** — old ones
+   carry the studio shorthand and no deliverable bullets.
+
+**Code, in priority order:**
+1. **`RUN_SECRET` on orchestrator / runner / report.** The anon key satisfies
+   their JWT check, so anyone who reads it out of a browser bundle can trigger
+   a run. Harmless today; **the moment an API key or Key Router URL exists,
+   every unsolicited call spends money.** `public.invoke_edge()` already
+   centralises the cron-side call, so it is one header there plus one check per
+   function. **Do this before, not after, configuring a key.**
+2. **24 Unsplash hotlinks** on the website. Works today; breaks silently if
+   Unsplash changes a URL or rate-limits, and leaks visitor traffic. The hero
+   and its video are already licensed and self-hosted; this is the rest.
+3. **Mock-mode weekly report** prints a content caption instead of a summary —
+   the report prompt matches the mock's content branch first. Invisible in
+   production, but it makes the dashboard look broken in a demo. Needs a
+   `report` redeploy.
+4. **Real logo PNG** at `assets/meridian-logo.png`; the card generator and the
+   Key Router console still draw the built monogram.
+
+**The decision that gates everything else:**
+- **The API key.** The marketing system is deployed, scheduled and has produced
+  **zero real AI outputs**. Otis decided not to use his own key for now. Until
+  one exists — his, or a client's through Key Router — the system is a
+  well-tested demo. Per the `client-handoff-api-keys` rule, **never ship or
+  deploy on a client's behalf using Otis's own key.**
+
+**Deploy steps still outstanding:**
 - Render: Blueprint from `key-router`, set `KEYROUTER_AUTH_TOKEN` + `KEYS`.
-- Supabase secrets: `KEYROUTER_URL` + `KEYROUTER_AUTH_TOKEN`. Flips mock -> real,
-  no redeploy needed (functions already carry the seam as of Aug 20).
+- Supabase secrets: `KEYROUTER_URL` + `KEYROUTER_AUTH_TOKEN`. Flips mock → real
+  with no redeploy (the functions already carry the seam).
 
 **Later:**
 - Phase 2 channels: Meta / Google Business Profile / Google Ads / WordPress
