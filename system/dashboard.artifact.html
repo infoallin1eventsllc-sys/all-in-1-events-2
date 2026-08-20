@@ -1,0 +1,106 @@
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700;800&display=swap" rel="stylesheet"/>
+<title>Meridian Marketing Dashboard</title>
+<style>
+:root{--paper:#F5F4EF;--card:#fff;--ink:#23262B;--soft:#5B626C;--faint:#8A8F98;--line:#E7E5DD;--slate:#3E4C63;--slate2:#5B6472;--steel:#4F6D8C;--amber:#B4791F;--green:#3E7C86;}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(900px 500px at 12% -8%,rgba(62,76,99,.06),transparent 60%),#F5F4EF;font-family:Inter,system-ui,sans-serif;color:var(--ink);}
+h1,h3,h4,.bname{font-family:Sora,system-ui,sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:22px 20px 60px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.brand{display:flex;gap:12px;align-items:center}.bname{font-weight:700;font-size:18px}.bsub{color:var(--soft);font-size:13px}
+.badges{display:flex;gap:8px}.badge{font-size:12px;font-weight:600;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--soft)}
+.badge.on{color:#2f7d5b;border-color:#bfe3d0;background:#eefaf3}.badge.off{color:var(--amber);border-color:#eeddba;background:#fbf5e8}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}
+@media(max-width:760px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.tile{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px}
+.tile-val{font-family:Sora;font-weight:700;font-size:26px}.tile-label{color:var(--soft);font-size:12.5px;margin-top:2px}
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.span2{grid-column:span 2}@media(max-width:900px){.span2{grid-column:auto}}
+.panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 18px 40px -30px rgba(35,38,43,.4)}
+.panel h3{margin:0 0 12px;font-size:15px;display:flex;align-items:center;gap:8px}
+.count{background:#eef1f6;color:var(--slate);border-radius:999px;font-size:12px;padding:1px 9px;font-family:Inter}
+.queue{display:flex;flex-direction:column;gap:12px}
+.content-card{display:flex;gap:14px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fafaf7}
+.thumb{width:120px;flex:0 0 120px;background-size:cover;background-position:center;min-height:100px}
+.content-body{padding:12px 14px}.content-body h4{margin:6px 0 4px;font-size:15px}.content-body p{margin:0;color:var(--soft);font-size:13.5px;line-height:1.5}
+.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pill{font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;background:#eef1f6;color:var(--slate)}
+.pill.ghost{background:#fff;border:1px solid var(--line);color:var(--soft)}
+.pill.amber{background:#fbf5e8;color:var(--amber)}.pill.green{background:#eefaf3;color:#2f7d5b}
+.msg{border-top:1px solid var(--line);padding:11px 0}.msg:first-of-type{border-top:0}.msg strong{display:block;margin:5px 0 3px;font-size:13.5px}
+.msg p{margin:0;color:var(--soft);font-size:13px}.to{color:var(--faint);font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}th{text-align:left;color:var(--faint);font-weight:600;font-size:12px;padding:6px 8px}
+td{padding:8px;border-top:1px solid var(--line)}
+.run{display:flex;align-items:center;gap:9px;padding:7px 0;font-size:13px}
+.dot{width:8px;height:8px;border-radius:999px;background:#ccc;flex:0 0 8px}.dot.success{background:#3e9c72}.dot.error{background:#c0563f}.dot.running{background:#c9a227}
+.run-time{color:var(--faint);font-size:12px;font-variant-numeric:tabular-nums}.run-sum{color:var(--soft)}
+.report p{color:var(--soft);line-height:1.6;font-size:14px;white-space:pre-wrap}
+.empty{color:var(--faint);font-size:13px;font-style:italic}
+.foot{text-align:center;color:var(--faint);font-size:12px;margin-top:26px}
+.gate{max-width:420px;margin:16vh auto;text-align:center}.gate h1{font-size:22px}.gate code{background:#eef1f6;padding:2px 6px;border-radius:6px}
+.mono{display:inline-flex}
+
+.thumb2{width:150px;flex:0 0 150px;display:flex;align-items:stretch}
+.thumb2 svg{width:150px;height:150px;border-right:1px solid #EAE8E0}
+</style>
+<div class="wrap"><header class="top"><div class="brand"><div class="mono"><svg width="30" height="30" viewBox="0 0 64 64" fill="none"><defs><linearGradient id="m" x1="8" y1="12" x2="56" y2="52" gradientUnits="userSpaceOnUse"><stop stop-color="#3E4C63"/><stop offset="1" stop-color="#5B6472"/></linearGradient></defs><path d="M11 52V16.5C11 13.5 14.7 12.2 16.6 14.5L32 33L47.4 14.5C49.3 12.2 53 13.5 53 16.5V52H45V27L34.8 39.2C33.4 40.9 30.6 40.9 29.2 39.2L19 27V52H11Z" fill="url(#m)"/></svg></div><div><div class="bname">Meridian Interface</div><div class="bsub">Marketing Dashboard</div></div></div><div class="badges"><span class="badge off">○ Demo mode</span><span class="badge muted">auto-branded cards</span></div></header>
+<div class="kpis"><div class="tile"><div class="tile-val">2</div><div class="tile-label">Leads</div></div><div class="tile"><div class="tile-val">$0</div><div class="tile-label">Open pipeline</div></div><div class="tile"><div class="tile-val">3</div><div class="tile-label">Content to approve</div></div><div class="tile"><div class="tile-val">2</div><div class="tile-label">Emails drafted</div></div><div class="tile"><div class="tile-val">0</div><div class="tile-label">Tasks queued</div></div></div>
+<div class="grid">
+<section class="panel span2"><h3>Approval queue <span class="count">3</span></h3><div class="queue"><article class="card content-card"><div class="thumb2"><svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+  <defs>
+    <linearGradient id="mg" x1="120" y1="140" x2="1000" y2="980" gradientUnits="userSpaceOnUse"><stop stop-color="#3E4C63"/><stop offset="1" stop-color="#5B6472"/></linearGradient>
+    <radialGradient id="bg" cx="18%" cy="0%" r="90%"><stop offset="0" stop-color="#EEF1F6"/><stop offset="1" stop-color="#F5F4EF"/></radialGradient>
+  </defs>
+  <rect width="1080" height="1080" fill="url(#bg)"/>
+  <circle cx="1010" cy="1030" r="300" fill="#3E4C63" opacity="0.05"/>
+  <!-- monogram -->
+  <g transform="translate(80,84) scale(1.15)"><path d="M11 52V16.5C11 13.5 14.7 12.2 16.6 14.5L32 33L47.4 14.5C49.3 12.2 53 13.5 53 16.5V52H45V27L34.8 39.2C33.4 40.9 30.6 40.9 29.2 39.2L19 27V52H11Z" fill="url(#mg)"/></g>
+  <text x="152" y="118" font-family="'Helvetica Neue',Arial,sans-serif" font-size="26" font-weight="700" fill="#23262B" letter-spacing="0.5">Meridian Interface</text>
+  <!-- kicker -->
+  <text x="80" y="254" font-family="'Helvetica Neue',Arial,sans-serif" font-size="24" font-weight="700" fill="#4F6D8C" letter-spacing="3">TIP OF THE WEEK</text>
+  <text x="80" y="332" font-family="'Helvetica Neue',Arial,sans-serif" font-size="78" font-weight="800" fill="#23262B" letter-spacing="-1">Why your</text><text x="80" y="424" font-family="'Helvetica Neue',Arial,sans-serif" font-size="78" font-weight="800" fill="#23262B" letter-spacing="-1">business needs</text><text x="80" y="516" font-family="'Helvetica Neue',Arial,sans-serif" font-size="78" font-weight="800" fill="#23262B" letter-spacing="-1">an always-on</text><text x="80" y="608" font-family="'Helvetica Neue',Arial,sans-serif" font-size="78" font-weight="800" fill="#23262B" letter-spacing="-1">website</text>
+  <rect x="82" y="670" width="96" height="8" rx="4" fill="#3E4C63"/>
+  <!-- footer -->
+  <text x="80" y="1010" font-family="'Helvetica Neue',Arial,sans-serif" font-size="26" font-weight="700" fill="#23262B" letter-spacing="0.5">Meridian Interface</text>
+  <text x="80" y="1046" font-family="'Helvetica Neue',Arial,sans-serif" font-size="22" fill="#5B626C">Websites · Apps · Marketing Systems</text>
+</svg></div><div class="content-body"><div class="row"><span class="pill">instagram</span><span class="pill ghost">tip</span><span class="pill amber">awaiting approval</span></div><h4>Why your business needs an always-on website</h4><p>Your site should be booking work around the clock — not just sitting there. We build fast, modern sites wired to an always-on marketing system.</p></div></article><article class="card content-card"><div class="thumb2"><svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+  <defs>
+    <linearGradient id="mg" x1="120" y1="140" x2="1000" y2="980" gradientUnits="userSpaceOnUse"><stop stop-color="#3E4C63"/><stop offset="1" stop-color="#5B6472"/></linearGradient>
+    <radialGradient id="bg" cx="18%" cy="0%" r="90%"><stop offset="0" stop-color="#EEF1F6"/><stop offset="1" stop-color="#F5F4EF"/></radialGradient>
+  </defs>
+  <rect width="1080" height="1080" fill="url(#bg)"/>
+  <circle cx="1010" cy="1030" r="300" fill="#3E4C63" opacity="0.05"/>
+  <!-- monogram -->
+  <g transform="translate(80,84) scale(1.15)"><path d="M11 52V16.5C11 13.5 14.7 12.2 16.6 14.5L32 33L47.4 14.5C49.3 12.2 53 13.5 53 16.5V52H45V27L34.8 39.2C33.4 40.9 30.6 40.9 29.2 39.2L19 27V52H11Z" fill="url(#mg)"/></g>
+  <text x="152" y="118" font-family="'Helvetica Neue',Arial,sans-serif" font-size="26" font-weight="700" fill="#23262B" letter-spacing="0.5">Meridian Interface</text>
+  <!-- kicker -->
+  <text x="80" y="254" font-family="'Helvetica Neue',Arial,sans-serif" font-size="24" font-weight="700" fill="#4F6D8C" letter-spacing="3">WHAT WE DO</text>
+  <text x="80" y="332" font-family="'Helvetica Neue',Arial,sans-serif" font-size="78" font-weight="800" fill="#23262B" letter-spacing="-1">We build sites</text><text x="80" y="424" font-family="'Helvetica Neue',Arial,sans-serif" font-size="78" font-weight="800" fill="#23262B" letter-spacing="-1">wired to a</text><text x="80" y="516" font-family="'Helvetica Neue',Arial,sans-serif" font-size="78" font-weight="800" fill="#23262B" letter-spacing="-1">marketing</text><text x="80" y="608" font-family="'Helvetica Neue',Arial,sans-serif" font-size="78" font-weight="800" fill="#23262B" letter-spacing="-1">system</text>
+  <rect x="82" y="670" width="96" height="8" rx="4" fill="#3E4C63"/>
+  <!-- footer -->
+  <text x="80" y="1010" font-family="'Helvetica Neue',Arial,sans-serif" font-size="26" font-weight="700" fill="#23262B" letter-spacing="0.5">Meridian Interface</text>
+  <text x="80" y="1046" font-family="'Helvetica Neue',Arial,sans-serif" font-size="22" fill="#5B626C">Websites · Apps · Marketing Systems</text>
+</svg></div><div class="content-body"><div class="row"><span class="pill">instagram</span><span class="pill ghost">post</span><span class="pill amber">awaiting approval</span></div><h4>We build sites wired to a marketing system</h4><p>Websites that don’t just look good — they capture leads and follow up automatically, so you never lose a customer to a slow reply.</p></div></article><article class="card content-card"><div class="thumb2"><svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+  <defs>
+    <linearGradient id="mg" x1="120" y1="140" x2="1000" y2="980" gradientUnits="userSpaceOnUse"><stop stop-color="#3E4C63"/><stop offset="1" stop-color="#5B6472"/></linearGradient>
+    <radialGradient id="bg" cx="18%" cy="0%" r="90%"><stop offset="0" stop-color="#EEF1F6"/><stop offset="1" stop-color="#F5F4EF"/></radialGradient>
+  </defs>
+  <rect width="1080" height="1080" fill="url(#bg)"/>
+  <circle cx="1010" cy="1030" r="300" fill="#3E4C63" opacity="0.05"/>
+  <!-- monogram -->
+  <g transform="translate(80,84) scale(1.15)"><path d="M11 52V16.5C11 13.5 14.7 12.2 16.6 14.5L32 33L47.4 14.5C49.3 12.2 53 13.5 53 16.5V52H45V27L34.8 39.2C33.4 40.9 30.6 40.9 29.2 39.2L19 27V52H11Z" fill="url(#mg)"/></g>
+  <text x="152" y="118" font-family="'Helvetica Neue',Arial,sans-serif" font-size="26" font-weight="700" fill="#23262B" letter-spacing="0.5">Meridian Interface</text>
+  <!-- kicker -->
+  <text x="80" y="300" font-family="'Helvetica Neue',Arial,sans-serif" font-size="24" font-weight="700" fill="#4F6D8C" letter-spacing="3">MERIDIAN INTERFACE</text>
+  <text x="80" y="378" font-family="'Helvetica Neue',Arial,sans-serif" font-size="78" font-weight="800" fill="#23262B" letter-spacing="-1">A slow website</text><text x="80" y="470" font-family="'Helvetica Neue',Arial,sans-serif" font-size="78" font-weight="800" fill="#23262B" letter-spacing="-1">is costing you</text><text x="80" y="562" font-family="'Helvetica Neue',Arial,sans-serif" font-size="78" font-weight="800" fill="#23262B" letter-spacing="-1">customers</text>
+  <rect x="82" y="624" width="96" height="8" rx="4" fill="#3E4C63"/>
+  <!-- footer -->
+  <text x="80" y="1010" font-family="'Helvetica Neue',Arial,sans-serif" font-size="26" font-weight="700" fill="#23262B" letter-spacing="0.5">Meridian Interface</text>
+  <text x="80" y="1046" font-family="'Helvetica Neue',Arial,sans-serif" font-size="22" fill="#5B626C">Websites · Apps · Marketing Systems</text>
+</svg></div><div class="content-body"><div class="row"><span class="pill">instagram</span><span class="pill ghost">post</span><span class="pill amber">awaiting approval</span></div><h4>A slow website is costing you customers</h4><p>Every extra second of load time sends people to a competitor. Let’s fix that — fast, modern, and built to convert.</p></div></article></div></section>
+<section class="panel"><h3>Drafted messages</h3><div class="msg"><div class="row"><span class="pill">email</span><span class="pill amber">draft</span><span class="to">→ dana@coleflorals.com</span></div><strong>Thanks for reaching out</strong><p>Hi Dana — thanks for getting in touch! I’d love to help modernize the florist site and get it booking for you. What’s your timeline?</p></div><div class="msg"><div class="row"><span class="pill">email</span><span class="pill amber">draft</span><span class="to">→ marcus@bellfitness.co</span></div><strong>Thanks for reaching out</strong><p>Hi Marcus — congrats on the second location! Happy to build a site plus automatic lead follow-up. Want to grab 15 minutes this week?</p></div></section>
+<section class="panel span2"><h3>Recent leads</h3><table><thead><tr><th>Name</th><th>Email</th><th>Source</th><th>Stage</th></tr></thead><tbody><tr><td>Dana Cole</td><td>dana@coleflorals.com</td><td><span class="pill ghost">website</span></td><td><span class="pill">lead</span></td></tr><tr><td>Marcus Bell</td><td>marcus@bellfitness.co</td><td><span class="pill ghost">referral</span></td><td><span class="pill">lead</span></td></tr></tbody></table></section>
+<section class="panel"><h3>How images work</h3><p style="color:#5B626C;font-size:13.5px;line-height:1.6">Every post gets its own <strong>auto-branded card</strong> (shown left) generated in your slate-on-ivory brand — no stock photos needed. When you add real photos/screenshots to the media library, matching posts use those instead.</p></section>
+</div>
+<footer class="foot">Meridian Interface · snapshot · cards generated in-brand</footer></div>
