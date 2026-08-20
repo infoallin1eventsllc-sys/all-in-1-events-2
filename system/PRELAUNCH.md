@@ -34,6 +34,14 @@ for something no one sees in production.
 
 ## 2. Website photography is hotlinked from a third party
 
+> **The hero is now settled.** Aug 20: replaced with Adobe Stock 337907436,
+> licensed to the Meridian account (free collection), and self-hosted along
+> with the video loop derived from it. The previous hero was a CG render of
+> unknown provenance that shipped with the Google AI Studio export.
+> Provenance for everything is recorded in
+> `meridian-interface-website/public/images/CREDITS.md`.
+> What remains below is the *rest* of the site's imagery.
+
 **Where:** `meridian-interface-website`, 24 images from `images.unsplash.com`
 
 **What happens:** The site's visual identity is served by a host we do not
