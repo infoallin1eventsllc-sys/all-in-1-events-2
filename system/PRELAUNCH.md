@@ -84,6 +84,30 @@ generator and the console mark to match.
 
 ---
 
+## 5. Owner invoices live in the browser, not on a server
+
+**Where:** `meridian-interface-website` → `OwnerInvoiceView.tsx`
+
+**What happens:** The Internal Invoice & Pricing Manager stores invoices in
+`localStorage`, and its passcode is checked in the browser. That means:
+
+- The data exists only in whichever browser created it. Clearing site data, or
+  switching to a phone or another machine, loses it. There is no backup.
+- The passcode is a privacy screen, not security. Anyone using the device, or
+  reading the site's JavaScript, can reach the records.
+
+The portal now says this on screen, so it is at least not a surprise. But it is
+a decision to make **before real client pricing goes in**, not after.
+
+**Fix:** Move invoices to the Supabase backend that already exists — a table
+plus RLS, reusing the same service-role pattern as the CRM. The portal keeps
+working; it just stops being the only copy.
+
+**Status:** open. The lockout that made this visible is fixed
+(`meridian-interface-website` PR #1); the storage question is untouched.
+
+---
+
 ## Not pre-launch
 
 Phase 2 publishing channels — Meta, Google Business Profile, Google Ads,
