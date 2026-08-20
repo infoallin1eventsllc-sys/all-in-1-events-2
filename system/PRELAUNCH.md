@@ -1,5 +1,10 @@
 # Pre-launch fix list
 
+> **Status Aug 20 (evening):** the website is now **deployed to Vercel
+> production** (PR #1 merged, deploy green). These items are therefore live-site
+> items, not pre-deploy ones. Item 3 (RUN_SECRET) is still the one that turns
+> into a real spend risk the moment an API key is configured.
+
 Things to fix **before** deploying the website or Key Router. Nothing here
 blocks development; all of it is worth closing before the first real visitor or
 the first real API key.

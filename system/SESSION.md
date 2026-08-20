@@ -147,6 +147,37 @@ Compact record of what was built and the current state, so work can resume later
   instead of a summary, because the report prompt matches the mock's content
   branch. Disappears with a real key; metrics in the same report are correct.
 
+## Aug 20 (evening) — DEPLOYED TO VERCEL
+
+- **`meridian-interface-website` PR #1 MERGED** (83d68aa). Vercel was already
+  connected to the repo and building preview deploys from branches; merging to
+  `main` triggered the **production deploy, which completed successfully**.
+  Project: `infoallin1eventsllc-7684s-projects/meridian-interface-website`.
+- The site is therefore LIVE with: the licensed video hero, the branded image
+  fallbacks, the fixed dropdown chevron, and the owner portal reachable again.
+- **ACTION FOR OTIS:** set `VITE_OWNER_PASSCODE` in the Vercel project if he
+  wants the Invoice & Pricing Manager usable in production. Without it the
+  portal shows its setup panel — correct behaviour, but the tool stays locked.
+
+### Two rendering bugs fixed this round
+1. **Every failed image impersonated another service.** All five image call
+   sites fell back to one hard-coded Unsplash photo — the *dashboards* shot. A
+   Web Design card whose photo failed rendered a dashboard under a "Custom Web
+   Design & Development" heading. The fallback was itself an Unsplash URL, so
+   in the only failure that actually happens (Unsplash unreachable) it failed
+   too — it could only ever produce a wrong image, never a working one. Now a
+   shared `ImageWithFallback` renders a branded panel with the item's own icon
+   and label. No network, no other service's photo.
+2. **`expand_more` was painted across the service dropdown** in 24px type.
+   The subset font's cmap covers only `' _abcdefghiklmnoprstuvwy'` — **j, q, x,
+   z are absent** — so the `x` in "e(x)pand_more" cannot map, the ligature never
+   forms, and the browser paints the word. It is the ONLY icon name on the site
+   containing one of those letters. Replaced with an inline SVG chevron.
+   METHOD WORTH REUSING: measured rather than reasoned — walked every Material
+   Symbol span and compared rendered width to font size. A resolved ligature is
+   ~1em square; raw text is far wider. My font-table reading had wrongly claimed
+   21 broken icons; the measurement found exactly 1.
+
 ## Aug 20 — merges, portal lockout, video hero
 
 ### Merged
