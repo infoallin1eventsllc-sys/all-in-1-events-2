@@ -116,8 +116,26 @@ a decision to make **before real client pricing goes in**, not after.
 plus RLS, reusing the same service-role pattern as the CRM. The portal keeps
 working; it just stops being the only copy.
 
-**Status:** open. The lockout that made this visible is fixed
-(`meridian-interface-website` PR #1); the storage question is untouched.
+**Status: BUILT, awaiting one secret.** Aug 20: `owner_invoices` table created
+behind deny-by-default RLS; `owner` edge function (v1, verify_jwt=false)
+deployed. The passcode is now compared server-side against a Supabase secret
+using a constant-time comparison; a successful login returns an HMAC-signed
+token with an 8h expiry held in sessionStorage. Failures throttle at 8 per 15
+minutes, keyed by a salted hash of the caller IP. Website side is
+`src/lib/ownerStore.ts` + the rewired `OwnerInvoiceView`, on branch
+`claude/owner-portal-server-auth`.
+
+**Verified live:** login with no passcode configured -> 503 `not_configured`;
+list/save/delete without a token -> 401; a forged token -> 401. RLS proven by
+canary: a service-role row is invisible to anon reads, anon INSERT is rejected
+(42501), and an anon DELETE returns 204 having matched nothing — the canary
+survived. Canaries removed afterwards.
+
+**REMAINING — two steps for Otis:**
+1. Set `OWNER_PASSCODE` as a Supabase Edge Function secret. Until then the
+   portal shows its setup panel and no one can sign in.
+2. Delete `VITE_OWNER_PASSCODE` from the Vercel project. It no longer does
+   anything except sit readable in the shipped bundle.
 
 ---
 
