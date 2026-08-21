@@ -1,0 +1,118 @@
+---
+name: meridian-stack
+description: Map of Otis's Claude tooling — which plugins, connectors and skills are enabled on this account, which tool to reach for per job (design, marketing, events ops, client work), and what is NOT available so you stop hunting for it. Use this skill BEFORE telling Otis a capability is missing, before searching the MCP or plugin registry, before proposing a tool or workflow, and whenever a request touches design, mockups, UI, branding, fonts, 3D or venue layouts, social posting, CRM, analytics, or client deliverables. Also use it when Otis asks what he has, what to enable, why a slash command didn't resolve, or how to set up a new project — the answers are here and rediscovering them wastes a whole session.
+---
+
+# Otis's Claude stack
+
+Inventory snapshot: **20 Aug 2026**. Counts drift; the routing advice does not.
+
+Otis runs **All in 1 Events LLC** (luxury event production — photo booths,
+lighting, VIP lounges, planning) and **Meridian Digital Design Studio LLC**
+(design and marketing systems for clients). Tooling questions almost always
+trace back to one of those two.
+
+## Reach for these first
+
+Match the job, not the brand name. Everything below is on this account.
+
+| Job | Reach for |
+|---|---|
+| Reference how real apps solve a UI problem | **Mobbin** — `search_screens`, `search_flows`, `search_sections` |
+| Read an existing design, or push code into Figma | **Figma** — `get_design_context`, `use_figma`, `get_variable_defs` |
+| Animation and motion design | `figma:figma-use-motion`, `figma:figma-implement-motion` |
+| Multi-artboard mockups Otis will hand-edit | The bundled `design` skill (Claude Design canvas) |
+| Critique, design system, a11y audit, dev handoff, UX copy | `design:*` plugin skills |
+| Polish or audit a real product surface | The `impeccable` skill — Otis's own design vocabulary |
+| Charts, dashboards, stat tiles | The bundled `dataviz` skill |
+| Find or preview a typeface | **Adobe** — `font_search`, `font_recommend`, `font_preview` |
+| Photo/video edit, background removal, vectorize | **Adobe for creativity** |
+| Client-facing marketing collateral, bulk variants | **Canva** — `generate-design`, `create-design-from-brand-template` |
+| Generate UI from a prompt, iterate visually | **Magic Patterns** |
+| Wireframes, flowcharts, journey maps | **Whimsical** *(installed — usually needs enabling per chat)* |
+| Venue floor plans, lounge layouts, truss/rigging | **Trimble SketchUp** — `build_model` |
+| 3D scene in a browser | **Three.js 3D Viewer** — `show_threejs_scene` |
+| Brand voice and tone enforcement | The `brand-voice` plugin |
+| Schedule/publish social across 28+ platforms | The `postiz` plugin |
+| Marketing system, CRM, approval queue in this repo | The `meridian-marketing` skill — read it before touching `system/` |
+| Letter asking a client for credentials or a next step | The `meridian-client-letter` skill |
+| Ad/analytics data pull | **Supermetrics** — 150+ sources |
+| Leads, deals, event projects | **monday.com** + the `monday-crm` plugin |
+| Database, auth, edge functions | **Supabase** |
+
+## Do not go looking for these
+
+Confirmed absent as of this snapshot. Say so plainly rather than searching:
+
+- **No Higgsfield MCP.** Not in the connector directory.
+- **No Google Stitch MCP.** Stitch is real, but ships no MCP server. Its Figma
+  export is the bridge — Stitch → Figma → read with `get_design_context`.
+- **No "Nano Banana" connector.** That's a nickname for a Gemini image model,
+  not a product with an MCP endpoint.
+- **No `motion.dev` skill and no `frontend-design` skill.** For animation use
+  the Figma motion skills above. For product-surface design use `impeccable`.
+- **No 21st.dev connector.** Its density idiom can be reproduced by hand;
+  Mobbin is the better reference source.
+
+When a genuinely new tool is asked about, check `SearchMcpRegistry` once and
+report the result. Do not promise to install anything — see the next section.
+
+## Three facts that repeatedly cost time
+
+**Installed is not the same as enabled in this chat.** Roughly half of Otis's
+connectors sit at `enabledInChat: false` — their tools never load, so they look
+missing. Whimsical, Webflow, Vercel, Firecrawl, Slack and HubSpot have all been
+in this state. Before concluding a connector is absent, check `ListConnectors`
+and look at that field, then tell him to toggle it on in the chat's connector
+settings.
+
+**A remote session cannot install connectors or plugins.** Enabling happens at
+claude.ai → Settings → Connectors / Capabilities, or `claude mcp add` in a local
+terminal. Offering to install from a cloud session is a promise that cannot be
+kept.
+
+**Plugin count is the usual root cause of "the skill didn't trigger."** Every
+enabled plugin loads its skill descriptions into every session and competes for
+attention. Otis had 78 enabled at snapshot time — Twilio alone contributed 56
+skill descriptions, and `signoz` and `carta-investors` install session hooks
+that run regardless. When a slash command fails to resolve, suspect noise before
+suspecting absence, and point him at the tune-up checklist rather than debugging
+the command.
+
+## Skills already on the account
+
+These sync from claude.ai and load in **every** project, so never suggest
+installing them:
+
+`impeccable` · `canvas-design` · `algorithmic-art` · `theme-factory` ·
+`brand-guidelines` · `web-artifacts-builder` · `docx` · `pptx` · `xlsx` ·
+`pdf` · `doc-coauthoring` · `internal-comms` · `meridian-client-letter` ·
+`client-handoff-api-keys` · `mcp-builder` · `skill-creator` · `learn` ·
+`morning` · `slack-gif-creator`
+
+Another ~15 ship inside the Claude Code CLI itself (`design`, `dataviz`,
+`artifact-design`, `artifact-diagramming`, `artifact-capabilities`,
+`code-review`, `security-review`, `init`, `run`, `loop`, `simplify`,
+`claude-api`, `update-config`, `keybindings-help`, `fewer-permission-prompts`).
+Project-local: `meridian-marketing`, and `session-start-hook` on his machine.
+
+## Working preferences observed
+
+- He asks in fragments — `21st.dev`, `/motion.dev`, `higgsfield mcp`. Treat a
+  bare product name as "what can I do with this here," answer the capability
+  question directly, and say plainly when the thing does not exist.
+- He values the honest negative. "That isn't real" saves him more time than a
+  hedged maybe.
+- Design work should be grounded in his actual repos, never invented. The two
+  live design systems are documented in `references/design-tokens.md`.
+- He will ask for something and change direction mid-turn. Deliver what is
+  finished, then follow the new direction — do not silently drop the old work.
+
+## Full inventory
+
+Read these only when the summary above is not enough:
+
+- `references/connectors.md` — all 24 connectors with enabled-in-chat state.
+- `references/plugins.md` — all 78 plugins, grouped, with a keep/drop call.
+- `references/design-tokens.md` — the palettes and type ramps of Otis's two
+  shipped design systems, for any work that must match them.
