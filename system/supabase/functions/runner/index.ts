@@ -104,6 +104,9 @@ async function generateContent(sb: SupabaseClient, task: Task) {
   const channel = String(task.payload.channel ?? "content");
   const kind = String(task.payload.kind ?? "post");
   const topic = String(task.payload.topic ?? "an update for our audience");
+  // Which customer profile this piece is aimed at. Stored so `analyze` can
+  // report effort per profile instead of guessing from the wording.
+  const icp = task.payload.icp ? String(task.payload.icp) : null;
 
   // Load the shared business context so every draft is written FROM the
   // business — its buyers, services, prices, proof, and rules — rather than
@@ -137,7 +140,7 @@ async function generateContent(sb: SupabaseClient, task: Task) {
     channel, kind, title, body, image_url: imageUrl,
     status: autonomy === "auto" ? "approved" : "pending_approval",
     created_by: "agent",
-    meta: { mocked: out.mocked, topic },
+    meta: { mocked: out.mocked, topic, icp },
   }).select("id").single();
 
   return { content_item_id: data?.id, status: autonomy === "auto" ? "approved" : "pending_approval", mocked: out.mocked };

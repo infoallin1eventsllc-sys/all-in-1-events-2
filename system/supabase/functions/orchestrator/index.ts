@@ -78,6 +78,9 @@ Deno.serve(async (req) => {
       `You plan a small batch of concrete marketing tasks each run. Be practical and non-repetitive. ` +
       `When planning generate_content tasks, set payload.topic to a SPECIFIC angle aimed at one of ` +
       `the customer profiles above (e.g. their pains or buying triggers) — never a generic "update for our audience". ` +
+      `Also set payload.icp to the exact name of the customer profile you are targeting, so effort per profile ` +
+      `can be measured later. If a "What actually happened" section appears above, treat its guidance as ` +
+      `instructions about THIS cycle, not background reading. ` +
       `Only use these task types: generate_content, send_email, send_sms, publish_content, follow_up_lead. ` +
       `Respect autonomy="${(agent as Record<string, unknown>).autonomy}": in "draft" mode, prefer generate_content and follow_up_lead ` +
       `(a human approves before anything is sent/published). Never invent contact details.`;

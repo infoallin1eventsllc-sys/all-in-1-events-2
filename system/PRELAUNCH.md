@@ -284,6 +284,49 @@ their own approvals.
 
 ---
 
+## 10. The loop is closed — measurement now reaches the next plan
+
+**Where:** `system/supabase/functions/analyze/`, `_shared/context.ts`,
+migration `0007`
+
+The system could plan, write and publish, but its only output about results was
+a weekly report written for a human. Nothing it learned ever reached the next
+plan, so every cycle began from the same standing instructions.
+
+`analyze` closes that. It aggregates real outcomes per channel from the CRM,
+writes them to `settings.performance`, and the shared context layer renders
+them into every planning and writing prompt. Scheduled at 12:30 UTC daily —
+half an hour before the orchestrator plans, so each plan is made with the
+latest numbers already in front of it.
+
+**On cost-per-acquisition.** The reference architecture computes CAC by
+channel. CAC needs ad spend, and there is none here by deliberate decision.
+Rather than divide by zero or invent a number, `settings.ad_spend` is an empty
+seam: enter real spend and CAC becomes real. The one genuine cost that *is*
+measurable — what the AI itself burns — is computed from `agent_runs` token
+counts against `settings.model_rates`, and reads $0.00 while in mock mode.
+
+**The discipline that makes it worth having:** every claim is gated on sample
+size. Fewer than 10 attributable leads and it refuses to rank channels; fewer
+than 3 published posts and a channel is not judged at all. `leads_per_post` is
+`null`, not a flattering zero, when nothing has been published. Leads whose
+source is not one of the system's channels are excluded from its performance
+and reported separately, so the numbers can never take credit for the website.
+
+**Its first real finding was uncomfortable and correct:** nine drafts, nothing
+ever published, and all four leads in the window came from outside the system.
+The guidance it wrote back was *"do not plan more content volume — the
+bottleneck is approval and publishing, not writing."*
+
+**Status: SHIPPED** (analyze v1, orchestrator v13, runner v15). Verified live:
+the analyzer ran against real data, the orchestrator planned cleanly with the
+new section in its prompt, and the rendered block was confirmed word for word.
+
+**Open for Otis:** the approval queue is the bottleneck the system just
+identified. Nine items are waiting.
+
+---
+
 ## Not pre-launch
 
 Phase 2 publishing channels — Meta, Google Business Profile, Google Ads,

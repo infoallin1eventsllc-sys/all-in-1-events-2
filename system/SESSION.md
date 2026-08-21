@@ -469,6 +469,43 @@ It only ever needed a `report` redeploy, which this change required anyway.
 **Setup guide: `system/CHANNELS.md`** — what is built, what each channel needs,
 and how long each approval realistically takes.
 
+## Aug 21 (later still) — the loop is closed
+
+Gap #3 from the competitor teardown: analytics feeding back.
+
+**New `analyze` function (v1)** aggregates real per-channel outcomes, writes
+`settings.performance`, and `_shared/context.ts` renders it into every planning
+and writing prompt. Cron at 12:30 UTC, thirty minutes before the orchestrator
+plans, so each plan sees the latest numbers. Migration `0007` adds the
+`v_channel_performance` view plus the `performance`, `ad_spend` and
+`model_rates` settings rows.
+
+**CAC honestly handled.** Their diagram computes cost-per-acquisition; CAC needs
+ad spend and there is none here by deliberate decision. `ad_spend` is an empty
+seam — enter spend, CAC becomes real. What IS measurable is the AI's own cost,
+priced from `agent_runs` tokens against `model_rates` ($0.00 in mock mode).
+
+**Sample-size gating is the point.** <10 attributable leads → refuses to rank
+channels. <3 published posts → does not judge that channel. `leads_per_post` is
+`null` rather than a flattering 0 when nothing is published. Leads from sources
+outside the channel registry are excluded from performance and reported
+separately, so the system can never take credit for the website's leads.
+
+**ICP tagging closes the effort side:** orchestrator sets `payload.icp` on
+content tasks (v13), runner persists it to `content_items.meta.icp` (v15),
+analyze aggregates `effort_by_customer_profile`. Note this measures EFFORT per
+profile, not leads per profile — the latter needs per-link tracking that does
+not exist.
+
+**First real finding, and it stings:** 9 drafts, 0 ever published, all 4 leads
+from outside the system. Guidance written back: *"Do not plan more content
+volume — the bottleneck is approval and publishing, not writing."*
+
+**Verified:** analyzer ran on real data; orchestrator v13 planned cleanly with
+the new section; the rendered block confirmed word for word.
+
+All three gaps from the competitor teardown are now closed.
+
 ## Open next steps (not done)
 
 *(Current as of end of Aug 20. The site is already live, so these are live-site
