@@ -547,6 +547,64 @@ times this session.
 - Architecture diagram: https://claude.ai/code/artifact/9ec3d3a6-d674-461e-9ef3-92d577924a9b
 - Running loop simulator: https://claude.ai/code/artifact/ccd9bd39-3876-4da5-8a40-e411219ad6b7
 
+## Aug 21 — full-system diagnostic (website + key-router + marketing system)
+
+Otis asked for a whole-system debug: does it all communicate as one system?
+Four passes. **72 checks, one real defect found and fixed.**
+
+### A. Structural — clean
+website `tsc --noEmit` + build clean; **key-router 36/36 tests**; all seven edge
+functions' `_shared` imports resolve. key-router working branch has **zero**
+unmerged commits vs origin/main.
+
+### B. Config coherence — the seam nobody had ever exercised
+Website endpoints point at project `glzodwhyavexpuusbqjy` (correct). The
+marketing system calls `POST /v1/route`; key-router serves exactly that.
+
+**Then actually proved it: 9/9 cross-repo seam test** (`scratchpad/seam-test.mjs`).
+Ran key-router in-process with a stubbed provider and called it with a faithful
+transcription of `viaKeyRouter()` from `_shared/claude.ts`. Happy path, text
+extraction, token usage for cost tracking, auth enforced, wrong token rejected,
+trailing-slash URL handled, fleet status, usage metering advanced. **This call
+had never been made — the seam was deployed but KEYROUTER_URL was never set.**
+
+**Deploy gotcha found:** the secret env var uses the key `id` VERBATIM.
+`{"id":"primary"}` needs `KEYROUTER_SECRET_primary`, not `_PRIMARY`. A wrong
+case kills the boot with `missing env var`.
+
+### C. Live end-to-end — every hop
+Run-secret gate: all four scheduled functions refuse the bare anon key AND a
+wrong secret. Booking → intake → contact (`source: linkedin`), company parsed,
+campaign carried, deal `quoted / $12,000` (budget range parsed), follow-up task
+queued and drained by the 2-min cron → message drafted `status: draft` (never
+auto-sent). `analyze` then reported **"4 of 5 leads came from outside the
+system's channels"** — it correctly attributed the one tagged lead and excluded
+the rest. Weekly report showed `linkedin: 1` in its source breakdown.
+Owner portal: status ok, unauthenticated list 401, forged token 401, wrong
+passcode `invalid_passcode` with throttle countdown.
+**RLS canary:** anon reads return `[]` for contacts, deals, messages,
+content_items, owner_invoices AND `settings` — which holds the run secret and
+channel credentials. Test rows removed.
+
+### D. Website feature QA — 18/18 after one fix
+All public views, hero video with poster fallback, booking → intake with an
+attribution source, portal unlock, all four portal tabs, link builder emitting a
+tagged URL and copying it, invoice add + save, no horizontal scroll at 390px,
+zero page errors.
+
+### THE ONE REAL DEFECT — a second broken icon ligature
+`quick_reference_all` (the Client Answers tab icon, added earlier today) contains
+a **q**. The subset font's cmap covers only `' _abcdefghiklmnoprstuvwy'` — **j,
+q, x, z are absent** — so the ligature never forms and the browser paints the raw
+word: **444px of literal text at 24px font**, which pushed the owner portal into
+horizontal scrolling at 390px. Public pages were clean throughout.
+
+Replaced with `contact_support`. **A measurement pass over every icon across all
+views and portal tabs now reports 0 broken.** The constraint is written at the
+site where icons are chosen. Method worth keeping: **measure rendered width vs
+font size** — a resolved ligature is ~1em square, raw text is several times
+wider. Reading font tables got this wrong before; measuring has not.
+
 ## Open next steps (not done)
 
 *(Current as of end of Aug 20. The site is already live, so these are live-site

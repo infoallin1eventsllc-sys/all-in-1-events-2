@@ -144,6 +144,19 @@ Then it publishes through the webhook adapter with no code change at all.
 
 ---
 
+## Key Router: the secret env var name is case-sensitive
+
+When you deploy Key Router, each key's secret env var uses the key's `id`
+**verbatim**. A fleet entry of `{"id":"primary"}` needs `KEYROUTER_SECRET_primary`
+— not `KEYROUTER_SECRET_PRIMARY`. The wrong case does not degrade quietly; it
+kills the boot with `missing env var KEYROUTER_SECRET_primary`.
+
+The seam itself is verified: key-router run in-process against the marketing
+system's own client code passes 9/9 — happy path, auth enforced, wrong token
+rejected, trailing-slash URL handled, token usage returned for cost tracking.
+
+---
+
 ## Verified
 
 All three routing branches were tested live against the deployed runner (v14):
