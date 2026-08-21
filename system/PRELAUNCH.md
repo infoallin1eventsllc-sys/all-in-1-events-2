@@ -367,6 +367,57 @@ its referrer is indistinguishable from organic Google without a tag.
 
 ---
 
+## 12. System Health — the system can now say when something is wrong
+
+Until this shipped, a failure was visible only to whoever went looking in the
+tables. The weekly report describes marketing; it says nothing about the
+machinery that does marketing. A schedule that quietly stopped firing, a task
+that retried until it gave up, a message that never sent — all of it was
+silent.
+
+**Owner portal → System Health.** Three things, in the order they matter:
+
+1. **Open items.** What is wrong right now, in owner-facing words. Not
+   `cron_silent`, but *"marketing-runner has stopped running — last ran Aug 20
+   04:00 UTC and is overdue. Whatever it does is not happening."*
+2. **Marketing system.** Errored planning runs, tasks waiting, tasks that gave
+   up, drafts waiting on you, published, failed sends, approval mode — plus the
+   pg_cron schedules and when each last ran.
+3. **Key Router.** Probed live on each load, because it is a separate service on
+   separate infrastructure and its being up is not something the database knows.
+
+Checks run every fifteen minutes (`marketing-healthcheck`). Each raises while
+its condition holds and clears when it stops, so the list is current state, not
+an archive. A repeat sighting bumps a counter rather than adding a row.
+
+**Two pieces of honesty built into the panel:**
+
+- **Mode is decided by real output, not by configuration.** It reports live only
+  when non-mocked content actually exists. A key that is present but invalid
+  degrades to placeholder text silently while everything keeps running — reading
+  the config would call that live, and it is not.
+- **Key Router not being deployed is not a fault, and does not read as one.**
+  The panel distinguishes up / erroring / unreachable / never deployed, and for
+  the last says plainly that nothing is broken and what happens instead.
+
+**A bug of mine, caught and fixed before it shipped.** The first version treated
+a schedule with no run history as critical, so creating a job raised *"has
+stopped running"* before its first window arrived. You can only say something
+stopped if you saw it start. Never-run is informational now and says exactly
+that. An alert list that cries wolf on day one teaches its reader to ignore it,
+which is worse than having no alerts.
+
+**What is not built: notification.** Alerts appear on this page and nowhere
+else. Email delivery needs a SendGrid key, which is not configured. Until it is,
+System Health is where problems appear — the page refreshes itself every minute,
+so leaving it open is the closest thing to being told.
+
+Verified across three states (all clear, two live problems, Key Router up with a
+key fleet) plus a measurement pass for broken icon ligatures, horizontal scroll
+at 390px, and page errors. 17/17.
+
+---
+
 ## Not pre-launch
 
 Phase 2 publishing channels — Meta, Google Business Profile, Google Ads,

@@ -225,6 +225,102 @@ Deno.serve(async (req) => {
   }
 
   switch (action) {
+    case "health": {
+      // What the machinery is doing, and what is wrong with it.
+      //
+      // The weekly report describes marketing. This describes the system that
+      // does the marketing — schedules, queue, failures — plus Key Router,
+      // which lives outside this project entirely and is therefore probed
+      // rather than queried.
+      const since = new Date(Date.now() - 24 * 3600_000).toISOString();
+
+      const [alerts, runs, queue, content, messages, perf, agentCfg] = await Promise.all([
+        sb.from("system_alerts").select("*").is("resolved_at", null)
+          .order("last_seen", { ascending: false }),
+        sb.from("agent_runs").select("status, summary, tasks_created, started_at, finished_at, error")
+          .order("started_at", { ascending: false }).limit(5),
+        sb.from("tasks").select("status"),
+        sb.from("content_items").select("status"),
+        sb.from("messages").select("status"),
+        sb.from("settings").select("value").eq("key", "performance").maybeSingle(),
+        sb.from("settings").select("value").eq("key", "agent").maybeSingle(),
+      ]);
+
+      const tally = (rows: { status: string }[] | null) => {
+        const out: Record<string, number> = {};
+        for (const r of rows ?? []) out[r.status] = (out[r.status] ?? 0) + 1;
+        return out;
+      };
+
+      // Schedules, via a function that narrows cron's internals to what the
+      // portal shows. `last_run` null means never, which is different from
+      // stopped — the alert wording keeps that distinction.
+      const { data: schedules } = await sb.rpc("cron_health");
+
+      /* ---- Key Router ------------------------------------------------
+         A separate service on separate infrastructure. When KEYROUTER_URL is
+         unset it is not deployed, and saying "unreachable" would be wrong —
+         there is nothing to reach. */
+      const krUrl = Deno.env.get("KEYROUTER_URL");
+      const krToken = Deno.env.get("KEYROUTER_AUTH_TOKEN");
+      let keyrouter: Record<string, unknown>;
+      if (!krUrl) {
+        keyrouter = { state: "not_deployed",
+          detail: "Key Router has not been deployed. The marketing system falls back to a direct Anthropic call, or to mock output when no key exists." };
+      } else {
+        const started = Date.now();
+        try {
+          const res = await fetch(`${krUrl.replace(/\/$/, "")}/v1/status`, {
+            headers: krToken ? { authorization: `Bearer ${krToken}` } : {},
+            signal: AbortSignal.timeout(5000),
+          });
+          const body = await res.json().catch(() => ({}));
+          keyrouter = res.ok
+            ? { state: "up", ms: Date.now() - started, fleet: body.keys ?? body.fleet ?? [] }
+            : { state: "error", ms: Date.now() - started, status: res.status,
+                detail: `Key Router answered ${res.status}. Marketing falls back to a direct call.` };
+        } catch (err) {
+          keyrouter = { state: "unreachable", ms: Date.now() - started,
+            detail: `Could not reach Key Router: ${err instanceof Error ? err.message : String(err)}. Marketing falls back to a direct call, so nothing stops — but key rotation and metering are not happening.` };
+        }
+      }
+
+      const agent = (agentCfg.data?.value ?? {}) as Record<string, unknown>;
+
+      // A key being SET is not the same as a key that works — an invalid one
+      // degrades to mock silently and everything keeps running. So mode is
+      // decided by whether real output actually exists, not by configuration.
+      const { count: realOutput } = await sb
+        .from("content_items")
+        .select("id", { count: "exact", head: true })
+        .eq("meta->>mocked", "false");
+      const keyConfigured = !!Deno.env.get("ANTHROPIC_API_KEY") || !!krUrl;
+      const mode = (realOutput ?? 0) > 0 ? "live"
+        : keyConfigured ? "configured_but_still_mocking" : "mock";
+
+      return json({
+        ok: true,
+        generated_at: new Date().toISOString(),
+        alerts: alerts.data ?? [],
+        marketing: {
+          mode,
+          key_configured: keyConfigured,
+          real_outputs: realOutput ?? 0,
+          autonomy: agent.autonomy ?? "draft",
+          model: agent.model ?? null,
+          recent_runs: runs.data ?? [],
+          errors_24h: (runs.data ?? []).filter((r) => r.status === "error" &&
+            r.started_at > since).length,
+          tasks: tally(queue.data),
+          content: tally(content.data),
+          messages: tally(messages.data),
+          performance: perf.data?.value ?? null,
+        },
+        schedules: schedules ?? null,
+        keyrouter,
+      });
+    }
+
     case "catalogue": {
       // The pricing catalogue: every rate, the benchmark tiers, and the
       // freelancer-vs-boutique-vs-agency comparison.

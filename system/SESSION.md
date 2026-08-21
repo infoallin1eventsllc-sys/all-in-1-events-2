@@ -4,7 +4,7 @@ Compact record of what was built and the current state, so work can resume later
 
 ---
 
-## ► START HERE (last updated end of Aug 20)
+## ► START HERE (last updated end of Aug 21)
 
 **Read this block first. The sections below it are a running log and some of the
 older entries have been overtaken — where they disagree with this block, this
@@ -18,7 +18,8 @@ block is right.**
 | **all-in-1-events-2** (this repo) | Working branch `claude/marketing-system-tech-stack-uds0mp`. Holds the marketing system in `system/` **and** the All in 1 Events *client* site at the root. |
 | **key-router** | Both PRs merged to `main`. **Not deployed to Render.** |
 | **Marketing system** | Deployed and scheduled, but in **mock mode** — it has produced **zero real AI outputs**. No API key configured, by Otis's decision. |
-| **Owner invoice portal** | Server-side auth, live and working. Invoices in Postgres behind RLS. |
+| **Owner invoice portal** | Server-side auth, live and working. Invoices in Postgres behind RLS. Five tabs: Invoices & Pricing, Client Answers, Campaign Links, **System Health**, Photo Control. |
+| **System Health** | Live. Checks every 15 min; alerts raise and clear on their own. Key Router probed on each load. **No email notification** — needs a SendGrid key. |
 
 ### ⚠️ Careful with this repo
 
@@ -699,3 +700,47 @@ items, not pre-deploy ones.)*
 - Wire the marketing dashboard into the deployed site so real photos render.
 - Hero dials if Otis wants more: longer/slower (24s), more push (9% -> 15%),
   heavier grain.
+
+
+---
+
+## Aug 21 (late) — System Health: the system's own voice
+
+Otis asked: *"I have a question about the tech stack and the key router. Can we
+create a portal so I can access both of those? From the owner's portal? to see
+how they're performing? or if any problems occur. that I get notified?"*
+
+Built as a fifth portal tab. Full write-up in `PRELAUNCH.md` §12; the parts
+worth having in memory:
+
+**Shipped**
+- `system_alerts` + `raise_alert()` / `clear_alert()`. Unique index on the code
+  **while open**, so a persisting condition bumps `seen_count` instead of adding
+  rows, and the same code can recur later as a fresh row.
+- `check_system_health()` — cron silence, agent errors, dead tasks, failed
+  sends, failed publishes, approval backlog. Every message written for an owner,
+  not an engineer.
+- `cron_health()` — pg_cron's tables are not reachable through PostgREST; this
+  narrows them to what the panel shows.
+- `marketing-healthcheck` on `*/15 * * * *`.
+- `owner` v9: token-gated `health` action, live Key Router probe.
+- `src/lib/health.ts`, `src/components/SystemHealth.tsx` (website repo, on `main`).
+- Migration `0009_system_health.sql` consolidates the four that were applied live.
+
+**Two decisions to keep**
+1. **Mode is read from real output, not from config.** `content_items` with
+   `meta->>mocked = 'false'` decides live vs mock. A present-but-invalid key
+   degrades to placeholder text silently; config would call that live.
+2. **Never-run ≠ stopped running.** My first version raised a critical for a job
+   scheduled minutes earlier. You can only say something stopped if you saw it
+   start. Never-run is `info` now. An alert list that cries wolf on day one
+   teaches its reader to ignore it.
+
+**Still open on this**: notification is page-only. Email needs a SendGrid key.
+Say so plainly rather than implying he will be told.
+
+**Note for next session**: `mcp__Supabase__execute_sql` returned *"You do not
+have permission to perform this action"* at the end of this session. The four
+health migrations were already applied and verified before that; `0009` is the
+consolidated file, written idempotent so it converges rather than conflicts.
+Check the tool works before assuming the database is unreachable.
