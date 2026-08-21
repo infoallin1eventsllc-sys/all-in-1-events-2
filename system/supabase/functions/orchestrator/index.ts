@@ -5,6 +5,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { serviceClient, getSetting } from "../_shared/supabase.ts";
 import { callClaude, extractJson, DEFAULT_MODEL } from "../_shared/claude.ts";
+import { contextBlock } from "../_shared/context.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
 
 type PlannedTask = { type: string; payload?: Record<string, unknown>; priority?: number };
@@ -62,10 +63,15 @@ Deno.serve(async (req) => {
       memory: (recentMemory.data ?? []).map((m) => m.content),
     };
 
+    // The shared context layer: the same business brief every agent reads.
+    const business = await contextBlock(sb);
+
     const system =
-      `You are the marketing operations agent for ${(profile as Record<string, unknown>).name}. ` +
-      `Voice: ${(profile as Record<string, unknown>).voice}. ` +
+      `You are the marketing operations agent for ${(profile as Record<string, unknown>).name}.\n\n` +
+      `${business}\n\n` +
       `You plan a small batch of concrete marketing tasks each run. Be practical and non-repetitive. ` +
+      `When planning generate_content tasks, set payload.topic to a SPECIFIC angle aimed at one of ` +
+      `the customer profiles above (e.g. their pains or buying triggers) — never a generic "update for our audience". ` +
       `Only use these task types: generate_content, send_email, send_sms, publish_content, follow_up_lead. ` +
       `Respect autonomy="${(agent as Record<string, unknown>).autonomy}": in "draft" mode, prefer generate_content and follow_up_lead ` +
       `(a human approves before anything is sent/published). Never invent contact details.`;

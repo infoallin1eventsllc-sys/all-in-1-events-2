@@ -382,6 +382,38 @@ guessed rather than read. **Read the real markup before believing a failure,
 and measure rather than reason** — the same discipline that corrected an
 earlier claim of "21 broken icons" down to the one that was real.
 
+## Aug 21 — the shared context layer (the "what does it know about my niche" fix)
+
+Otis sent a competitor's "$15,000 Agentic AI Marketing System" architecture
+video. Comparison showed most of its boxes already exist here (orchestrator,
+queue, Supabase, cron, approval-as-human-gate) or are oversized for this scale
+(Redis cache, NGINX LB, ELK, Grafana). The one genuinely missing piece was its
+best idea: a **shared context layer** — "one store, read by every agent" — ICP
+profiles and buying triggers. Which matched the audit finding from Aug 20: the
+agents knew exactly two things about the business (name + voice), and only
+those two fields ever reached a prompt.
+
+**Built and deployed (orchestrator v11, runner v13):**
+- Five settings rows are now the context store: `business_profile` (extended
+  with location/service_area), `icp_profiles` (4 buyer profiles, each marked
+  `status:"draft"` — inferred from the pricing catalogue, NOT yet confirmed by
+  Otis), `services` (all 10, with real prices), `proof_points` (5, all
+  verifiably true), `content_rules` (5 ALWAYS + 5 NEVER, incl. "only listed
+  proof points are true" and a banned-word list).
+- `_shared/context.ts` renders them into one ~7.5k-char prompt block;
+  orchestrator + runner (both generate_content and follow_up_lead) inject it.
+  The orchestrator is also told to plan topics aimed at a specific profile's
+  pains/triggers, never "an update for our audience".
+- **Editing the settings rows changes the agents' next run — no redeploy.**
+  Seed preserved as `migrations/0004_shared_context_seed.sql`.
+- Verified live: orchestrator v11 ran ok (mock plan, 1 task), cron runner v13
+  drained it and drafted a content item at 16:06 with no errors.
+
+**Waiting on Otis:** review the four ICP drafts (they stay labelled "draft" in
+the prompt until `status` flips to `"confirmed"`), and the proof points /
+rules. This was built precisely so the key, when it comes, writes from HIS
+niche — so his review is the point, not a formality.
+
 ## Open next steps (not done)
 
 *(Current as of end of Aug 20. The site is already live, so these are live-site

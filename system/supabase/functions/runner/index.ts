@@ -5,6 +5,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { serviceClient, getSetting } from "../_shared/supabase.ts";
 import { callClaude, DEFAULT_MODEL } from "../_shared/claude.ts";
+import { contextBlock } from "../_shared/context.ts";
 import { sendEmail, sendSms, publishContent } from "../_shared/channels.ts";
 import { cardDataUri, kickerFor } from "../_shared/card.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
@@ -98,8 +99,16 @@ async function generateContent(sb: SupabaseClient, task: Task) {
   const kind = String(task.payload.kind ?? "post");
   const topic = String(task.payload.topic ?? "an update for our audience");
 
+  // Load the shared business context so every draft is written FROM the
+  // business — its buyers, services, prices, proof, and rules — rather than
+  // from a two-line profile. This is the difference between "a post about web
+  // design" and a post only this studio could publish.
+  const business = await contextBlock(sb);
+
   const out = await callClaude({
-    system: `You write ${kind} content for ${profile.name}. Voice: ${profile.voice}. ` +
+    system: `You write ${kind} content for ${profile.name}.\n\n${business}\n\n` +
+      `Follow the writing rules above exactly. Ground the piece in ONE customer profile's ` +
+      `pains or buying triggers, and use only the listed proof points as evidence. ` +
       `Return a short JSON object {"title": "...", "body": "..."} only.`,
     prompt: `Write a ${kind} for the "${channel}" channel about: ${topic}. Keep it on-brand and ready to post.`,
     model: String(agent.model || DEFAULT_MODEL),
@@ -135,8 +144,15 @@ async function followUpLead(sb: SupabaseClient, task: Task) {
   if (!contact) throw new Error(`contact ${contactId} not found`);
   const { profile, agent } = await agentCfg(sb);
 
+  // Context matters here too: a follow-up that can name the service the lead
+  // likely needs, at its real price, reads as competence rather than a form
+  // letter. The rules also stop it over-promising to a stranger.
+  const business = await contextBlock(sb);
+
   const out = await callClaude({
-    system: `You write brief, warm first-touch outreach for ${profile.name}. Voice: ${profile.voice}. ` +
+    system: `You write brief, warm first-touch outreach for ${profile.name}.\n\n${business}\n\n` +
+      `Follow the writing rules above. If their message hints at what they need, you may name ` +
+      `the matching service and its price plainly; never quote a timeline or invent details. ` +
       `Return JSON {"subject": "...", "body": "..."} only. Keep body under 120 words, no placeholders.`,
     prompt: `New lead: ${contact.full_name ?? "there"} (source: ${contact.source ?? "website"}). ` +
       `Message they left: ${contact.meta?.message ?? "n/a"}. Write a friendly follow-up that invites a reply.`,
