@@ -1,0 +1,12 @@
+{
+  "name": "meridian-tools",
+  "private": true,
+  "type": "module",
+  "description": "Operator tools for Meridian Interface. site-audit scores prospect websites so a call has something specific to say.",
+  "scripts": {
+    "audit": "node site-audit.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.50.0"
+  }
+}
