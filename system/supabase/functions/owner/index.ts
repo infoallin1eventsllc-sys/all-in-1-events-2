@@ -225,6 +225,24 @@ Deno.serve(async (req) => {
   }
 
   switch (action) {
+    case "catalogue": {
+      // The pricing catalogue: every rate, the benchmark tiers, and the
+      // freelancer-vs-boutique-vs-agency comparison.
+      //
+      // This used to be imported straight into the website's source, which
+      // meant it was compiled into the JavaScript every visitor downloads. No
+      // public page rendered it — which is exactly why nobody noticed — but the
+      // whole price list, and the competitive positioning with it, could be
+      // read out of the bundle by anyone who opened it.
+      //
+      // It comes through here now, behind the same token that guards the
+      // invoices, so a client sees a price when Otis sends one and not before.
+      const { data, error } = await sb
+        .from("settings").select("value").eq("key", "pricing_catalogue").maybeSingle();
+      if (error) return json({ ok: false, error: error.message }, 500);
+      return json({ ok: true, catalogue: data?.value ?? null });
+    }
+
     case "list": {
       const { data, error } = await sb
         .from("owner_invoices")

@@ -605,6 +605,59 @@ site where icons are chosen. Method worth keeping: **measure rendered width vs
 font size** — a resolved ligature is ~1em square, raw text is several times
 wider. Reading font tables got this wrong before; measuring has not.
 
+## Aug 21 (final) — pricing off the wire, and a fabricated invoice removed
+
+Otis: "I'm fine with all the prices. But I don't want the customer or client to
+see the prices. Let them pick what they want, and then I will send them an
+invoice." Checking where prices were *displayed* found something bigger.
+
+### Prices were not displayed publicly — they were SHIPPED
+Every rate, every invoice preset, and the freelancer/boutique/agency comparison
+were imported into the app, so Vite compiled them into the JavaScript every
+visitor downloads. No public page rendered any of it, which is precisely why it
+went unnoticed for the whole build.
+
+**Fixed:** the catalogue lives in `settings.pricing_catalogue` and reaches the
+portal through a new token-gated `catalogue` action on the `owner` function
+(v8). `src/lib/catalogue.ts` fetches it after login. TypeScript interfaces stay
+client-side — types are erased at build, so the shape ships without a number.
+**A price change is now a SQL update, no redeploy.** Migration `0008`.
+
+**Verified:** no rate of ours remains in the built bundle. The only dollar
+figures left are the client's own budget-range selector, which is their number.
+
+### The public price calculator became a scope builder
+The Services page had a working estimator — base rate + add-ons + rush fee →
+"Estimated Project Quote $X" with a range. The *selections* are valuable (they
+say what a visitor wants before the first call) so those stay and travel into
+the booking as a brief. The arithmetic is gone.
+
+### A FABRICATED INVOICE was being shown to clients — removed
+Worse than the pricing issue, and not a pricing issue. After booking, a client
+saw **"View Official Service Invoice"** and **"View Deposit Receipt"**. Both
+opened a document with a hard-coded **$3,500 total** and a badge reading
+**"Deposit Received ($250.00)"**, carrying an invoice number and a transaction
+reference — shown to someone who had booked a call and paid nothing. Reachable
+from three more places in the client portal.
+
+`InvoiceReceiptModal.tsx` is **deleted**. Replaced with a plain statement that a
+written quote follows and nothing is owed until it has been seen. Real invoices
+come from the owner portal, which is backed by the database.
+
+### Also this session
+- **Motion installed** (`motion` 13.1.1 — Framer Motion renamed) behind
+  `src/lib/motion.ts`. Named imports + LazyMotion: +29kB gzip. Namespace imports
+  cost 194kB raw — `import * as` defeats tree-shaking. Provider is `strict`.
+- **`system/tools/site-audit.mjs`** — scores prospect websites on 11 checks with
+  owner-facing sentences per finding. Willing to say "site is fine". Apify
+  optional; it supplies the list, this decides who to call.
+- **Tech Stack service** added, defined in plain language for non-technical
+  readers, with exclusions (the tools' own monthly fees) stated up front.
+
+**METHOD NOTE:** harness artifacts reached **nine** this session. The last three:
+wrong nav button, wrong portal tab, and a harness that predated the server-side
+pricing change. The app was fine every time.
+
 ## Open next steps (not done)
 
 *(Current as of end of Aug 20. The site is already live, so these are live-site
