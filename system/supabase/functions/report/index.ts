@@ -4,10 +4,16 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { serviceClient, getSetting } from "../_shared/supabase.ts";
 import { callClaude, DEFAULT_MODEL } from "../_shared/claude.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
+import { authorizedRun } from "../_shared/runauth.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const sb = serviceClient();
+
+  // The anon key alone no longer triggers runs — see _shared/runauth.ts.
+  if (!(await authorizedRun(req, sb))) {
+    return json({ ok: false, error: "unauthorized" }, 401);
+  }
 
   const days = 7;
   const since = new Date(Date.now() - days * 864e5).toISOString();

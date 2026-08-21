@@ -9,6 +9,7 @@ import { contextBlock } from "../_shared/context.ts";
 import { sendEmail, sendSms, publishContent } from "../_shared/channels.ts";
 import { cardDataUri, kickerFor } from "../_shared/card.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
+import { authorizedRun } from "../_shared/runauth.ts";
 
 type Task = {
   id: string;
@@ -21,6 +22,11 @@ type Task = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const sb = serviceClient();
+
+  // The anon key alone no longer triggers runs — see _shared/runauth.ts.
+  if (!(await authorizedRun(req, sb))) {
+    return json({ ok: false, error: "unauthorized" }, 401);
+  }
 
   const { data: claimed, error } = await sb.rpc("claim_tasks", { p_limit: 10, p_worker: "runner" });
   if (error) return json({ ok: false, error: error.message }, 500);
@@ -227,7 +233,12 @@ async function publishContentTask(sb: SupabaseClient, task: Task) {
   if (item.status !== "approved" && item.status !== "scheduled") {
     throw new Error(`content_item ${itemId} not approved (status=${item.status})`);
   }
-  const res = publishContent(item.channel ?? "content", { title: item.title, body: item.body });
+  const res = await publishContent(sb, item.channel ?? "content", {
+    title: item.title,
+    body: item.body,
+    kind: item.kind,
+    image_url: item.image_url,
+  });
   await sb.from("content_items").update({
     status: res.ok ? "published" : "failed",
     published_at: res.ok ? new Date().toISOString() : null,

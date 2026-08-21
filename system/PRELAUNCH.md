@@ -32,8 +32,9 @@ before go-live.
 keyed on something the report prompt actually contains (e.g. `owner summary`
 or `week's numbers`). Requires redeploying `report`.
 
-**Status:** open. Deliberately deferred — it needed a full function redeploy
-for something no one sees in production.
+**Status: FIXED** (Aug 21). A summary branch keyed on `owner summary` /
+`week's numbers` now sits ahead of the content branch. Shipped with the
+`report` redeploy that added the run-secret gate, so it cost nothing extra.
 
 ---
 
@@ -76,8 +77,19 @@ money.** This should be closed before step 3 of go-live, not after.
 centralises the cron-side call, so the change is one header there plus one
 check in each function.
 
-**Status:** open. Rises from "optional hardening" to **required** the moment
-a key exists.
+**Status: DONE** (Aug 21). Closed *before* any key exists, and before the
+publish adapters went in — the order that matters, since publishing is the
+first thing that made an uninvited run cost something.
+
+The secret is a settings row (`run_secret`, service-role only), not an env
+secret, so rotating it is one UPDATE with no redeploy and there is exactly one
+copy shared by the SQL and TypeScript sides. `public.invoke_edge()` sends it as
+`x-run-secret`; each function checks it via `_shared/runauth.ts`. A service-role
+JWT is also accepted, for the operator CLI. An absent secret leaves the gate
+open on purpose, so no seeding order can lock the system out of itself.
+
+**Verified live against the deployed runner:** anon key alone → `unauthorized`;
+anon key + correct secret → runs; anon key + wrong secret → `unauthorized`.
 
 ---
 
@@ -235,6 +247,40 @@ client receives. Nothing is broken; the data simply predates the feature.
 automatically.
 
 **Status:** open, Otis's call — it only matters for invoices he intends to send.
+
+---
+
+## 9. Publishing channels — built, with the ad platforms deliberately left out
+
+**Where:** `system/supabase/functions/_shared/channels.ts`, `system/CHANNELS.md`
+
+Publishing was a stub that marked every item published without sending
+anything. It is now real: a **generic outbound webhook** (Make / Zapier / n8n),
+**Facebook Page**, **Instagram**, and **LinkedIn**, each behind its own
+credentials, each falling back to the honest mock stub when unconfigured. No
+redeploy to switch one on — credentials are a `settings` row read per publish.
+
+The webhook adapter is the one that matters short-term: it reaches TikTok,
+YouTube, WordPress and Google Business Profile **today**, through a tool that
+already holds those connections, instead of waiting weeks on each platform's
+API approval.
+
+Also fixed on the way through: `content_items.channel` is a foreign key to
+`channels(key)`, and `facebook` and `linkedin` were never registered — a
+LinkedIn draft would have failed at the database before any adapter ran.
+
+**Deliberately NOT built: Google Ads and Meta Ads.** Publishing a post costs
+nothing; an ads API spends money on a schedule with no person in the loop.
+That belongs behind its own approval flow and its own spend caps. Both stay in
+the `channels` table as known-but-disabled so the omission reads as a decision.
+
+**Status: SHIPPED** (runner v14). All three routing branches verified live —
+real 200 → `published`; real 400 → `failed` with the error stored verbatim and
+a backoff retry; unconfigured → stub. Test rows removed.
+
+**Open for Otis:** nothing is switched on. Setup for each channel is in
+`system/CHANNELS.md`; the webhook route takes minutes, the platform ones need
+their own approvals.
 
 ---
 

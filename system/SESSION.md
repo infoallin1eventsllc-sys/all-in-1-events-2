@@ -37,9 +37,9 @@ you are touching before committing here.
 
 ### What to pick up next
 
-See **Open next steps** at the bottom of this file — it is current as of Aug 20.
-The one with teeth is **RUN_SECRET**: harmless today, a real spend risk the
-moment an API key exists.
+See **Open next steps** at the bottom of this file. **RUN_SECRET is now DONE**
+(Aug 21) — closed before any key exists and before publishing went in, which is
+the right order.
 
 ### Source-of-truth docs
 
@@ -414,6 +414,61 @@ the prompt until `status` flips to `"confirmed"`), and the proof points /
 rules. This was built precisely so the key, when it comes, writes from HIS
 niche — so his review is the point, not a formality.
 
+## Aug 21 (later) — channel integrations + the run-secret gate
+
+Otis asked for gap #2 from the competitor teardown: the bottom row of channels.
+
+### RUN_SECRET first, deliberately
+Publishing is the first capability that makes an uninvited run cost something,
+so the open door was closed before the door led anywhere. `_shared/runauth.ts`:
+a caller needs the `x-run-secret` header (sent by `public.invoke_edge()`, so
+cron just works) or a service-role JWT. The secret is a **settings row**, not an
+env secret — one UPDATE to rotate, no redeploy, one copy shared by the SQL and
+TS sides. An absent secret leaves the gate open on purpose, so seeding order
+can never self-lockout. Migration `0005`.
+**Verified live:** anon alone → unauthorized; anon + correct secret → runs;
+anon + wrong secret → unauthorized.
+
+### Real publish adapters (runner v14)
+`publishContent` was a stub that marked everything published without sending
+anything. Now: **generic webhook** (Make/Zapier/n8n), **Facebook Page**,
+**Instagram**, **LinkedIn** — each behind its own credentials in the `channels`
+settings row (env secrets take precedence), each falling back to the honest
+stub when unconfigured. Read per publish, so **no redeploy to switch one on**.
+
+Routing: the channel's own platform if configured → else webhook → else stub.
+
+**The webhook adapter is the practical unlock.** It reaches TikTok, YouTube,
+WordPress and Google Business Profile TODAY through a tool that already holds
+those connections, rather than waiting weeks on each platform's API approval.
+
+**Ad platforms (Google Ads, Meta Ads) deliberately NOT built.** Publishing a
+post costs nothing; an ads API spends money on a schedule with nobody in the
+loop. Left in the `channels` table as known-but-disabled so it reads as a
+decision, not an oversight.
+
+### A bug this surfaced
+`content_items.channel` is a FK to `channels(key)`, and `facebook`/`linkedin`
+were never registered — a LinkedIn draft would have failed at the database
+before any adapter ran. Registered in migration `0006`, along with `webhook`.
+
+### Verified live, all three branches (test rows removed after)
+- real 200 → item `published`, `{ok:true, mocked:false, provider:"webhook", providerId:"200"}`
+- real 400 → item `failed`, no publish date, error stored verbatim, task retried with backoff
+- unconfigured → stub, completes
+
+Receivers were endpoints inside Otis's own project (the `dashboard` function
+returns 200 with a valid key; `intake` returns 400 without an email) — no
+third-party service involved.
+
+### Free fix taken on the way
+PRELAUNCH #1 (mock weekly report printing an Instagram caption) is closed: a
+summary branch keyed on `owner summary` now sits ahead of the content branch.
+It only ever needed a `report` redeploy, which this change required anyway.
+
+**Setup guide: `system/CHANNELS.md`** — what is built, what each channel needs,
+and how long each approval realistically takes.
+
 ## Open next steps (not done)
 
 *(Current as of end of Aug 20. The site is already live, so these are live-site
@@ -429,19 +484,11 @@ items, not pre-deploy ones.)*
    carry the studio shorthand and no deliverable bullets.
 
 **Code, in priority order:**
-1. **`RUN_SECRET` on orchestrator / runner / report.** The anon key satisfies
-   their JWT check, so anyone who reads it out of a browser bundle can trigger
-   a run. Harmless today; **the moment an API key or Key Router URL exists,
-   every unsolicited call spends money.** `public.invoke_edge()` already
-   centralises the cron-side call, so it is one header there plus one check per
-   function. **Do this before, not after, configuring a key.**
+1. ~~`RUN_SECRET`~~ — **DONE Aug 21**, before any key and before publishing.
 2. **24 Unsplash hotlinks** on the website. Works today; breaks silently if
    Unsplash changes a URL or rate-limits, and leaks visitor traffic. The hero
    and its video are already licensed and self-hosted; this is the rest.
-3. **Mock-mode weekly report** prints a content caption instead of a summary —
-   the report prompt matches the mock's content branch first. Invisible in
-   production, but it makes the dashboard look broken in a demo. Needs a
-   `report` redeploy.
+3. ~~Mock-mode weekly report~~ — **DONE Aug 21**, shipped with the report redeploy.
 4. **Real logo PNG** at `assets/meridian-logo.png`; the card generator and the
    Key Router console still draw the built monogram.
 
