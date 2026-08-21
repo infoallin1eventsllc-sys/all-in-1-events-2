@@ -506,6 +506,47 @@ the new section; the rendered block confirmed word for word.
 
 All three gaps from the competitor teardown are now closed.
 
+## Aug 21 (last) — lead attribution, the gap that would have broken the loop
+
+Otis asked what changes when he connects his social accounts. Answering it
+properly surfaced a real defect: **connecting them would not have been enough.**
+
+`intake` sets `contacts.source` from `payload.source` and defaults to
+`meridian-website:booking`; `leads.ts` never sent one. So an Instagram visitor
+who clicked through and booked was recorded as a website lead — and `analyze`
+attributes by matching `contacts.source` to a `channels.key`. The system would
+have published happily and gone on reporting "0 leads attributable to channels"
+forever, never reaching the 10 needed to rank anything.
+
+**Fixed website-side only — no backend change, no redeploy**, because intake
+already read the field the site was failing to send.
+
+- `src/lib/attribution.ts` — captures UTM + referrer host on arrival,
+  normalises to real channel keys. First touch never overwritten (found in
+  March, booked in May = Instagram), except a blank "direct" first touch which
+  upgrades when a tagged visit follows.
+- Organic search maps to `google-organic` / `search-organic` — deliberately NOT
+  channel keys, so it lands in "from elsewhere". Counting it would flatter the
+  system's own numbers.
+- Only the referrer HOSTNAME is stored; a search referrer carries the query.
+- `CampaignLinks.tsx` — a 4th owner-portal tab that builds tagged links, so
+  they don't get hand-typed and drift out of matching.
+
+**Verified:** 13/13 against a real build (tagged link → instagram; LinkedIn
+referrer with no tag → linkedin; organic stays unclaimed; direct keeps the old
+default; first touch survives; no full URL or search query leaves the browser).
+Then live against `intake`: a tagged booking moved Instagram 0 → 1 leads in
+`v_channel_performance`. Canary removed.
+
+**METHOD NOTE:** the first harness run scored 5/13 and all 8 failures were the
+test not driving the booking form correctly — it is a single form with a
+required date, not a multi-step wizard. The app was fine. That is now **seven**
+times this session.
+
+**Two artifacts published** (static + animated):
+- Architecture diagram: https://claude.ai/code/artifact/9ec3d3a6-d674-461e-9ef3-92d577924a9b
+- Running loop simulator: https://claude.ai/code/artifact/ccd9bd39-3876-4da5-8a40-e411219ad6b7
+
 ## Open next steps (not done)
 
 *(Current as of end of Aug 20. The site is already live, so these are live-site

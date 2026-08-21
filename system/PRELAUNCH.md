@@ -327,6 +327,46 @@ identified. Nine items are waiting.
 
 ---
 
+## 11. Lead attribution — the gap that would have made the loop useless
+
+**Where:** `meridian-interface-website` → `src/lib/attribution.ts`,
+`src/lib/leads.ts`, `src/components/CampaignLinks.tsx`
+
+Found while answering a question about connecting social accounts, and it was
+load-bearing: **connecting the accounts alone would not have worked.**
+
+`intake` sets `contacts.source` from `payload.source`, defaulting to
+`meridian-website:booking`. The site never sent one. So a visitor arriving from
+an Instagram post and booking was filed as a website lead — and `analyze`
+attributes by matching `contacts.source` to a `channels.key`. It would have
+kept reporting **"0 leads attributable to channels"** no matter how much was
+published, and never reached the 10 it needs before it can rank anything.
+
+**Fixed on the website side only** — no backend change, no redeploy, because
+`intake` already read the field the site was failing to send.
+
+- UTM tags and the referring host are captured on arrival, normalised to real
+  channel keys.
+- **First touch wins** and is never overwritten: found in March, booked in May,
+  still an Instagram lead. The one exception is a blank "direct" first touch,
+  which upgrades if a tagged arrival follows.
+- **Organic search is deliberately unmapped.** It is not something the system
+  did, and counting it would flatter every number the system reports.
+- **Only the referrer's hostname is stored** — a search referrer carries the
+  query in its path, and that is the visitor's words.
+- A **Campaign Links** tab in the owner portal builds the tagged links, so they
+  do not get hand-typed and quietly stop matching.
+
+**Status: SHIPPED** to `main`. 13 checks against a real build, then end to end
+against live `intake`: a tagged booking moved Instagram from 0 leads to 1 in
+`v_channel_performance`. Canary removed.
+
+**Open for Otis:** tagged links only help if they are used. Instagram bio links
+and Google Business Profile links need tagging by hand — GBP especially, since
+its referrer is indistinguishable from organic Google without a tag.
+
+---
+
 ## Not pre-launch
 
 Phase 2 publishing channels — Meta, Google Business Profile, Google Ads,
