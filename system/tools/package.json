@@ -2,9 +2,12 @@
   "name": "meridian-tools",
   "private": true,
   "type": "module",
-  "description": "Operator tools for Meridian Interface. site-audit scores prospect websites so a call has something specific to say.",
+  "description": "Operator tools for Meridian Interface. site-audit scores prospect websites so a call has something specific to say; the preview and diag scripts rebuild and check the clickable copy of the site.",
   "scripts": {
-    "audit": "node site-audit.mjs"
+    "audit": "node site-audit.mjs",
+    "preview": "node build-site-preview.mjs",
+    "diag:site": "node diag-site.mjs",
+    "diag:preview": "node diag-preview-health.mjs"
   },
   "dependencies": {
     "playwright": "^1.50.0"

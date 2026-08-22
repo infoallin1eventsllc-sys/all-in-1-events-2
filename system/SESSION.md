@@ -744,3 +744,39 @@ have permission to perform this action"* at the end of this session. The four
 health migrations were already applied and verified before that; `0009` is the
 consolidated file, written idempotent so it converges rather than conflicts.
 Check the tool works before assuming the database is unreachable.
+
+### The tab existed and Otis still could not see it
+
+He was in the **artifact copy** of the site, built Aug 20 — a frozen snapshot
+that predates System Health by a day. Nothing was broken. Rebuilt it and
+republished to the **same URL**, so his bookmark still works:
+`https://claude.ai/code/artifact/4ee1e978-b336-40b6-ba13-dadd73cf5f33`
+
+**When he says a feature is missing, establish which copy he is looking at
+before touching code.** There are three: the artifact snapshot, the Vercel
+deploy, and this checkout. Only the last is current by definition.
+
+Two things this environment cannot do, so do not waste a turn on them:
+- The network policy blocks `meridian-interface-website.vercel.app` (403 at the
+  proxy CONNECT). The deployed site cannot be fetched from here — verify from
+  the checkout and say plainly that you did not look at the live page.
+- Playwright is global (`/opt/node22/lib/node_modules`) but ESM ignores
+  `NODE_PATH`. Run `npm install` inside `system/tools` (3s, browser download is
+  skipped) rather than trying to point at the global copy.
+
+### Tooling moved into the repo, because the scratchpad dies with the container
+
+`system/tools/` now holds `build-site-preview.mjs` (rebuilds the clickable
+artifact, with the shim that answers what the CSP blocks), `diag-site.mjs` (the
+18-check headless pass over `dist/`), and `diag-preview-health.mjs`. Paths come
+from `SITE_DIST` / `PRICING` / `OUT`; the rate card is deliberately **not**
+committed — fetch it from the `owner` function. `system/tools/README.md` has
+the commands.
+
+### A second defect in my own health panel
+
+The schedules table had **"Runs" as the header over the cron expression** and
+"Last 24h" over the run count, so `*/2 * * * *` sat under a column that said
+Runs. Fixed and pushed. My earlier 17/17 pass had verified the panel *rendered*
+— not that its labels described their own cells. A passing test says the thing
+drew, not that it is telling the truth.

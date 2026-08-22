@@ -73,3 +73,47 @@ hand-typed list works just as well.
 **Before any outbound sending:** use a separate domain, not
 meridianinterface.com. A cold list can get a domain flagged as spam, and that
 would break your real client email — quotes, invoices, project threads.
+
+---
+
+## build-site-preview.mjs — the clickable copy of the website
+
+Inlines the website's build into one self-contained HTML file and publishes as
+an artifact. Everything a viewer clicks works, because a shim answers the calls
+that would otherwise go to Supabase — the artifact viewer's CSP allows no host
+but Google Fonts, so without it the portal would sit on "loading" forever and a
+booking would look broken, neither of which is true of the deployed site.
+
+```
+export SITE_DIST=/path/to/meridian-interface-website/dist
+export PRICING=/tmp/pricing.json      # see below
+export OUT=/tmp/meridian-site-preview.html
+npm install                            # once per container
+npm run preview
+npm run diag:preview                   # proves the portal opens and renders
+```
+
+**PRICING is not committed, on purpose.** It is the studio's rate card, and the
+root of this repository is a client site that auto-deploys. Fetch it fresh each
+time from the `owner` function (`{"action":"catalogue"}` with an owner token).
+
+**The preview shows configured state, not live readings.** System Health has no
+database to read here, so it answers with what is actually true of the system —
+mock mode, no key, Key Router not deployed, the real schedules — and zeros
+where a live count would go. Do not put invented activity in that payload: a
+panel that looks official is exactly where a made-up number does damage.
+
+**Republish to the existing artifact URL**, never a new one, or the link Otis
+has bookmarked goes stale while a second copy drifts:
+`https://claude.ai/code/artifact/4ee1e978-b336-40b6-ba13-dadd73cf5f33`
+
+## diag-site.mjs — 18 checks over the built site
+
+Serves `dist/` locally and drives it headless: every view, the booking form,
+each portal tab, plus the two measurements that catch what reading the source
+cannot — icons painted as their own name (the subset font's cmap has no j, q,
+x or z) and horizontal scroll at 390px.
+
+```
+npm run diag:site
+```
