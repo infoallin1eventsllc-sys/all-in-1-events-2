@@ -4,7 +4,7 @@ Compact record of what was built and the current state, so work can resume later
 
 ---
 
-## ► START HERE (last updated end of Aug 21)
+## ► START HERE (last updated end of Aug 23)
 
 **Read this block first. The sections below it are a running log and some of the
 older entries have been overtaken — where they disagree with this block, this
@@ -20,6 +20,7 @@ block is right.**
 | **Marketing system** | Deployed and scheduled, but in **mock mode** — it has produced **zero real AI outputs**. No API key configured, by Otis's decision. |
 | **Owner invoice portal** | Server-side auth, live and working. Invoices in Postgres behind RLS. Five tabs: Invoices & Pricing, Client Answers, Campaign Links, **System Health**, Photo Control. |
 | **System Health** | Live. Checks every 15 min; alerts raise and clear on their own. Key Router probed on each load. **No email notification** — needs a SendGrid key. |
+| **Payments** | Half built (Aug 23). Tables live, `pay-webhook` deployed and signature-tested. `pay` written but **not deployed**; no portal button. Blocked on a Stripe key. |
 
 ### ⚠️ Careful with this repo
 
@@ -865,3 +866,97 @@ set it. Removed; added `VITE_OWNER_ENDPOINT`, which four modules actually read.
 3. A channel: webhook first (an afternoon), Meta/LinkedIn later (days of review).
 4. SendGrid — also what turns on System Health alert emails.
 5. Autonomy last, after ~30 approvals that felt like rubber stamps.
+
+
+---
+
+## Aug 23 (late) — payments, and a naming problem worth remembering
+
+Otis: *"I need to create a transactional credit card system for this business.
+Can we do that? including Apple Pay, PayPal, Google Pay."* Then, on being told
+he had no LLC or business account: *"Can we still move forward, or do I have to
+wait?"* — answer: yes, Stripe test mode needs none of that.
+
+### Three corrections that shaped the build
+
+1. **Never build card handling.** Card numbers touching our server means
+   PCI-DSS. We integrate a processor; the system only ever sees paid / not paid.
+2. **Apple Pay and Google Pay are not separate integrations.** They are wallets
+   on the card rails. One Stripe integration covers card + Apple + Google.
+   PayPal is the only genuinely separate one, and is deferred.
+3. **ACH is the real story at this studio's invoice sizes.** ~$276 in card fees
+   on a $9,500 package versus **$5 flat** by bank transfer. The largest invoice
+   in the system is **$125,950** — about $3,653 in card fees. Bank transfer is
+   offered first by default (`settings.payments.allow_bank_transfer`).
+
+### The business-name problem (fixed)
+
+Client-facing output claimed an **LLC that does not exist**, in three different
+spellings — portal header "Meridian Digital Studio LLC", invoice footer "DIGITAL
+DESIGN & DEVELOPMENT STUDIO LLC", and a default company field of "Meridian
+Digital Design Studio LLC". The invoice also carried a fabricated **New York
+address** beside a real Houston phone number.
+
+All of it now reads **Meridian Interface**, with "Houston, Texas" and no
+invented street line. Otis confirmed the name and said a virtual address is
+coming later — one line to change when it does. **Do not reintroduce "LLC"
+anywhere client-facing** unless he says the entity has been registered.
+
+### What was built
+
+- Migration `0011_payments.sql` — `payments`, `payment_events`, and a generated
+  `owner_invoices.total_cents`. **Cents are computed by Postgres**, not JS;
+  binary floating point eventually turns some invoice into 849999 cents.
+- `_shared/stripe.ts` — hosted Checkout over plain fetch, plus signature
+  verification. Hosted (not embedded) so card data never touches our page and
+  Apple Pay needs no domain registration of ours.
+- `_shared/ownertoken.ts` — verify-only copy of the owner session check, so
+  functions other than `owner` can authenticate the portal. **Duplicated from
+  `owner/index.ts` on purpose; change both together or sessions break in one.**
+- `pay/index.ts` — creates a link. **Written, NOT DEPLOYED.**
+- `pay-webhook/index.ts` — **deployed, verify_jwt=false.**
+
+### Two invariants, both deliberate
+
+- **The amount is read from the invoice server-side, never from the caller.**
+  An amount the browser can set is an amount the client can set.
+- **Nothing marks an invoice paid except a signature-verified webhook.** The
+  `success_url` a payer lands on is a string anyone can type; it shows a
+  message and decides nothing.
+
+### The signature test
+
+`system/tools/tests/stripe-signature.test.mjs` — `npm run test:signature` from
+`system/tools`. 12/12, including a forged signature and **a replay of a genuine
+old "paid" event** (the timestamp window is what stops it). The test
+**extracts the function from `_shared/stripe.ts` at run time** rather than
+testing a committed copy, so it cannot pass against a stale duplicate.
+
+### Handled because they will otherwise bite
+
+- **ACH settles late.** A card is paid inside `checkout.session.completed`; a
+  bank debit completes that event with `payment_status: "unpaid"` and clears
+  days later via `async_payment_succeeded`. Treating the first event as payment
+  marks bank transfers paid before the money moves.
+- **Webhooks are retried by design.** `payment_events` is keyed by Stripe's own
+  event id, so a redelivery conflicts and stops.
+- **Refunds** put the invoice back to `Issued`, so income is not overstated.
+
+### Live state at close (verified, not remembered)
+
+| | |
+|---|---|
+| AI | **mock — zero real outputs** |
+| Channels | none configured |
+| Approval queue | 4 pending, 9 rejected (the events-client copy) |
+| Messages | 6 drafted, 0 sent |
+| Invoices | 9 unpaid |
+| Payments | 0 recorded — no Stripe key |
+| Open alerts | `cron_never:marketing-report` (info, correct — weekly) |
+| ICP profiles | 4 still DRAFT |
+
+### Needs a human, cannot be done from here
+
+- **Delete the `cardspike` edge function** in the Supabase dashboard. It is a
+  retired feasibility test, now a 410 tombstone. The MCP tooling deploys
+  functions but cannot delete them.
