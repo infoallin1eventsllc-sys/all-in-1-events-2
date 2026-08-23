@@ -1,0 +1,814 @@
+<meta charset="utf-8" />
+<title>Meridian Marketing Runbook</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+
+<style>
+  /* Meridian's own palette — slate, steel, ivory, ink — as the light ground.
+     Every colour is defined here first so the un-stamped "system" theme, which
+     is what most viewers get, always resolves. */
+  :root {
+    --ground:      #F5F4EF;
+    --surface:     #FFFFFF;
+    --surface-2:   #EFEEE8;
+    --ink:         #23262B;
+    --ink-soft:    #5B626C;
+    --ink-faint:   #8A8F97;
+    --rule:        #DCDAD2;
+    --rule-strong: #C4C2B8;
+    --slate:       #3E4C63;
+    --steel:       #4F6D8C;
+    --ready:       #1B6B4F;
+    --waiting:     #8A5A10;
+    --off:         #8C3A33;
+    --ready-bg:    #E4F0EA;
+    --waiting-bg:  #F7EEDC;
+    --off-bg:      #F6E6E4;
+    --steel-bg:    #E6EDF4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #15171B;
+      --surface:     #1C1F25;
+      --surface-2:   #23272E;
+      --ink:         #E6E8EC;
+      --ink-soft:    #A6ADB7;
+      --ink-faint:   #767D87;
+      --rule:        #2C3038;
+      --rule-strong: #3C424C;
+      --slate:       #A8B8CE;
+      --steel:       #8FB0CE;
+      --ready:       #6DCFA6;
+      --waiting:     #E0B368;
+      --off:         #E58C82;
+      --ready-bg:    #17302A;
+      --waiting-bg:  #322717;
+      --off-bg:      #321F1D;
+      --steel-bg:    #1E2A36;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:      #15171B;
+    --surface:     #1C1F25;
+    --surface-2:   #23272E;
+    --ink:         #E6E8EC;
+    --ink-soft:    #A6ADB7;
+    --ink-faint:   #767D87;
+    --rule:        #2C3038;
+    --rule-strong: #3C424C;
+    --slate:       #A8B8CE;
+    --steel:       #8FB0CE;
+    --ready:       #6DCFA6;
+    --waiting:     #E0B368;
+    --off:         #E58C82;
+    --ready-bg:    #17302A;
+    --waiting-bg:  #322717;
+    --off-bg:      #321F1D;
+    --steel-bg:    #1E2A36;
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 940px;
+    margin: 0 auto;
+    padding: 56px 24px 96px;
+  }
+
+  h1, h2, h3, .eyebrow, .step-n {
+    font-family: Sora, Inter, sans-serif;
+    text-wrap: balance;
+  }
+  h1 {
+    font-size: clamp(30px, 5vw, 44px);
+    font-weight: 700;
+    letter-spacing: -0.022em;
+    line-height: 1.12;
+    margin: 0 0 14px;
+  }
+  h2 {
+    font-size: clamp(21px, 3vw, 26px);
+    font-weight: 700;
+    letter-spacing: -0.014em;
+    line-height: 1.25;
+    margin: 0;
+  }
+  h3 {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.006em;
+    margin: 0 0 6px;
+  }
+  p { margin: 0 0 14px; max-width: 68ch; }
+  p:last-child { margin-bottom: 0; }
+  strong { font-weight: 600; }
+  a { color: var(--steel); }
+
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 18px;
+  }
+  .lede {
+    font-size: 18px;
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin: 0;
+  }
+
+  /* Sections are separated by a rule and generous space; layout does the
+     spacing so nothing collapses or doubles. */
+  .doc { display: flex; flex-direction: column; gap: 52px; margin-top: 52px; }
+  section { display: flex; flex-direction: column; gap: 20px; }
+  .sec-head { display: flex; flex-direction: column; gap: 6px; border-top: 2px solid var(--rule-strong); padding-top: 18px; }
+  .sec-head .kicker {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--steel);
+  }
+
+  /* ---- status grid ---- */
+  .status { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .stat .label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); }
+  .stat .value { font-family: Sora, sans-serif; font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat .note { font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; }
+
+  .chip {
+    display: inline-block;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 10.5px; font-weight: 500;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 2px; white-space: nowrap;
+  }
+  .chip.ready   { color: var(--ready);   background: var(--ready-bg); }
+  .chip.waiting { color: var(--waiting); background: var(--waiting-bg); }
+  .chip.off     { color: var(--off);     background: var(--off-bg); }
+  .chip.info    { color: var(--steel);   background: var(--steel-bg); }
+
+  /* ---- steps: the setup order is a real dependency chain, so it is numbered ---- */
+  .steps { display: flex; flex-direction: column; gap: 4px; }
+  .step {
+    display: grid;
+    grid-template-columns: 54px 1fr;
+    gap: 20px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 22px 22px 22px 18px;
+  }
+  .step + .step { margin-top: 12px; }
+  .step-n {
+    font-size: 26px; font-weight: 700;
+    color: var(--rule-strong);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    padding-top: 2px;
+  }
+  .step-body { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .step-title { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+  .knowit {
+    background: var(--surface-2);
+    border-left: 2px solid var(--steel);
+    padding: 11px 14px;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+    border-radius: 0 2px 2px 0;
+  }
+  .knowit b { color: var(--ink); font-weight: 600; }
+
+  code, .mono {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.9em;
+  }
+  code {
+    background: var(--surface-2);
+    padding: 1.5px 5px;
+    border-radius: 2px;
+    word-break: break-word;
+  }
+
+  ul { margin: 0; padding-left: 20px; max-width: 66ch; }
+  li { margin-bottom: 6px; }
+  li:last-child { margin-bottom: 0; }
+
+  /* ---- tables scroll inside their own box, never the page ---- */
+  .tablewrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 3px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 14px; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  thead th {
+    font-size: 10.5px; letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--ink-faint); font-weight: 600; background: var(--surface-2);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.num, td .mono { font-variant-numeric: tabular-nums; }
+
+  /* ---- diagram ---- */
+  figure { margin: 0; display: flex; flex-direction: column; gap: 12px; }
+  .diagram {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 20px 16px;
+    overflow-x: auto;
+  }
+  .diagram svg { max-width: 100%; height: auto; display: block; margin: 0 auto; min-width: 620px; }
+  figcaption { font-size: 13.5px; color: var(--ink-soft); max-width: 68ch; }
+
+  .callout {
+    background: var(--surface);
+    border: 1px solid var(--rule-strong);
+    border-radius: 3px;
+    padding: 18px 20px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .callout.warn { border-color: var(--waiting); background: var(--waiting-bg); }
+  .callout.warn p { color: var(--ink); }
+
+  footer {
+    margin-top: 56px; padding-top: 20px;
+    border-top: 1px solid var(--rule);
+    font-size: 13px; color: var(--ink-faint);
+  }
+
+  @media (max-width: 620px) {
+    .wrap { padding: 36px 18px 72px; }
+    .step { grid-template-columns: 36px 1fr; gap: 14px; padding: 18px 16px; }
+    .step-n { font-size: 20px; }
+  }
+</style>
+
+<div class="wrap">
+
+  <p class="eyebrow">Meridian Interface · Marketing Operations</p>
+  <h1>Meridian Marketing Runbook</h1>
+  <p class="lede">
+    What the system does, the order to switch it on, and how it runs the week once it
+    is on. Everything below was checked against the live system today, not read off
+    the source.
+  </p>
+
+  <div class="doc">
+
+    <!-- ============ STATE ============ -->
+    <section>
+      <div class="sec-head">
+        <span class="kicker">Checked 23 August</span>
+        <h2>Where it stands right now</h2>
+      </div>
+
+      <p>
+        The machinery is built, deployed, and running. What it has never done is
+        produce a single real word or reach a single real person — because there is
+        no AI key and no channel connected. Everything below is true today:
+      </p>
+
+      <div class="status">
+        <div class="stat">
+          <span class="label">Schedules</span>
+          <span class="value">5 of 5 running</span>
+          <span class="note">3,554 runner cycles, zero failures.</span>
+        </div>
+        <div class="stat">
+          <span class="label">Lead capture</span>
+          <span class="value">Working</span>
+          <span class="note">Booking form → CRM → follow-up drafted in under two minutes. Tested today.</span>
+        </div>
+        <div class="stat">
+          <span class="label">AI writing</span>
+          <span class="value">Placeholder</span>
+          <span class="note">No key. Every draft is canned text marked <span class="mono">[mock]</span>.</span>
+        </div>
+        <div class="stat">
+          <span class="label">Publishing</span>
+          <span class="value">Nowhere to go</span>
+          <span class="note">No channel connected, so approved posts land in a stub.</span>
+        </div>
+        <div class="stat">
+          <span class="label">Sending</span>
+          <span class="value">Drafts only</span>
+          <span class="note">6 emails written, none sent. No SendGrid key.</span>
+        </div>
+        <div class="stat">
+          <span class="label">Approval queue</span>
+          <span class="value">5 waiting</span>
+          <span class="note">Nine wrong-industry drafts were rejected today — see below.</span>
+        </div>
+      </div>
+
+      <div class="callout">
+        <h3>The one-sentence version</h3>
+        <p>
+          You have a working conveyor belt with nothing on it: every moving part has
+          been exercised end to end, and the only thing standing between this and a
+          system that markets the studio is <strong>an API key</strong> — everything
+          after that is optional and reversible.
+        </p>
+      </div>
+    </section>
+
+    <!-- ============ PART ONE: SETUP ============ -->
+    <section>
+      <div class="sec-head">
+        <span class="kicker">Part one</span>
+        <h2>Switching it on, in order</h2>
+      </div>
+
+      <p>
+        These are numbered because the order is a real dependency chain, not a
+        preference. Each step is safe to stop at — the system keeps running in
+        whatever state you leave it. <strong>Do not skip ahead to step 5.</strong>
+      </p>
+
+      <div class="steps">
+
+        <!-- 1 -->
+        <div class="step">
+          <div class="step-n">1</div>
+          <div class="step-body">
+            <div class="step-title">
+              <h3>Give it an API key</h3>
+              <span class="chip off">Not done · blocks everything</span>
+            </div>
+            <p>
+              In the Supabase dashboard: <strong>Edge Functions → Secrets → Add
+              new secret</strong>. Name it <code>ANTHROPIC_API_KEY</code>, paste the
+              full <code>sk-ant-…</code> value from console.anthropic.com.
+            </p>
+            <p>
+              It belongs in Supabase because that is where the functions actually
+              run. A key saved on your Mac, or in a <code>.env</code> file, does
+              nothing — the code executing is on Supabase's servers, not yours. No
+              redeploy is needed; the next run picks it up.
+            </p>
+            <div class="knowit">
+              <b>You'll know it worked when</b> the System Health tab stops saying
+              "Demo mode" and new drafts arrive without the <code>[mock]</code> tag.
+              Give it up to a day, or ask me to trigger a run.
+            </div>
+            <p style="color:var(--ink-soft);font-size:14.5px;">
+              A note I'll keep repeating: this must be <em>your</em> key for
+              <em>your</em> studio. When a client gets a system like this, they bring
+              their own — never yours, or their usage lands on your bill and their
+              access dies with your account.
+            </p>
+          </div>
+        </div>
+
+        <!-- 2 -->
+        <div class="step">
+          <div class="step-n">2</div>
+          <div class="step-body">
+            <div class="step-title">
+              <h3>Read the first real draft before connecting anything</h3>
+              <span class="chip waiting">Do this before step 3</span>
+            </div>
+            <p>
+              Once the key is in, wait for one planning cycle and open the approval
+              queue. Read what it writes about your studio, to your buyers, at your
+              prices. This is the cheapest moment to discover it has the wrong idea
+              about the business — nothing can reach anyone yet.
+            </p>
+            <p>
+              If the voice is off, the fix is not in the code. It is in the business
+              context: the customer profiles, the service list, the proof points, and
+              the writing rules. Those live in the database and every agent re-reads
+              them on the next run. Tell me what is wrong and I will change the
+              context, not the prompt.
+            </p>
+            <div class="knowit">
+              <b>You'll know it worked when</b> you read a draft and think "I would
+              actually post that" — or you can name exactly what is wrong with it.
+              Both are useful. Neither is possible while it is writing placeholder.
+            </div>
+          </div>
+        </div>
+
+        <!-- 3 -->
+        <div class="step">
+          <div class="step-n">3</div>
+          <div class="step-body">
+            <div class="step-title">
+              <h3>Give approved posts somewhere to go</h3>
+              <span class="chip off">Nothing connected</span>
+            </div>
+            <p>
+              Right now approving a post marks it approved and publishes it to a
+              stub — a polite nowhere. Two routes out:
+            </p>
+            <ul>
+              <li>
+                <strong>The webhook route (fast).</strong> One URL pointed at
+                Make, Zapier, or n8n. That tool posts to Instagram, Facebook,
+                LinkedIn, TikTok — anywhere it can already reach. No platform
+                approval, no developer review, working the same afternoon.
+              </li>
+              <li>
+                <strong>The direct route (slower, sturdier).</strong> Facebook and
+                Instagram through Meta's Graph API, LinkedIn through theirs. Both
+                adapters are already written and waiting for credentials. Each needs
+                a Meta or LinkedIn developer app, which takes days and a review.
+              </li>
+            </ul>
+            <p>
+              Start with the webhook. It costs an afternoon and tells you whether
+              publishing is even the bottleneck before you spend a week on API
+              approval.
+            </p>
+            <div class="knowit">
+              <b>You'll know it worked when</b> an approved post shows
+              <span class="mono">published</span> with a real ID beside it instead of
+              <span class="mono">stub</span> — and it is visibly on the platform.
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 -->
+        <div class="step">
+          <div class="step-n">4</div>
+          <div class="step-body">
+            <div class="step-title">
+              <h3>Let it actually send email</h3>
+              <span class="chip off">Drafts only</span>
+            </div>
+            <p>
+              Add <code>SENDGRID_API_KEY</code> and <code>SENDGRID_FROM_EMAIL</code>
+              as Supabase secrets. Until then, follow-ups to new leads are written
+              and stored, and no one receives them. There are six sitting there now.
+            </p>
+            <p>
+              This same key turns on <strong>alert emails</strong> from the System
+              Health panel. Until it exists, problems appear on that page and nowhere
+              else — the system cannot tell you something broke, it can only show you
+              if you look.
+            </p>
+            <div class="callout warn">
+              <p>
+                <strong>Send from a separate domain if you ever do cold outreach.</strong>
+                Warm replies to people who contacted you are fine on
+                meridianinterface.com. Cold email is not: a spam complaint against
+                your main domain can take your real client correspondence down with
+                it.
+              </p>
+            </div>
+            <div class="knowit">
+              <b>You'll know it worked when</b> a test lead you create receives the
+              follow-up, and "Messages failed to send" on System Health stays at zero.
+            </div>
+          </div>
+        </div>
+
+        <!-- 5 -->
+        <div class="step">
+          <div class="step-n">5</div>
+          <div class="step-body">
+            <div class="step-title">
+              <h3>Decide how much rope it gets</h3>
+              <span class="chip ready">Currently: you approve everything</span>
+            </div>
+            <p>
+              One setting, two values. <span class="mono">draft</span> — where it is
+              now — means the agent writes and you approve before anything reaches a
+              person. <span class="mono">auto</span> means it sends follow-ups and
+              publishes posts on its own.
+            </p>
+            <p>
+              <strong>My advice: stay on <span class="mono">draft</span> until you
+              have approved thirty or so pieces</strong> and stopped being surprised
+              by what it writes. Autonomy is worth having, but it is worth having
+              after you know its habits — and it is one word to change, either
+              direction, any time.
+            </p>
+            <div class="knowit">
+              <b>You'll know you're ready when</b> your last several approvals were
+              rubber stamps. If you are still editing, the system is not ready and
+              switching to auto just publishes the edits you would have made.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============ PART TWO: HOW IT RUNS ============ -->
+    <section>
+      <div class="sec-head">
+        <span class="kicker">Part two</span>
+        <h2>How it runs once it's on</h2>
+      </div>
+
+      <figure>
+        <div class="diagram">
+          <svg viewBox="0 0 860 252" role="img"
+               aria-label="A loop: the website form feeds the CRM, the planner reads it each morning and creates tasks, the runner writes drafts, you approve them, approved work publishes, and the measurement step feeds the next morning's plan.">
+            <defs>
+              <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5"
+                      markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" />
+              </marker>
+              <marker id="ah-a" viewBox="0 0 10 10" refX="9" refY="5"
+                      markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--steel)" />
+              </marker>
+            </defs>
+
+            <g font-family="Inter, sans-serif" font-size="12.5" fill="currentColor">
+
+              <!-- row A -->
+              <rect x="20"  y="70" width="130" height="54" rx="2" fill="none" stroke="currentColor" stroke-width="1.25" />
+              <text x="85"  y="93"  text-anchor="middle">Website</text>
+              <text x="85"  y="110" text-anchor="middle">form</text>
+
+              <rect x="210" y="70" width="110" height="54" rx="2" fill="none" stroke="currentColor" stroke-width="1.25" />
+              <text x="265" y="102" text-anchor="middle">CRM</text>
+
+              <rect x="380" y="70" width="150" height="54" rx="2" fill="none" stroke="currentColor" stroke-width="1.25" />
+              <text x="455" y="93"  text-anchor="middle">Plan the day</text>
+              <text x="455" y="110" text-anchor="middle" font-size="11" fill="var(--ink-faint)">8:00am</text>
+
+              <rect x="590" y="70" width="170" height="54" rx="2" fill="none" stroke="currentColor" stroke-width="1.25" />
+              <text x="675" y="93"  text-anchor="middle">Do the work</text>
+              <text x="675" y="110" text-anchor="middle" font-size="11" fill="var(--ink-faint)">every 2 minutes</text>
+
+              <line x1="150" y1="97" x2="204" y2="97" stroke="currentColor" stroke-width="1.25" marker-end="url(#ah)" />
+              <text x="177" y="88" text-anchor="middle" font-size="10.5" fill="var(--ink-faint)">enquiry</text>
+
+              <line x1="320" y1="97" x2="374" y2="97" stroke="currentColor" stroke-width="1.25" marker-end="url(#ah)" />
+              <text x="347" y="88" text-anchor="middle" font-size="10.5" fill="var(--ink-faint)">who's new</text>
+
+              <line x1="530" y1="97" x2="584" y2="97" stroke="currentColor" stroke-width="1.25" marker-end="url(#ah)" />
+              <text x="557" y="88" text-anchor="middle" font-size="10.5" fill="var(--ink-faint)">tasks</text>
+
+              <!-- drop -->
+              <line x1="675" y1="124" x2="675" y2="170" stroke="currentColor" stroke-width="1.25" marker-end="url(#ah)" />
+              <text x="688" y="152" font-size="10.5" fill="var(--ink-faint)">writes them</text>
+
+              <!-- row B, read right to left -->
+              <rect x="610" y="176" width="130" height="54" rx="2" fill="none" stroke="currentColor" stroke-width="1.25" />
+              <text x="675" y="208" text-anchor="middle">Drafts</text>
+
+              <rect x="410" y="176" width="140" height="54" rx="2" fill="var(--steel-bg)" stroke="var(--steel)" stroke-width="2" />
+              <text x="480" y="199" text-anchor="middle" fill="var(--steel)" font-weight="600">You approve</text>
+              <text x="480" y="215" text-anchor="middle" font-size="10.5" fill="var(--steel)">the only human step</text>
+
+              <rect x="240" y="176" width="110" height="54" rx="2" fill="none" stroke="currentColor" stroke-width="1.25" />
+              <text x="295" y="208" text-anchor="middle">Publish</text>
+
+              <rect x="40"  y="176" width="140" height="54" rx="2" fill="none" stroke="currentColor" stroke-width="1.25" />
+              <text x="110" y="199" text-anchor="middle">Measure</text>
+              <text x="110" y="215" text-anchor="middle" font-size="11" fill="var(--ink-faint)">7:30am</text>
+
+              <line x1="610" y1="203" x2="556" y2="203" stroke="var(--steel)" stroke-width="1.5" marker-end="url(#ah-a)" />
+              <line x1="410" y1="203" x2="356" y2="203" stroke="var(--steel)" stroke-width="1.5" marker-end="url(#ah-a)" />
+              <text x="383" y="194" text-anchor="middle" font-size="10.5" fill="var(--steel)">approved</text>
+
+              <line x1="240" y1="203" x2="186" y2="203" stroke="currentColor" stroke-width="1.25" marker-end="url(#ah)" />
+              <text x="213" y="194" text-anchor="middle" font-size="10.5" fill="var(--ink-faint)">results</text>
+
+              <!-- return: measurement into tomorrow's plan -->
+              <path d="M 110 176 L 110 148 L 455 148 L 455 130"
+                    fill="none" stroke="currentColor" stroke-width="1.25"
+                    stroke-dasharray="4 3" marker-end="url(#ah)" />
+              <text x="282" y="141" text-anchor="middle" font-size="10.5" fill="var(--ink-faint)">what worked, into tomorrow's plan</text>
+
+            </g>
+          </svg>
+        </div>
+        <figcaption>
+          The loop. Everything runs on its own except the highlighted step — and
+          nothing downstream of it happens until you act. The dashed line is what
+          makes it a loop rather than a treadmill: what actually happened is fed back
+          into the next morning's plan.
+        </figcaption>
+      </figure>
+
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr><th>When</th><th>What happens</th><th>What you'd notice</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="mono">Every 2 min</td>
+              <td>Picks up queued work and does it — writing a draft, drafting a follow-up, publishing something you approved.</td>
+              <td>Nothing. This is the part that should be invisible.</td>
+            </tr>
+            <tr>
+              <td class="mono">7:30am daily</td>
+              <td>Measures the last 30 days: what was drafted, published, where leads actually came from, what it cost.</td>
+              <td>Nothing directly — it changes what the 8:00am plan decides.</td>
+            </tr>
+            <tr>
+              <td class="mono">8:00am daily</td>
+              <td>Reads the business context and yesterday's measurements, then decides the day's work: follow up new leads, draft content aimed at one customer profile.</td>
+              <td>New drafts appear in your queue.</td>
+            </tr>
+            <tr>
+              <td class="mono">Mondays 8:30am</td>
+              <td>Writes the weekly owner summary from the real numbers.</td>
+              <td>A report you can read in two minutes.</td>
+            </tr>
+            <tr>
+              <td class="mono">Every 15 min</td>
+              <td>Checks itself — schedules firing, work failing, sends failing, how long drafts have waited.</td>
+              <td>Anything wrong appears on the System Health tab.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        Times are Houston. The measurement step runs half an hour before the planner
+        on purpose: the plan should be made by something that has already looked at
+        what happened, not alongside it.
+      </p>
+    </section>
+
+    <!-- ============ PART THREE: THE HUMAN PART ============ -->
+    <section>
+      <div class="sec-head">
+        <span class="kicker">Part three</span>
+        <h2>The part that is yours</h2>
+      </div>
+
+      <p>
+        There is exactly one human step in that diagram, and the system's own
+        measurement has already flagged it. Its words, not mine:
+      </p>
+
+      <div class="callout warn">
+        <p>
+          "Nothing has ever been published. Do not plan more content volume. Nothing
+          that has been written has reached an audience yet, so more drafts cannot
+          teach us anything — the bottleneck is approval and publishing, not writing."
+        </p>
+      </div>
+
+      <p>
+        That is the honest shape of this. The system will happily write more than you
+        can read. Drafting is free; your attention is not. Two consequences worth
+        planning around:
+      </p>
+
+      <ul>
+        <li>
+          <strong>Approve on a rhythm, not on inspiration.</strong> Ten minutes on a
+          fixed day beats an hour when you happen to remember. The system flags a
+          backlog once five items have waited a week — that alert exists because this
+          is the predictable failure.
+        </li>
+        <li>
+          <strong>Rejecting is as useful as approving.</strong> An item you leave
+          untouched teaches nothing and blocks the queue. Rejecting it is a decision
+          the system can see.
+        </li>
+      </ul>
+
+      <p>
+        And the measurement is honest in the other direction too. All four leads so
+        far came from the website and a referral — none from anything the system
+        published, because it has published nothing. It says so plainly rather than
+        claiming credit for the website's work. That property is worth protecting:
+        a marketing system that flatters itself is worse than none, because you would
+        make real decisions on it.
+      </p>
+    </section>
+
+    <!-- ============ TODAY'S FIXES ============ -->
+    <section>
+      <div class="sec-head">
+        <span class="kicker">Changed today</span>
+        <h2>Two things that were wrong</h2>
+      </div>
+
+      <p>Both were found by checking the running system rather than reading the code.</p>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-n">A</div>
+          <div class="step-body">
+            <div class="step-title">
+              <h3>It was writing for the wrong business</h3>
+              <span class="chip ready">Fixed and deployed</span>
+            </div>
+            <p>
+              The placeholder copy was written for the events client this system was
+              first built for. Every draft it produced for a web studio talked about
+              "lighting, photo booths, and a DJ", and the lead follow-up asked
+              web-design enquiries for their <em>date and guest count</em>. Nine such
+              drafts were sitting in your approval queue.
+            </p>
+            <p>
+              Placeholder does not mean unread — you read it, and on
+              <span class="mono">auto</span> a real lead would have received it. The
+              copy now speaks as the studio and cites the published prices. The nine
+              drafts are rejected with the reason recorded, not deleted.
+            </p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-n">B</div>
+          <div class="step-body">
+            <div class="step-title">
+              <h3>A saved file didn't match what's running</h3>
+              <span class="chip ready">Fixed</span>
+            </div>
+            <p>
+              The health-check migration had been written from memory during a
+              session that couldn't reach the database. It looked right and was
+              wrong in four ways — different alert names, one shared staleness
+              threshold instead of per-schedule ones, a different return type, and a
+              three-day backlog window instead of seven. Applying it would have
+              quietly downgraded the live checks and stranded every open alert.
+            </p>
+            <p>
+              It is now dumped from the live database and verified line-for-line
+              against it. Worth stating the lesson plainly: <strong>a file that
+              describes a running system is not evidence about that system.</strong>
+              Only the system is.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ NOT BUILT ============ -->
+    <section>
+      <div class="sec-head">
+        <span class="kicker">Scope</span>
+        <h2>What it deliberately does not do</h2>
+      </div>
+      <ul>
+        <li>
+          <strong>It does not spend money on ads.</strong> Google, Meta and TikTok
+          ad APIs are absent by choice, not oversight. Publishing a post costs
+          nothing; an ads API spends your budget. That deserves its own decision and
+          its own approval gate.
+        </li>
+        <li>
+          <strong>It does not promise Google rankings</strong> or invent clients,
+          statistics, or testimonials. Those are written into its rules as hard
+          prohibitions, alongside a ban on filler words like <em>unlock</em>,
+          <em>elevate</em>, and <em>seamless</em>.
+        </li>
+        <li>
+          <strong>It does not claim credit it cannot prove.</strong> Leads from
+          outside its channels are counted separately and labelled as not being
+          marketing results.
+        </li>
+      </ul>
+    </section>
+
+    <!-- ============ REFERENCE ============ -->
+    <section>
+      <div class="sec-head">
+        <span class="kicker">Reference</span>
+        <h2>Where everything lives</h2>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr><th>Thing</th><th>Where</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Is it healthy? Any problems?</td><td>Owner portal → <strong>System Health</strong></td></tr>
+            <tr><td>Drafts waiting on you</td><td>Approval queue (ask me, or the dashboard)</td></tr>
+            <tr><td>API key, email key, channel credentials</td><td>Supabase → Edge Functions → Secrets</td></tr>
+            <tr><td>Who it writes for, what you sell, the rules</td><td>Database <code>settings</code> — editable without a redeploy</td></tr>
+            <tr><td>Code</td><td><code>system/</code> on branch <code class="mono">claude/marketing-system-tech-stack-uds0mp</code></td></tr>
+            <tr><td>The written record</td><td><code>system/SESSION.md</code> and <code>system/PRELAUNCH.md</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="color:var(--ink-soft);font-size:14.5px;">
+        Nothing here needs a terminal. Every step above is a value pasted into the
+        Supabase dashboard, or a sentence to me.
+      </p>
+    </section>
+
+  </div>
+
+  <footer>
+    Verified against the live system on 23 August 2026 — schedules, lead capture,
+    task queue, publishing path, and both agent functions after redeploy.
+  </footer>
+</div>

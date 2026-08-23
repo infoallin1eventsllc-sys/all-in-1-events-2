@@ -780,3 +780,88 @@ The schedules table had **"Runs" as the header over the cron expression** and
 Runs. Fixed and pushed. My earlier 17/17 pass had verified the panel *rendered*
 — not that its labels described their own cells. A passing test says the thing
 drew, not that it is telling the truth.
+
+
+---
+
+## Aug 23 — end-to-end verification, and two real defects
+
+Otis: *"can I get a step by step how we're going to set it up and how it's going
+to work for the business? And make sure everything is set up properly with the
+code and communication to function and operate properly."*
+
+**Runbook artifact** (setup order + how the week runs + what is deliberately not
+built): `https://claude.ai/code/artifact/68750eb8-c1a0-41d0-b87c-a1101c3b39a0`
+Source kept in the repo at `system/runbook.artifact.html`.
+
+### First: yesterday's "permission denied" was my own error
+
+`mcp__Supabase__execute_sql` was fine. I had used the **wrong project ref**
+(`iyeqrrvmlaqcgytqhgik`). The correct one is **`glzodwhyavexpuusbqjy`** — it is
+in this file and in the skill. Check the ref before concluding the tool or the
+database is unavailable.
+
+### Verified working, against the live system
+
+- All 5 schedules active, **zero failures**: runner 3,554 runs, healthcheck 169,
+  orchestrator 5, analyze 2, report 0 (weekly, Monday not yet reached).
+- Full chain, live: `intake` → contact + activity → `follow_up_lead` task →
+  runner executed within 2 min → email drafted. Test contact then deleted.
+- `invoke_edge()` is the only path that satisfies both the gateway JWT **and**
+  the run secret. A bare `x-run-secret` POST gets
+  `UNAUTHORIZED_NO_AUTH_HEADER` from the gateway before the function runs.
+
+### Defect 1 — the agent was writing for the wrong business
+
+`_shared/claude.ts` mock copy was the events client's: *"lighting, photo booths,
+a DJ"*, and the follow-up asked web-design leads for their **"date and guest
+count"**. Nine such drafts were in the approval queue. The shared context layer
+had fixed the real prompts; nobody had fixed the fallbacks.
+
+Fixed, deployed (**orchestrator v14, runner v16**), and verified by queueing a
+content task and reading the output. The nine drafts are **rejected** with
+`meta.rejected_reason`, not deleted.
+
+Lesson: placeholder text is not unread text. The owner reads it, and on
+`autonomy=auto` a lead receives it.
+
+### Defect 2 — migration 0009 did not match production
+
+The file I wrote Aug 22 from memory differed from the deployed functions in four
+ways: alert codes (`cron_never_ran:` vs the real `cron_never:`), one shared
+staleness threshold instead of **per-schedule grace periods**, `returns jsonb`
+instead of `returns table(raised, cleared)`, and a 3-day approval-backlog window
+instead of 7. Applying it would have downgraded the live checks and stranded
+every open alert, since `clear_alert` matches on code.
+
+Now dumped from the live database and **verified body-for-body** (md5 of
+whitespace-normalised `prosrc` for all four functions).
+
+Lesson: a file that describes a running system is not evidence about that
+system.
+
+### Also fixed
+
+`vite-env.d.ts` declared `VITE_OWNER_PASSCODE`. Nothing read it, but Vite
+inlines every `VITE_` var into the public bundle, so the name invited someone to
+set it. Removed; added `VITE_OWNER_ENDPOINT`, which four modules actually read.
+
+### Current true state (23 Aug)
+
+| | |
+|---|---|
+| AI | mock — no `ANTHROPIC_API_KEY`, no `KEYROUTER_URL` |
+| Channels | `settings.channels` is `{}` — every publish hits the stub |
+| Email | no SendGrid — 6 drafted messages, 0 sent |
+| Autonomy | `draft` |
+| Approval queue | 5 pending (4 older on-brand mocks + 1 new correct one) |
+| Open alerts | 1 info: `cron_never:marketing-report` (correct — weekly) |
+
+### The order that matters (from the runbook)
+
+1. `ANTHROPIC_API_KEY` as a **Supabase Edge Function secret**.
+2. **Read one real draft before connecting any channel** — cheapest moment to
+   catch a wrong voice, and the fix is the `settings` context, not the code.
+3. A channel: webhook first (an afternoon), Meta/LinkedIn later (days of review).
+4. SendGrid — also what turns on System Health alert emails.
+5. Autonomy last, after ~30 approvals that felt like rubber stamps.
