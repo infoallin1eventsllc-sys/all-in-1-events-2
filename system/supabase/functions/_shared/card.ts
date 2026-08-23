@@ -3,11 +3,23 @@
 // the dashboard and CSP-strict artifacts, with no external image host).
 // SVG-as-image can't load web fonts, so we use a clean system sans stack.
 
-const F = "'Helvetica Neue',Arial,sans-serif";
+// Browsers render this SVG as an <img>, where a system stack is the right
+// choice. The rasteriser (see cardhost.ts) has no system fonts at all and is
+// handed one font by name, so it overrides this.
+const SYSTEM_STACK = "'Helvetica Neue',Arial,sans-serif";
 
-export function cardSvg(opts: { title: string; kicker?: string; tagline?: string }): string {
+export type CardOpts = {
+  title: string;
+  kicker?: string;
+  tagline?: string;
+  /** Override the font stack. Set to a family the rasteriser was given. */
+  fontFamily?: string;
+};
+
+export function cardSvg(opts: CardOpts): string {
+  const F = opts.fontFamily ?? SYSTEM_STACK;
   const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]!));
-  const kicker = opts.kicker ?? "MERIDIAN INTERFACE";
+  const kicker = opts.kicker ?? "";
   const tagline = opts.tagline ?? "Websites · Apps · Marketing Systems";
   // Strip bracketed tags / emoji for a clean typographic card.
   const clean = String(opts.title)
@@ -41,7 +53,7 @@ export function cardSvg(opts: { title: string; kicker?: string; tagline?: string
 <circle cx="1010" cy="1030" r="300" fill="#3E4C63" opacity="0.05"/>
 <g transform="translate(80,84) scale(1.15)"><path d="M11 52V16.5C11 13.5 14.7 12.2 16.6 14.5L32 33L47.4 14.5C49.3 12.2 53 13.5 53 16.5V52H45V27L34.8 39.2C33.4 40.9 30.6 40.9 29.2 39.2L19 27V52H11Z" fill="url(#mg)"/></g>
 <text x="152" y="118" font-family="${F}" font-size="26" font-weight="700" fill="#23262B" letter-spacing="0.5">Meridian Interface</text>
-<text x="80" y="${startY - 78}" font-family="${F}" font-size="24" font-weight="700" fill="#4F6D8C" letter-spacing="3">${esc(kicker)}</text>
+${kicker ? `<text x="80" y="${startY - 78}" font-family="${F}" font-size="24" font-weight="700" fill="#4F6D8C" letter-spacing="3">${esc(kicker)}</text>` : ""}
 ${heads}
 <rect x="82" y="${startY + lines.length * 92 - 30}" width="96" height="8" rx="4" fill="#3E4C63"/>
 <text x="80" y="1010" font-family="${F}" font-size="26" font-weight="700" fill="#23262B" letter-spacing="0.5">Meridian Interface</text>
@@ -49,18 +61,26 @@ ${heads}
 </svg>`;
 }
 
-export function cardDataUri(opts: { title: string; kicker?: string; tagline?: string }): string {
+export function cardDataUri(opts: CardOpts): string {
   const svg = cardSvg(opts);
   // Unicode-safe base64 for Deno/browsers.
   const b64 = btoa(unescape(encodeURIComponent(svg)));
   return "data:image/svg+xml;base64," + b64;
 }
 
-// Map a content kind to a card kicker label.
+/**
+ * The small line above the headline. It earns its place only when it says
+ * something the card does not already say: the studio name is on the card
+ * twice over (the lockup at the top, the sign-off at the bottom), so a kicker
+ * reading "MERIDIAN INTERFACE" made it three times on one square. Kinds with
+ * nothing extra to add get no kicker, and the headline takes the space.
+ */
 export function kickerFor(kind: string): string {
   const m: Record<string, string> = {
-    tip: "TIP OF THE WEEK", blog: "FROM THE BLOG", ad: "MERIDIAN INTERFACE",
-    story: "MERIDIAN INTERFACE", post: "MERIDIAN INTERFACE",
+    tip: "TIP OF THE WEEK",
+    blog: "FROM THE BLOG",
+    guide: "HOW IT WORKS",
+    case_study: "CLIENT WORK",
   };
-  return m[kind] ?? "MERIDIAN INTERFACE";
+  return m[kind] ?? "";
 }

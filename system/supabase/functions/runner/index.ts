@@ -8,6 +8,7 @@ import { callClaude, DEFAULT_MODEL } from "../_shared/claude.ts";
 import { contextBlock } from "../_shared/context.ts";
 import { sendEmail, sendSms, publishContent } from "../_shared/channels.ts";
 import { cardDataUri, kickerFor } from "../_shared/card.ts";
+import { hostCard } from "../_shared/cardhost.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
 import { authorizedRun } from "../_shared/runauth.ts";
 
@@ -132,18 +133,42 @@ async function generateContent(sb: SupabaseClient, task: Task) {
     body = j.body ?? out.text;
   } catch { /* keep raw text as body */ }
 
-  // (A) real library photo if one truly matches; (B) else a generated branded card.
-  const imageUrl = (await pickLibraryImage(sb, `${topic} ${kind} ${channel}`))
-    ?? cardDataUri({ title: title ?? topic, kicker: kickerFor(kind) });
+  // Three ways to get a picture, best first.
+  //
+  // (A) A real photo from the library whose tags genuinely match. A photograph
+  //     of actual work beats a typographic card on every channel.
+  // (B) The branded card, rasterised to a hosted JPEG. Instagram fetches images
+  //     by URL and takes JPEG only, so this is the one that makes an Instagram
+  //     post possible at all.
+  // (C) The same card embedded as a data: URI. Facebook and LinkedIn post as
+  //     text, and the dashboard renders this fine, so nothing is lost here
+  //     except Instagram — which is why (B) failing is not a task failure.
+  const cardTitle = title ?? topic;
+  const cardOpts = { title: cardTitle, kicker: kickerFor(kind) };
+
+  const libraryImage = await pickLibraryImage(sb, `${topic} ${kind} ${channel}`);
+  const hosted = libraryImage ? null : await hostCard(sb, cardOpts);
+  const imageUrl = libraryImage ?? hosted?.url ?? cardDataUri(cardOpts);
+
+  const imageSource = libraryImage ? "library" : hosted ? "hosted_card" : "embedded_card";
+
   const autonomy = String(agent.autonomy || "draft");
   const { data } = await sb.from("content_items").insert({
     channel, kind, title, body, image_url: imageUrl,
     status: autonomy === "auto" ? "approved" : "pending_approval",
     created_by: "agent",
-    meta: { mocked: out.mocked, topic, icp },
+    // image_source is worth storing: "embedded_card" is the one value that
+    // means this item cannot go to Instagram, and that should be visible
+    // without re-deriving it from the URL.
+    meta: { mocked: out.mocked, topic, icp, image_source: imageSource },
   }).select("id").single();
 
-  return { content_item_id: data?.id, status: autonomy === "auto" ? "approved" : "pending_approval", mocked: out.mocked };
+  return {
+    content_item_id: data?.id,
+    status: autonomy === "auto" ? "approved" : "pending_approval",
+    mocked: out.mocked,
+    image_source: imageSource,
+  };
 }
 
 // Draft (draft mode) or send (auto mode) a first-touch follow-up to a new lead.
