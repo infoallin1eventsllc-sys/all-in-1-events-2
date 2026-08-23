@@ -147,20 +147,31 @@ export function extractJson<T = unknown>(text: string): T | null {
   }
 }
 
+/**
+ * Placeholder copy used whenever there is no working Anthropic key.
+ *
+ * This must read as MERIDIAN INTERFACE — a web and software studio — and not as
+ * the events client this system was first built for. It shipped that way, and
+ * every draft in the approval queue came out asking web-design leads for their
+ * "date and guest count". Placeholder text still reaches a human: the owner
+ * reads it in the approval queue, and with autonomy set to `auto` a lead would
+ * receive it. Keep it on-brand, keep the [mock] marker, and keep it consistent
+ * with settings.content_rules — plain words, real prices, no filler verbs.
+ */
 function mockFor(prompt: string): string {
   if (/\bplan\b|ONLY JSON|"tasks"/i.test(prompt)) {
     return JSON.stringify({
-      summary: "[mock] Follow up new leads and draft one seasonal post.",
+      summary: "[mock] Follow up new leads and draft one post about what a site actually costs.",
       tasks: [
         { type: "follow_up_lead" },
-        { type: "generate_content", payload: { channel: "instagram", kind: "post", topic: "Seasonal highlight" } },
+        { type: "generate_content", payload: { channel: "instagram", kind: "post", topic: "What a small-business website costs" } },
       ],
     });
   }
   if (/follow-up|outreach|invites a reply/i.test(prompt)) {
     return JSON.stringify({
       subject: "Thanks for reaching out",
-      body: "[mock draft] Hi there — thanks so much for getting in touch! We'd love to help make your event unforgettable. Could you share your date and guest count? I'll put together a couple of options right away. (This is placeholder text — add an Anthropic key for real, personalized copy.)",
+      body: "[mock draft] Thanks for getting in touch. So I can give you a real number rather than a range: what does the business do, and is this a new site or a rebuild of one you already have? If there is a site now, send me the address and I will tell you what I would change before you spend anything. (This is placeholder text — add an Anthropic key for real, personalised copy.)",
     });
   }
   // The summary branch must come before the content branch: the report prompt
@@ -172,8 +183,8 @@ function mockFor(prompt: string): string {
   }
   if (/write a|content|post|caption/i.test(prompt)) {
     return JSON.stringify({
-      title: "[mock draft] Your Event, Elevated",
-      body: "[mock draft] ✨ From lighting to photo booths to a DJ that keeps the floor packed — we handle the details so you can enjoy the night. Booking now for the season. DM us to reserve your date. (Placeholder text — add an Anthropic key for real, on-brand copy.)",
+      title: "[mock draft] What a small-business website actually costs",
+      body: "[mock draft] A single landing page is $3,800. A 3-7 page business site is $8,500. Those are the real numbers, published on our site, because a quote you cannot get without a sales call is not a price. What is not included: we do not run your ads, and we do not promise a Google ranking. What is: a site you can edit yourself without calling us. (Placeholder text — add an Anthropic key for real, on-brand copy.)",
     });
   }
   return "[mock] Placeholder copy generated without an Anthropic API key. Add ANTHROPIC_API_KEY to produce real content.";
