@@ -960,3 +960,13 @@ testing a committed copy, so it cannot pass against a stale duplicate.
 - **Delete the `cardspike` edge function** in the Supabase dashboard. It is a
   retired feasibility test, now a 410 tombstone. The MCP tooling deploys
   functions but cannot delete them.
+
+### Tomorrow's checklist (published)
+
+`https://claude.ai/code/artifact/8857e9ea-d148-4d96-ae92-c2eb516ed81a`
+Source kept at `system/checklist.artifact.html`. Ticks persist in Otis's
+browser only — this session cannot see them, so ask rather than assume.
+
+**The two items that unblock everything**, both one paste each and neither
+needing the LLC: `STRIPE_SECRET_KEY` (test mode) and `ANTHROPIC_API_KEY`, both
+as Supabase Edge Function secrets.

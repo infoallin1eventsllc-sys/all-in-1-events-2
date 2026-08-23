@@ -1,0 +1,470 @@
+<meta charset="utf-8" />
+<title>Meridian Monday Checklist</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+
+<style>
+  /* Meridian's own palette. Light is the base so the un-stamped "system"
+     theme — which most viewers get — always resolves. */
+  :root {
+    --ground:      #F5F4EF;
+    --surface:     #FFFFFF;
+    --surface-2:   #EFEEE8;
+    --ink:         #23262B;
+    --ink-soft:    #5B626C;
+    --ink-faint:   #8A8F97;
+    --rule:        #DCDAD2;
+    --rule-firm:   #C4C2B8;
+    --steel:       #4F6D8C;
+    --slate:       #3E4C63;
+    --stop:        #8C3A33;
+    --stop-bg:     #F6E6E4;
+    --wait:        #8A5A10;
+    --wait-bg:     #F7EEDC;
+    --go:          #1B6B4F;
+    --go-bg:       #E4F0EA;
+    --steel-bg:    #E6EDF4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:    #15171B;
+      --surface:   #1C1F25;
+      --surface-2: #23272E;
+      --ink:       #E6E8EC;
+      --ink-soft:  #A6ADB7;
+      --ink-faint: #767D87;
+      --rule:      #2C3038;
+      --rule-firm: #3C424C;
+      --steel:     #8FB0CE;
+      --slate:     #A8B8CE;
+      --stop:      #E58C82;
+      --stop-bg:   #321F1D;
+      --wait:      #E0B368;
+      --wait-bg:   #322717;
+      --go:        #6DCFA6;
+      --go-bg:     #17302A;
+      --steel-bg:  #1E2A36;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:    #15171B;
+    --surface:   #1C1F25;
+    --surface-2: #23272E;
+    --ink:       #E6E8EC;
+    --ink-soft:  #A6ADB7;
+    --ink-faint: #767D87;
+    --rule:      #2C3038;
+    --rule-firm: #3C424C;
+    --steel:     #8FB0CE;
+    --slate:     #A8B8CE;
+    --stop:      #E58C82;
+    --stop-bg:   #321F1D;
+    --wait:      #E0B368;
+    --wait-bg:   #322717;
+    --go:        #6DCFA6;
+    --go-bg:     #17302A;
+    --steel-bg:  #1E2A36;
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 48px 20px 88px; }
+
+  h1, h2, .eyebrow, .grouphead { font-family: Sora, Inter, sans-serif; text-wrap: balance; }
+  h1 { font-size: clamp(28px, 5vw, 38px); font-weight: 700; letter-spacing: -0.02em; margin: 0 0 10px; line-height: 1.14; }
+  .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 16px; }
+  .lede { font-size: 17px; color: var(--ink-soft); margin: 0; max-width: 60ch; }
+
+  .doc { display: flex; flex-direction: column; gap: 34px; margin-top: 40px; }
+  .group { display: flex; flex-direction: column; gap: 12px; }
+  .grouphead { display: flex; flex-direction: column; gap: 3px; border-top: 2px solid var(--rule-firm); padding-top: 14px; }
+  .grouphead h2 { font-size: 19px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+  .grouphead .why { font-size: 13.5px; color: var(--ink-soft); font-family: Inter, sans-serif; max-width: 62ch; }
+
+  /* The whole row is the control: a checklist you have to aim at is a
+     checklist you stop using. */
+  .item {
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    gap: 14px;
+    align-items: start;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 15px 16px;
+    cursor: pointer;
+    transition: border-color .12s ease, background .12s ease;
+  }
+  .item:hover { border-color: var(--rule-firm); }
+  .item:focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
+  .item input { width: 19px; height: 19px; margin: 2px 0 0; accent-color: var(--steel); cursor: pointer; }
+  .item .body { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .item .title { font-weight: 600; font-size: 15.5px; display: flex; flex-wrap: wrap; gap: 9px; align-items: center; }
+  .item .detail { font-size: 14px; color: var(--ink-soft); }
+  .item .detail code {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.88em; background: var(--surface-2);
+    padding: 1.5px 5px; border-radius: 2px; word-break: break-word;
+  }
+
+  /* Done fades rather than vanishes — you still want to see what you cleared. */
+  .item.done { background: var(--surface-2); border-color: var(--rule); }
+  .item.done .title { text-decoration: line-through; text-decoration-thickness: 1px; color: var(--ink-faint); }
+  .item.done .detail { color: var(--ink-faint); }
+
+  .tag {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 10px; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase;
+    padding: 3px 7px; border-radius: 2px; white-space: nowrap;
+  }
+  .tag.stop { color: var(--stop); background: var(--stop-bg); }
+  .tag.wait { color: var(--wait); background: var(--wait-bg); }
+  .tag.go   { color: var(--go);   background: var(--go-bg); }
+  .tag.info { color: var(--steel); background: var(--steel-bg); }
+
+  .note {
+    background: var(--surface);
+    border: 1px solid var(--rule-firm);
+    border-radius: 3px;
+    padding: 16px 18px;
+    display: flex; flex-direction: column; gap: 8px;
+    font-size: 14.5px;
+  }
+  .note strong { font-weight: 600; }
+  .note.warn { border-color: var(--wait); background: var(--wait-bg); }
+
+  .progress {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--surface); border: 1px solid var(--rule);
+    border-radius: 3px; padding: 13px 16px; margin-top: 26px;
+    font-size: 14px; color: var(--ink-soft);
+  }
+  .bar { flex: 1; height: 5px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+  .bar span { display: block; height: 100%; width: 0%; background: var(--steel); transition: width .25s ease; }
+  .count { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 500; }
+  .reset {
+    font: inherit; font-size: 12.5px; color: var(--ink-faint);
+    background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 2px;
+  }
+  .reset:hover { color: var(--ink); text-decoration: underline; }
+  .reset:focus-visible { outline: 2px solid var(--steel); outline-offset: 1px; }
+
+  .statelist { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .st { background: var(--surface); border: 1px solid var(--rule); border-radius: 3px; padding: 11px 13px; display: flex; flex-direction: column; gap: 2px; }
+  .st .k { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); }
+  .st .v { font-family: Sora, sans-serif; font-weight: 600; font-size: 15px; }
+
+  footer { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--rule); font-size: 12.5px; color: var(--ink-faint); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  @media (max-width: 560px) { .wrap { padding: 32px 16px 64px; } .item { padding: 13px 14px; gap: 11px; } }
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">Meridian Interface · Monday 24 August</p>
+  <h1>Monday Checklist</h1>
+  <p class="lede">
+    Ordered so the things that unblock other things come first. Ticks are saved
+    in this browser.
+  </p>
+
+  <div class="progress">
+    <span class="count" id="count">0 of 13</span>
+    <span class="bar"><span id="fill"></span></span>
+    <button class="reset" id="reset" type="button">Clear all</button>
+  </div>
+
+  <div class="doc">
+
+    <!-- ================= UNBLOCKS EVERYTHING ================= -->
+    <section class="group">
+      <div class="grouphead">
+        <h2>Do these first — everything else waits on them</h2>
+        <div class="why">Each one is blocking a piece of finished work that cannot be tested or used until it exists.</div>
+      </div>
+
+      <label class="item" tabindex="0">
+        <input type="checkbox" data-k="stripe" />
+        <span class="body">
+          <span class="title">Create a Stripe account and add the test key <span class="tag stop">10 min · blocks payments</span></span>
+          <span class="detail">
+            stripe.com, sign up with just an email, stay in <strong>test mode</strong>. No LLC, no EIN, no bank
+            account needed. Copy the key starting <code>sk_test_</code> into Supabase → Edge Functions →
+            Secrets as <code>STRIPE_SECRET_KEY</code>. <strong>Do not paste it into chat.</strong>
+          </span>
+        </span>
+      </label>
+
+      <label class="item" tabindex="0">
+        <input type="checkbox" data-k="anthropic" />
+        <span class="body">
+          <span class="title">Decide on the AI key <span class="tag stop">blocks the whole marketing system</span></span>
+          <span class="detail">
+            The system is deployed, scheduled, and has produced <strong>zero real words</strong> in ten days.
+            Everything else about it is polish on a machine that has not run. Same place:
+            Supabase → Edge Functions → Secrets, named <code>ANTHROPIC_API_KEY</code>.
+          </span>
+        </span>
+      </label>
+
+      <div class="note warn">
+        <strong>Both of these are one paste each.</strong> Neither needs the LLC, a bank account, or
+        anything you have to wait for. Ten minutes on this pair unblocks two finished systems that
+        are currently sitting idle.
+      </div>
+    </section>
+
+    <!-- ================= I DO THESE ================= -->
+    <section class="group">
+      <div class="grouphead">
+        <h2>What I do the moment the Stripe key lands</h2>
+        <div class="why">Written and waiting. Nothing here needs your time beyond watching it work.</div>
+      </div>
+
+      <label class="item" tabindex="0">
+        <input type="checkbox" data-k="deploypay" />
+        <span class="body">
+          <span class="title">Deploy the <code>pay</code> function <span class="tag info">mine</span></span>
+          <span class="detail">Written, tested, not yet deployed. Turns an invoice into a payment link.</span>
+        </span>
+      </label>
+
+      <label class="item" tabindex="0">
+        <input type="checkbox" data-k="paybutton" />
+        <span class="body">
+          <span class="title">Add <strong>Send payment link</strong> to the invoice portal <span class="tag info">mine</span></span>
+          <span class="detail">One button on each unpaid invoice. Copies a link you send to the client.</span>
+        </span>
+      </label>
+
+      <label class="item" tabindex="0">
+        <input type="checkbox" data-k="testcard" />
+        <span class="body">
+          <span class="title">Run a full test payment in front of you <span class="tag info">mine</span></span>
+          <span class="detail">
+            Test card, declined card, Apple Pay, Google Pay, bank transfer — and the invoice
+            flipping to Paid on its own, from Stripe's signed message rather than the browser.
+          </span>
+        </span>
+      </label>
+    </section>
+
+    <!-- ================= YOUR DECISIONS ================= -->
+    <section class="group">
+      <div class="grouphead">
+        <h2>Decisions only you can make</h2>
+        <div class="why">No code depends on these today, but two of them have to be settled before a client is ever charged.</div>
+      </div>
+
+      <label class="item" tabindex="0">
+        <input type="checkbox" data-k="llc" />
+        <span class="body">
+          <span class="title">LLC or sole proprietor — twenty minutes with an accountant <span class="tag wait">before taking money</span></span>
+          <span class="detail">
+            Stripe does not require an LLC; a sole proprietor can take payments with an SSN and a bank
+            account. But forming it <em>first</em> means the Stripe account is under the entity from day
+            one instead of being migrated later. That ordering is the only technical reason to hurry.
+          </span>
+        </span>
+      </label>
+
+      <label class="item" tabindex="0">
+        <input type="checkbox" data-k="address" />
+        <span class="body">
+          <span class="title">The invoice address <span class="tag wait">before sending an invoice</span></span>
+          <span class="detail">
+            The fabricated New York address is gone; it now says Houston, Texas with no street line.
+            When the virtual address is set up, send it to me — one line changes.
+          </span>
+        </span>
+      </label>
+
+      <label class="item" tabindex="0">
+        <input type="checkbox" data-k="paypal" />
+        <span class="body">
+          <span class="title">PayPal — still wanted, or is Stripe enough? <span class="tag info">your call</span></span>
+          <span class="detail">
+            Stripe already covers cards, Apple Pay and Google Pay. PayPal is a separate integration
+            with its own webhooks and reconciliation. Worth doing if clients ask for it; worth
+            skipping if none do.
+          </span>
+        </span>
+      </label>
+    </section>
+
+    <!-- ================= SECURITY ================= -->
+    <section class="group">
+      <div class="grouphead">
+        <h2>Security, still open</h2>
+        <div class="why">Carried from earlier sessions. Neither is urgent; both should stop being true.</div>
+      </div>
+
+      <label class="item" tabindex="0">
+        <input type="checkbox" data-k="passcode" />
+        <span class="body">
+          <span class="title">Rotate <code>OWNER_PASSCODE</code> <span class="tag wait">not private</span></span>
+          <span class="detail">
+            The one in use came from an example in a transcript, so it was never private. It guards
+            invoices rather than money, and failed logins throttle — but change it.
+          </span>
+        </span>
+      </label>
+
+      <label class="item" tabindex="0">
+        <input type="checkbox" data-k="viteenv" />
+        <span class="body">
+          <span class="title">Delete <code>VITE_OWNER_PASSCODE</code> from Vercel <span class="tag wait">dead credential</span></span>
+          <span class="detail">
+            I removed the declaration from the code, so nothing reads it. If the variable still exists
+            in the Vercel project, delete it there — anything named <code>VITE_</code> gets baked into
+            the public bundle.
+          </span>
+        </span>
+      </label>
+
+      <label class="item" tabindex="0">
+        <input type="checkbox" data-k="cardspike" />
+        <span class="body">
+          <span class="title">Delete the <code>cardspike</code> function in Supabase <span class="tag info">30 seconds</span></span>
+          <span class="detail">
+            Edge Functions → cardspike → Delete. It was the test that proved the card renderer could
+            work; it now returns "retired" and does nothing. My tooling can deploy functions but not
+            delete them.
+          </span>
+        </span>
+      </label>
+    </section>
+
+    <!-- ================= WHEN THERE IS TIME ================= -->
+    <section class="group">
+      <div class="grouphead">
+        <h2>When there is time</h2>
+        <div class="why">Real work, none of it blocking.</div>
+      </div>
+
+      <label class="item" tabindex="0">
+        <input type="checkbox" data-k="icp" />
+        <span class="body">
+          <span class="title">Read the four customer profiles <span class="tag info">20 min</span></span>
+          <span class="detail">
+            Still marked DRAFT because they are my guesses about who buys from you. Every post the
+            system writes is aimed at one of them, so a wrong guess is wrong content forever. Tell me
+            what is off and I will change the context, not the code.
+          </span>
+        </span>
+      </label>
+
+      <label class="item" tabindex="0">
+        <input type="checkbox" data-k="queue" />
+        <span class="body">
+          <span class="title">Clear the four drafts waiting on you <span class="tag info">10 min</span></span>
+          <span class="detail">
+            Approve or reject — rejecting teaches the system as much as approving. Leaving them
+            teaches it nothing and blocks the queue.
+          </span>
+        </span>
+      </label>
+    </section>
+
+    <!-- ================= STATE ================= -->
+    <section class="group">
+      <div class="grouphead">
+        <h2>Where things actually stood at close</h2>
+        <div class="why">Read from the live database on 23 August, not from memory.</div>
+      </div>
+      <div class="statelist">
+        <div class="st"><span class="k">Schedules</span><span class="v">5 of 5, no failures</span></div>
+        <div class="st"><span class="k">AI output</span><span class="v">Still placeholder</span></div>
+        <div class="st"><span class="k">Channels</span><span class="v">None connected</span></div>
+        <div class="st"><span class="k">Approval queue</span><span class="v">4 waiting</span></div>
+        <div class="st"><span class="k">Messages</span><span class="v">6 drafted, 0 sent</span></div>
+        <div class="st"><span class="k">Invoices</span><span class="v">9 unpaid</span></div>
+        <div class="st"><span class="k">Payments</span><span class="v">0 — no key yet</span></div>
+        <div class="st"><span class="k">Open alerts</span><span class="v">1, informational</span></div>
+      </div>
+
+      <div class="note">
+        <strong>Two things were fixed yesterday that you should know about.</strong>
+        Client-facing output claimed an <strong>LLC that does not exist</strong>, in three different
+        spellings, next to a fabricated New York address. All of it now reads Meridian Interface,
+        Houston, Texas. And the marketing agent had been writing <strong>event-planning copy</strong> —
+        lighting, photo booths, a DJ — for a web studio. Nine of those drafts were in your queue.
+        They are rejected, with the reason recorded.
+      </div>
+    </section>
+
+  </div>
+
+  <footer>
+    Ticks are stored in this browser only — they are not shared and not visible to me.
+    The full written record is in <code>system/SESSION.md</code>.
+  </footer>
+</div>
+
+<script>
+  // Ticks live in this browser. Storage can be absent or throw outright in a
+  // private window or a thumbnail render, so every read and write is guarded
+  // and the page renders correctly with no stored value at all.
+  var KEY = "meridian-checklist-2026-08-24";
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('.item input'));
+
+  function load() {
+    try {
+      var raw = window.localStorage.getItem(KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) { return {}; }
+  }
+  function save(state) {
+    try { window.localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* nothing to do */ }
+  }
+
+  function paint() {
+    var done = 0;
+    boxes.forEach(function (b) {
+      b.closest('.item').classList.toggle('done', b.checked);
+      if (b.checked) done++;
+    });
+    document.getElementById('count').textContent = done + ' of ' + boxes.length;
+    document.getElementById('fill').style.width = (boxes.length ? (done / boxes.length) * 100 : 0) + '%';
+  }
+
+  var state = load();
+  boxes.forEach(function (b) {
+    if (state[b.dataset.k]) b.checked = true;
+    b.addEventListener('change', function () {
+      var s = load();
+      s[b.dataset.k] = b.checked;
+      save(s);
+      paint();
+    });
+  });
+
+  // The row is a <label>, so a keyboard user landing on it should be able to
+  // toggle the same way a click does.
+  document.querySelectorAll('.item').forEach(function (row) {
+    row.addEventListener('keydown', function (e) {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        var box = row.querySelector('input');
+        box.checked = !box.checked;
+        box.dispatchEvent(new Event('change'));
+      }
+    });
+  });
+
+  document.getElementById('reset').addEventListener('click', function () {
+    boxes.forEach(function (b) { b.checked = false; });
+    save({});
+    paint();
+  });
+
+  paint();
+</script>
