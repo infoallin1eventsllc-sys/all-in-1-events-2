@@ -208,6 +208,22 @@ function productCardHTML(product) {
   );
 }
 
+/* ===== Brand mark =====
+ * The leaf mark is pure geometry (no embedded fonts), so it stays crisp inside
+ * an <img>; the wordmark is real HTML text so it renders in Montserrat like the
+ * rest of the site. Swap assets/logo-mark.svg for an exported asset any time —
+ * nothing else needs to change.
+ */
+
+const LOGO_MARK = "assets/logo-mark.svg";
+
+function brandMarkHTML(markClass, wordClass) {
+  return (
+    '<img src="' + LOGO_MARK + '" alt="" aria-hidden="true" class="w-auto shrink-0 ' + markClass + '"/>' +
+    '<span class="' + wordClass + '">420 FRIENDLY</span>'
+  );
+}
+
 /* ===== Shared chrome ===== */
 
 function renderChrome(activeLabel) {
@@ -238,7 +254,9 @@ function renderChrome(activeLabel) {
       '<div class="fixed top-0 left-0 w-full z-50 bg-background/95 backdrop-blur-md border-b border-outline-variant">' +
       utilityBar +
       '<header class="flex justify-between items-center px-margin-mobile md:px-margin-desktop h-16 gap-4">' +
-      '<a href="index.html" class="font-headline-md text-headline-md font-bold tracking-tighter text-secondary hover:text-tertiary transition-colors shrink-0">420 FRIENDLY</a>' +
+      '<a href="index.html" data-brand class="flex items-center gap-2 shrink-0 text-secondary hover:text-tertiary transition-colors">' +
+      brandMarkHTML("h-9", "font-headline-md text-headline-md font-bold tracking-tighter") +
+      "</a>" +
       '<nav class="hidden md:flex items-center gap-7" aria-label="Primary">' + primaryLinks + "</nav>" +
       '<div class="flex items-center gap-1 shrink-0">' +
       // Search pill (Nike pattern) — routes to the shop page's filter field
@@ -309,7 +327,9 @@ function renderChrome(activeLabel) {
         { href: "portal.html", label: "Join the Portal" },
         { href: "cart.html", label: "Your Bag" }
       ]) +
-      '<div><p class="font-headline-md text-headline-md font-bold tracking-tighter text-secondary">420 FRIENDLY</p>' +
+      '<div><div class="flex items-center gap-2 text-secondary">' +
+      brandMarkHTML("h-10", "font-headline-md text-headline-md font-bold tracking-tighter") +
+      "</div>" +
       '<p class="font-body-md text-body-md text-on-surface-variant mt-3">Streetwear for the concrete jungle. 420 Friendly is an apparel brand — every product is clothing, nothing more.</p></div>' +
       "</div>" +
       '<div class="max-w-container-max mx-auto mt-12 pt-6 border-t border-outline-variant/30 flex flex-col md:flex-row justify-between gap-2">' +
