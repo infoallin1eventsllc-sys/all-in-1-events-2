@@ -2,7 +2,7 @@
 
 A full-stack luxury event production site with an AI-powered concierge chatbot, built for security, scalability, and performance. This project demonstrates modern web development practices: serverless architecture, XSS-safe DOM rendering, environment-based configuration, and secure API key management.
 
-> **Also in this repo:** the **420 Friendly** streetwear storefront preview lives under [`420-friendly/`](420-friendly/) — shop grid, product pages, drop calendar, and a localStorage cart. It is a static front-end preview; checkout and the mailing list are not yet wired to a backend.
+> **Also in this repo:** the **420 Friendly** streetwear storefront preview lives under [`420-friendly/`](420-friendly/) — homepage, shop listing with category filters and search, product pages, favorites, drop calendar, and a localStorage cart, laid out on Nike-style e-commerce patterns. It is a static front-end preview; checkout and the mailing list are not yet wired to a backend. Styles compile with `npm run build:420`.
 
 ## Project Structure
 

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>420 FRIENDLY — Favorites</title>
+<link href="assets/tailwind.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+
+<main class="pt-16 md:pt-[100px] max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+  <section class="pt-10 pb-8">
+    <nav class="font-label-caps text-label-caps text-on-surface-variant mb-3" aria-label="Breadcrumb">
+      <a href="index.html" class="hover:text-secondary transition-colors">HOME</a>
+      <span class="mx-2 text-outline">/</span><span class="text-on-surface">FAVORITES</span>
+    </nav>
+    <h1 class="font-headline-xl-mobile text-headline-xl-mobile md:font-headline-xl md:text-headline-xl text-on-surface uppercase tracking-tighter">Favorites</h1>
+  </section>
+
+  <div id="favs-root" class="pb-8"></div>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+
+<script src="assets/products.js"></script>
+<script src="assets/app.js"></script>
+<script>
+  renderChrome("FAVORITES");
+
+  function renderFavs() {
+    const items = getFavs().map(getProduct).filter(Boolean);
+    const root = document.getElementById("favs-root");
+
+    if (items.length === 0) {
+      root.innerHTML =
+        '<div class="text-center py-16 border border-outline-variant/30 rounded-2xl bg-surface-container-low/50">' +
+        '<span class="material-symbols-outlined text-outline text-[48px]">favorite</span>' +
+        '<p class="font-label-caps text-label-caps text-on-surface-variant mt-4 mb-2">NO FAVORITES YET</p>' +
+        '<p class="font-body-md text-body-md text-on-surface-variant mb-8 max-w-sm mx-auto">Tap Favorite on any piece to keep it here. Saved in this browser only.</p>' +
+        '<a href="shop.html" class="inline-block rounded-full bg-secondary text-surface-container-lowest py-4 px-8 font-label-caps text-label-caps hover:bg-secondary-fixed transition-all duration-300">SHOP THE DROP</a>' +
+        "</div>";
+      return;
+    }
+
+    root.innerHTML =
+      '<p class="font-label-caps text-label-caps text-on-surface-variant mb-6">' +
+      items.length + (items.length === 1 ? " PIECE" : " PIECES") + "</p>" +
+      '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-gutter gap-y-10">' +
+      items.map((p) =>
+        '<div class="relative">' + productCardHTML(p) +
+        '<button data-remove="' + esc(p.id) + '" aria-label="Remove from favorites" ' +
+        'class="absolute top-3 right-3 glass-panel rounded-full p-2 text-tertiary hover:text-error transition-colors">' +
+        '<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: \'FILL\' 1;">favorite</span>' +
+        "</button></div>"
+      ).join("") +
+      "</div>";
+
+    root.querySelectorAll("[data-remove]").forEach((btn) =>
+      btn.addEventListener("click", () => {
+        toggleFav(btn.dataset.remove);
+        toast("REMOVED FROM FAVORITES");
+        renderFavs();
+      })
+    );
+  }
+
+  renderFavs();
+</script>
+</body>
+</html>

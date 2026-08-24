@@ -12,7 +12,7 @@
 <body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
 <div id="site-header"></div>
 
-<main class="pt-16 md:pt-24 max-w-3xl mx-auto px-margin-mobile md:px-margin-desktop">
+<main class="pt-16 md:pt-[100px] max-w-3xl mx-auto px-margin-mobile md:px-margin-desktop">
   <section class="pt-12 md:pt-20 text-center">
     <p class="font-label-caps text-label-caps text-tertiary flex items-center justify-center gap-2 mb-4">
       <span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
@@ -30,9 +30,9 @@
     <form id="portal-form" class="flex flex-col sm:flex-row gap-3">
       <label class="sr-only" for="portal-email">Email address</label>
       <input id="portal-email" type="email" required placeholder="YOUR@EMAIL.COM"
-        class="flex-1 bg-surface border border-outline-variant focus:border-secondary focus:ring-0 text-on-surface placeholder:text-outline font-label-caps text-label-caps px-4 py-4"/>
+        class="flex-1 rounded-full bg-surface border border-outline-variant focus:border-secondary focus:ring-0 text-on-surface placeholder:text-outline font-label-caps text-label-caps px-6 py-4"/>
       <button type="submit"
-        class="bg-surface py-4 px-8 border border-secondary text-secondary font-label-caps text-label-caps hover:bg-secondary hover:text-surface-container-lowest transition-all duration-300 whitespace-nowrap">
+        class="rounded-full bg-secondary text-surface-container-lowest py-4 px-8 font-label-caps text-label-caps hover:bg-secondary-fixed transition-all duration-300 whitespace-nowrap">
         JOIN THE LIST
       </button>
     </form>

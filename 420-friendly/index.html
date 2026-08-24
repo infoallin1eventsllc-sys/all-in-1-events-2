@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>420 FRIENDLY — Shop</title>
+<title>420 FRIENDLY — Streetwear</title>
 <meta name="description" content="420 Friendly streetwear. Heavyweight fleece, high-density prints, limited drops."/>
 <link href="assets/tailwind.css" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
@@ -13,43 +13,81 @@
 <body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
 <div id="site-header"></div>
 
-<main class="pt-16 max-w-container-max mx-auto">
-  <!-- Hero -->
-  <section class="px-margin-mobile md:px-margin-desktop pt-12 md:pt-20 pb-8">
-    <p class="font-label-caps text-label-caps text-tertiary flex items-center gap-2 mb-4">
-      <span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
-      VIBRANT SERIES — LIVE NOW
-    </p>
-    <h1 class="font-display-lg text-headline-xl-mobile md:text-display-lg text-on-surface uppercase tracking-tighter" style="font-weight:900;">
-      Built for the<br/><span class="text-secondary">concrete jungle.</span>
-    </h1>
-    <p class="font-body-lg text-body-lg text-on-surface-variant mt-6 max-w-xl">
-      Heavyweight blacks, gold hits, electric green energy. Small runs, no restocks — when a drop is gone, it's gone.
-    </p>
-    <div class="flex flex-wrap gap-4 mt-8">
-      <a href="#shop-grid" class="bg-surface py-4 px-8 border border-secondary text-secondary font-label-caps text-label-caps hover:bg-secondary hover:text-surface-container-lowest transition-all duration-300">
-        SHOP THE DROP
-      </a>
-      <a href="drops.html" class="py-4 px-8 border border-outline-variant text-on-surface-variant font-label-caps text-label-caps hover:border-tertiary hover:text-tertiary transition-all duration-300">
-        SEE NEXT DROP
-      </a>
+<main class="pt-16 md:pt-[100px]">
+  <!-- Full-bleed hero (Nike pattern: image, headline overlaid bottom-left, pill CTA) -->
+  <section class="relative w-full h-[78vh] min-h-[520px] overflow-hidden">
+    <div class="hero-art absolute inset-0" aria-hidden="true">
+      <span class="hero-word">420<br/>FRIENDLY</span>
+    </div>
+    <div class="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent"></div>
+    <div class="absolute bottom-0 left-0 p-margin-mobile md:p-margin-desktop max-w-3xl">
+      <p class="font-label-caps text-label-caps text-tertiary flex items-center gap-2 mb-4">
+        <span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+        VIBRANT SERIES — LIVE NOW
+      </p>
+      <h1 class="font-display-lg text-headline-xl-mobile md:text-display-lg text-on-surface uppercase tracking-tighter" style="font-weight:900;">
+        Built for the concrete jungle
+      </h1>
+      <p class="font-body-lg text-body-lg text-on-surface-variant mt-4 max-w-lg">
+        Heavyweight blacks, gold hits, electric green energy. Small runs, no restocks.
+      </p>
+      <div class="flex flex-wrap gap-3 mt-8">
+        <a href="shop.html" class="rounded-full bg-secondary text-surface-container-lowest py-3 px-8 font-label-caps text-label-caps hover:bg-secondary-fixed transition-all duration-300">
+          SHOP
+        </a>
+        <a href="drops.html" class="rounded-full border border-on-surface/40 text-on-surface py-3 px-8 font-label-caps text-label-caps hover:border-tertiary hover:text-tertiary transition-all duration-300">
+          NEXT DROP
+        </a>
+      </div>
     </div>
   </section>
 
+  <!-- Three-up category tiles (Nike pattern: image tile, plain label beneath) -->
+  <section class="px-margin-mobile md:px-margin-desktop py-12 md:py-16 max-w-container-max mx-auto">
+    <div id="category-tiles" class="grid grid-cols-1 md:grid-cols-3 gap-gutter"></div>
+  </section>
+
   <!-- Ticker -->
-  <div class="ticker border-y border-outline-variant/50 py-3 mt-8" aria-hidden="true">
+  <div class="ticker border-y border-outline-variant/50 py-3" aria-hidden="true">
     <div class="ticker-track font-label-caps text-label-caps text-outline">
       <span class="mx-8">VIBRANT SERIES</span><span class="text-tertiary mx-8">&#9679;</span><span class="mx-8">450GSM FLEECE</span><span class="text-secondary mx-8">&#9679;</span><span class="mx-8">LIMITED RUNS</span><span class="text-tertiary mx-8">&#9679;</span><span class="mx-8">NO RESTOCKS</span><span class="text-secondary mx-8">&#9679;</span><span class="mx-8">VIBRANT SERIES</span><span class="text-tertiary mx-8">&#9679;</span><span class="mx-8">450GSM FLEECE</span><span class="text-secondary mx-8">&#9679;</span><span class="mx-8">LIMITED RUNS</span><span class="text-tertiary mx-8">&#9679;</span><span class="mx-8">NO RESTOCKS</span><span class="text-secondary mx-8">&#9679;</span>
     </div>
   </div>
 
-  <!-- Product grid -->
-  <section id="shop-grid" class="px-margin-mobile md:px-margin-desktop py-12">
+  <!-- Featured rail -->
+  <section class="px-margin-mobile md:px-margin-desktop py-12 md:py-16 max-w-container-max mx-auto">
     <div class="flex justify-between items-end mb-8">
-      <h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter">The Lineup</h2>
-      <span class="font-label-caps text-label-caps text-on-surface-variant" id="product-count"></span>
+      <h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter">Just Dropped</h2>
+      <a href="shop.html" class="font-body-md text-body-md text-on-surface-variant hover:text-secondary transition-colors underline decoration-1 underline-offset-4">Shop All</a>
     </div>
-    <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter"></div>
+    <div id="featured-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-gutter gap-y-10"></div>
+  </section>
+
+  <!-- Editorial split (Nike pattern: big image, copy block, pill CTA) -->
+  <section class="px-margin-mobile md:px-margin-desktop pb-4 max-w-container-max mx-auto">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter items-stretch">
+      <div class="relative aspect-[4/3] md:aspect-auto md:min-h-[460px] overflow-hidden bg-surface-container-low">
+        <div class="art-tile absolute inset-0" style="background:linear-gradient(160deg,#0f2e1e,#003005)">
+          <span class="art-word" style="color:#00e639;font-size:clamp(48px,7vw,96px)">THE
+PORTAL</span>
+          <span class="art-mark" style="color:#00e639">MEMBERS ONLY</span>
+        </div>
+      </div>
+      <div class="flex flex-col justify-center py-10 md:py-16 md:px-8">
+        <p class="font-label-caps text-label-caps text-secondary mb-4">MEMBERS GET FIRST LOOK</p>
+        <h2 class="font-headline-xl-mobile text-headline-xl-mobile md:font-headline-xl md:text-headline-xl text-on-surface uppercase tracking-tighter">
+          24 hours early. Every drop.
+        </h2>
+        <p class="font-body-lg text-body-lg text-on-surface-variant mt-5 max-w-md">
+          Join the Portal and see every release before it goes public — plus member stock held back from the general run.
+        </p>
+        <div class="mt-8">
+          <a href="portal.html" class="inline-block rounded-full bg-secondary text-surface-container-lowest py-3 px-8 font-label-caps text-label-caps hover:bg-secondary-fixed transition-all duration-300">
+            JOIN THE PORTAL
+          </a>
+        </div>
+      </div>
+    </div>
   </section>
 </main>
 
@@ -59,25 +97,35 @@
 <script src="assets/products.js"></script>
 <script src="assets/app.js"></script>
 <script>
-  renderChrome("SHOP");
+  renderChrome("SHOP ALL");
 
-  const grid = document.getElementById("grid");
-  grid.innerHTML = CATALOG.map((p) => {
-    const badgeColor = p.badge === "PRE-ORDER" ? "text-secondary border-secondary/30" : "text-tertiary border-tertiary/30";
+  // Category tiles: one representative product's art per category.
+  const TILES = [
+    { cat: "HOODIES & CREWS", label: "Shop Hoodies & Crews", pid: "vibrant-hoodie" },
+    { cat: "TEES", label: "Shop Tees", pid: "vibrant-tee" },
+    { cat: "ALL", label: "Shop All", pid: "midnight-windbreaker" }
+  ];
+
+  document.getElementById("category-tiles").innerHTML = TILES.map((tile) => {
+    const p = getProduct(tile.pid);
+    const href = tile.cat === "ALL" ? "shop.html" : "shop.html?cat=" + encodeURIComponent(tile.cat);
     return (
-      '<a href="product.html?id=' + esc(p.id) + '" class="group block">' +
-      '<div class="relative aspect-[4/5] overflow-hidden bg-surface-container-low border border-outline-variant/30 group-hover:border-secondary/50 transition-colors">' +
+      '<a href="' + href + '" class="group block">' +
+      '<div class="relative aspect-[4/5] overflow-hidden bg-surface-container-low">' +
       productArtHTML(p, "sm") +
-      '<div class="absolute top-3 left-3 glass-panel px-3 py-1.5 rounded-full border ' + badgeColor + '">' +
-      '<span class="font-label-caps text-label-caps text-[10px]">' + esc(p.badge) + "</span></div>" +
+      '<div class="absolute inset-0 bg-background/0 group-hover:bg-background/20 transition-colors"></div>' +
       "</div>" +
-      '<div class="flex justify-between items-baseline mt-3 gap-2">' +
-      '<h3 class="font-label-caps text-label-caps text-on-surface group-hover:text-secondary transition-colors">' + esc(p.name.toUpperCase()) + "</h3>" +
-      '<span class="font-label-caps text-label-caps text-tertiary whitespace-nowrap">' + esc(money(p.price)) + "</span>" +
-      "</div></a>"
+      '<p class="font-body-lg text-body-lg text-on-surface mt-4 group-hover:text-secondary transition-colors">' + esc(tile.label) + "</p>" +
+      "</a>"
     );
   }).join("");
-  document.getElementById("product-count").textContent = CATALOG.length + " PIECES";
+
+  // Featured: newest four, drop-status first.
+  const rank = { "JUST DROPPED": 0, "LIMITED DROP": 1, "PRE-ORDER": 2, "BEST SELLER": 3 };
+  const featured = [...CATALOG]
+    .sort((a, b) => (rank[a.badge] ?? 9) - (rank[b.badge] ?? 9))
+    .slice(0, 4);
+  document.getElementById("featured-grid").innerHTML = featured.map(productCardHTML).join("");
 </script>
 </body>
 </html>

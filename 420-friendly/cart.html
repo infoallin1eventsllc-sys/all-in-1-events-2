@@ -12,7 +12,7 @@
 <body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
 <div id="site-header"></div>
 
-<main class="pt-16 md:pt-24 max-w-4xl mx-auto px-margin-mobile md:px-margin-desktop">
+<main class="pt-16 md:pt-[100px] max-w-6xl mx-auto px-margin-mobile md:px-margin-desktop">
   <section class="pt-12 pb-8">
     <h1 class="font-headline-xl-mobile text-headline-xl-mobile md:font-headline-xl md:text-headline-xl text-on-surface uppercase tracking-tighter">Your Bag</h1>
   </section>
@@ -28,6 +28,7 @@
 <script>
   renderChrome("BAG");
 
+  const FREE_SHIP_AT = 100;
   const root = document.getElementById("cart-root");
 
   function renderCart() {
@@ -37,7 +38,7 @@
         '<div class="text-center py-16 border border-outline-variant/30 rounded-2xl bg-surface-container-low/50">' +
         '<span class="material-symbols-outlined text-outline text-[48px]">shopping_bag</span>' +
         '<p class="font-label-caps text-label-caps text-on-surface-variant mt-4 mb-8">YOUR BAG IS EMPTY</p>' +
-        '<a href="index.html" class="inline-block bg-surface py-4 px-8 border border-secondary text-secondary font-label-caps text-label-caps hover:bg-secondary hover:text-surface-container-lowest transition-all duration-300">SHOP THE DROP</a>' +
+        '<a href="shop.html" class="inline-block rounded-full bg-secondary text-surface-container-lowest py-4 px-8 font-label-caps text-label-caps hover:bg-secondary-fixed transition-all duration-300">SHOP THE DROP</a>' +
         "</div>";
       return;
     }
@@ -47,34 +48,48 @@
       if (!p) return "";
       return (
         '<div class="flex gap-4 py-6">' +
-        '<a href="product.html?id=' + esc(p.id) + '" class="relative w-24 h-28 shrink-0 overflow-hidden bg-surface-container-low border border-outline-variant/30">' +
+        '<a href="product.html?id=' + esc(p.id) + '" class="relative w-24 h-28 shrink-0 overflow-hidden bg-surface-container-low">' +
         productArtHTML(p, "sm") + "</a>" +
         '<div class="flex-1 min-w-0">' +
         '<div class="flex justify-between gap-2">' +
-        '<a href="product.html?id=' + esc(p.id) + '" class="font-label-caps text-label-caps text-on-surface hover:text-secondary transition-colors">' + esc(p.name.toUpperCase()) + "</a>" +
+        '<div>' +
+        '<a href="product.html?id=' + esc(p.id) + '" class="font-body-md text-body-md text-on-surface hover:text-secondary transition-colors">' + esc(p.name) + "</a>" +
+        '<p class="font-body-md text-body-md text-on-surface-variant">' + esc(p.subtitle) + "</p>" +
+        '<p class="font-label-caps text-label-caps text-on-surface-variant mt-1">SIZE: ' + esc(line.size) + "</p>" +
+        "</div>" +
         '<span class="font-label-caps text-label-caps text-tertiary whitespace-nowrap">' + esc(money(p.price * line.qty)) + "</span></div>" +
-        '<p class="font-label-caps text-label-caps text-on-surface-variant mt-2">SIZE: ' + esc(line.size) + "</p>" +
         '<div class="flex items-center gap-4 mt-4">' +
-        '<div class="flex items-center border border-outline-variant">' +
+        '<div class="flex items-center border border-outline-variant rounded-full">' +
         '<button data-action="dec" data-index="' + i + '" aria-label="Decrease quantity" class="px-3 py-1.5 text-on-surface hover:text-secondary transition-colors font-label-caps text-label-caps">&minus;</button>' +
-        '<span class="px-3 font-label-caps text-label-caps text-on-surface tabular-nums">' + line.qty + "</span>" +
+        '<span class="px-2 font-label-caps text-label-caps text-on-surface tabular-nums">' + line.qty + "</span>" +
         '<button data-action="inc" data-index="' + i + '" aria-label="Increase quantity" class="px-3 py-1.5 text-on-surface hover:text-secondary transition-colors font-label-caps text-label-caps">+</button></div>' +
-        '<button data-action="remove" data-index="' + i + '" class="font-label-caps text-label-caps text-outline hover:text-error transition-colors underline decoration-1 underline-offset-4">REMOVE</button>' +
+        '<button data-action="remove" data-index="' + i + '" aria-label="Remove item" class="text-outline hover:text-error transition-colors flex items-center">' +
+        '<span class="material-symbols-outlined text-[20px]">delete</span></button>' +
         "</div></div></div>"
       );
     }).join("");
 
     const subtotal = cartSubtotal();
+    const shipMsg = subtotal >= FREE_SHIP_AT
+      ? '<p class="font-body-md text-[13px] text-tertiary mt-4">Free US shipping unlocked.</p>'
+      : '<p class="font-body-md text-[13px] text-on-surface-variant mt-4">You\'re ' + esc(money(FREE_SHIP_AT - subtotal)) + " from free US shipping.</p>";
+
     root.innerHTML =
-      '<div class="divide-y divide-outline-variant/50 border-y border-outline-variant/50">' + rows + "</div>" +
-      '<div class="ambient-glow rounded-2xl bg-surface-container-low/80 border border-outline-variant/30 p-6 md:p-8 mt-8">' +
+      '<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">' +
+      '<div class="lg:col-span-8 divide-y divide-outline-variant/50 border-y border-outline-variant/50">' + rows + "</div>" +
+      '<aside class="lg:col-span-4">' +
+      '<div class="lg:sticky lg:top-32 ambient-glow rounded-2xl bg-surface-container-low/80 border border-outline-variant/30 p-6">' +
+      '<h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter mb-6">Summary</h2>' +
       '<div class="flex justify-between font-label-caps text-label-caps text-on-surface-variant"><span>SUBTOTAL</span><span class="text-on-surface">' + esc(money(subtotal)) + "</span></div>" +
-      '<div class="flex justify-between font-label-caps text-label-caps text-on-surface-variant mt-3"><span>SHIPPING</span><span>CALCULATED AT CHECKOUT</span></div>' +
-      '<button id="checkout" class="w-full bg-surface py-4 px-6 border border-secondary text-secondary font-label-caps text-label-caps hover:bg-secondary hover:text-surface-container-lowest transition-all duration-300 flex items-center justify-center gap-2 mt-8">' +
+      '<div class="flex justify-between font-label-caps text-label-caps text-on-surface-variant mt-3"><span>SHIPPING</span><span>' + (subtotal >= FREE_SHIP_AT ? "FREE" : "AT CHECKOUT") + "</span></div>" +
+      '<div class="border-t border-outline-variant/50 my-4"></div>' +
+      '<div class="flex justify-between font-label-caps text-label-caps text-on-surface"><span>ESTIMATED TOTAL</span><span>' + esc(money(subtotal)) + "</span></div>" +
+      '<button id="checkout" class="w-full rounded-full bg-secondary text-surface-container-lowest py-4 px-6 font-label-caps text-label-caps hover:bg-secondary-fixed transition-all duration-300 flex items-center justify-center gap-2 mt-6">' +
       "CHECKOUT" +
-      '<span class="material-symbols-outlined text-[16px]">arrow_forward</span></button>' +
-      '<p class="font-body-md text-[13px] text-outline mt-4 text-center">Preview build — checkout goes live once a payment provider is connected.</p>' +
-      "</div>";
+      '<span class="material-symbols-outlined text-[18px]">arrow_forward</span></button>' +
+      shipMsg +
+      '<p class="font-body-md text-[13px] text-outline mt-2">Preview build — checkout goes live once a payment provider is connected.</p>' +
+      "</div></aside></div>";
 
     root.querySelectorAll("button[data-action]").forEach((btn) => {
       btn.addEventListener("click", () => {

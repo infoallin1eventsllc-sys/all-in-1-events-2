@@ -5,6 +5,9 @@ const CATALOG = [
   {
     id: "vibrant-hoodie",
     name: "Vibrant Series Hoodie",
+    category: "HOODIES & CREWS",
+    subtitle: "Unisex Heavyweight Hoodie",
+    colors: ["Blackout / Electric"],
     price: 120,
     badge: "LIMITED DROP",
     blurb:
@@ -22,8 +25,11 @@ const CATALOG = [
   {
     id: "vibrant-tee",
     name: "Vibrant Logo Tee",
+    category: "TEES",
+    subtitle: "Unisex Garment-Dyed Tee",
+    colors: ["Blackout / Electric"],
     price: 45,
-    badge: "LIVE",
+    badge: "BEST SELLER",
     blurb:
       "The daily driver. Midweight combed cotton with the Vibrant Typographic Logo hit across the chest in electric green. Pre-shrunk, garment-dyed black.",
     features: [
@@ -38,8 +44,11 @@ const CATALOG = [
   {
     id: "smoke-signal-crew",
     name: "Smoke Signal Crewneck",
+    category: "HOODIES & CREWS",
+    subtitle: "Unisex Fleece Crewneck",
+    colors: ["Blackout / Gold"],
     price: 95,
-    badge: "LIVE",
+    badge: "JUST DROPPED",
     blurb:
       "A slow-burn classic. Brushed-back fleece crewneck with tonal 'Smoke Signal' embroidery and a gold hit at the cuff. Made to loop through every session.",
     features: [
@@ -54,8 +63,11 @@ const CATALOG = [
   {
     id: "blazed-beanie",
     name: "Blazed Beanie",
+    category: "HEADWEAR",
+    subtitle: "Knit Beanie",
+    colors: ["Blackout"],
     price: 35,
-    badge: "LIVE",
+    badge: "JUST DROPPED",
     blurb:
       "Tight-knit acrylic beanie with the 420 FRIENDLY woven label front and center. Deep cuff, zero slouch. Keeps the head warm and the fit correct.",
     features: [
@@ -70,8 +82,11 @@ const CATALOG = [
   {
     id: "terpene-joggers",
     name: "Terpene Joggers",
+    category: "BOTTOMS",
+    subtitle: "Unisex Fleece Joggers",
+    colors: ["Blackout / Electric"],
     price: 85,
-    badge: "LIVE",
+    badge: "BEST SELLER",
     blurb:
       "Matched to the Vibrant Hoodie. Tapered heavyweight fleece joggers with a stacked ankle, zip pockets that actually hold, and the logo printed down the left leg.",
     features: [
@@ -86,8 +101,11 @@ const CATALOG = [
   {
     id: "haze-snapback",
     name: "Haze Snapback",
+    category: "HEADWEAR",
+    subtitle: "Six-Panel Snapback",
+    colors: ["Blackout / Green Brim"],
     price: 40,
-    badge: "LIVE",
+    badge: "JUST DROPPED",
     blurb:
       "Six-panel snapback in blackout twill with a raised 3D-embroidered 420 mark and an under-brim in electric green. One size fits most heads and all moods.",
     features: [
@@ -102,8 +120,11 @@ const CATALOG = [
   {
     id: "sesh-socks",
     name: "Sesh Socks (2-Pack)",
+    category: "ACCESSORIES",
+    subtitle: "Cushioned Crew Socks",
+    colors: ["Blackout + Electric"],
     price: 18,
-    badge: "LIVE",
+    badge: "BEST SELLER",
     blurb:
       "Cushioned crew socks in a two-pack: one blackout pair, one electric green pair. Jacquard-knit logo at the calf so the fit talks even when you don't.",
     features: [
@@ -118,6 +139,9 @@ const CATALOG = [
   {
     id: "midnight-windbreaker",
     name: "Midnight Windbreaker",
+    category: "JACKETS",
+    subtitle: "Packable Windbreaker",
+    colors: ["Midnight Ripstop"],
     price: 140,
     badge: "PRE-ORDER",
     blurb:
@@ -132,6 +156,8 @@ const CATALOG = [
     art: { from: "#131313", to: "#2f4d3b", word: "MID\nNIGHT", tint: "#accfb7" }
   }
 ];
+
+const CATEGORIES = ["ALL", ...new Set(CATALOG.map((p) => p.category))];
 
 function getProduct(id) {
   return CATALOG.find((p) => p.id === id) || null;

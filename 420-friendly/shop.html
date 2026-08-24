@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>420 FRIENDLY — Shop All</title>
+<meta name="description" content="420 Friendly streetwear. Heavyweight fleece, high-density prints, limited drops."/>
+<link href="assets/tailwind.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+
+<main class="pt-16 md:pt-[100px] max-w-container-max mx-auto">
+  <!-- PLP header (Nike pattern: title + count, filters below) -->
+  <section class="px-margin-mobile md:px-margin-desktop pt-10 pb-2">
+    <nav class="font-label-caps text-label-caps text-on-surface-variant mb-3" aria-label="Breadcrumb">
+      <a href="index.html" class="hover:text-secondary transition-colors">HOME</a>
+      <span class="mx-2 text-outline">/</span><span class="text-on-surface">SHOP</span>
+    </nav>
+    <h1 id="plp-title" class="font-headline-xl-mobile text-headline-xl-mobile md:font-headline-xl md:text-headline-xl text-on-surface uppercase tracking-tighter">Shop All</h1>
+  </section>
+
+  <!-- Product listing -->
+  <section id="shop-grid" class="px-margin-mobile md:px-margin-desktop py-12">
+    <!-- Toolbar -->
+    <div class="flex flex-wrap justify-between items-center gap-4 mb-8">
+      <p id="product-count" class="font-label-caps text-label-caps text-on-surface-variant"></p>
+      <label class="flex items-center gap-3 font-label-caps text-label-caps text-on-surface-variant">
+        SORT BY
+        <select id="sort" class="bg-surface-container-low border border-outline-variant text-on-surface font-label-caps text-label-caps rounded-full px-4 py-2 pr-8 focus:border-secondary focus:ring-0 cursor-pointer">
+          <option value="featured">FEATURED</option>
+          <option value="price-asc">PRICE: LOW–HIGH</option>
+          <option value="price-desc">PRICE: HIGH–LOW</option>
+        </select>
+      </label>
+    </div>
+
+    <!-- Mobile category pills -->
+    <div id="cat-pills" class="flex md:hidden gap-2 overflow-x-auto pb-4 -mx-margin-mobile px-margin-mobile"></div>
+
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+      <!-- Category rail (desktop) -->
+      <aside class="hidden md:block md:col-span-3 lg:col-span-2">
+        <nav id="cat-rail" class="flex flex-col gap-1 sticky top-32" aria-label="Categories"></nav>
+      </aside>
+      <!-- Grid -->
+      <div class="col-span-1 md:col-span-9 lg:col-span-10">
+        <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-gutter gap-y-10"></div>
+        <p id="no-results" class="hidden font-body-md text-body-md text-on-surface-variant py-12">No pieces match — try another category, or browse everything.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+
+<script src="assets/products.js"></script>
+<script src="assets/app.js"></script>
+<script>
+  renderChrome("SHOP ALL");
+
+  const urlParams = new URLSearchParams(location.search);
+  const requestedCat = (urlParams.get("cat") || "ALL").toUpperCase();
+  const query = (urlParams.get("q") || "").trim().toLowerCase();
+  const state = {
+    cat: CATEGORIES.includes(requestedCat) ? requestedCat : "ALL",
+    sort: "featured"
+  };
+
+  if (query) {
+    document.getElementById("plp-title").textContent = 'Results for "' + query + '"';
+  } else if (state.cat !== "ALL") {
+    document.getElementById("plp-title").textContent = state.cat;
+  }
+
+  function visibleProducts() {
+    let items = state.cat === "ALL" ? [...CATALOG] : CATALOG.filter((p) => p.category === state.cat);
+    if (query) {
+      items = items.filter((p) =>
+        (p.name + " " + p.subtitle + " " + p.category + " " + p.blurb).toLowerCase().includes(query)
+      );
+    }
+    if (state.sort === "price-asc") items.sort((a, b) => a.price - b.price);
+    if (state.sort === "price-desc") items.sort((a, b) => b.price - a.price);
+    return items;
+  }
+
+  function renderCats() {
+    const railBtn = (cat, active) =>
+      '<button data-cat="' + esc(cat) + '" class="text-left font-label-caps text-label-caps py-2 transition-colors ' +
+      (active ? "text-tertiary" : "text-on-surface-variant hover:text-secondary") + '">' + esc(cat) + "</button>";
+    const pillBtn = (cat, active) =>
+      '<button data-cat="' + esc(cat) + '" class="whitespace-nowrap rounded-full border px-4 py-2 font-label-caps text-label-caps transition-colors ' +
+      (active ? "border-tertiary text-tertiary" : "border-outline-variant text-on-surface-variant") + '">' + esc(cat) + "</button>";
+    document.getElementById("cat-rail").innerHTML = CATEGORIES.map((c) => railBtn(c, c === state.cat)).join("");
+    document.getElementById("cat-pills").innerHTML = CATEGORIES.map((c) => pillBtn(c, c === state.cat)).join("");
+    document.querySelectorAll("[data-cat]").forEach((btn) =>
+      btn.addEventListener("click", () => {
+        state.cat = btn.dataset.cat;
+        renderCats();
+        renderGrid();
+      })
+    );
+  }
+
+  function renderGrid() {
+    const items = visibleProducts();
+    document.getElementById("grid").innerHTML = items.map(productCardHTML).join("");
+    document.getElementById("no-results").classList.toggle("hidden", items.length > 0);
+    document.getElementById("product-count").textContent = items.length + (items.length === 1 ? " PIECE" : " PIECES");
+  }
+
+  document.getElementById("sort").addEventListener("change", (e) => {
+    state.sort = e.target.value;
+    renderGrid();
+  });
+
+  renderCats();
+  renderGrid();
+</script>
+</body>
+</html>
