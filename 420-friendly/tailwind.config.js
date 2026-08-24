@@ -1,7 +1,12 @@
-// 420 FRIENDLY — shared Tailwind theme (loaded after the Tailwind CDN script)
-// Guard: if the CDN is blocked or down, pages degrade unstyled instead of throwing.
-window.tailwind = window.tailwind || {};
-tailwind.config = {
+/** 420 FRIENDLY — Tailwind build config.
+ * Compiled to assets/tailwind.css via `npm run build:420` (run from repo root).
+ * The committed CSS is the deploy artifact; this config is the source of truth
+ * for the theme (mirrors the original seed-page CDN config).
+ */
+module.exports = {
+  content: ["420-friendly/**/*.html", "420-friendly/assets/*.js"],
+  // Built at runtime via string concat in product.html, invisible to the scanner:
+  safelist: ["grid-cols-1", "grid-cols-2", "grid-cols-3", "grid-cols-4"],
   darkMode: "class",
   theme: {
     extend: {
@@ -68,13 +73,13 @@ tailwind.config = {
         "unit": "8px"
       },
       fontFamily: {
-        "headline-xl-mobile": ["Montserrat"],
-        "headline-md": ["Montserrat"],
-        "headline-xl": ["Montserrat"],
-        "label-caps": ["JetBrains Mono"],
-        "display-lg": ["Montserrat"],
-        "body-lg": ["Inter"],
-        "body-md": ["Inter"]
+        "headline-xl-mobile": ["Montserrat", "ui-sans-serif", "system-ui", "sans-serif"],
+        "headline-md": ["Montserrat", "ui-sans-serif", "system-ui", "sans-serif"],
+        "headline-xl": ["Montserrat", "ui-sans-serif", "system-ui", "sans-serif"],
+        "label-caps": ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "monospace"],
+        "display-lg": ["Montserrat", "ui-sans-serif", "system-ui", "sans-serif"],
+        "body-lg": ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        "body-md": ["Inter", "ui-sans-serif", "system-ui", "sans-serif"]
       },
       fontSize: {
         "headline-xl-mobile": ["32px", { lineHeight: "1.2", fontWeight: "800" }],
@@ -86,5 +91,6 @@ tailwind.config = {
         "body-md": ["16px", { lineHeight: "1.5", fontWeight: "400" }]
       }
     }
-  }
+  },
+  plugins: []
 };

@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "python -m http.server 8000",
     "start": "netlify dev",
-    "lint": "echo 'Install ESLint to lint JS files'"
+    "lint": "echo 'Install ESLint to lint JS files'",
+    "build:420": "npx -y tailwindcss@3.4.17 -c 420-friendly/tailwind.config.js -i 420-friendly/assets/tailwind.src.css -o 420-friendly/assets/tailwind.css --minify"
   },
   "keywords": [
     "events",

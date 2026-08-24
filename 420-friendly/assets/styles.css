@@ -30,15 +30,16 @@
 }
 
 /* Typographic product-art tiles (placeholders until real photography lands) */
+/* Positioned by the caller (absolute inset-0) — no position here, or it
+   overrides Tailwind's .absolute and the tile collapses. */
 .art-tile {
-  position: relative;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .art-tile .art-word {
-  font-family: Montserrat, sans-serif;
+  font-family: Montserrat, ui-sans-serif, system-ui, sans-serif;
   font-weight: 900;
   letter-spacing: -0.04em;
   line-height: 0.85;
@@ -51,7 +52,7 @@
 }
 .art-tile .art-mark {
   position: absolute;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 11px;
   letter-spacing: 0.2em;
   bottom: 12px;
@@ -83,7 +84,7 @@
   background: rgba(14, 14, 14, 0.92);
   border: 1px solid #e9c349;
   color: #e9c349;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 12px;
   letter-spacing: 0.1em;
   padding: 12px 20px;
@@ -118,7 +119,7 @@
   border-radius: 9999px;
   background: #00e639;
   color: #002203;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 10px;
   font-weight: 700;
   display: flex;
