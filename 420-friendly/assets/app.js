@@ -209,18 +209,68 @@ function productCardHTML(product) {
 }
 
 /* ===== Brand mark =====
- * The leaf mark is pure geometry (no embedded fonts), so it stays crisp inside
- * an <img>; the wordmark is real HTML text so it renders in Montserrat like the
- * rest of the site. Swap assets/logo-mark.svg for an exported asset any time —
- * nothing else needs to change.
+ * A reproduction of the 420 Friendly badge: gold leaf, ring, "420", wordmark
+ * and tagline on the deep-green field. It is inlined into the DOM rather than
+ * loaded via <img> so its lettering renders in the page's Montserrat instead
+ * of a system fallback. Gradient ids are per-instance so multiple badges on
+ * one page never collide. Swap in an exported asset by replacing this
+ * function's body with an <img> tag pointing at it.
  */
 
-const LOGO_MARK = "assets/logo-mark.svg";
+let badgeSeq = 0;
 
-function brandMarkHTML(markClass, wordClass) {
+function brandBadgeHTML(heightClass) {
+  const uid = "bg" + ++badgeSeq;
+  const leaflet = (rot, w1, w2, len) =>
+    '<g transform="rotate(' + rot + ')"><path d="M0,0 C-' + w1 + ',-' + Math.round(len * 0.43) +
+    ' -' + w2 + ',-' + Math.round(len * 0.78) + ' 0,-' + len +
+    ' C' + w2 + ',-' + Math.round(len * 0.78) + ' ' + w1 + ',-' + Math.round(len * 0.43) + ' 0,0 Z"/></g>';
+
   return (
-    '<img src="' + LOGO_MARK + '" alt="" aria-hidden="true" class="w-auto shrink-0 ' + markClass + '"/>' +
-    '<span class="' + wordClass + '">420 FRIENDLY</span>'
+    '<svg class="' + heightClass + ' w-auto shrink-0" viewBox="0 0 400 400" ' +
+    'role="img" aria-label="420 Friendly — Clothing Brand">' +
+    "<defs>" +
+    '<linearGradient id="' + uid + '" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0%" stop-color="#f7e79c"/>' +
+    '<stop offset="42%" stop-color="#e9c349"/>' +
+    '<stop offset="100%" stop-color="#a8811f"/>' +
+    "</linearGradient></defs>" +
+    // Field and borders
+    '<rect x="0" y="0" width="400" height="400" rx="62" fill="#0a2e1b"/>' +
+    '<rect x="21" y="21" width="358" height="358" rx="46" fill="none" ' +
+    'stroke="url(#' + uid + ')" stroke-width="9"/>' +
+    '<rect x="35" y="35" width="330" height="330" rx="36" fill="none" ' +
+    'stroke="#1c5735" stroke-width="3"/>' +
+    // Ring behind the leaf
+    '<circle cx="200" cy="168" r="92" fill="none" stroke="url(#' + uid + ')" ' +
+    'stroke-width="6" opacity="0.7"/>' +
+    // Leaf — sits high enough that the lower fronds stay clear of the numerals
+    '<g transform="translate(200,248)" fill="none" stroke="url(#' + uid + ')" ' +
+    'stroke-width="7" stroke-linejoin="round" stroke-linecap="round">' +
+    leaflet(0, 21, 13, 148) +
+    leaflet(26, 18, 11, 130) + leaflet(-26, 18, 11, 130) +
+    leaflet(53, 16, 10, 106) + leaflet(-53, 16, 10, 106) +
+    leaflet(79, 13, 8, 80) + leaflet(-79, 13, 8, 80) +
+    "</g>" +
+    // Chevron wings, clear of the numerals on either side
+    '<path d="M122,224 L98,241 L122,258" fill="none" stroke="url(#' + uid + ')" ' +
+    'stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>' +
+    '<path d="M278,224 L302,241 L278,258" fill="none" stroke="url(#' + uid + ')" ' +
+    'stroke-width="7" stroke-linejoin="round" stroke-linecap="round"/>' +
+    // Lettering
+    '<text x="200" y="272" text-anchor="middle" fill="url(#' + uid + ')" ' +
+    'font-family="Montserrat, \'Arial Black\', sans-serif" font-weight="900" ' +
+    'font-size="86" letter-spacing="-1">420</text>' +
+    '<text x="200" y="318" text-anchor="middle" fill="url(#' + uid + ')" ' +
+    'font-family="Montserrat, \'Arial Black\', sans-serif" font-weight="900" ' +
+    'font-size="41">420 FRIENDLY</text>' +
+    '<text x="200" y="347" text-anchor="middle" fill="url(#' + uid + ')" ' +
+    'font-family="Montserrat, \'Arial Black\', sans-serif" font-weight="700" ' +
+    'font-size="23" letter-spacing="3">CLOTHING BRAND</text>' +
+    // Sweep
+    '<path d="M104,360 C158,351 246,366 298,355" fill="none" ' +
+    'stroke="url(#' + uid + ')" stroke-width="7" stroke-linecap="round"/>' +
+    "</svg>"
   );
 }
 
@@ -254,8 +304,8 @@ function renderChrome(activeLabel) {
       '<div class="fixed top-0 left-0 w-full z-50 bg-background/95 backdrop-blur-md border-b border-outline-variant">' +
       utilityBar +
       '<header class="flex justify-between items-center px-margin-mobile md:px-margin-desktop h-16 gap-4">' +
-      '<a href="index.html" data-brand class="flex items-center gap-2 shrink-0 text-secondary hover:text-tertiary transition-colors">' +
-      brandMarkHTML("h-9", "font-headline-md text-headline-md font-bold tracking-tighter") +
+      '<a href="index.html" data-brand aria-label="420 Friendly home" class="flex items-center shrink-0 hover:opacity-80 transition-opacity">' +
+      brandBadgeHTML("h-14") +
       "</a>" +
       '<nav class="hidden md:flex items-center gap-7" aria-label="Primary">' + primaryLinks + "</nav>" +
       '<div class="flex items-center gap-1 shrink-0">' +
@@ -327,8 +377,8 @@ function renderChrome(activeLabel) {
         { href: "portal.html", label: "Join the Portal" },
         { href: "cart.html", label: "Your Bag" }
       ]) +
-      '<div><div class="flex items-center gap-2 text-secondary">' +
-      brandMarkHTML("h-10", "font-headline-md text-headline-md font-bold tracking-tighter") +
+      '<div><div class="flex items-center">' +
+      brandBadgeHTML("h-24") +
       "</div>" +
       '<p class="font-body-md text-body-md text-on-surface-variant mt-3">Streetwear for the concrete jungle. 420 Friendly is an apparel brand — every product is clothing, nothing more.</p></div>' +
       "</div>" +
