@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>420 FRIENDLY — Drops</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="assets/theme.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+
+<main class="pt-16 md:pt-24 max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+  <section class="pt-12 md:pt-16 pb-8">
+    <p class="font-label-caps text-label-caps text-tertiary flex items-center gap-2 mb-4">
+      <span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+      DROP CALENDAR
+    </p>
+    <h1 class="font-headline-xl-mobile text-headline-xl-mobile md:font-headline-xl md:text-headline-xl text-on-surface uppercase tracking-tighter">
+      When it's gone,<br/><span class="text-secondary">it's gone.</span>
+    </h1>
+  </section>
+
+  <!-- Next drop countdown -->
+  <section class="ambient-glow rounded-2xl bg-surface-container-low/80 border border-outline-variant/30 p-6 md:p-10 mt-4">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-8">
+      <div>
+        <p class="font-label-caps text-label-caps text-secondary mb-3">NEXT DROP — SMOKE SIGNAL PACK</p>
+        <p class="font-body-md text-body-md text-on-surface-variant max-w-md">
+          The Midnight Windbreaker ships alongside restock-proof colorways of the Smoke Signal Crewneck. Pre-order the windbreaker now — everything else goes live at the timer.
+        </p>
+      </div>
+      <div id="countdown" class="grid grid-cols-4 gap-3 md:gap-4" data-drop-at="2026-09-18T16:20:00-07:00">
+        <!-- filled by script -->
+      </div>
+    </div>
+    <a href="product.html?id=midnight-windbreaker" class="inline-flex items-center gap-2 mt-8 bg-surface py-4 px-8 border border-secondary text-secondary font-label-caps text-label-caps hover:bg-secondary hover:text-surface-container-lowest transition-all duration-300">
+      PRE-ORDER THE WINDBREAKER
+      <span class="material-symbols-outlined text-[16px]">bolt</span>
+    </a>
+  </section>
+
+  <!-- Drop history / schedule -->
+  <section class="mt-16">
+    <h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter mb-6">The Schedule</h2>
+    <div class="divide-y divide-outline-variant/50 border-y border-outline-variant/50">
+      <div class="py-6 flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div>
+          <p class="font-label-caps text-label-caps text-on-surface">VIBRANT SERIES</p>
+          <p class="font-body-md text-body-md text-on-surface-variant mt-1">Hoodie, tee, joggers, snapback — the launch drop.</p>
+        </div>
+        <span class="font-label-caps text-label-caps text-tertiary flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>LIVE NOW
+        </span>
+      </div>
+      <div class="py-6 flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div>
+          <p class="font-label-caps text-label-caps text-on-surface">SMOKE SIGNAL PACK</p>
+          <p class="font-body-md text-body-md text-on-surface-variant mt-1">Windbreaker + crewneck colorways. Pre-orders open.</p>
+        </div>
+        <span class="font-label-caps text-label-caps text-secondary">SEP 18 — 4:20 PM PT</span>
+      </div>
+      <div class="py-6 flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div>
+          <p class="font-label-caps text-label-caps text-on-surface">HARVEST CAPSULE</p>
+          <p class="font-body-md text-body-md text-on-surface-variant mt-1">Fall weights. Details drop in the Portal first.</p>
+        </div>
+        <span class="font-label-caps text-label-caps text-outline">OCT — TBA</span>
+      </div>
+    </div>
+    <p class="font-body-md text-body-md text-on-surface-variant mt-8">
+      Want first access? <a href="portal.html" class="text-secondary underline decoration-1 underline-offset-4 hover:text-tertiary transition-colors">Join the Portal</a> — members see every drop 24 hours early.
+    </p>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+
+<script src="assets/products.js"></script>
+<script src="assets/app.js"></script>
+<script>
+  renderChrome("DROPS");
+
+  const countdownEl = document.getElementById("countdown");
+  const dropAt = new Date(countdownEl.dataset.dropAt).getTime();
+
+  function cell(value, label) {
+    return (
+      '<div class="glass-panel rounded-xl px-3 py-4 md:px-5 text-center min-w-[64px]">' +
+      '<div class="font-headline-md text-headline-md text-tertiary tabular-nums">' + value + "</div>" +
+      '<div class="font-label-caps text-label-caps text-on-surface-variant text-[10px] mt-1">' + label + "</div></div>"
+    );
+  }
+
+  function tick() {
+    const diff = dropAt - Date.now();
+    if (diff <= 0) {
+      countdownEl.innerHTML =
+        '<div class="col-span-4 font-headline-md text-headline-md text-tertiary uppercase">Drop is live.</div>';
+      return;
+    }
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    const pad = (n) => String(n).padStart(2, "0");
+    countdownEl.innerHTML =
+      cell(pad(d), "DAYS") + cell(pad(h), "HRS") + cell(pad(m), "MIN") + cell(pad(s), "SEC");
+  }
+
+  tick();
+  setInterval(tick, 1000);
+</script>
+</body>
+</html>

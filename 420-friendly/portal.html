@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>420 FRIENDLY — Portal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="assets/theme.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+
+<main class="pt-16 md:pt-24 max-w-3xl mx-auto px-margin-mobile md:px-margin-desktop">
+  <section class="pt-12 md:pt-20 text-center">
+    <p class="font-label-caps text-label-caps text-tertiary flex items-center justify-center gap-2 mb-4">
+      <span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+      MEMBERS ONLY
+    </p>
+    <h1 class="font-headline-xl-mobile text-headline-xl-mobile md:font-headline-xl md:text-headline-xl text-on-surface uppercase tracking-tighter">
+      The Portal
+    </h1>
+    <p class="font-body-lg text-body-lg text-on-surface-variant mt-6 max-w-xl mx-auto">
+      Every drop, 24 hours early. Restock-proof pieces held for members. No spam — one signal per drop.
+    </p>
+  </section>
+
+  <section class="ambient-glow rounded-2xl bg-surface-container-low/80 border border-outline-variant/30 p-6 md:p-10 mt-12">
+    <form id="portal-form" class="flex flex-col sm:flex-row gap-3">
+      <label class="sr-only" for="portal-email">Email address</label>
+      <input id="portal-email" type="email" required placeholder="YOUR@EMAIL.COM"
+        class="flex-1 bg-surface border border-outline-variant focus:border-secondary focus:ring-0 text-on-surface placeholder:text-outline font-label-caps text-label-caps px-4 py-4"/>
+      <button type="submit"
+        class="bg-surface py-4 px-8 border border-secondary text-secondary font-label-caps text-label-caps hover:bg-secondary hover:text-surface-container-lowest transition-all duration-300 whitespace-nowrap">
+        JOIN THE LIST
+      </button>
+    </form>
+    <p class="font-body-md text-[13px] text-outline mt-4">
+      Preview build — signups are stored in your browser only until a mailing-list provider is connected.
+    </p>
+  </section>
+
+  <section class="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-gutter text-center">
+    <div class="border border-outline-variant/30 rounded-xl p-6">
+      <p class="font-headline-md text-headline-md text-tertiary">24H</p>
+      <p class="font-label-caps text-label-caps text-on-surface-variant mt-2">EARLY ACCESS</p>
+    </div>
+    <div class="border border-outline-variant/30 rounded-xl p-6">
+      <p class="font-headline-md text-headline-md text-secondary">HELD</p>
+      <p class="font-label-caps text-label-caps text-on-surface-variant mt-2">MEMBER STOCK</p>
+    </div>
+    <div class="border border-outline-variant/30 rounded-xl p-6">
+      <p class="font-headline-md text-headline-md text-on-surface">1&times;</p>
+      <p class="font-label-caps text-label-caps text-on-surface-variant mt-2">SIGNAL PER DROP</p>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+
+<script src="assets/products.js"></script>
+<script src="assets/app.js"></script>
+<script>
+  renderChrome("PORTAL");
+
+  document.getElementById("portal-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const input = document.getElementById("portal-email");
+    const email = input.value.trim();
+    if (!email) return;
+    try {
+      const KEY = "420_portal_signups";
+      const list = JSON.parse(localStorage.getItem(KEY) || "[]");
+      if (!list.includes(email)) list.push(email);
+      localStorage.setItem(KEY, JSON.stringify(list));
+    } catch {
+      // Storage unavailable — the confirmation below still reflects reality (preview only).
+    }
+    input.value = "";
+    toast("SAVED LOCALLY — YOU'RE ON THE PREVIEW LIST");
+  });
+</script>
+</body>
+</html>

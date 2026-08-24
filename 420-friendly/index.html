@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>420 FRIENDLY — Shop</title>
+<meta name="description" content="420 Friendly streetwear. Heavyweight fleece, high-density prints, limited drops."/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="assets/theme.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+
+<main class="pt-16 max-w-container-max mx-auto">
+  <!-- Hero -->
+  <section class="px-margin-mobile md:px-margin-desktop pt-12 md:pt-20 pb-8">
+    <p class="font-label-caps text-label-caps text-tertiary flex items-center gap-2 mb-4">
+      <span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+      VIBRANT SERIES — LIVE NOW
+    </p>
+    <h1 class="font-display-lg text-headline-xl-mobile md:text-display-lg text-on-surface uppercase tracking-tighter" style="font-weight:900;">
+      Built for the<br/><span class="text-secondary">concrete jungle.</span>
+    </h1>
+    <p class="font-body-lg text-body-lg text-on-surface-variant mt-6 max-w-xl">
+      Heavyweight blacks, gold hits, electric green energy. Small runs, no restocks — when a drop is gone, it's gone.
+    </p>
+    <div class="flex flex-wrap gap-4 mt-8">
+      <a href="#shop-grid" class="bg-surface py-4 px-8 border border-secondary text-secondary font-label-caps text-label-caps hover:bg-secondary hover:text-surface-container-lowest transition-all duration-300">
+        SHOP THE DROP
+      </a>
+      <a href="drops.html" class="py-4 px-8 border border-outline-variant text-on-surface-variant font-label-caps text-label-caps hover:border-tertiary hover:text-tertiary transition-all duration-300">
+        SEE NEXT DROP
+      </a>
+    </div>
+  </section>
+
+  <!-- Ticker -->
+  <div class="ticker border-y border-outline-variant/50 py-3 mt-8" aria-hidden="true">
+    <div class="ticker-track font-label-caps text-label-caps text-outline">
+      <span class="mx-8">VIBRANT SERIES</span><span class="text-tertiary mx-8">&#9679;</span><span class="mx-8">450GSM FLEECE</span><span class="text-secondary mx-8">&#9679;</span><span class="mx-8">LIMITED RUNS</span><span class="text-tertiary mx-8">&#9679;</span><span class="mx-8">NO RESTOCKS</span><span class="text-secondary mx-8">&#9679;</span><span class="mx-8">VIBRANT SERIES</span><span class="text-tertiary mx-8">&#9679;</span><span class="mx-8">450GSM FLEECE</span><span class="text-secondary mx-8">&#9679;</span><span class="mx-8">LIMITED RUNS</span><span class="text-tertiary mx-8">&#9679;</span><span class="mx-8">NO RESTOCKS</span><span class="text-secondary mx-8">&#9679;</span>
+    </div>
+  </div>
+
+  <!-- Product grid -->
+  <section id="shop-grid" class="px-margin-mobile md:px-margin-desktop py-12">
+    <div class="flex justify-between items-end mb-8">
+      <h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter">The Lineup</h2>
+      <span class="font-label-caps text-label-caps text-on-surface-variant" id="product-count"></span>
+    </div>
+    <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter"></div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+
+<script src="assets/products.js"></script>
+<script src="assets/app.js"></script>
+<script>
+  renderChrome("SHOP");
+
+  const grid = document.getElementById("grid");
+  grid.innerHTML = CATALOG.map((p) => {
+    const badgeColor = p.badge === "PRE-ORDER" ? "text-secondary border-secondary/30" : "text-tertiary border-tertiary/30";
+    return (
+      '<a href="product.html?id=' + esc(p.id) + '" class="group block">' +
+      '<div class="relative aspect-[4/5] overflow-hidden bg-surface-container-low border border-outline-variant/30 group-hover:border-secondary/50 transition-colors">' +
+      productArtHTML(p, "sm") +
+      '<div class="absolute top-3 left-3 glass-panel px-3 py-1.5 rounded-full border ' + badgeColor + '">' +
+      '<span class="font-label-caps text-label-caps text-[10px]">' + esc(p.badge) + "</span></div>" +
+      "</div>" +
+      '<div class="flex justify-between items-baseline mt-3 gap-2">' +
+      '<h3 class="font-label-caps text-label-caps text-on-surface group-hover:text-secondary transition-colors">' + esc(p.name.toUpperCase()) + "</h3>" +
+      '<span class="font-label-caps text-label-caps text-tertiary whitespace-nowrap">' + esc(money(p.price)) + "</span>" +
+      "</div></a>"
+    );
+  }).join("");
+  document.getElementById("product-count").textContent = CATALOG.length + " PIECES";
+</script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+/* 420 FRIENDLY — shared styles */
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Glassmorphism utility (brand signature, carried from the seed page) */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Glow utility */
+.ambient-glow {
+  box-shadow: 0 0 40px rgba(0, 230, 57, 0.15);
+}
+
+/* Typographic product-art tiles (placeholders until real photography lands) */
+.art-tile {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.art-tile .art-word {
+  font-family: Montserrat, sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 0.85;
+  text-transform: uppercase;
+  opacity: 0.18;
+  transform: rotate(-8deg) scale(1.4);
+  user-select: none;
+  white-space: pre-line;
+  text-align: center;
+}
+.art-tile .art-mark {
+  position: absolute;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  bottom: 12px;
+  left: 14px;
+  opacity: 0.7;
+}
+
+/* Hero ticker */
+.ticker {
+  overflow: hidden;
+  white-space: nowrap;
+}
+.ticker-track {
+  display: inline-block;
+  animation: ticker 24s linear infinite;
+}
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  background: rgba(14, 14, 14, 0.92);
+  border: 1px solid #e9c349;
+  color: #e9c349;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  padding: 12px 20px;
+  border-radius: 9999px;
+  backdrop-filter: blur(12px);
+  animation: toast-in 0.25s ease-out;
+  max-width: min(90vw, 480px);
+  text-align: center;
+}
+.toast.toast-out { animation: toast-out 0.25s ease-in forwards; }
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+@keyframes toast-out {
+  from { opacity: 1; transform: translate(-50%, 0); }
+  to { opacity: 0; transform: translate(-50%, 12px); }
+}
+
+@media (min-width: 768px) {
+  .toast { bottom: 40px; }
+}
+
+/* Cart badge */
+[data-cart-count] {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  background: #00e639;
+  color: #002203;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+[data-cart-count][data-empty="true"] { display: none; }
+
+/* Reduced motion: respect the visitor */
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track { animation: none; }
+  .animate-pulse { animation: none; }
+}

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>420 FRIENDLY — Product</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="assets/theme.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+
+<main class="pt-16 md:pt-24 max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+  <div id="product-root"></div>
+
+  <!-- Related products -->
+  <section id="related" class="hidden mt-16">
+    <h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter mb-6">Complete the Fit</h2>
+    <div id="related-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-gutter"></div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+
+<script src="assets/products.js"></script>
+<script src="assets/app.js"></script>
+<script>
+  renderChrome("SHOP");
+
+  const params = new URLSearchParams(location.search);
+  const product = getProduct(params.get("id") || "vibrant-hoodie");
+  const root = document.getElementById("product-root");
+  let selectedSize = null;
+
+  function renderNotFound() {
+    root.innerHTML =
+      '<div class="text-center py-24">' +
+      '<p class="font-label-caps text-label-caps text-tertiary mb-4">404 — PIECE NOT FOUND</p>' +
+      '<h1 class="font-headline-xl-mobile text-headline-xl-mobile text-on-surface uppercase tracking-tighter mb-8">That drop doesn\'t exist.</h1>' +
+      '<a href="index.html" class="inline-block bg-surface py-4 px-8 border border-secondary text-secondary font-label-caps text-label-caps hover:bg-secondary hover:text-surface-container-lowest transition-all duration-300">BACK TO SHOP</a>' +
+      "</div>";
+  }
+
+  function renderProduct() {
+    document.title = "420 FRIENDLY — " + product.name;
+    selectedSize = product.sizes.length === 1 ? product.sizes[0] : null;
+    const badgeColor = product.badge === "PRE-ORDER" ? "text-secondary border-secondary/30" : "text-tertiary border-tertiary/30";
+
+    root.innerHTML =
+      '<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter mt-8">' +
+      // Image / art area
+      '<div class="col-span-1 md:col-span-7 lg:col-span-8 relative aspect-[4/5] md:aspect-auto md:min-h-[80vh] overflow-hidden">' +
+      productArtHTML(product, "lg") +
+      '<div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-80 md:opacity-40 pointer-events-none"></div>' +
+      '<div class="absolute top-4 left-4 glass-panel px-4 py-2 rounded-full border ' + badgeColor + '">' +
+      '<span class="font-label-caps text-label-caps flex items-center gap-2">' +
+      '<span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>' + esc(product.badge) + "</span></div></div>" +
+      // Info panel
+      '<div class="col-span-1 md:col-span-5 lg:col-span-4 flex flex-col justify-end md:justify-center py-8 md:py-12 z-10">' +
+      '<div class="space-y-6 ambient-glow p-6 md:p-8 rounded-2xl bg-surface-container-low/80 backdrop-blur-md border border-outline-variant/30">' +
+      "<div>" +
+      '<h1 class="font-headline-xl-mobile text-headline-xl-mobile md:font-headline-xl md:text-headline-xl text-on-surface mb-2 uppercase tracking-tighter">' + esc(product.name) + "</h1>" +
+      '<p class="font-label-caps text-label-caps text-tertiary">' + esc(money(product.price)) + "</p></div>" +
+      '<p class="font-body-md text-body-md text-on-surface-variant">' + esc(product.blurb) + "</p>" +
+      '<div class="space-y-4 pt-4 border-t border-outline-variant/50">' +
+      '<div class="flex justify-between items-center">' +
+      '<span class="font-label-caps text-label-caps text-on-surface">SELECT SIZE</span>' +
+      '<button id="size-guide" class="font-label-caps text-label-caps text-secondary underline decoration-1 underline-offset-4">SIZE GUIDE</button></div>' +
+      '<div id="sizes" class="grid grid-cols-' + Math.min(product.sizes.length, 4) + ' gap-2"></div></div>' +
+      '<button id="add-to-bag" class="w-full bg-surface py-4 px-6 border border-secondary text-secondary font-label-caps text-label-caps hover:bg-secondary hover:text-surface-container-lowest transition-all duration-300 flex items-center justify-center gap-2 mt-8">' +
+      (product.badge === "PRE-ORDER" ? "PRE-ORDER" : "ADD TO BAG") +
+      '<span class="material-symbols-outlined text-[16px]">shopping_cart</span></button>' +
+      '<ul class="space-y-2 pt-6">' +
+      product.features.map((f) =>
+        '<li class="flex items-start gap-3 font-body-md text-body-md text-on-surface-variant">' +
+        '<span class="material-symbols-outlined text-secondary text-[20px]">check_circle</span>' +
+        "<span>" + esc(f) + "</span></li>"
+      ).join("") +
+      "</ul></div></div></div>";
+
+    renderSizes();
+    document.getElementById("add-to-bag").addEventListener("click", () => {
+      if (!selectedSize) {
+        toast("PICK A SIZE FIRST");
+        return;
+      }
+      addToCart(product.id, selectedSize);
+    });
+    document.getElementById("size-guide").addEventListener("click", () => {
+      toast("SIZE GUIDE: TRUE TO SIZE — SIZE UP FOR EXTRA ROOM");
+    });
+  }
+
+  function renderSizes() {
+    const wrap = document.getElementById("sizes");
+    wrap.innerHTML = "";
+    product.sizes.forEach((size) => {
+      const btn = document.createElement("button");
+      const active = size === selectedSize;
+      btn.className = active
+        ? "border border-secondary bg-surface-container text-secondary py-3 font-label-caps text-label-caps transition-colors"
+        : "border border-outline-variant hover:border-secondary hover:text-secondary text-on-surface py-3 font-label-caps text-label-caps transition-colors";
+      btn.textContent = size;
+      btn.addEventListener("click", () => {
+        selectedSize = size;
+        renderSizes();
+      });
+      wrap.appendChild(btn);
+    });
+  }
+
+  function renderRelated() {
+    const others = CATALOG.filter((p) => p.id !== product.id).slice(0, 3);
+    document.getElementById("related").classList.remove("hidden");
+    document.getElementById("related-grid").innerHTML = others.map((p) =>
+      '<a href="product.html?id=' + esc(p.id) + '" class="group block">' +
+      '<div class="relative aspect-[4/5] overflow-hidden bg-surface-container-low border border-outline-variant/30 group-hover:border-secondary/50 transition-colors">' +
+      productArtHTML(p, "sm") + "</div>" +
+      '<div class="flex justify-between items-baseline mt-3 gap-2">' +
+      '<h3 class="font-label-caps text-label-caps text-on-surface group-hover:text-secondary transition-colors">' + esc(p.name.toUpperCase()) + "</h3>" +
+      '<span class="font-label-caps text-label-caps text-tertiary whitespace-nowrap">' + esc(money(p.price)) + "</span>" +
+      "</div></a>"
+    ).join("");
+  }
+
+  if (product) {
+    renderProduct();
+    renderRelated();
+  } else {
+    renderNotFound();
+  }
+</script>
+</body>
+</html>
