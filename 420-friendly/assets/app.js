@@ -209,18 +209,20 @@ function productCardHTML(product) {
 }
 
 /* ===== Brand mark =====
- * The real 420 Friendly badge, exported from the brand artwork. Served as WebP
- * (~18KB) at 320px, which covers 2x on the largest place it appears (the 96px
- * footer). Height is set by the caller; width follows via `w-auto`.
+ * The 3D 420 Friendly emblem. The render's dark background was cut away using
+ * the green edge-glow as a boundary, so the mark sits on any surface; it ships
+ * as WebP with alpha at 261x300 (~21KB), which covers 2x at the largest
+ * placement (the 96px footer). The intrinsic width/height below match the file
+ * and keep the header from shifting while the image loads.
  */
 
 const LOGO_SRC = "assets/logo.webp";
 
 function brandBadgeHTML(heightClass) {
   return (
-    '<img src="' + LOGO_SRC + '" alt="420 Friendly — Clothing Brand" ' +
+    '<img src="' + LOGO_SRC + '" alt="420 Friendly" ' +
     'class="' + heightClass + ' w-auto shrink-0" ' +
-    'width="320" height="320" decoding="async"/>'
+    'width="261" height="300" decoding="async"/>'
   );
 }
 
