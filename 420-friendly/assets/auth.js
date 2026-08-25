@@ -16,6 +16,73 @@
  * protection is that the page has nothing in it until the server says yes.
  */
 
+/* ===== Passcode sessions =====
+ * The passcode is checked by `/.netlify/functions/owner-auth`, never here. On
+ * success that function returns a signed, expiring token which is what the data
+ * function actually accepts. The passcode itself is never kept in the browser.
+ *
+ * sessionStorage, not localStorage: the session should end with the tab rather
+ * than persisting on a shared or borrowed machine.
+ */
+
+const OWNER_TOKEN_KEY = "420_owner_token";
+const AUTH_ENDPOINT = "/.netlify/functions/owner-auth";
+
+function storedToken() {
+  try {
+    return sessionStorage.getItem(OWNER_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function storeToken(token) {
+  try {
+    if (token) sessionStorage.setItem(OWNER_TOKEN_KEY, token);
+    else sessionStorage.removeItem(OWNER_TOKEN_KEY);
+  } catch {
+    // Private windows block storage — the session simply will not persist.
+  }
+}
+
+// Resolves { ok, message }.
+async function submitPasscode(passcode) {
+  let res;
+  try {
+    res = await fetch(AUTH_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ passcode })
+    });
+  } catch {
+    return { ok: false, message: "Could not reach the sign-in service." };
+  }
+
+  if (res.status === 404) {
+    return {
+      ok: false,
+      message: "The sign-in function is not deployed. It runs on Netlify, not a plain static server."
+    };
+  }
+
+  let data = {};
+  try {
+    data = await res.json();
+  } catch {
+    return { ok: false, message: "The sign-in service sent an unreadable reply." };
+  }
+
+  if (res.ok && data.token) {
+    storeToken(data.token);
+    return { ok: true };
+  }
+  return { ok: false, message: data.message || "That passcode is not right." };
+}
+
+function signOutPasscode() {
+  storeToken(null);
+}
+
 const IDENTITY_WIDGET_SRC = "https://identity.netlify.com/v1/netlify-identity-widget.js";
 
 let identityReady = null;
@@ -64,54 +131,101 @@ async function authToken() {
 }
 
 async function authedFetch(url, options) {
-  const token = await authToken();
   const opts = { ...(options || {}) };
   opts.headers = { ...(opts.headers || {}) };
+
+  // Passcode session first — it is the configured path on this site. The
+  // Identity token is sent on Authorization, so the passcode token uses its own
+  // header and the two can never be confused for one another.
+  const passToken = storedToken();
+  if (passToken) opts.headers["X-Owner-Token"] = passToken;
+
+  const token = await authToken();
   if (token) opts.headers.Authorization = "Bearer " + token;
+
   return fetch(url, opts);
 }
 
-/* Renders the signed-out / unavailable states into a container and returns
- * whether a signed-in user is present. */
+/* Gate. Passcode first; if no passcode session exists it offers the form, and
+ * falls back to Netlify Identity when that is what the site is set up with.
+ *
+ * This gate decides what is DISPLAYED. It is not the security boundary — the
+ * page is served to anyone. The boundary is that the data function refuses to
+ * answer without a token the server signed.
+ */
 async function requireOwner(mountId, onSignedIn) {
   const mount = document.getElementById(mountId);
-  const identity = await loadIdentity();
 
-  if (!identity) {
-    mount.innerHTML = gateCard(
-      "IDENTITY UNAVAILABLE",
-      "The Netlify Identity script could not load. On a local static server this is expected — " +
-      "sign-in only works on the deployed site. If you are seeing this on the live site, check " +
-      "that Identity is enabled in the Netlify dashboard.",
-      null
-    );
-    return false;
-  }
-
-  const render = async () => {
-    const user = currentUser();
-    if (user) {
-      mount.innerHTML = "";
-      mount.classList.add("hidden");
-      await onSignedIn(user);
-    } else {
-      mount.classList.remove("hidden");
-      mount.innerHTML = gateCard(
-        "OWNER SIGN-IN REQUIRED",
-        "This area holds order and customer information. Sign in with an account that has the " +
-        "owner role. Order data is served only to a verified account — it is not in this page.",
-        "SIGN IN"
-      );
-      const btn = document.getElementById("gate-signin");
-      if (btn) btn.addEventListener("click", () => identity.open("login"));
-    }
+  const enter = async () => {
+    mount.innerHTML = "";
+    mount.classList.add("hidden");
+    await onSignedIn({ via: "passcode" });
   };
 
-  identity.on("login", () => { identity.close(); render(); });
-  identity.on("logout", () => render());
+  if (storedToken()) {
+    await enter();
+    return true;
+  }
 
-  await render();
-  return !!currentUser();
+  mount.classList.remove("hidden");
+  mount.innerHTML = passcodeCard();
+
+  const form = document.getElementById("gate-form");
+  const input = document.getElementById("gate-passcode");
+  const err = document.getElementById("gate-error");
+  const btn = document.getElementById("gate-submit");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const value = input.value;
+    if (!value) return;
+    btn.disabled = true;
+    const label = btn.textContent;
+    btn.textContent = "CHECKING…";
+    err.classList.add("hidden");
+
+    const result = await submitPasscode(value);
+
+    btn.disabled = false;
+    btn.textContent = label;
+    // Clear the field either way — a passcode should not linger on screen.
+    input.value = "";
+
+    if (result.ok) {
+      await enter();
+    } else {
+      err.textContent = result.message;
+      err.classList.remove("hidden");
+      input.focus();
+    }
+  });
+
+  setTimeout(() => input.focus(), 100);
+  return false;
+}
+
+function passcodeCard() {
+  return (
+    '<div class="max-w-md mx-auto text-center border border-outline-variant/50 rounded-2xl bg-surface-container-low/70 px-6 py-12 mt-10">' +
+    '<span class="material-symbols-outlined text-outline text-[42px]">lock</span>' +
+    '<p class="font-label-caps text-label-caps text-on-surface mt-4">OWNER ACCESS</p>' +
+    '<p class="font-body-md text-body-md text-on-surface-variant mt-3">' +
+    "Enter the owner passcode. Order data is served only to a verified session — " +
+    "it is not contained in this page." +
+    "</p>" +
+    '<form id="gate-form" class="mt-8 flex flex-col gap-3">' +
+    '<label class="sr-only" for="gate-passcode">Owner passcode</label>' +
+    '<input id="gate-passcode" type="password" autocomplete="current-password" ' +
+    'placeholder="PASSCODE" class="rounded-full bg-surface border border-outline-variant ' +
+    'focus:border-secondary focus:ring-0 text-on-surface placeholder:text-outline ' +
+    'font-label-caps text-label-caps px-6 py-4 text-center"/>' +
+    '<button id="gate-submit" type="submit" class="rounded-full bg-primary text-on-primary ' +
+    'py-4 px-8 font-label-caps text-label-caps hover:bg-inverse-surface transition-all duration-300">' +
+    "UNLOCK</button>" +
+    "</form>" +
+    '<p id="gate-error" role="alert" class="hidden font-label-caps text-label-caps text-error mt-4"></p>' +
+    "</div>"
+  );
 }
 
 function gateCard(title, body, buttonLabel) {
@@ -139,7 +253,12 @@ function signOutButtonHTML() {
 
 function wireSignOut() {
   const btn = document.getElementById("sign-out");
-  if (btn && window.netlifyIdentity) {
-    btn.addEventListener("click", () => window.netlifyIdentity.logout());
-  }
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    signOutPasscode();
+    if (window.netlifyIdentity && window.netlifyIdentity.currentUser()) {
+      window.netlifyIdentity.logout();
+    }
+    location.reload();
+  });
 }

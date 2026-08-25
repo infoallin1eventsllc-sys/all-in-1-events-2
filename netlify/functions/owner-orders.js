@@ -49,14 +49,32 @@ const SAMPLE_ORDERS = [
 ];
 
 const REQUIRED_ROLE = process.env.OWNER_ROLE || "owner";
+const { verifyToken, tokenFromEvent } = require("../shared/owner-session");
 
 exports.handler = async (event, context) => {
+  // Two ways in, both checked here on the server. A passcode session is the
+  // simple path; a Netlify Identity account with the owner role is the stronger
+  // one and keeps working if it is set up. Either satisfies this check; neither
+  // can be bypassed from the browser, because the data lives behind it.
+  const passcode = process.env.OWNER_PASSCODE;
+  if (passcode) {
+    const session = verifyToken(tokenFromEvent(event), passcode);
+    if (session.ok) return json(200, payload("passcode"));
+    // A recognised-but-expired session gets a distinct code so the page can say
+    // "your session ended" rather than "wrong passcode".
+    if (session.reason === "expired") {
+      return json(401, { error: "expired", message: "Your session has ended. Enter the passcode again." });
+    }
+  }
+
   const user = context.clientContext && context.clientContext.user;
 
   if (!user) {
     return json(401, {
       error: "unauthorized",
-      message: "Sign in to view orders."
+      message: passcode
+        ? "Enter the owner passcode to view orders."
+        : "Sign in to view orders."
     });
   }
 
@@ -73,19 +91,22 @@ exports.handler = async (event, context) => {
     });
   }
 
+  return json(200, payload(user.email || null));
+};
+
+function payload(viewer) {
   const orders = SAMPLE_ORDERS.map((o) => {
     const subtotal = o.items.reduce((s, i) => s + i.price * i.qty, 0);
     return { ...o, subtotal, total: subtotal + (o.shipping || 0) };
   });
-
-  return json(200, {
+  return {
     orders,
     // Drives the portal's "these aren't real sales" banner. Flip to false when
     // this function reads a real payment provider instead of the list above.
     sample: true,
-    viewer: user.email || null
-  });
-};
+    viewer
+  };
+}
 
 function json(statusCode, body) {
   return {

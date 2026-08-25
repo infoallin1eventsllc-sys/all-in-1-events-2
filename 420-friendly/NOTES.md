@@ -44,7 +44,8 @@ page, preserving the original URL.
 
 ## Owner portal & payments
 
-`owner.html` and `photos.html` are owner tools, gated with Netlify Identity.
+`owner.html` and `photos.html` are owner tools, gated by a passcode (or Netlify
+Identity, if that is set up instead — the data function accepts either).
 
 The protection is server-side, not in the page. The pages are public shells with
 no data in them; orders come from `netlify/functions/owner-orders.js`, which

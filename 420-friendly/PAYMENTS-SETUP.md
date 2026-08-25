@@ -76,7 +76,42 @@ any CVC. Place a full order end to end before switching to live keys.
   configured for the states you have nexus in.
 - **No order confirmation email** beyond the provider's own receipt.
 
-## Locking the owner pages (Netlify Identity)
+## Locking the owner pages
+
+Two ways in. Both are checked **on the server** — that is the whole point.
+
+A passcode compared in the browser protects nothing: the page and its script
+are served to anyone, so the comparison can be read and skipped. Here the
+passcode is checked by `netlify/functions/owner-auth.js`, which returns a signed
+token; `owner-orders.js` refuses to return any data without one. The pages
+themselves are public shells containing no customer data.
+
+### Option A — passcode (simplest, set this)
+
+1. Netlify → **Site settings → Environment variables** → add `OWNER_PASSCODE`.
+2. Use a **long passphrase**, not a PIN. Four or five random words is ideal.
+3. Redeploy.
+
+That's it. The portal will ask for the passcode and remember it for 12 hours,
+per browser tab.
+
+Two properties worth knowing:
+
+- **Changing `OWNER_PASSCODE` instantly signs everyone out.** The signing key is
+  derived from the passcode, so old tokens stop verifying. That is your
+  revocation button if it ever gets shared.
+- **Length is the protection.** Netlify functions are stateless, so there is
+  nowhere to keep a lockout counter between attempts. A fixed delay is applied
+  to every wrong guess, but a short passcode is still brute-forceable — the
+  function refuses to run with one under 8 characters.
+
+### Option B — Netlify Identity (per-person accounts)
+
+Better when more than one person needs access, or you want to revoke one person
+without changing everyone's passcode. It also gives you a named account in the
+audit trail instead of a shared secret.
+
+## Netlify Identity setup
 
 The owner pages are now gated, but understand **where** the protection is.
 
@@ -89,8 +124,6 @@ valid token it returns 401 and there is nothing to leak.
 
 That is why `assets/owner-data.js` no longer holds any orders — a public file
 holding real customer names and emails would be a leak by construction.
-
-### Turn it on
 
 1. Netlify dashboard → **Identity** → **Enable Identity**.
 2. **Identity → Registration**: set to **Invite only**. Leaving it open lets
