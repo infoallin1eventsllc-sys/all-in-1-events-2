@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class="dark" lang="en">
+<html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
@@ -42,7 +42,7 @@
       '<div class="text-center py-24">' +
       '<p class="font-label-caps text-label-caps text-tertiary mb-4">404 — PIECE NOT FOUND</p>' +
       '<h1 class="font-headline-xl-mobile text-headline-xl-mobile text-on-surface uppercase tracking-tighter mb-8">That drop doesn\'t exist.</h1>' +
-      '<a href="shop.html" class="inline-block rounded-full bg-secondary text-surface-container-lowest py-4 px-8 font-label-caps text-label-caps hover:bg-secondary-fixed transition-all duration-300">BACK TO SHOP</a>' +
+      '<a href="shop.html" class="inline-block rounded-full bg-primary text-on-primary py-4 px-8 font-label-caps text-label-caps hover:bg-inverse-surface transition-all duration-300">BACK TO SHOP</a>' +
       "</div>";
   }
 
@@ -108,7 +108,7 @@
       '<div id="sizes" class="grid grid-cols-' + Math.min(product.sizes.length, 4) + ' gap-2"></div></div>' +
 
       '<div class="flex flex-col gap-3 mt-8">' +
-      '<button id="add-to-bag" class="w-full rounded-full bg-secondary text-surface-container-lowest py-4 px-6 font-label-caps text-label-caps hover:bg-secondary-fixed transition-all duration-300 flex items-center justify-center gap-2">' +
+      '<button id="add-to-bag" class="w-full rounded-full bg-primary text-on-primary py-4 px-6 font-label-caps text-label-caps hover:bg-inverse-surface transition-all duration-300 flex items-center justify-center gap-2">' +
       (product.badge === "PRE-ORDER" ? "PRE-ORDER" : "ADD TO BAG") +
       '<span class="material-symbols-outlined text-[18px]">shopping_bag</span></button>' +
       '<button id="fav-btn" class="w-full rounded-full border border-outline-variant text-on-surface py-4 px-6 font-label-caps text-label-caps hover:border-secondary hover:text-secondary transition-all duration-300 flex items-center justify-center gap-2">' +

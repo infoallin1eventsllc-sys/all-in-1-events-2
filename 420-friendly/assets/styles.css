@@ -1,5 +1,40 @@
 /* 420 FRIENDLY — shared styles */
 
+/* ===== Generated page background =====
+ * A pearl field built from layered radial gradients plus a fine grain overlay,
+ * echoing the soft studio light the brand emblem is rendered in: warm cream on
+ * one side, cool mint-grey on the other. It is drawn entirely in CSS (the grain
+ * is an inline SVG turbulence, a few hundred bytes) so it stays crisp at any
+ * viewport instead of shipping a large raster.
+ */
+body { background-color: #f4f3ef; }
+
+/* The wash and the grain each ride on their own fixed layer. Painting them here
+   rather than via `background-attachment: fixed` on <body> avoids that
+   property's well-known repaint cost on mobile Safari while giving the same
+   viewport-locked result. */
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+body::before {
+  background-image:
+    radial-gradient(1200px 800px at 12% -5%, rgba(255, 250, 236, 0.95), rgba(255, 250, 236, 0) 60%),
+    radial-gradient(1000px 700px at 92% 8%, rgba(226, 238, 228, 0.85), rgba(226, 238, 228, 0) 62%),
+    radial-gradient(900px 900px at 78% 96%, rgba(240, 236, 226, 0.75), rgba(240, 236, 226, 0) 60%);
+}
+body::after {
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)' opacity='0.35'/%3E%3C/svg%3E");
+}
+body > * { position: relative; z-index: 1; }
+
+
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined';
   font-weight: normal;
@@ -18,15 +53,15 @@
 
 /* Glassmorphism utility (brand signature, carried from the seed page) */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.62);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(22, 26, 23, 0.08);
 }
 
 /* Glow utility */
 .ambient-glow {
-  box-shadow: 0 0 40px rgba(0, 230, 57, 0.15);
+  box-shadow: 0 18px 50px -24px rgba(22, 26, 23, 0.28);
 }
 
 /* Typographic product-art tiles (placeholders until real photography lands) */
@@ -44,7 +79,7 @@
   letter-spacing: -0.04em;
   line-height: 0.85;
   text-transform: uppercase;
-  opacity: 0.18;
+  opacity: 0.22;
   transform: rotate(-8deg) scale(1.4);
   user-select: none;
   white-space: pre-line;
@@ -64,9 +99,9 @@
    Swap the whole .hero-art block for an <img> when the shoot lands. */
 .hero-art {
   background:
-    radial-gradient(120% 90% at 20% 20%, rgba(0, 230, 57, 0.16), transparent 60%),
-    radial-gradient(100% 80% at 85% 30%, rgba(233, 195, 73, 0.12), transparent 55%),
-    linear-gradient(160deg, #0f2e1e 0%, #131313 55%, #0e0e0e 100%);
+    radial-gradient(120% 90% at 18% 15%, rgba(255, 251, 238, 0.95), transparent 62%),
+    radial-gradient(100% 80% at 88% 25%, rgba(205, 234, 207, 0.7), transparent 58%),
+    linear-gradient(160deg, #fbfaf6 0%, #eeece5 55%, #e4e6df 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -79,8 +114,8 @@
   letter-spacing: -0.05em;
   text-transform: uppercase;
   text-align: center;
-  color: #00e639;
-  opacity: 0.1;
+  color: #12752f;
+  opacity: 0.14;
   transform: rotate(-6deg);
   user-select: none;
 }
@@ -106,9 +141,9 @@
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
-  background: rgba(14, 14, 14, 0.92);
-  border: 1px solid #e9c349;
-  color: #e9c349;
+  background: rgba(22, 26, 23, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f4f3ef;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 12px;
   letter-spacing: 0.1em;
@@ -142,8 +177,8 @@
   height: 16px;
   padding: 0 4px;
   border-radius: 9999px;
-  background: #00e639;
-  color: #002203;
+  background: #12752f;
+  color: #ffffff;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 10px;
   font-weight: 700;

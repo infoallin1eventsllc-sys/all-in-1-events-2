@@ -31,11 +31,11 @@ page, preserving the original URL.
 - `assets/styles.css` — hand-written styles (art tiles, ticker, toast, badges).
 - `assets/tailwind.css` — **compiled output, do not edit by hand.**
 - `assets/logo.webp` — the 3D brand emblem, used in the header and footer. Cut
-  from the 1024px Stitch render: the dark studio background was removed with a
-  flood fill that used the mark's green edge-glow as the boundary, then resized
-  to 261x300 and saved as WebP with alpha (~21KB). `favicon.ico` and
-  `apple-touch-icon.png` come from the same cutout, padded onto the brand black
-  so the mark stays square and centred rather than letterboxed.
+  from the light-environment Stitch render: the background is removed by flood
+  filling inward from the image border, then a morphological close seals the
+  thin notches where bright rim highlights touch the silhouette. 259x300 WebP
+  with alpha (~21KB). `favicon.ico` and `apple-touch-icon.png` come from the
+  same cutout, padded onto the page off-white to stay square.
 
 ## Building CSS
 
@@ -65,6 +65,25 @@ Not wired up (deliberate, and labeled as such in the UI):
 - **Product photography** — only the Vibrant Series Hoodie has a real photo. The
   other seven render typographic art tiles as placeholders.
 
+## Theme
+
+The site runs a light "pearl" theme. The page background is generated in CSS,
+not shipped as an image: three layered radial gradients (warm cream one side,
+cool mint-grey the other) plus a fine grain from an inline SVG turbulence,
+each on its own fixed pseudo-element. `background-attachment: fixed` is
+deliberately avoided — it repaints badly on mobile Safari — and the layers carry
+`pointer-events: none` so they never swallow clicks.
+
+Colour rules that matter when extending it:
+
+- Body copy is `on-surface` / `on-surface-variant`; `outline` is the lightest
+  tone that still clears WCAG AA on the pearl background — do not lighten it.
+- Product art tiles stay dark on purpose: they stand in for product photography
+  and read as images against the light page. Their decorative words carry
+  `aria-hidden="true"`, so screen readers and contrast tooling skip them.
+- There is a contrast sweep in the scratch tooling; every text node on all seven
+  pages passes AA. Re-run it after any palette change.
+
 ## Open decisions
 
 1. ~~The logo is a reproduction.~~ **Resolved** — the 3D emblem is in place,
@@ -72,11 +91,8 @@ Not wired up (deliberate, and labeled as such in the UI):
 2. **Header legibility.** At 56px the badge's own lettering is too small to
    read. Options: leave as-is; pair the badge with a "420 FRIENDLY" wordmark
    beside it (recommended); or make the header taller.
-3. **Gold vs green.** The 3D emblem is charcoal and green, which sits close to
-   the site's electric green accent (`#00e639`) — that half now matches. The
-   odd one out is the gold (`#e9c349`) on the pill CTAs and active nav, chosen
-   back when the logo was the gold badge. Options: keep gold as a deliberate
-   contrast accent; move CTAs to the logo's green; or keep gold only for
-   small highlights.
+3. ~~Gold vs green.~~ **Resolved by the light theme** — CTAs are now charcoal
+   (`#1d2320`) on pearl, matching the emblem; green (`#12752f`) carries status
+   and accents; gold survives only as a deepened highlight (`#8a6a05`).
 
 Front page layout is settled — Otis likes it. Leave it alone unless asked.

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class="dark" lang="en">
+<html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
@@ -40,7 +40,7 @@
         '<div class="text-center py-16 border border-outline-variant/30 rounded-2xl bg-surface-container-low/50">' +
         '<span class="material-symbols-outlined text-outline text-[48px]">shopping_bag</span>' +
         '<p class="font-label-caps text-label-caps text-on-surface-variant mt-4 mb-8">YOUR BAG IS EMPTY</p>' +
-        '<a href="shop.html" class="inline-block rounded-full bg-secondary text-surface-container-lowest py-4 px-8 font-label-caps text-label-caps hover:bg-secondary-fixed transition-all duration-300">SHOP THE DROP</a>' +
+        '<a href="shop.html" class="inline-block rounded-full bg-primary text-on-primary py-4 px-8 font-label-caps text-label-caps hover:bg-inverse-surface transition-all duration-300">SHOP THE DROP</a>' +
         "</div>";
       return;
     }
@@ -86,7 +86,7 @@
       '<div class="flex justify-between font-label-caps text-label-caps text-on-surface-variant mt-3"><span>SHIPPING</span><span>' + (subtotal >= FREE_SHIP_AT ? "FREE" : "AT CHECKOUT") + "</span></div>" +
       '<div class="border-t border-outline-variant/50 my-4"></div>' +
       '<div class="flex justify-between font-label-caps text-label-caps text-on-surface"><span>ESTIMATED TOTAL</span><span>' + esc(money(subtotal)) + "</span></div>" +
-      '<button id="checkout" class="w-full rounded-full bg-secondary text-surface-container-lowest py-4 px-6 font-label-caps text-label-caps hover:bg-secondary-fixed transition-all duration-300 flex items-center justify-center gap-2 mt-6">' +
+      '<button id="checkout" class="w-full rounded-full bg-primary text-on-primary py-4 px-6 font-label-caps text-label-caps hover:bg-inverse-surface transition-all duration-300 flex items-center justify-center gap-2 mt-6">' +
       "CHECKOUT" +
       '<span class="material-symbols-outlined text-[18px]">arrow_forward</span></button>' +
       shipMsg +

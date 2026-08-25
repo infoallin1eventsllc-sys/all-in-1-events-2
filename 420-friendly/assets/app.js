@@ -144,9 +144,9 @@ function productArtHTML(product, sizeClass) {
   return (
     '<div class="art-tile absolute inset-0" style="background:linear-gradient(160deg,' +
     esc(art.from) + "," + esc(art.to) + ')">' +
-    '<span class="art-word" style="color:' + esc(art.tint) + ";font-size:" + fontSize + '">' +
+    '<span class="art-word" aria-hidden="true" style="color:' + esc(art.tint) + ";font-size:" + fontSize + '">' +
     esc(art.word) + "</span>" +
-    '<span class="art-mark" style="color:' + esc(art.tint) + '">420 FRIENDLY</span>' +
+    '<span class="art-mark" aria-hidden="true" style="color:' + esc(art.tint) + '">420 FRIENDLY</span>' +
     "</div>"
   );
 }
@@ -222,7 +222,7 @@ function brandBadgeHTML(heightClass) {
   return (
     '<img src="' + LOGO_SRC + '" alt="420 Friendly" ' +
     'class="' + heightClass + ' w-auto shrink-0" ' +
-    'width="261" height="300" decoding="async"/>'
+    'width="259" height="300" decoding="async"/>'
   );
 }
 
@@ -238,7 +238,7 @@ function renderChrome(activeLabel) {
     const utilityBar =
       '<div class="hidden md:flex justify-end items-center gap-4 h-9 px-margin-desktop bg-surface-container-lowest border-b border-outline-variant/40">' +
       UTILITY_NAV.map((item, i) =>
-        (i > 0 ? '<span class="text-outline-variant" aria-hidden="true">|</span>' : "") +
+        (i > 0 ? '<span class="text-outline" aria-hidden="true">|</span>' : "") +
         '<a href="' + item.href + '" class="font-body-md text-[13px] text-on-surface-variant hover:text-secondary transition-colors">' + item.label + "</a>"
       ).join("") +
       "</div>";
@@ -278,7 +278,7 @@ function renderChrome(activeLabel) {
 
   if (navMount) {
     navMount.innerHTML =
-      '<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 h-20 bg-surface-container-lowest/80 backdrop-blur-xl border-t border-outline-variant shadow-[0_-4px_20px_0_rgba(0,230,57,0.1)]" aria-label="Mobile">' +
+      '<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 h-20 bg-surface-container-lowest/80 backdrop-blur-xl border-t border-outline-variant shadow-[0_-4px_20px_-6px_rgba(22,26,23,0.18)]" aria-label="Mobile">' +
       NAV.map((item) => {
         const active = item.label === activeLabel;
         const color = active
