@@ -160,6 +160,44 @@ Set `MERIDIAN_INTAKE_URL` in the Netlify environment to switch it on. Until
 then the form keeps the address locally and says so — it never claims a signup
 reached the CRM when it did not.
 
+## Where we left off (2026-08-25)
+
+Branch `claude/420-friendly-hoodie-page-yl8ho9`, PR #3 — open, green, unmerged.
+Everything below is built and verified; what remains is configuration only, and
+all of it is Otis's to do because it involves his own accounts and keys.
+
+### Waiting on Otis — one variable each, all in Netlify → Site settings →
+### Environment variables, then redeploy (env vars only apply to a new build)
+
+| Variable | Unlocks | Notes |
+|---|---|---|
+| `OWNER_PASSCODE` | The owner Portal | **Do this first** — nothing else is reachable without it. Long passphrase, not a PIN; the function refuses anything under 8 characters |
+| `MERIDIAN_INTAKE_URL` | Website → CRM lead capture | The `intake` function URL. Until set, signups are kept locally and the form says so |
+| `ANTHROPIC_API_KEY` | The events-site concierge | Until set it answers from scripted FAQ copy and admits it |
+| `STRIPE_SECRET_KEY` + publishable key | Card / Apple Pay / Google Pay / Cash App | See PAYMENTS-SETUP.md; needs his own verified Stripe account |
+| `paypalClientId` in `assets/payments.js` | PayPal + Venmo | Public value, safe in code |
+
+### Still genuinely unbuilt
+
+- **Real orders.** The Transactions page reads sample data; there is no payment
+  provider connected, so no real sale exists. Real orders need a Stripe webhook
+  and somewhere to store them.
+- **Photos are per-browser.** IndexedDB only — they do not reach a server, a
+  phone, or customers. Needs object storage to publish.
+- **Product photography.** Only the hoodie has a real image; the rest render
+  typographic tiles. Uploading via the Portal and assigning to a product
+  replaces them on the shop.
+- **Stock, tax, confirmation emails** — none of these exist yet.
+
+### Two traps this codebase has already sprung once each
+
+- **Rebuild CSS after any Tailwind class change** (`npm run build:420`). A class
+  that isn't in the compiled sheet silently does nothing — it cost a
+  zero-height logo and a hero image blown up to natural size.
+- **Test that nav links are *clickable*, not just present.** A stacking-context
+  bug left every header link dead while looking perfectly normal, and passed
+  every visibility check for days.
+
 ## Open decisions
 
 1. ~~The logo is a reproduction.~~ **Resolved** — the 3D emblem is in place,
