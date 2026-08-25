@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>420 FRIENDLY — Members</title>
+<link href="assets/tailwind.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link rel="icon" href="assets/favicon.ico" sizes="any"/>
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+
+<main class="pt-20 md:pt-[116px] max-w-3xl mx-auto px-margin-mobile md:px-margin-desktop">
+  <section class="pt-12 md:pt-20 text-center">
+    <p class="font-label-caps text-label-caps text-tertiary flex items-center justify-center gap-2 mb-4">
+      <span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+      MEMBERS ONLY
+    </p>
+    <h1 class="font-headline-xl-mobile text-headline-xl-mobile md:font-headline-xl md:text-headline-xl text-on-surface uppercase tracking-tighter">
+      The List
+    </h1>
+    <p class="font-body-lg text-body-lg text-on-surface-variant mt-6 max-w-xl mx-auto">
+      Every drop, 24 hours early. Restock-proof pieces held for members. No spam — one signal per drop.
+    </p>
+  </section>
+
+  <section class="ambient-glow rounded-2xl bg-surface-container-low/80 border border-outline-variant/30 p-6 md:p-10 mt-12">
+    <form id="portal-form" class="flex flex-col gap-3">
+      <div class="flex flex-col sm:flex-row gap-3">
+        <label class="sr-only" for="portal-name">Name</label>
+        <input id="portal-name" type="text" autocomplete="name" placeholder="NAME (OPTIONAL)"
+          class="sm:w-1/3 rounded-full bg-surface border border-outline-variant focus:border-secondary focus:ring-0 text-on-surface placeholder:text-outline font-label-caps text-label-caps px-6 py-4"/>
+        <label class="sr-only" for="portal-email">Email address</label>
+        <input id="portal-email" type="email" required autocomplete="email" placeholder="YOUR@EMAIL.COM"
+          class="flex-1 rounded-full bg-surface border border-outline-variant focus:border-secondary focus:ring-0 text-on-surface placeholder:text-outline font-label-caps text-label-caps px-6 py-4"/>
+        <button id="portal-submit" type="submit"
+          class="rounded-full bg-primary text-on-primary py-4 px-8 font-label-caps text-label-caps hover:bg-inverse-surface transition-all duration-300 whitespace-nowrap disabled:opacity-60">
+          JOIN THE LIST
+        </button>
+      </div>
+      <!-- Honeypot: hidden from people, filled in by naive bots. Not display:none,
+           which some bots skip; off-screen with aria-hidden works better. -->
+      <div class="absolute -left-[9999px]" aria-hidden="true">
+        <label for="company_website">Leave this empty</label>
+        <input id="company_website" name="company_website" type="text" tabindex="-1" autocomplete="off"/>
+      </div>
+    </form>
+    <p id="portal-status" class="hidden font-label-caps text-label-caps mt-4"></p>
+    <p class="font-body-md text-[13px] text-outline mt-4">
+      Joining adds you to the drop list. One signal per drop, and you can unsubscribe from any email.
+    </p>
+  </section>
+
+  <section class="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-gutter text-center">
+    <div class="border border-outline-variant/30 rounded-xl p-6">
+      <p class="font-headline-md text-headline-md text-tertiary">24H</p>
+      <p class="font-label-caps text-label-caps text-on-surface-variant mt-2">EARLY ACCESS</p>
+    </div>
+    <div class="border border-outline-variant/30 rounded-xl p-6">
+      <p class="font-headline-md text-headline-md text-secondary">HELD</p>
+      <p class="font-label-caps text-label-caps text-on-surface-variant mt-2">MEMBER STOCK</p>
+    </div>
+    <div class="border border-outline-variant/30 rounded-xl p-6">
+      <p class="font-headline-md text-headline-md text-on-surface">1&times;</p>
+      <p class="font-label-caps text-label-caps text-on-surface-variant mt-2">SIGNAL PER DROP</p>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+
+<script src="assets/products.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/crm.js"></script>
+<script>
+  renderChrome("MEMBERS");
+
+  const form = document.getElementById("portal-form");
+  const statusEl = document.getElementById("portal-status");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const emailEl = document.getElementById("portal-email");
+    const nameEl = document.getElementById("portal-name");
+    const btn = document.getElementById("portal-submit");
+    const email = emailEl.value.trim();
+    if (!email) return;
+
+    btn.disabled = true;
+    const label = btn.textContent;
+    btn.textContent = "JOINING…";
+    statusEl.classList.add("hidden");
+
+    const result = await submitLead({
+      name: nameEl.value.trim(),
+      email,
+      source: "420-friendly:members",
+      message: "Joined the 420 Friendly drop list from the members page.",
+      company_website: document.getElementById("company_website").value
+    });
+
+    btn.disabled = false;
+    btn.textContent = label;
+    statusEl.textContent = result.message;
+    statusEl.className =
+      "font-label-caps text-label-caps mt-4 " +
+      (result.delivered ? "text-tertiary" : "text-secondary");
+    toast(result.message);
+    if (result.delivered) {
+      emailEl.value = "";
+      nameEl.value = "";
+    }
+  });
+</script>
+</body>
+</html>

@@ -34,6 +34,15 @@ body::after {
 }
 body > * { position: relative; z-index: 1; }
 
+/* The rule above lifts content over the background layers, but it also gives
+   #site-header its own stacking context — which trapped the header's inner
+   z-50 inside it. <main> is a later sibling at the same z-index, so it painted
+   over the header and swallowed every click on the nav. These two put the
+   chrome back on top. Do not remove without re-testing that header links are
+   actually clickable, not merely visible. */
+#site-header { z-index: 50; }
+#site-bottom-nav { z-index: 50; }
+
 
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined';

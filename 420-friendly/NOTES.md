@@ -15,7 +15,8 @@ Deploy preview: https://deploy-preview-3--allin1-events.netlify.app/420-friendly
 | `product.html` | Product detail via `?id=`: gallery, sticky buy rail, accordions, related |
 | `cart.html` | Bag: line items, quantity, subtotal, free-shipping meter |
 | `drops.html` | Drop calendar with live countdown |
-| `portal.html` | Members mailing-list signup |
+| `members.html` | Customer drop-list signup (public) |
+| `portal.html` | **Owner** — hub linking transactions, photos and marketing |
 | `favorites.html` | Saved pieces |
 | `checkout.html` | Payment method selection, order summary, paid state |
 | `owner.html` | **Owner** — transactions, invoices, CSV export |
@@ -41,6 +42,30 @@ page, preserving the original URL.
   thin notches where bright rim highlights touch the silhouette. 259x300 WebP
   with alpha (~21KB). `favicon.ico` and `apple-touch-icon.png` come from the
   same cutout, padded onto the page off-white to stay square.
+
+## Naming: Portal vs Members
+
+Two different audiences, previously both called "Portal", which made the nav
+link land on the customer signup instead of the owner tools:
+
+- **`portal.html` — the owner hub.** Passcode-gated. Tiles through to
+  transactions/invoices, photos, and the marketing system. This is what the
+  Portal nav item points at.
+- **`members.html` — the customer drop list.** Public by design; it is how
+  people join and how leads reach the CRM.
+
+## A stacking trap worth remembering
+
+`body > * { position: relative; z-index: 1 }` (added so content sits above the
+generated background layers) gives `#site-header` its own stacking context,
+which traps the header's inner `z-50` inside it. `<main>` is a later sibling at
+the same z-index, so it paints over the header and **swallows every click on the
+nav** — the links look perfectly normal and simply do nothing. `#site-header`
+and `#site-bottom-nav` are pinned to `z-index: 50` to correct it.
+
+When testing nav, assert that links are *clickable* (`elementFromPoint` returns
+the link), not merely present in the DOM. A visibility check passes happily
+while every link is dead.
 
 ## Owner portal & payments
 

@@ -18,14 +18,15 @@ const PRIMARY_NAV = [
   { href: "shop.html?cat=TEES", label: "Tees" },
   { href: "shop.html?cat=HEADWEAR", label: "Headwear" },
   { href: "drops.html", label: "Drops" },
-  { href: "portal.html", label: "Portal" }
+  { href: "members.html", label: "Members" }
 ];
 
 // Utility bar (Nike pattern: secondary links above the masthead)
 const UTILITY_NAV = [
   { href: "drops.html", label: "Drop Calendar" },
-  { href: "portal.html", label: "Join the Portal" },
-  { href: "favorites.html", label: "Favorites" }
+  { href: "members.html", label: "Join the List" },
+  { href: "favorites.html", label: "Favorites" },
+  { href: "portal.html", label: "Owner Portal" }
 ];
 
 // Owner-only tools. Kept out of the customer navigation on purpose; the pages
@@ -367,7 +368,7 @@ function renderChrome(activeLabel) {
       ]) +
       column("THE BRAND", [
         { href: "drops.html", label: "Drop Calendar" },
-        { href: "portal.html", label: "Join the Portal" },
+        { href: "members.html", label: "Join the List" },
         { href: "cart.html", label: "Your Bag" }
       ]) +
       '<div><div class="flex items-center gap-3">' +
