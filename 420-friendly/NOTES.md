@@ -30,6 +30,10 @@ page, preserving the original URL.
   and it replaces the typographic art tile automatically.
 - `assets/styles.css` — hand-written styles (art tiles, ticker, toast, badges).
 - `assets/tailwind.css` — **compiled output, do not edit by hand.**
+- `assets/logo.webp` — the brand badge, used in the header and footer. Cut from
+  the 1024px Stitch export: export padding trimmed, resized to 320px, saved as
+  WebP (18KB vs 125KB for the equivalent PNG). `favicon.ico` and
+  `apple-touch-icon.png` come from the same master.
 
 ## Building CSS
 
@@ -61,9 +65,9 @@ Not wired up (deliberate, and labeled as such in the UI):
 
 ## Open decisions
 
-1. **The logo is a reproduction.** The badge in `brandBadgeHTML()` was rebuilt
-   from a screenshot; the original artwork lives in Google Stitch and was never
-   exported. Replace it with the real asset when available.
+1. ~~The logo is a reproduction.~~ **Resolved** — the real badge was exported
+   from Stitch and now ships as `assets/logo.webp` (320px, ~18KB), with
+   `favicon.ico` and `apple-touch-icon.png` cut from the same master.
 2. **Header legibility.** At 56px the badge's own lettering is too small to
    read. Options: leave as-is; pair the badge with a "420 FRIENDLY" wordmark
    beside it (recommended); or make the header taller.
