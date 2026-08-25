@@ -135,7 +135,36 @@ Compact record of what was built and the current state, so work can resume later
   instead of a summary, because the report prompt matches the mock's content
   branch. Disappears with a real key; metrics in the same report are correct.
 
+## Website → CRM bridge (2026-08-25)
+
+The 420 Friendly Portal signup now feeds the CRM. Previously it only wrote to
+localStorage, so a real visitor never became a lead.
+
+- `netlify/functions/lead.js` proxies form posts to `intake`. It is a proxy
+  rather than a direct browser call for three reasons: `intake` supports an
+  `x-webhook-secret` a browser cannot hold; same-origin avoids a CSP change and
+  a CORS round trip; and it gives one place to drop obvious spam.
+- `420-friendly/assets/crm.js` posts and reports honestly — `delivered` is true
+  only when the CRM accepted the lead. On any failure the address is kept in
+  localStorage, the message says so, and the field is NOT cleared so the visitor
+  can retry.
+- Honeypot field (`company_website`) is off-screen rather than `display:none`,
+  which more bots skip. A filled honeypot returns 200 so the bot does not retry
+  with a variation.
+- Needs `MERIDIAN_INTAKE_URL` in Netlify env (optionally
+  `MERIDIAN_WEBHOOK_SECRET`, matching Supabase's `WEBHOOK_SECRET`). Until set,
+  the function returns a specific `not_configured` 503 and the form says the
+  lead was kept locally.
+- **Verified live against the real intake function** with the exact payload the
+  bridge sends: contact created (source `420-friendly:portal`, stage `lead`),
+  1 activity, 1 follow-up task queued. Test data then removed — counts back to
+  4 contacts / 9 activities / 21 tasks.
+
 ## Open next steps (not done)
+- Set `MERIDIAN_INTAKE_URL` in Netlify so the bridge goes live (Otis's step).
+- The All in 1 Events `index.html` inquiry form is still unwired — and that page
+  references `js/api.js` and `js/app.js`, which **do not exist in the repo**, so
+  its form and chatbot are currently dead. Fix that before wiring it to intake.
 - Wire dashboard into the deployed website so real photos render + it's live.
 - Phase 2 channels: Meta/Google Business Profile/Google Ads/WordPress publishing (OAuth per platform).
 - Optional hardening: `RUN_SECRET` header on orchestrator/runner/report (currently callable by anyone with the public anon key; only burns idempotent work / would spend tokens once a real key is set).

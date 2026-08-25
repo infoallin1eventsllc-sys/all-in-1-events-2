@@ -123,6 +123,17 @@ Colour rules that matter when extending it:
 - There is a contrast sweep in the scratch tooling; every text node on all seven
   pages passes AA. Re-run it after any palette change.
 
+## Marketing system (CRM) connection
+
+The Portal signup feeds the Meridian marketing system rather than dying in
+localStorage: `assets/crm.js` posts to `/.netlify/functions/lead`, which
+forwards to the `intake` edge function. The contact lands in the CRM, an
+activity is logged, and a follow-up is queued for the agent to draft.
+
+Set `MERIDIAN_INTAKE_URL` in the Netlify environment to switch it on. Until
+then the form keeps the address locally and says so — it never claims a signup
+reached the CRM when it did not.
+
 ## Open decisions
 
 1. ~~The logo is a reproduction.~~ **Resolved** — the 3D emblem is in place,
