@@ -1,84 +1,44 @@
-/* 420 FRIENDLY — owner portal data layer.
+/* 420 FRIENDLY — owner portal helpers.
  *
- * IMPORTANT: the orders below are SAMPLE DATA, not real sales. Checkout is not
- * connected to a payment provider yet, so no real transaction exists to read.
- * They are here so the portal's tables, totals, filters and exports can be
- * built and verified against realistic shapes.
+ * Deliberately holds NO order data. Orders used to sit in this file, which is
+ * served to anyone who asks for it; once real customer names and emails replace
+ * the samples that would be a data leak by construction. They now come from
+ * `/.netlify/functions/owner-orders`, which returns nothing without a verified
+ * Identity token and the owner role.
  *
- * When Stripe / Shopify is connected, replace `fetchOrders()` with a call to
- * that provider (or to your own backend) returning the same shape. Nothing else
- * in the portal needs to change.
+ * What is left here is arithmetic and formatting — safe to be public.
  */
 
-const ORDER_SHAPE_NOTE =
-  "id, date (ISO), customer, email, items[{name,size,qty,price}], subtotal, shipping, total, status, invoice";
+const ORDERS_ENDPOINT = "/.netlify/functions/owner-orders";
 
-const SAMPLE_ORDERS = [
-  {
-    id: "420-1041", date: "2026-08-24", customer: "Marcus Webb", email: "m.webb@example.com",
-    items: [{ name: "Vibrant Series Hoodie", size: "L", qty: 1, price: 120 },
-            { name: "Sesh Socks (2-Pack)", size: "L/XL", qty: 1, price: 18 }],
-    shipping: 0, status: "paid", invoice: "INV-1041", invoiceStatus: "paid", due: "2026-08-24"
-  },
-  {
-    id: "420-1040", date: "2026-08-23", customer: "Dana Ruiz", email: "dana.ruiz@example.com",
-    items: [{ name: "Terpene Joggers", size: "M", qty: 1, price: 85 }],
-    shipping: 8, status: "paid", invoice: "INV-1040", invoiceStatus: "paid", due: "2026-08-23"
-  },
-  {
-    id: "420-1039", date: "2026-08-22", customer: "Priya Raman", email: "p.raman@example.com",
-    items: [{ name: "Midnight Windbreaker", size: "M", qty: 1, price: 140 }],
-    shipping: 0, status: "pending", invoice: "INV-1039", invoiceStatus: "open", due: "2026-09-05"
-  },
-  {
-    id: "420-1038", date: "2026-08-21", customer: "Alex Chen", email: "alex.chen@example.com",
-    items: [{ name: "Vibrant Logo Tee", size: "M", qty: 2, price: 45 },
-            { name: "Blazed Beanie", size: "ONE SIZE", qty: 1, price: 35 }],
-    shipping: 0, status: "paid", invoice: "INV-1038", invoiceStatus: "paid", due: "2026-08-21"
-  },
-  {
-    id: "420-1037", date: "2026-08-20", customer: "Jordan Blake", email: "j.blake@example.com",
-    items: [{ name: "Smoke Signal Crewneck", size: "XL", qty: 1, price: 95 }],
-    shipping: 8, status: "refunded", invoice: "INV-1037", invoiceStatus: "void", due: "2026-08-20"
-  },
-  {
-    id: "420-1036", date: "2026-08-19", customer: "Sam Okafor", email: "s.okafor@example.com",
-    items: [{ name: "Haze Snapback", size: "ONE SIZE", qty: 2, price: 40 }],
-    shipping: 8, status: "paid", invoice: "INV-1036", invoiceStatus: "paid", due: "2026-08-19"
-  },
-  {
-    id: "420-1035", date: "2026-08-18", customer: "Nina Alvarez", email: "nina.a@example.com",
-    items: [{ name: "Vibrant Series Hoodie", size: "M", qty: 1, price: 120 },
-            { name: "Terpene Joggers", size: "M", qty: 1, price: 85 }],
-    shipping: 0, status: "paid", invoice: "INV-1035", invoiceStatus: "paid", due: "2026-08-18"
-  },
-  {
-    id: "420-1034", date: "2026-08-16", customer: "Tomas Lind", email: "t.lind@example.com",
-    items: [{ name: "Vibrant Logo Tee", size: "L", qty: 1, price: 45 }],
-    shipping: 8, status: "pending", invoice: "INV-1034", invoiceStatus: "overdue", due: "2026-08-23"
-  }
-];
-
-function orderSubtotal(o) {
-  return o.items.reduce((s, i) => s + i.price * i.qty, 0);
-}
-function orderTotal(o) {
-  return orderSubtotal(o) + (o.shipping || 0);
-}
-
-// Swap this for a real provider call. Async on purpose so the portal's render
-// path already awaits it and will not need restructuring later.
+// Resolves { orders, sample, viewer }. Throws with a message worth showing.
 async function fetchOrders() {
-  return SAMPLE_ORDERS.map((o) => ({
-    ...o,
-    subtotal: orderSubtotal(o),
-    total: orderTotal(o)
-  }));
-}
+  let res;
+  try {
+    res = await authedFetch(ORDERS_ENDPOINT);
+  } catch {
+    throw new Error(
+      "Could not reach the orders service. On a local static server this is expected — " +
+      "functions only run on the deployed site."
+    );
+  }
 
-// True when the rows above are sample data rather than a live provider. The
-// portal renders a banner off this so the numbers are never mistaken for real.
-const USING_SAMPLE_DATA = true;
+  if (res.status === 404) {
+    throw new Error(
+      "The orders function is not deployed. It runs on Netlify, not on a plain static server."
+    );
+  }
+
+  let data = {};
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error("The orders service returned an unreadable response.");
+  }
+
+  if (!res.ok) throw new Error(data.message || data.error || "Could not load orders.");
+  return data;
+}
 
 /* ===== Derived figures ===== */
 

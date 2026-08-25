@@ -76,14 +76,50 @@ any CVC. Place a full order end to end before switching to live keys.
   configured for the states you have nexus in.
 - **No order confirmation email** beyond the provider's own receipt.
 
-## Security note on the owner pages
+## Locking the owner pages (Netlify Identity)
 
-`owner.html` and `photos.html` carry `noindex` and aren't linked from the
-customer navigation, but **they are not protected**. Anyone who knows or guesses
-the URL can open them. That's acceptable while the data is samples; it is not
-acceptable once real customer names, emails and order totals are behind them.
+The owner pages are now gated, but understand **where** the protection is.
 
-Before real data goes in, put real authentication in front of both — Netlify
-Identity with role-based access, or move them behind a backend login. A
-password typed into a static page is not protection: the check would run in the
-browser, where anyone can read past it.
+Hiding a page in JavaScript protects nothing: the file is still served to anyone
+who requests it, and disabling JS or reading source walks straight past the
+check. So the pages themselves are public shells that contain no data. The order
+data lives in `netlify/functions/owner-orders.js`, which Netlify runs only after
+verifying an Identity token, and which then checks the account's role. Without a
+valid token it returns 401 and there is nothing to leak.
+
+That is why `assets/owner-data.js` no longer holds any orders — a public file
+holding real customer names and emails would be a leak by construction.
+
+### Turn it on
+
+1. Netlify dashboard → **Identity** → **Enable Identity**.
+2. **Identity → Registration**: set to **Invite only**. Leaving it open lets
+   anyone create an account.
+3. **Identity → Invite users**: invite your own email. Accept the invite and set
+   a password.
+4. Give that account the role. **Identity → click the user → Edit roles** → add
+   `owner` → save.
+5. Sign out and back in on the site — roles are baked into the token when it is
+   issued, so an existing session will not pick up a newly added role.
+
+If you sign in without the role, the portal says so explicitly and names the
+role it wants, rather than failing silently.
+
+To use a different role name, set `OWNER_ROLE` in the Netlify environment.
+
+### What is and is not protected
+
+- **Orders, invoices, customer names and emails** — protected server-side. This
+  is the part that matters.
+- **The page layout and scripts** — public. They contain no customer data.
+- **Photos** — stored in your own browser's IndexedDB. There is no server copy,
+  so there is nothing for anyone else to reach. The sign-in on that page is for
+  consistency, not protection. Once photos move to real object storage, that
+  storage needs its own access rules.
+
+### Two-factor
+
+Netlify Identity does not do 2FA. If the portal will hold real customer records,
+consider putting a provider that does (Auth0, Clerk, or similar) in front
+instead — the function-level check stays the same shape, only the token issuer
+changes.

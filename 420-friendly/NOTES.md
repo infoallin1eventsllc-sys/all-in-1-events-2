@@ -44,10 +44,17 @@ page, preserving the original URL.
 
 ## Owner portal & payments
 
-`owner.html` and `photos.html` are owner tools. They carry `noindex` and are not
-in the customer navigation, but **they are not access-controlled** — anyone with
-the URL can open them. Fine for sample data, not fine for real customer records.
-Put real auth in front of both before go-live; see `PAYMENTS-SETUP.md`.
+`owner.html` and `photos.html` are owner tools, gated with Netlify Identity.
+
+The protection is server-side, not in the page. The pages are public shells with
+no data in them; orders come from `netlify/functions/owner-orders.js`, which
+Netlify only reaches with a verified Identity token and which checks for the
+`owner` role. A client-side gate alone would protect nothing — the HTML is served
+to anyone who asks. `assets/owner-data.js` therefore holds no orders at all,
+only arithmetic and formatting.
+
+Setup steps are in `PAYMENTS-SETUP.md`. Identity must be set to **invite only**,
+and the account needs the `owner` role added explicitly.
 
 - **Transactions/invoices** read `assets/owner-data.js`, which currently returns
   sample orders — checkout has no provider connected, so no real transaction

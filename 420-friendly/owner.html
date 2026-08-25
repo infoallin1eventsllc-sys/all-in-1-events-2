@@ -17,6 +17,9 @@
 
 <main class="pt-20 md:pt-[116px] max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop pb-16">
 
+  <div id="gate"></div>
+
+  <div id="owner-content" class="hidden">
   <!-- Honest banner about what this data is -->
   <div id="data-banner" class="mt-8 rounded-xl border border-secondary/40 bg-secondary-container/60 px-5 py-4">
     <p class="font-label-caps text-label-caps text-on-secondary-container">SAMPLE DATA — NOT REAL SALES</p>
@@ -37,6 +40,7 @@
       <a href="photos.html" class="rounded-full border border-outline-variant text-on-surface py-3 px-6 font-label-caps text-label-caps hover:border-tertiary hover:text-tertiary transition-all duration-300 flex items-center gap-2">
         <span class="material-symbols-outlined text-[18px]">photo_library</span>PHOTOS
       </a>
+      <span id="signout-slot"></span>
       <button id="export-csv" class="rounded-full bg-primary text-on-primary py-3 px-6 font-label-caps text-label-caps hover:bg-inverse-surface transition-all duration-300 flex items-center gap-2">
         <span class="material-symbols-outlined text-[18px]">download</span>EXPORT CSV
       </button>
@@ -95,6 +99,13 @@
       No orders match those filters.
     </p>
   </section>
+  </div>
+
+  <div id="load-error" class="hidden max-w-xl mx-auto text-center border border-error/40 bg-error-container/40 rounded-2xl px-6 py-12 mt-10">
+    <span class="material-symbols-outlined text-error text-[36px]">error</span>
+    <p class="font-label-caps text-label-caps text-on-error-container mt-3">COULD NOT LOAD ORDERS</p>
+    <p id="load-error-msg" class="font-body-md text-body-md text-on-error-container mt-3"></p>
+  </div>
 </main>
 
 <!-- Invoice detail -->
@@ -111,6 +122,7 @@
 
 <script src="assets/products.js"></script>
 <script src="assets/app.js"></script>
+<script src="assets/auth.js"></script>
 <script src="assets/owner-data.js"></script>
 <script>
   renderChrome("OWNER");
@@ -243,12 +255,26 @@
     toast("EXPORTED " + rows.length + " ORDER" + (rows.length === 1 ? "" : "S"));
   });
 
-  fetchOrders().then((orders) => {
-    state.orders = orders;
-    document.getElementById("data-banner").classList.toggle("hidden", !USING_SAMPLE_DATA);
-    renderKPIs(orders);
-    renderTable();
-  });
+  async function loadForOwner(user) {
+    document.getElementById("owner-content").classList.remove("hidden");
+    document.getElementById("signout-slot").innerHTML = signOutButtonHTML();
+    wireSignOut();
+    try {
+      const data = await fetchOrders();
+      state.orders = data.orders || [];
+      document.getElementById("data-banner").classList.toggle("hidden", !data.sample);
+      document.getElementById("load-error").classList.add("hidden");
+      renderKPIs(state.orders);
+      renderTable();
+    } catch (err) {
+      // A signed-in owner with no data needs the reason, not an empty table.
+      document.getElementById("owner-content").classList.add("hidden");
+      document.getElementById("load-error").classList.remove("hidden");
+      document.getElementById("load-error-msg").textContent = err.message;
+    }
+  }
+
+  requireOwner("gate", loadForOwner);
 </script>
 </body>
 </html>

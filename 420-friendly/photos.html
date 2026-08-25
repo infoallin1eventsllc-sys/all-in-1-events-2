@@ -17,6 +17,9 @@
 
 <main class="pt-20 md:pt-[116px] max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop pb-16">
 
+  <div id="gate"></div>
+
+  <div id="photo-content" class="hidden">
   <div class="mt-8 rounded-xl border border-secondary/40 bg-secondary-container/60 px-5 py-4">
     <p class="font-label-caps text-label-caps text-on-secondary-container">STORED IN THIS BROWSER ONLY</p>
     <p class="font-body-md text-body-md text-on-secondary-container mt-2">
@@ -33,6 +36,7 @@
         Photos
       </h1>
     </div>
+    <span id="signout-slot"></span>
     <a href="owner.html" class="rounded-full border border-outline-variant text-on-surface py-3 px-6 font-label-caps text-label-caps hover:border-tertiary hover:text-tertiary transition-all duration-300 flex items-center gap-2">
       <span class="material-symbols-outlined text-[18px]">receipt_long</span>TRANSACTIONS
     </a>
@@ -64,6 +68,7 @@
       No photos yet. Add some above and assign them to products.
     </p>
   </section>
+  </div>
 </main>
 
 <div id="site-footer"></div>
@@ -71,6 +76,7 @@
 
 <script src="assets/products.js"></script>
 <script src="assets/app.js"></script>
+<script src="assets/auth.js"></script>
 <script src="assets/store.js"></script>
 <script>
   renderChrome("PHOTOS");
@@ -228,7 +234,16 @@
   });
 
   window.addEventListener("beforeunload", releaseURLs);
-  render();
+
+  // Photos live in this browser's own IndexedDB — there is no server-side data
+  // here to protect, so this gate is consistency with the orders page rather
+  // than a security boundary of its own.
+  requireOwner("gate", async () => {
+    document.getElementById("photo-content").classList.remove("hidden");
+    document.getElementById("signout-slot").innerHTML = signOutButtonHTML();
+    wireSignOut();
+    await render();
+  });
 </script>
 </body>
 </html>
