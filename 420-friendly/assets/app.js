@@ -209,20 +209,29 @@ function productCardHTML(product) {
 }
 
 /* ===== Brand mark =====
- * The 3D 420 Friendly emblem. The render's dark background was cut away using
- * the green edge-glow as a boundary, so the mark sits on any surface; it ships
- * as WebP with alpha at 261x300 (~21KB), which covers 2x at the largest
- * placement (the 96px footer). The intrinsic width/height below match the file
- * and keep the header from shifting while the image loads.
+ * The emblem alone dissolves at header size — its interior lettering is too
+ * fine to read below ~100px — so the chrome pairs it with a real wordmark and
+ * gives it a drop shadow that matches its 3D lighting. `logo.webp` (259x300)
+ * serves the chrome; `logo-lg.webp` (657x760) serves the hero.
  */
 
 const LOGO_SRC = "assets/logo.webp";
+const LOGO_SRC_LG = "assets/logo-lg.webp";
 
 function brandBadgeHTML(heightClass) {
   return (
-    '<img src="' + LOGO_SRC + '" alt="420 Friendly" ' +
-    'class="' + heightClass + ' w-auto shrink-0" ' +
+    '<img src="' + LOGO_SRC + '" alt="" aria-hidden="true" ' +
+    'class="brand-emblem ' + heightClass + ' w-auto shrink-0" ' +
     'width="259" height="300" decoding="async"/>'
+  );
+}
+
+// Emblem + wordmark. The emblem carries the name too, but at chrome scale it is
+// unreadable, so the wordmark is what actually names the brand on screen.
+function brandLockupHTML(heightClass, wordClass) {
+  return (
+    brandBadgeHTML(heightClass) +
+    '<span class="brand-word ' + wordClass + '">420 FRIENDLY</span>'
   );
 }
 
@@ -255,9 +264,9 @@ function renderChrome(activeLabel) {
     headerMount.innerHTML =
       '<div class="fixed top-0 left-0 w-full z-50 bg-background/95 backdrop-blur-md border-b border-outline-variant">' +
       utilityBar +
-      '<header class="flex justify-between items-center px-margin-mobile md:px-margin-desktop h-16 gap-4">' +
-      '<a href="index.html" data-brand aria-label="420 Friendly home" class="flex items-center shrink-0 hover:opacity-80 transition-opacity">' +
-      brandBadgeHTML("h-14") +
+      '<header class="flex justify-between items-center px-margin-mobile md:px-margin-desktop h-20 gap-4">' +
+      '<a href="index.html" data-brand aria-label="420 Friendly home" class="flex items-center gap-2.5 shrink-0 hover:opacity-85 transition-opacity">' +
+      brandLockupHTML("h-12 md:h-16", "text-[19px] md:text-[23px]") +
       "</a>" +
       '<nav class="hidden md:flex items-center gap-7" aria-label="Primary">' + primaryLinks + "</nav>" +
       '<div class="flex items-center gap-1 shrink-0">' +
@@ -329,8 +338,8 @@ function renderChrome(activeLabel) {
         { href: "portal.html", label: "Join the Portal" },
         { href: "cart.html", label: "Your Bag" }
       ]) +
-      '<div><div class="flex items-center">' +
-      brandBadgeHTML("h-24") +
+      '<div><div class="flex items-center gap-3">' +
+      brandLockupHTML("h-20", "text-[26px]") +
       "</div>" +
       '<p class="font-body-md text-body-md text-on-surface-variant mt-3">Streetwear for the concrete jungle. 420 Friendly is an apparel brand — every product is clothing, nothing more.</p></div>' +
       "</div>" +

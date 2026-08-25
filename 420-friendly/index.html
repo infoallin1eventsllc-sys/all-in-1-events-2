@@ -15,13 +15,21 @@
 <body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
 <div id="site-header"></div>
 
-<main class="pt-16 md:pt-[100px]">
+<main class="pt-20 md:pt-[116px]">
   <!-- Full-bleed hero (Nike pattern: image, headline overlaid bottom-left, pill CTA) -->
   <section class="relative w-full h-[78vh] min-h-[520px] overflow-hidden">
-    <div class="hero-art absolute inset-0" aria-hidden="true">
-      <span class="hero-word">420<br/>FRIENDLY</span>
+    <div class="hero-art absolute inset-0" aria-hidden="true"></div>
+    <!-- Readability wash sits under the emblem: painted over it, it drained the
+         mark to a ghost. It only needs to sit between the art and the copy. -->
+    <div class="absolute inset-0 bg-gradient-to-tr from-background via-background/35 to-transparent"></div>
+    <!-- Positioning lives on the wrapper and the float animation on the image:
+         both want the `transform` property, and the animation wins, which
+         silently cancelled the centring translate when they shared an element. -->
+    <div class="absolute right-[3%] md:right-[7%] top-[6%] md:top-1/2 md:-translate-y-1/2
+                pointer-events-none select-none">
+      <img src="assets/logo-lg.webp" alt="" aria-hidden="true" width="657" height="760" fetchpriority="high"
+           class="hero-emblem h-[32vh] md:h-[58vh] w-auto max-w-[42vw]"/>
     </div>
-    <div class="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent"></div>
     <div class="absolute bottom-0 left-0 p-margin-mobile md:p-margin-desktop max-w-3xl">
       <p class="font-label-caps text-label-caps text-tertiary flex items-center gap-2 mb-4">
         <span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>

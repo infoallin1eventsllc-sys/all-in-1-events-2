@@ -95,6 +95,37 @@ body > * { position: relative; z-index: 1; }
   opacity: 0.7;
 }
 
+/* Brand lockup — the emblem is a 3D render, so it gets a matching cast shadow
+   to lift it off the pearl page rather than sitting flat on it. */
+.brand-emblem {
+  filter: drop-shadow(0 6px 10px rgba(22, 26, 23, 0.28));
+}
+.brand-word {
+  font-family: Montserrat, ui-sans-serif, system-ui, sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: #161a17;
+  white-space: nowrap;
+}
+
+/* Hero emblem — the brand mark at a size where its own lettering actually
+   reads, floated over the wash with a soft ground shadow.
+   NOTE: this animation owns `transform`, so never put a Tailwind translate on
+   the same element — the keyframes overwrite it. Position the wrapper instead. */
+.hero-emblem {
+  filter: drop-shadow(0 26px 34px rgba(22, 26, 23, 0.3));
+  animation: hero-float 7s ease-in-out infinite;
+}
+@keyframes hero-float {
+  0%, 100% { transform: translateY(0) rotate(-1.5deg); }
+  50%      { transform: translateY(-14px) rotate(-1.5deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-emblem { animation: none; }
+}
+
 /* Full-bleed homepage hero — typographic stand-in for campaign photography.
    Swap the whole .hero-art block for an <img> when the shoot lands. */
 .hero-art {

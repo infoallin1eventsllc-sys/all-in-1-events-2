@@ -30,6 +30,8 @@ page, preserving the original URL.
   and it replaces the typographic art tile automatically.
 - `assets/styles.css` — hand-written styles (art tiles, ticker, toast, badges).
 - `assets/tailwind.css` — **compiled output, do not edit by hand.**
+- `assets/logo-lg.webp` — the emblem at 657x760 (~60KB), used only by the
+  homepage hero, where it is large enough that its own lettering reads.
 - `assets/logo.webp` — the 3D brand emblem, used in the header and footer. Cut
   from the light-environment Stitch render: the background is removed by flood
   filling inward from the image border, then a morphological close seals the
@@ -88,9 +90,15 @@ Colour rules that matter when extending it:
 
 1. ~~The logo is a reproduction.~~ **Resolved** — the 3D emblem is in place,
    background removed, with matching favicons.
-2. **Header legibility.** At 56px the badge's own lettering is too small to
-   read. Options: leave as-is; pair the badge with a "420 FRIENDLY" wordmark
-   beside it (recommended); or make the header taller.
+2. ~~Header legibility.~~ **Resolved** — the header is now 80px, the emblem 64px,
+   and it is paired with a real Montserrat wordmark. The emblem carries the name
+   internally too, but that lettering is unreadable below roughly 100px, so the
+   wordmark is what actually names the brand on screen.
+
+   Two traps worth remembering here. The `.hero-emblem` float animation owns the
+   `transform` property, so a Tailwind translate on the same element is silently
+   overwritten — position a wrapper instead. And the hero's readability wash must
+   sit *under* the emblem in DOM order, or it drains the mark to a ghost.
 3. ~~Gold vs green.~~ **Resolved by the light theme** — CTAs are now charcoal
    (`#1d2320`) on pearl, matching the emblem; green (`#12752f`) carries status
    and accents; gold survives only as a deepened highlight (`#8a6a05`).
