@@ -162,9 +162,13 @@ localStorage, so a real visitor never became a lead.
 
 ## Open next steps (not done)
 - Set `MERIDIAN_INTAKE_URL` in Netlify so the bridge goes live (Otis's step).
-- The All in 1 Events `index.html` inquiry form is still unwired — and that page
-  references `js/api.js` and `js/app.js`, which **do not exist in the repo**, so
-  its form and chatbot are currently dead. Fix that before wiring it to intake.
+- ~~All in 1 Events index.html was dead.~~ **Fixed 2026-08-25.** `css/styles.css`,
+  `js/api.js`, `js/app.js` and `netlify/functions/chat.js` were referenced by
+  `index.html` but had never been committed — the page has been broken since its
+  first commit. Rebuilt, and the inquiry form now posts to the same `/lead`
+  bridge (source `allin1events:concierge`). Concierge chat needs
+  `ANTHROPIC_API_KEY` in Netlify; without it the page answers from scripted FAQ
+  copy and says so rather than pretending.
 - Wire dashboard into the deployed website so real photos render + it's live.
 - Phase 2 channels: Meta/Google Business Profile/Google Ads/WordPress publishing (OAuth per platform).
 - Optional hardening: `RUN_SECRET` header on orchestrator/runner/report (currently callable by anyone with the public anon key; only burns idempotent work / would spend tokens once a real key is set).

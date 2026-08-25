@@ -27,5 +27,9 @@
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.0",
+    "stripe": "^19.1.0"
   }
 }

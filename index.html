@@ -15,6 +15,9 @@
 
   <!-- Tailwind config (inline for simplicity; can be extracted to tailwind.config.js for larger projects) -->
   <script id="tailwind-config">
+    // Guard: if the Tailwind CDN is blocked or down, the page degrades
+    // unstyled instead of throwing before any other script runs.
+    window.tailwind = window.tailwind || {};
     tailwind.config = {
       darkMode: "class",
       theme: {
