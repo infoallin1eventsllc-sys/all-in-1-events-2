@@ -29,6 +29,7 @@
 
 <script src="assets/products.js"></script>
 <script src="assets/app.js"></script>
+<script src="assets/store.js"></script>
 <script>
   renderChrome("SHOP ALL");
 
@@ -176,12 +177,14 @@
     document.getElementById("related-grid").innerHTML = picks.map(productCardHTML).join("");
   }
 
-  if (product) {
-    renderProduct();
-    renderRelated();
-  } else {
-    renderNotFound();
-  }
+  whenPhotosReady(() => {
+    if (product) {
+      renderProduct();
+      renderRelated();
+    } else {
+      renderNotFound();
+    }
+  });
 </script>
 </body>
 </html>

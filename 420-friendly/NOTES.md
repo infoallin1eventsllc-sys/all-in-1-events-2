@@ -17,6 +17,9 @@ Deploy preview: https://deploy-preview-3--allin1-events.netlify.app/420-friendly
 | `drops.html` | Drop calendar with live countdown |
 | `portal.html` | Members mailing-list signup |
 | `favorites.html` | Saved pieces |
+| `checkout.html` | Payment method selection, order summary, paid state |
+| `owner.html` | **Owner** — transactions, invoices, CSV export |
+| `photos.html` | **Owner** — photo upload, library, assign to products |
 
 `/420-friendly-hoodie.html` at the repo root redirects to the hoodie's product
 page, preserving the original URL.
@@ -38,6 +41,33 @@ page, preserving the original URL.
   thin notches where bright rim highlights touch the silhouette. 259x300 WebP
   with alpha (~21KB). `favicon.ico` and `apple-touch-icon.png` come from the
   same cutout, padded onto the page off-white to stay square.
+
+## Owner portal & payments
+
+`owner.html` and `photos.html` are owner tools. They carry `noindex` and are not
+in the customer navigation, but **they are not access-controlled** — anyone with
+the URL can open them. Fine for sample data, not fine for real customer records.
+Put real auth in front of both before go-live; see `PAYMENTS-SETUP.md`.
+
+- **Transactions/invoices** read `assets/owner-data.js`, which currently returns
+  sample orders — checkout has no provider connected, so no real transaction
+  exists. `fetchOrders()` is async precisely so swapping in a live provider
+  needs no restructuring. `USING_SAMPLE_DATA` drives the warning banner.
+- **Photos** live in IndexedDB via `assets/store.js`, not localStorage: a single
+  camera image would blow localStorage's ~5MB string budget. Uploads are resized
+  to 1600px and re-encoded as WebP before saving. Everything is per-browser —
+  photos do not reach a server or any other device.
+- **Assigning a photo to a product** makes it render on the storefront ahead of
+  the catalog image. Because that read is async and rendering is not, pages
+  route their first render through `whenPhotosReady()`, which falls straight
+  through if the store is missing or fails — a storage error can never blank a
+  page.
+- **Payments** need two providers: Stripe for card/Apple Pay/Google Pay/Cash App,
+  PayPal for PayPal/Venmo. The Stripe secret key belongs only in the Netlify
+  function's environment. `netlify/functions/create-checkout-session.js` prices
+  line items server-side from its own catalog and ignores any prices the browser
+  sends, so a tampered cart cannot set its own total — which does mean prices
+  live in two files until there is a real backend.
 
 ## Building CSS
 

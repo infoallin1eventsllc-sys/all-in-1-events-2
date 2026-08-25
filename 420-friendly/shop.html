@@ -62,6 +62,7 @@
 
 <script src="assets/products.js"></script>
 <script src="assets/app.js"></script>
+<script src="assets/store.js"></script>
 <script>
   renderChrome("SHOP ALL");
 
@@ -121,8 +122,10 @@
     renderGrid();
   });
 
-  renderCats();
-  renderGrid();
+  whenPhotosReady(() => {
+    renderCats();
+    renderGrid();
+  });
 </script>
 </body>
 </html>

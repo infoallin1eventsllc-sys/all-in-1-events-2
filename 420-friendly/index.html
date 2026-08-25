@@ -109,6 +109,7 @@ PORTAL</span>
 
 <script src="assets/products.js"></script>
 <script src="assets/app.js"></script>
+<script src="assets/store.js"></script>
 <script>
   renderChrome("SHOP ALL");
 
@@ -119,26 +120,28 @@ PORTAL</span>
     { cat: "ALL", label: "Shop All", pid: "midnight-windbreaker" }
   ];
 
-  document.getElementById("category-tiles").innerHTML = TILES.map((tile) => {
-    const p = getProduct(tile.pid);
-    const href = tile.cat === "ALL" ? "shop.html" : "shop.html?cat=" + encodeURIComponent(tile.cat);
-    return (
-      '<a href="' + href + '" class="group block">' +
-      '<div class="relative aspect-[4/5] overflow-hidden bg-surface-container-low">' +
-      productArtHTML(p, "sm") +
-      '<div class="absolute inset-0 bg-background/0 group-hover:bg-background/20 transition-colors"></div>' +
-      "</div>" +
-      '<p class="font-body-lg text-body-lg text-on-surface mt-4 group-hover:text-secondary transition-colors">' + esc(tile.label) + "</p>" +
-      "</a>"
-    );
-  }).join("");
+  whenPhotosReady(() => {
+    document.getElementById("category-tiles").innerHTML = TILES.map((tile) => {
+      const p = getProduct(tile.pid);
+      const href = tile.cat === "ALL" ? "shop.html" : "shop.html?cat=" + encodeURIComponent(tile.cat);
+      return (
+        '<a href="' + href + '" class="group block">' +
+        '<div class="relative aspect-[4/5] overflow-hidden bg-surface-container-low">' +
+        productArtHTML(p, "sm") +
+        '<div class="absolute inset-0 bg-background/0 group-hover:bg-background/20 transition-colors"></div>' +
+        "</div>" +
+        '<p class="font-body-lg text-body-lg text-on-surface mt-4 group-hover:text-secondary transition-colors">' + esc(tile.label) + "</p>" +
+        "</a>"
+      );
+    }).join("");
 
-  // Featured: newest four, drop-status first.
-  const rank = { "JUST DROPPED": 0, "LIMITED DROP": 1, "PRE-ORDER": 2, "BEST SELLER": 3 };
-  const featured = [...CATALOG]
-    .sort((a, b) => (rank[a.badge] ?? 9) - (rank[b.badge] ?? 9))
-    .slice(0, 4);
-  document.getElementById("featured-grid").innerHTML = featured.map(productCardHTML).join("");
+    // Featured: newest four, drop-status first.
+    const rank = { "JUST DROPPED": 0, "LIMITED DROP": 1, "PRE-ORDER": 2, "BEST SELLER": 3 };
+    const featured = [...CATALOG]
+      .sort((a, b) => (rank[a.badge] ?? 9) - (rank[b.badge] ?? 9))
+      .slice(0, 4);
+    document.getElementById("featured-grid").innerHTML = featured.map(productCardHTML).join("");
+  });
 </script>
 </body>
 </html>

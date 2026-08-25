@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta name="robots" content="noindex, nofollow"/>
+<title>420 FRIENDLY — Owner Portal</title>
+<link href="assets/tailwind.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link rel="icon" href="assets/favicon.ico" sizes="any"/>
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+
+<main class="pt-20 md:pt-[116px] max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop pb-16">
+
+  <!-- Honest banner about what this data is -->
+  <div id="data-banner" class="mt-8 rounded-xl border border-secondary/40 bg-secondary-container/60 px-5 py-4">
+    <p class="font-label-caps text-label-caps text-on-secondary-container">SAMPLE DATA — NOT REAL SALES</p>
+    <p class="font-body-md text-body-md text-on-secondary-container mt-2">
+      Checkout is not connected to a payment provider, so there are no real transactions to show yet.
+      Every figure below comes from sample orders. Connect Stripe or Shopify and this portal reads live data.
+    </p>
+  </div>
+
+  <section class="pt-10 pb-6 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="font-label-caps text-label-caps text-tertiary mb-2">OWNER PORTAL</p>
+      <h1 class="font-headline-xl-mobile text-headline-xl-mobile md:font-headline-xl md:text-headline-xl text-on-surface uppercase tracking-tighter">
+        Transactions &amp; Invoices
+      </h1>
+    </div>
+    <div class="flex flex-wrap gap-3">
+      <a href="photos.html" class="rounded-full border border-outline-variant text-on-surface py-3 px-6 font-label-caps text-label-caps hover:border-tertiary hover:text-tertiary transition-all duration-300 flex items-center gap-2">
+        <span class="material-symbols-outlined text-[18px]">photo_library</span>PHOTOS
+      </a>
+      <button id="export-csv" class="rounded-full bg-primary text-on-primary py-3 px-6 font-label-caps text-label-caps hover:bg-inverse-surface transition-all duration-300 flex items-center gap-2">
+        <span class="material-symbols-outlined text-[18px]">download</span>EXPORT CSV
+      </button>
+    </div>
+  </section>
+
+  <!-- Summary tiles -->
+  <section id="kpis" class="grid grid-cols-2 lg:grid-cols-5 gap-gutter"></section>
+
+  <!-- Controls -->
+  <section class="mt-12 flex flex-wrap items-center gap-3">
+    <div class="flex items-center gap-2 bg-surface-container rounded-full px-4 py-2 flex-1 min-w-[220px] max-w-sm">
+      <span class="material-symbols-outlined text-on-surface-variant text-[18px]">search</span>
+      <label class="sr-only" for="q">Search orders</label>
+      <input id="q" type="search" placeholder="Order, customer or email"
+             class="bg-transparent border-0 focus:ring-0 p-0 w-full font-body-md text-[14px] text-on-surface placeholder:text-outline"/>
+    </div>
+    <label class="sr-only" for="status">Filter by status</label>
+    <select id="status" class="bg-surface-container-low border border-outline-variant text-on-surface font-label-caps text-label-caps rounded-full px-4 py-2.5 pr-9 focus:border-secondary focus:ring-0 cursor-pointer">
+      <option value="all">ALL STATUSES</option>
+      <option value="paid">PAID</option>
+      <option value="pending">PENDING</option>
+      <option value="refunded">REFUNDED</option>
+    </select>
+    <label class="sr-only" for="invstatus">Filter by invoice status</label>
+    <select id="invstatus" class="bg-surface-container-low border border-outline-variant text-on-surface font-label-caps text-label-caps rounded-full px-4 py-2.5 pr-9 focus:border-secondary focus:ring-0 cursor-pointer">
+      <option value="all">ALL INVOICES</option>
+      <option value="paid">PAID</option>
+      <option value="open">OPEN</option>
+      <option value="overdue">OVERDUE</option>
+      <option value="void">VOID</option>
+    </select>
+    <span id="result-count" class="font-label-caps text-label-caps text-on-surface-variant ml-auto"></span>
+  </section>
+
+  <!-- Transactions -->
+  <section class="mt-6">
+    <div class="overflow-x-auto border border-outline-variant/60 rounded-xl bg-surface-container-low/60">
+      <table class="w-full min-w-[820px] border-collapse">
+        <caption class="sr-only">Transactions</caption>
+        <thead>
+          <tr class="border-b border-outline-variant/60 text-left">
+            <th scope="col" class="font-label-caps text-label-caps text-on-surface-variant px-4 py-3">ORDER</th>
+            <th scope="col" class="font-label-caps text-label-caps text-on-surface-variant px-4 py-3">DATE</th>
+            <th scope="col" class="font-label-caps text-label-caps text-on-surface-variant px-4 py-3">CUSTOMER</th>
+            <th scope="col" class="font-label-caps text-label-caps text-on-surface-variant px-4 py-3">ITEMS</th>
+            <th scope="col" class="font-label-caps text-label-caps text-on-surface-variant px-4 py-3 text-right">TOTAL</th>
+            <th scope="col" class="font-label-caps text-label-caps text-on-surface-variant px-4 py-3">STATUS</th>
+            <th scope="col" class="font-label-caps text-label-caps text-on-surface-variant px-4 py-3">INVOICE</th>
+          </tr>
+        </thead>
+        <tbody id="tx-body"></tbody>
+      </table>
+    </div>
+    <p id="tx-empty" class="hidden font-body-md text-body-md text-on-surface-variant py-10 text-center">
+      No orders match those filters.
+    </p>
+  </section>
+</main>
+
+<!-- Invoice detail -->
+<dialog id="invoice-dialog" class="rounded-2xl border border-outline-variant/60 bg-surface-container-lowest p-0 w-[min(94vw,680px)] backdrop:bg-inverse-surface/40">
+  <div id="invoice-body" class="p-6 md:p-10"></div>
+  <div class="flex flex-wrap justify-end gap-3 px-6 md:px-10 pb-6 md:pb-8 no-print">
+    <button id="invoice-print" class="rounded-full border border-outline-variant text-on-surface py-3 px-6 font-label-caps text-label-caps hover:border-tertiary hover:text-tertiary transition-colors">PRINT</button>
+    <button id="invoice-close" class="rounded-full bg-primary text-on-primary py-3 px-6 font-label-caps text-label-caps hover:bg-inverse-surface transition-colors">CLOSE</button>
+  </div>
+</dialog>
+
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+
+<script src="assets/products.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/owner-data.js"></script>
+<script>
+  renderChrome("OWNER");
+
+  const state = { orders: [], q: "", status: "all", invstatus: "all" };
+
+  const STATUS_TONE = {
+    paid: "text-tertiary", pending: "text-secondary",
+    refunded: "text-error", open: "text-secondary",
+    overdue: "text-error", void: "text-outline"
+  };
+
+  function tile(label, value, note, tone) {
+    return (
+      '<div class="border border-outline-variant/50 rounded-xl bg-surface-container-low/60 p-5">' +
+      '<p class="font-label-caps text-label-caps text-on-surface-variant">' + esc(label) + "</p>" +
+      '<p class="font-headline-md text-headline-md ' + (tone || "text-on-surface") + ' mt-2 tabular-nums">' + esc(value) + "</p>" +
+      (note ? '<p class="font-body-md text-[13px] text-on-surface-variant mt-1">' + esc(note) + "</p>" : "") +
+      "</div>"
+    );
+  }
+
+  function renderKPIs(orders) {
+    const s = summarise(orders);
+    document.getElementById("kpis").innerHTML =
+      tile("REVENUE", money(s.revenue), s.orders + " orders") +
+      tile("AVERAGE ORDER", money(s.avg), s.units + " units sold") +
+      tile("OUTSTANDING", money(s.outstanding), s.overdue + " overdue",
+           s.outstanding > 0 ? "text-secondary" : "text-on-surface") +
+      tile("REFUNDED", money(s.refunded), "excluded from revenue",
+           s.refunded > 0 ? "text-error" : "text-on-surface") +
+      tile("UNITS", String(s.units), "across paid orders");
+  }
+
+  function visible() {
+    const q = state.q.trim().toLowerCase();
+    return state.orders.filter((o) => {
+      if (state.status !== "all" && o.status !== state.status) return false;
+      if (state.invstatus !== "all" && o.invoiceStatus !== state.invstatus) return false;
+      if (!q) return true;
+      return (o.id + " " + o.customer + " " + o.email).toLowerCase().includes(q);
+    });
+  }
+
+  function renderTable() {
+    const rows = visible();
+    document.getElementById("result-count").textContent =
+      rows.length + " OF " + state.orders.length;
+    document.getElementById("tx-empty").classList.toggle("hidden", rows.length > 0);
+    document.getElementById("tx-body").innerHTML = rows.map((o) => {
+      const units = o.items.reduce((n, i) => n + i.qty, 0);
+      const itemText = o.items.map((i) => i.name + " ×" + i.qty).join(", ");
+      return (
+        '<tr class="border-b border-outline-variant/40 last:border-0 hover:bg-surface-container/50 transition-colors">' +
+        '<td class="px-4 py-4 font-label-caps text-label-caps text-on-surface whitespace-nowrap">' + esc(o.id) + "</td>" +
+        '<td class="px-4 py-4 font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap">' + esc(fmtDate(o.date)) + "</td>" +
+        '<td class="px-4 py-4"><span class="font-body-md text-body-md text-on-surface">' + esc(o.customer) + "</span>" +
+        '<br/><span class="font-body-md text-[13px] text-on-surface-variant">' + esc(o.email) + "</span></td>" +
+        '<td class="px-4 py-4 font-body-md text-[13px] text-on-surface-variant max-w-[260px]">' + esc(itemText) +
+        '<br/><span class="text-outline">' + units + " unit" + (units === 1 ? "" : "s") + "</span></td>" +
+        '<td class="px-4 py-4 font-label-caps text-label-caps text-on-surface text-right whitespace-nowrap tabular-nums">' + esc(money(o.total)) + "</td>" +
+        '<td class="px-4 py-4 font-label-caps text-label-caps ' + (STATUS_TONE[o.status] || "") + '">' + esc(o.status.toUpperCase()) + "</td>" +
+        '<td class="px-4 py-4 whitespace-nowrap">' +
+        '<button data-invoice="' + esc(o.id) + '" class="font-label-caps text-label-caps text-on-surface underline decoration-1 underline-offset-4 hover:text-tertiary transition-colors">' + esc(o.invoice) + "</button>" +
+        '<br/><span class="font-label-caps text-label-caps ' + (STATUS_TONE[o.invoiceStatus] || "") + '">' + esc(o.invoiceStatus.toUpperCase()) + "</span></td>" +
+        "</tr>"
+      );
+    }).join("");
+
+    document.querySelectorAll("[data-invoice]").forEach((b) =>
+      b.addEventListener("click", () => showInvoice(b.dataset.invoice)));
+  }
+
+  function showInvoice(orderId) {
+    const o = state.orders.find((x) => x.id === orderId);
+    if (!o) return;
+    document.getElementById("invoice-body").innerHTML =
+      '<div class="flex justify-between items-start gap-6 flex-wrap">' +
+      "<div>" +
+      '<p class="font-label-caps text-label-caps text-tertiary">420 FRIENDLY</p>' +
+      '<p class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter mt-1">Invoice ' + esc(o.invoice) + "</p>" +
+      "</div>" +
+      '<div class="text-right">' +
+      '<p class="font-label-caps text-label-caps ' + (STATUS_TONE[o.invoiceStatus] || "") + '">' + esc(o.invoiceStatus.toUpperCase()) + "</p>" +
+      '<p class="font-body-md text-[13px] text-on-surface-variant mt-1">Issued ' + esc(fmtDate(o.date)) + "</p>" +
+      '<p class="font-body-md text-[13px] text-on-surface-variant">Due ' + esc(fmtDate(o.due)) + "</p>" +
+      "</div></div>" +
+
+      '<div class="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-6">' +
+      '<div><p class="font-label-caps text-label-caps text-on-surface-variant">BILLED TO</p>' +
+      '<p class="font-body-md text-body-md text-on-surface mt-2">' + esc(o.customer) + "</p>" +
+      '<p class="font-body-md text-[13px] text-on-surface-variant">' + esc(o.email) + "</p></div>" +
+      '<div><p class="font-label-caps text-label-caps text-on-surface-variant">ORDER</p>' +
+      '<p class="font-body-md text-body-md text-on-surface mt-2">' + esc(o.id) + "</p></div></div>" +
+
+      '<table class="w-full mt-8 border-collapse"><thead><tr class="border-b border-outline-variant/60 text-left">' +
+      '<th class="font-label-caps text-label-caps text-on-surface-variant py-2">ITEM</th>' +
+      '<th class="font-label-caps text-label-caps text-on-surface-variant py-2 text-center">QTY</th>' +
+      '<th class="font-label-caps text-label-caps text-on-surface-variant py-2 text-right">AMOUNT</th>' +
+      "</tr></thead><tbody>" +
+      o.items.map((i) =>
+        '<tr class="border-b border-outline-variant/30"><td class="py-3 font-body-md text-body-md text-on-surface">' +
+        esc(i.name) + ' <span class="text-on-surface-variant">(' + esc(i.size) + ")</span></td>" +
+        '<td class="py-3 text-center font-body-md text-body-md text-on-surface-variant tabular-nums">' + i.qty + "</td>" +
+        '<td class="py-3 text-right font-body-md text-body-md text-on-surface tabular-nums">' + esc(money(i.price * i.qty)) + "</td></tr>"
+      ).join("") +
+      "</tbody></table>" +
+
+      '<div class="mt-6 ml-auto max-w-xs space-y-2">' +
+      '<div class="flex justify-between font-body-md text-body-md text-on-surface-variant"><span>Subtotal</span><span class="tabular-nums">' + esc(money(o.subtotal)) + "</span></div>" +
+      '<div class="flex justify-between font-body-md text-body-md text-on-surface-variant"><span>Shipping</span><span class="tabular-nums">' + esc(o.shipping ? money(o.shipping) : "Free") + "</span></div>" +
+      '<div class="flex justify-between border-t border-outline-variant/60 pt-2 font-label-caps text-label-caps text-on-surface"><span>TOTAL</span><span class="tabular-nums">' + esc(money(o.total)) + "</span></div>" +
+      "</div>" +
+      '<p class="font-body-md text-[13px] text-outline mt-8">Sample invoice — generated from sample order data.</p>';
+
+    document.getElementById("invoice-dialog").showModal();
+  }
+
+  document.getElementById("invoice-close").addEventListener("click", () =>
+    document.getElementById("invoice-dialog").close());
+  document.getElementById("invoice-print").addEventListener("click", () => window.print());
+
+  document.getElementById("q").addEventListener("input", (e) => { state.q = e.target.value; renderTable(); });
+  document.getElementById("status").addEventListener("change", (e) => { state.status = e.target.value; renderTable(); });
+  document.getElementById("invstatus").addEventListener("change", (e) => { state.invstatus = e.target.value; renderTable(); });
+  document.getElementById("export-csv").addEventListener("click", () => {
+    const rows = visible();
+    if (!rows.length) { toast("NOTHING TO EXPORT WITH THOSE FILTERS"); return; }
+    downloadCSV("420-friendly-transactions.csv", ordersToCSV(rows));
+    toast("EXPORTED " + rows.length + " ORDER" + (rows.length === 1 ? "" : "S"));
+  });
+
+  fetchOrders().then((orders) => {
+    state.orders = orders;
+    document.getElementById("data-banner").classList.toggle("hidden", !USING_SAMPLE_DATA);
+    renderKPIs(orders);
+    renderTable();
+  });
+</script>
+</body>
+</html>

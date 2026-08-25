@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>420 FRIENDLY — Checkout</title>
+<link href="assets/tailwind.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link rel="icon" href="assets/favicon.ico" sizes="any"/>
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+
+<main class="pt-20 md:pt-[116px] max-w-5xl mx-auto px-margin-mobile md:px-margin-desktop pb-16">
+  <section class="pt-12 pb-8">
+    <h1 class="font-headline-xl-mobile text-headline-xl-mobile md:font-headline-xl md:text-headline-xl text-on-surface uppercase tracking-tighter">Checkout</h1>
+  </section>
+  <div id="checkout-root"></div>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+
+<script src="assets/products.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/store.js"></script>
+<script src="assets/payments.js"></script>
+<script>
+  renderChrome("BAG");
+
+  const root = document.getElementById("checkout-root");
+  const params = new URLSearchParams(location.search);
+
+  function orderSummary() {
+    const cart = getCart();
+    const subtotal = cartSubtotal();
+    const shipping = subtotal >= PAYMENTS.freeShippingOver ? 0 : PAYMENTS.flatShipping;
+    const rows = cart.map((l) => {
+      const p = getProduct(l.id);
+      if (!p) return "";
+      return (
+        '<div class="flex justify-between gap-4 py-2">' +
+        '<span class="font-body-md text-body-md text-on-surface-variant">' +
+        esc(p.name) + ' <span class="text-outline">(' + esc(l.size) + ") ×" + l.qty + "</span></span>" +
+        '<span class="font-body-md text-body-md text-on-surface tabular-nums whitespace-nowrap">' +
+        esc(money(p.price * l.qty)) + "</span></div>"
+      );
+    }).join("");
+    return { rows, subtotal, shipping, total: subtotal + shipping, count: cart.length };
+  }
+
+  function renderPaid() {
+    root.innerHTML =
+      '<div class="text-center py-16 border border-tertiary/40 rounded-2xl bg-tertiary-container/40">' +
+      '<span class="material-symbols-outlined text-tertiary text-[48px]">check_circle</span>' +
+      '<h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter mt-4">Payment received</h2>' +
+      '<p class="font-body-md text-body-md text-on-surface-variant mt-3 max-w-md mx-auto">' +
+      "Thank you — a receipt is on its way to your email. Your order will appear in the owner portal." +
+      "</p>" +
+      '<a href="shop.html" class="inline-block mt-8 rounded-full bg-primary text-on-primary py-4 px-8 font-label-caps text-label-caps hover:bg-inverse-surface transition-all duration-300">KEEP SHOPPING</a>' +
+      "</div>";
+    saveCart([]);
+  }
+
+  function methodRow(icon, label, note, live) {
+    return (
+      '<div class="flex items-start gap-3 py-2">' +
+      '<span class="material-symbols-outlined text-[20px] ' + (live ? "text-tertiary" : "text-outline") + '">' +
+      (live ? "check_circle" : "radio_button_unchecked") + "</span>" +
+      "<div><p class='font-body-md text-body-md " + (live ? "text-on-surface" : "text-on-surface-variant") + "'>" +
+      esc(label) + "</p>" +
+      (note ? "<p class='font-body-md text-[13px] text-outline'>" + esc(note) + "</p>" : "") +
+      "</div></div>"
+    );
+  }
+
+  function render() {
+    if (params.get("paid")) { renderPaid(); return; }
+
+    const s = orderSummary();
+    if (!s.count) {
+      root.innerHTML =
+        '<div class="text-center py-16 border border-outline-variant/30 rounded-2xl bg-surface-container-low/50">' +
+        '<span class="material-symbols-outlined text-outline text-[48px]">shopping_bag</span>' +
+        '<p class="font-label-caps text-label-caps text-on-surface-variant mt-4 mb-8">YOUR BAG IS EMPTY</p>' +
+        '<a href="shop.html" class="inline-block rounded-full bg-primary text-on-primary py-4 px-8 font-label-caps text-label-caps hover:bg-inverse-surface transition-all duration-300">SHOP THE DROP</a>' +
+        "</div>";
+      return;
+    }
+
+    const wallets = walletHints();
+    const stripeLive = stripeConfigured();
+    const paypalLive = paypalConfigured();
+
+    root.innerHTML =
+      '<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">' +
+
+      // Payment methods
+      '<div class="lg:col-span-7">' +
+      (anyPaymentConfigured()
+        ? ""
+        : '<div class="rounded-xl border border-secondary/40 bg-secondary-container/60 px-5 py-4 mb-6">' +
+          '<p class="font-label-caps text-label-caps text-on-secondary-container">PAYMENTS NOT CONNECTED YET</p>' +
+          '<p class="font-body-md text-body-md text-on-secondary-container mt-2">' +
+          "No payment accounts are configured, so these buttons cannot take money yet. " +
+          "The setup steps are in PAYMENTS-SETUP.md — it needs your own Stripe and PayPal accounts." +
+          "</p></div>") +
+
+      '<h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter mb-4">How would you like to pay?</h2>' +
+
+      '<div class="border border-outline-variant/50 rounded-xl bg-surface-container-low/60 p-5">' +
+      '<p class="font-label-caps text-label-caps text-on-surface-variant mb-3">CARD &amp; WALLETS</p>' +
+      methodRow("credit_card", "Credit or debit card", "Visa, Mastercard, Amex, Discover", stripeLive) +
+      methodRow("wallet", "Apple Pay",
+                wallets.includes("Apple Pay") ? "Available on this device" : "Shows on Apple devices in Safari", stripeLive) +
+      methodRow("wallet", "Google Pay",
+                wallets.includes("Google Pay") ? "Available on this device" : "Shows on supporting Android browsers", stripeLive) +
+      methodRow("payments", "Cash App Pay", "US only — enable it in the Stripe dashboard", stripeLive) +
+      '<button id="pay-stripe" class="w-full rounded-full bg-primary text-on-primary py-4 px-6 font-label-caps text-label-caps hover:bg-inverse-surface transition-all duration-300 flex items-center justify-center gap-2 mt-5">' +
+      "PAY " + esc(money(s.total)) +
+      '<span class="material-symbols-outlined text-[18px]">lock</span></button>' +
+      "</div>" +
+
+      '<div class="border border-outline-variant/50 rounded-xl bg-surface-container-low/60 p-5 mt-4">' +
+      '<p class="font-label-caps text-label-caps text-on-surface-variant mb-3">PAYPAL &amp; VENMO</p>' +
+      methodRow("account_balance_wallet", "PayPal", "Pay with a PayPal balance or linked account", paypalLive) +
+      methodRow("account_balance_wallet", "Venmo", "US buyers, in the PayPal checkout", paypalLive) +
+      '<div id="paypal-buttons" class="mt-4"></div>' +
+      (paypalLive ? "" :
+        '<button id="pay-paypal-disabled" class="w-full rounded-full border border-outline-variant text-on-surface-variant py-4 px-6 font-label-caps text-label-caps mt-1">PAYPAL NOT CONNECTED</button>') +
+      "</div>" +
+
+      '<p class="font-body-md text-[13px] text-outline mt-4">' +
+      "Card details are entered on the payment provider's own secure page. This site never sees or stores them." +
+      "</p>" +
+      "</div>" +
+
+      // Summary
+      '<aside class="lg:col-span-5">' +
+      '<div class="lg:sticky lg:top-[132px] ambient-glow rounded-2xl bg-surface-container-low/80 border border-outline-variant/30 p-6">' +
+      '<h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter mb-4">Order</h2>' +
+      s.rows +
+      '<div class="border-t border-outline-variant/50 my-4"></div>' +
+      '<div class="flex justify-between font-label-caps text-label-caps text-on-surface-variant"><span>SUBTOTAL</span><span class="tabular-nums">' + esc(money(s.subtotal)) + "</span></div>" +
+      '<div class="flex justify-between font-label-caps text-label-caps text-on-surface-variant mt-3"><span>SHIPPING</span><span class="tabular-nums">' + esc(s.shipping ? money(s.shipping) : "FREE") + "</span></div>" +
+      '<div class="flex justify-between font-label-caps text-label-caps text-on-surface mt-3"><span>TOTAL</span><span class="tabular-nums">' + esc(money(s.total)) + "</span></div>" +
+      '<a href="cart.html" class="block text-center mt-6 font-label-caps text-label-caps text-on-surface-variant hover:text-secondary transition-colors underline decoration-1 underline-offset-4">EDIT BAG</a>' +
+      "</div></aside></div>";
+
+    document.getElementById("pay-stripe").addEventListener("click", async (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      const original = btn.innerHTML;
+      btn.textContent = "STARTING SECURE CHECKOUT…";
+      try {
+        await startStripeCheckout();
+      } catch (err) {
+        toast(String(err.message).toUpperCase());
+        btn.disabled = false;
+        btn.innerHTML = original;
+      }
+    });
+
+    const ppDisabled = document.getElementById("pay-paypal-disabled");
+    if (ppDisabled) {
+      ppDisabled.addEventListener("click", () =>
+        toast("ADD YOUR PAYPAL CLIENT ID IN assets/payments.js TO ENABLE PAYPAL AND VENMO"));
+    }
+
+    if (paypalLive) mountPayPal(s.total);
+  }
+
+  // PayPal's SDK is only loaded when a client id exists — no point fetching it
+  // otherwise, and it keeps a third-party script off the page until it's real.
+  function mountPayPal(total) {
+    const sdk = document.createElement("script");
+    sdk.src = "https://www.paypal.com/sdk/js?client-id=" +
+      encodeURIComponent(PAYMENTS.paypalClientId) +
+      "&currency=" + encodeURIComponent(PAYMENTS.currency) +
+      "&enable-funding=venmo";
+    sdk.onload = () => {
+      if (!window.paypal) return;
+      window.paypal.Buttons({
+        style: { shape: "pill", height: 48 },
+        createOrder: (data, actions) =>
+          actions.order.create({
+            purchase_units: [{ amount: { value: total.toFixed(2) } }]
+          }),
+        onApprove: (data, actions) =>
+          actions.order.capture().then(() => {
+            saveCart([]);
+            location.href = "checkout.html?paid=1";
+          }),
+        onError: (err) => toast("PAYPAL ERROR: " + String(err.message || err).toUpperCase())
+      }).render("#paypal-buttons");
+    };
+    sdk.onerror = () => toast("COULD NOT LOAD THE PAYPAL SDK");
+    document.head.appendChild(sdk);
+  }
+
+  whenPhotosReady(render);
+</script>
+</body>
+</html>

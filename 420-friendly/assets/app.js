@@ -28,6 +28,14 @@ const UTILITY_NAV = [
   { href: "favorites.html", label: "Favorites" }
 ];
 
+// Owner-only tools. Kept out of the customer navigation on purpose; the pages
+// also carry noindex. This is convenience, not access control — see
+// PAYMENTS-SETUP.md on putting real auth in front of them before go-live.
+const OWNER_NAV = [
+  { href: "owner.html", label: "Transactions" },
+  { href: "photos.html", label: "Photos" }
+];
+
 // Escape anything interpolated into markup. Catalog data is ours, but the
 // repo convention (see README) is: never trust interpolation, always escape.
 function esc(value) {
@@ -132,6 +140,16 @@ function toast(message) {
 // Renders the product visual: real photo when we have one, typographic
 // art tile otherwise. `sizeClass` controls the tile's aspect/height.
 function productArtHTML(product, sizeClass) {
+  // An owner-assigned photo from the photo portal outranks the catalog image,
+  // which outranks the typographic stand-in.
+  const local = typeof photoOverrideFor === "function" ? photoOverrideFor(product.id) : null;
+  if (local) {
+    return (
+      '<img alt="' + esc(product.name) + '" ' +
+      'class="w-full h-full object-cover object-center absolute inset-0" ' +
+      'src="' + local + '"/>'
+    );
+  }
   if (product.image) {
     return (
       '<img alt="' + esc(product.name) + '" loading="lazy" ' +
@@ -233,6 +251,20 @@ function brandLockupHTML(heightClass, wordClass) {
     brandBadgeHTML(heightClass) +
     '<span class="brand-word ' + wordClass + '">420 FRIENDLY</span>'
   );
+}
+
+/* ===== Render gate =====
+ * Product art may come from IndexedDB, which is async, while rendering is not.
+ * Pages route their first render through here: it resolves assigned photos
+ * first when the store is loaded, and falls straight through when it is not or
+ * when it fails, so a storage problem can never leave a page blank.
+ */
+function whenPhotosReady(render) {
+  if (typeof initPhotoOverrides === "function") {
+    initPhotoOverrides().then(render).catch(render);
+  } else {
+    render();
+  }
 }
 
 /* ===== Shared chrome ===== */

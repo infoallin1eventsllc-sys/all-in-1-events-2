@@ -27,6 +27,7 @@
 
 <script src="assets/products.js"></script>
 <script src="assets/app.js"></script>
+<script src="assets/store.js"></script>
 <script>
   renderChrome("BAG");
 
@@ -90,7 +91,7 @@
       "CHECKOUT" +
       '<span class="material-symbols-outlined text-[18px]">arrow_forward</span></button>' +
       shipMsg +
-      '<p class="font-body-md text-[13px] text-outline mt-2">Preview build — checkout goes live once a payment provider is connected.</p>' +
+      '<p class="font-body-md text-[13px] text-outline mt-2">Card, Apple Pay, Google Pay, Cash App, PayPal and Venmo at checkout.</p>' +
       "</div></aside></div>";
 
     root.querySelectorAll("button[data-action]").forEach((btn) => {
@@ -106,11 +107,11 @@
     });
 
     document.getElementById("checkout").addEventListener("click", () => {
-      toast("CHECKOUT ISN'T WIRED UP YET — CONNECT STRIPE OR SHOPIFY TO GO LIVE");
+      location.href = "checkout.html";
     });
   }
 
-  renderCart();
+  whenPhotosReady(renderCart);
 </script>
 </body>
 </html>
