@@ -240,7 +240,7 @@ function brandBadgeHTML(heightClass) {
   return (
     '<img src="' + LOGO_SRC + '" alt="" aria-hidden="true" ' +
     'class="brand-emblem ' + heightClass + ' w-auto shrink-0" ' +
-    'width="259" height="300" decoding="async"/>'
+    'width="258" height="300" decoding="async"/>'
   );
 }
 
