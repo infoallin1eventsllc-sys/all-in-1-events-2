@@ -341,7 +341,7 @@ function renderChrome(activeLabel) {
       '<div><div class="flex items-center gap-3">' +
       brandLockupHTML("h-20", "text-[26px]") +
       "</div>" +
-      '<p class="font-body-md text-body-md text-on-surface-variant mt-3">Streetwear for the concrete jungle. 420 Friendly is an apparel brand — every product is clothing, nothing more.</p></div>' +
+      '<p class="font-body-md text-body-md text-on-surface-variant mt-3">Embrace the love. 420 Friendly is an apparel brand — every product is clothing, nothing more.</p></div>' +
       "</div>" +
       '<div class="max-w-container-max mx-auto mt-12 pt-6 border-t border-outline-variant/30 flex flex-col md:flex-row justify-between gap-2">' +
       '<p class="font-label-caps text-label-caps text-outline">&copy; 2026 420 FRIENDLY. ALL RIGHTS RESERVED.</p>' +

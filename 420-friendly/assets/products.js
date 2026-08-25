@@ -11,7 +11,7 @@ const CATALOG = [
     price: 120,
     badge: "LIMITED DROP",
     blurb:
-      "Heavyweight black fleece constructed for the concrete jungle. Featuring a high-density 'Vibrant Typographic Logo' print pulsating with electric energy across the chest. Built for high impact.",
+      "Heavyweight black fleece, cut oversized and boxy. Featuring a high-density 'Vibrant Typographic Logo' print pulsating with electric energy across the chest. Built for high impact.",
     features: [
       "High-Density Print Technology",
       "Heavyweight 450gsm Cotton Fleece",
