@@ -299,11 +299,33 @@ Set `MERIDIAN_INTAKE_URL` in the Netlify environment to switch it on. Until
 then the form keeps the address locally and says so — it never claims a signup
 reached the CRM when it did not.
 
-## Where we left off (2026-08-25)
+## Where we left off (2026-08-29)
 
-Branch `claude/420-friendly-hoodie-page-yl8ho9`, PR #3 — open, green, unmerged.
-Everything below is built and verified; what remains is configuration only, and
-all of it is Otis's to do because it involves his own accounts and keys.
+Branch `claude/420-friendly-hoodie-page-yl8ho9`, PR #3 — open, unmerged, 28
+commits ahead of `main`.
+
+**`main` has none of this.** Every 420 Friendly file lives on the branch only,
+so if Netlify builds production from `main`, the storefront and the Portal are
+not on the live site at all. Merging PR #3 is what puts them there. That is
+the single biggest thing outstanding and it is Otis's call.
+
+### Added 2026-08-29
+
+- **`playlist.html` ("The Sound")** — Spotify / Apple Music / YouTube tabs plus
+  a video reel. Players load only on click; nothing third-party is requested
+  before that. Configured by pasting share links into `assets/playlist.js`.
+- **`media.html`** — the owner uploads music and video files directly and they
+  play on the front page. Netlify Blobs, chunked upload, Range playback. This
+  is the answer to "the client should not have to edit code".
+- **Passcode fixes** — stray whitespace no longer rejects a correct passcode,
+  and the not-configured error now names the deploy context, because a variable
+  scoped to Production only is invisible to deploy previews.
+- **A mobile layout bug fixed site-wide** — Material Symbols render as
+  ligatures, so before the icon font loaded the browser laid out the literal
+  word `shopping_cart` at ~135px and pushed every page sideways off a phone.
+
+**Not yet proven on a real deploy:** Netlify Blobs. All media testing used an
+in-memory stand-in. One upload on the preview confirms it.
 
 ### Waiting on Otis — one variable each, all in Netlify → Site settings →
 ### Environment variables, then redeploy (env vars only apply to a new build)
@@ -321,8 +343,11 @@ all of it is Otis's to do because it involves his own accounts and keys.
 - **Real orders.** The Transactions page reads sample data; there is no payment
   provider connected, so no real sale exists. Real orders need a Stripe webhook
   and somewhere to store them.
-- **Photos are per-browser.** IndexedDB only — they do not reach a server, a
-  phone, or customers. Needs object storage to publish.
+- **Photos are still per-browser.** IndexedDB only — they do not reach a
+  server, a phone, or customers. `media.html` now solves exactly this shape of
+  problem for audio and video using Netlify Blobs, so porting `photos.html`
+  onto `media-store.js` is the obvious next step; images need size limits and
+  a thumbnail path, but the storage and auth work is already done.
 - **Product photography.** Only the hoodie has a real image; the rest render
   typographic tiles. Uploading via the Portal and assigning to a product
   replaces them on the shop.
@@ -336,6 +361,9 @@ all of it is Otis's to do because it involves his own accounts and keys.
 - **Test that nav links are *clickable*, not just present.** A stacking-context
   bug left every header link dead while looking perfectly normal, and passed
   every visibility check for days.
+- **Check `document.body.scrollWidth` at 390px, on every page.** The icon-font
+  ligature bug made every page overflow sideways on a phone and went unnoticed
+  because it looks fine the moment the font loads.
 
 ## Open decisions
 
