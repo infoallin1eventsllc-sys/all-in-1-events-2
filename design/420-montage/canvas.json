@@ -1,0 +1,13 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Primary lockup", "x": 0, "y": 0, "w": 1080, "h": 1080 },
+    { "file": "IconMark.dc.html", "title": "Icon only", "x": 1180, "y": 0, "w": 640, "h": 640 },
+    { "file": "OnLight.dc.html", "title": "On light", "x": 1180, "y": 740, "w": 640, "h": 760 },
+    { "file": "Horizontal.dc.html", "title": "Horizontal lockup", "x": 0, "y": 1180, "w": 1400, "h": 420 }
+  ],
+  "annotations": [
+    { "id": "brief", "x": -420, "y": 0, "w": 360, "text": "Rebuilt as true vector — the original was a raster with soft AI-render edges, so it could not scale.\n\nSame palette: #1A1E23 ground, #2E7D4F green, white numerals. Same monoline language, same rounded-square container.\n\nThe 420-friendly move: a monoline cannabis leaf living inside the counter of the 0, drawn at the same stroke weight as everything else. One move, not five." },
+    { "id": "usage", "x": -420, "y": 560, "w": 360, "text": "Primary lockup = social, 1:1.\nIcon only = avatar, favicon, stamp.\nOn light = print, invoices, contracts.\nHorizontal = web header, email signature.\n\nGreen is a tweak chip above each artboard if you want to test a warmer or deeper green across all four." }
+  ],
+  "launch": { "view": "canvas" }
+}
