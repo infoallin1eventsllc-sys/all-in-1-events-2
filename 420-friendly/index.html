@@ -76,6 +76,15 @@
     <div id="featured-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-gutter gap-y-10"></div>
   </section>
 
+  <!-- Owner-uploaded music and video. Hidden until something is uploaded, so
+       the page never shows an empty shell to a customer. -->
+  <section id="landing-media" class="hidden px-margin-mobile md:px-margin-desktop py-12 md:py-16 max-w-container-max mx-auto">
+    <div class="flex justify-between items-end mb-8">
+      <h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter">The Sound</h2>
+      <a href="playlist.html" class="font-body-md text-body-md text-on-surface-variant hover:text-secondary transition-colors underline decoration-1 underline-offset-4">Full playlist</a>
+    </div>
+  </section>
+
   <!-- Editorial split (Nike pattern: big image, copy block, pill CTA) -->
   <section class="px-margin-mobile md:px-margin-desktop pb-4 max-w-container-max mx-auto">
     <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter items-stretch">
@@ -110,8 +119,10 @@ LIST</span>
 <script src="assets/products.js"></script>
 <script src="assets/app.js"></script>
 <script src="assets/store.js"></script>
+<script src="assets/media.js"></script>
 <script>
   renderChrome("SHOP ALL");
+  renderLandingMedia("landing-media");
 
   // Category tiles: one representative product's art per category.
   const TILES = [

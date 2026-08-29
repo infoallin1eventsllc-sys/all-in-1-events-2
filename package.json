@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.0",
+    "@netlify/blobs": "^11.0.2",
     "stripe": "^19.1.0"
   }
 }

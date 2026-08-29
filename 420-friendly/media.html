@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta name="robots" content="noindex, nofollow"/>
+<title>420 FRIENDLY — Music &amp; Video</title>
+<link href="assets/tailwind.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link rel="icon" href="assets/favicon.ico" sizes="any"/>
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+
+<main class="pt-20 md:pt-[116px] max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop pb-16">
+  <div id="gate"></div>
+
+  <div id="media-content" class="hidden">
+    <section class="pt-10 pb-8 flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p class="font-label-caps text-label-caps text-tertiary mb-2">OWNER PORTAL</p>
+        <h1 class="font-headline-xl-mobile text-headline-xl-mobile md:font-headline-xl md:text-headline-xl text-on-surface uppercase tracking-tighter">
+          Music &amp; video
+        </h1>
+        <p class="font-body-lg text-body-lg text-on-surface-variant mt-4 max-w-xl">
+          Upload a track or a clip and it appears on the front page. No links to copy, nothing to paste.
+        </p>
+      </div>
+      <span id="signout-slot"></span>
+    </section>
+
+    <div id="media-manager"></div>
+
+    <section class="mt-12 border border-outline-variant/40 rounded-2xl bg-surface-container-low/40 p-6">
+      <p class="font-label-caps text-label-caps text-on-surface-variant mb-3">GOOD TO KNOW</p>
+      <ul class="font-body-md text-body-md text-on-surface-variant flex flex-col gap-2">
+        <li>&bull; <strong class="text-on-surface">Hide</strong> takes something off the site without deleting it. <strong class="text-on-surface">Delete</strong> is permanent — there is no second copy.</li>
+        <li>&bull; Click a title to rename it. It saves when you click away.</li>
+        <li>&bull; Only upload music you own or have the rights to use. Putting someone else's song on your shop is the owner's liability, not the platform's.</li>
+        <li>&bull; Prefer a streaming playlist instead? <a href="playlist.html" class="text-secondary underline decoration-1 underline-offset-4 hover:text-tertiary transition-colors">The Sound</a> embeds Spotify, Apple Music and YouTube.</li>
+      </ul>
+    </section>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+
+<script src="assets/products.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/auth.js"></script>
+<script src="assets/media.js"></script>
+<script>
+  renderChrome("PORTAL");
+  requireOwner("gate", async () => {
+    document.getElementById("media-content").classList.remove("hidden");
+    document.getElementById("signout-slot").innerHTML = signOutButtonHTML();
+    wireSignOut();
+    initMediaManager("media-manager");
+  });
+</script>
+</body>
+</html>

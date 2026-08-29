@@ -36,7 +36,8 @@ const UTILITY_NAV = [
 // PAYMENTS-SETUP.md on putting real auth in front of them before go-live.
 const OWNER_NAV = [
   { href: "owner.html", label: "Transactions" },
-  { href: "photos.html", label: "Photos" }
+  { href: "photos.html", label: "Photos" },
+  { href: "media.html", label: "Music & Video" }
 ];
 
 // Escape anything interpolated into markup. Catalog data is ours, but the

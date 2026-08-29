@@ -15,6 +15,7 @@ Deploy preview: https://deploy-preview-3--allin1-events.netlify.app/420-friendly
 | `product.html` | Product detail via `?id=`: gallery, sticky buy rail, accordions, related |
 | `cart.html` | Bag: line items, quantity, subtotal, free-shipping meter |
 | `drops.html` | Drop calendar with live countdown |
+| `media.html` | **Owner** — upload music/video; appears on the front page |
 | `playlist.html` | "The Sound" — music playlist (Spotify/Apple/YouTube) and video reel |
 | `members.html` | Customer drop-list signup (public) |
 | `portal.html` | **Owner** — hub linking transactions, photos and marketing |
@@ -28,6 +29,8 @@ page, preserving the original URL.
 
 ## Assets
 
+- `assets/media.js` — owner upload client (chunking, progress) and the
+  front-page player.
 - `assets/playlist.js` — playlist/reel config plus the embed-URL parsers.
   The only file to edit when adding a playlist link or a clip.
 - `assets/app.js` — shared chrome (header, bottom nav, footer), cart, favorites,
@@ -104,6 +107,74 @@ and the account needs the `owner` role added explicitly.
   line items server-side from its own catalog and ignores any prices the browser
   sends, so a tampered cart cannot set its own total — which does mean prices
   live in two files until there is a real backend.
+
+## Owner media uploads (`media.html`)
+
+The owner uploads a music file or a video clip and it appears on the front
+page. No links, no code, no second service to sign up for. This is the
+self-hosted path; `playlist.html` is the streaming-embed path, and they are
+independent — use either or both.
+
+Storage is **Netlify Blobs** (`netlify/shared/media-store.js`). It ships with
+the platform, so there is no extra account and no key to rotate. Legacy-style
+handlers must call `connectLambda(event)` before `getStore`, or every read
+fails at runtime rather than at deploy.
+
+### Two platform limits shape the whole design
+
+A Netlify function receives **~6 MB per request** and returns **~6 MB per
+response**. Neither is configurable, and a 40 MB video violates both.
+
+- **Upload** is chunked. `assets/media.js` slices the file, posts each slice
+  base64-encoded (3 MB binary → ~4 MB encoded, safely under the ceiling), and
+  `media.js` reassembles them: `init` → `chunk`×N → `finalize`. A dropped
+  connection then costs one slice, not the whole upload, and the progress bar
+  reflects real bytes.
+- **Playback** uses HTTP Range. `media-file.js` answers 206 with an explicit
+  `Content-Range`, always — even when no Range header was sent, because a
+  browser opens a media element with `Range: bytes=0-` and follows the
+  reported total. Replying 200 with a truncated body would look like a
+  complete, corrupt file. A readable Range asking for bytes past the end gets
+  **416**, not byte 0: answering 206 there produces corrupt playback or a
+  request loop.
+
+### Security decisions worth keeping
+
+- **The MIME allowlist is a security control, not a convenience.** Files are
+  served back from our own origin, so accepting `text/html` or any script type
+  would let an upload execute as first-party JavaScript — stored XSS on our
+  own domain. Responses pin the stored type and send `nosniff`.
+- **Ids are generated, never derived from filenames.** A filename is
+  attacker-controlled text; using it as a blob key invites traversal and
+  collisions. The original name is only ever a display label, stripped of
+  control characters, quotes, angle brackets and path separators.
+- **`media-public.js` is a separate function from `media.js`** rather than one
+  function branching on whether the caller is signed in. That branch is where
+  "returned everything to everyone" bugs live. The public response is built
+  field by field, so a field added to the stored record later is private until
+  someone deliberately publishes it.
+- **The index is the authority on visibility.** `media-file.js` checks it on
+  every request, so hiding or deleting an item stops serving it even to
+  someone who already has the id.
+
+### Bandwidth
+
+Self-hosted media is served through the function, and that counts against the
+site's bandwidth. A 20 MB clip viewed 5,000 times is 100 GB. Caps are 20 MB
+audio / 60 MB video, and playback responses are cached hard (`immutable`,
+ids never change) so the function runs once per visitor rather than once per
+seek. If the reel ever gets popular, move video to YouTube via
+`playlist.html` — that is what the streaming path is for.
+
+### Verified
+
+`media.test.js` runs the functions against an in-memory Blobs stand-in: a 7 MB
+file survives chunked upload byte-identical, walking every Range rebuilds it
+exactly, seeks and suffix ranges return the right bytes, gaps are refused
+rather than published, and hidden/deleted items stop serving. The browser
+suite covers the gate, upload progress, rename/hide/delete, and the front-page
+player. Neither can prove Blobs itself behaves on a real deploy — that needs
+one upload on the preview to confirm.
 
 ## The playlist page (`playlist.html`)
 
