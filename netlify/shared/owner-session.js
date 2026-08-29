@@ -81,11 +81,31 @@ function timingSafeEqualStr(a, b) {
   return crypto.timingSafeEqual(ha, hb);
 }
 
+/**
+ * Strip surrounding whitespace from a passcode.
+ *
+ * Both sides need this. Netlify's environment-variable field routinely keeps a
+ * trailing newline off a paste, and a passphrase copied from notes or a
+ * password manager arrives with a leading space just as often. Without this,
+ * an owner who pasted the passcode correctly on both ends gets "That passcode
+ * is not right" and has no way to see why — the one failure mode that looks
+ * exactly like a forgotten password.
+ *
+ * Applied at every read of OWNER_PASSCODE, not just here, because the token
+ * signing key is derived from that value: normalising in one place and not
+ * another would issue tokens under a key the verifier does not reconstruct.
+ */
+function normalizePasscode(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 function checkPasscode(supplied, expected) {
-  if (!expected) return { ok: false, reason: "not_configured" };
-  if (expected.length < MIN_PASSCODE_LENGTH) return { ok: false, reason: "too_short" };
-  if (typeof supplied !== "string" || !supplied) return { ok: false, reason: "missing" };
-  return timingSafeEqualStr(supplied, expected) ? { ok: true } : { ok: false, reason: "wrong" };
+  const want = normalizePasscode(expected);
+  const got = normalizePasscode(supplied);
+  if (!want) return { ok: false, reason: "not_configured" };
+  if (want.length < MIN_PASSCODE_LENGTH) return { ok: false, reason: "too_short" };
+  if (!got) return { ok: false, reason: "missing" };
+  return timingSafeEqualStr(got, want) ? { ok: true } : { ok: false, reason: "wrong" };
 }
 
 /** Pulls a session token from either header the client might use. */
@@ -97,6 +117,7 @@ function tokenFromEvent(event) {
 }
 
 module.exports = {
+  normalizePasscode,
   SESSION_MS,
   MIN_PASSCODE_LENGTH,
   issueToken,

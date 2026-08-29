@@ -49,14 +49,14 @@ const SAMPLE_ORDERS = [
 ];
 
 const REQUIRED_ROLE = process.env.OWNER_ROLE || "owner";
-const { verifyToken, tokenFromEvent } = require("../shared/owner-session");
+const { verifyToken, tokenFromEvent, normalizePasscode } = require("../shared/owner-session");
 
 exports.handler = async (event, context) => {
   // Two ways in, both checked here on the server. A passcode session is the
   // simple path; a Netlify Identity account with the owner role is the stronger
   // one and keeps working if it is set up. Either satisfies this check; neither
   // can be bypassed from the browser, because the data lives behind it.
-  const passcode = process.env.OWNER_PASSCODE;
+  const passcode = normalizePasscode(process.env.OWNER_PASSCODE);
   if (passcode) {
     const session = verifyToken(tokenFromEvent(event), passcode);
     if (session.ok) return json(200, payload("passcode"));

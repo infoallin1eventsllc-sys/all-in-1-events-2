@@ -8,7 +8,7 @@
  * Setup: Netlify → Site settings → Environment variables → OWNER_PASSCODE.
  */
 
-const { issueToken, checkPasscode, SESSION_MS, MIN_PASSCODE_LENGTH } =
+const { issueToken, checkPasscode, normalizePasscode, SESSION_MS, MIN_PASSCODE_LENGTH } =
   require("../shared/owner-session");
 
 // Netlify functions are stateless, so there is no reliable place to keep a
@@ -23,7 +23,7 @@ exports.handler = async (event) => {
     return json(405, { ok: false, error: "POST only" });
   }
 
-  const expected = process.env.OWNER_PASSCODE;
+  const expected = normalizePasscode(process.env.OWNER_PASSCODE);
 
   let supplied = "";
   try {
