@@ -15,6 +15,7 @@ Deploy preview: https://deploy-preview-3--allin1-events.netlify.app/420-friendly
 | `product.html` | Product detail via `?id=`: gallery, sticky buy rail, accordions, related |
 | `cart.html` | Bag: line items, quantity, subtotal, free-shipping meter |
 | `drops.html` | Drop calendar with live countdown |
+| `playlist.html` | "The Sound" — music playlist (Spotify/Apple/YouTube) and video reel |
 | `members.html` | Customer drop-list signup (public) |
 | `portal.html` | **Owner** — hub linking transactions, photos and marketing |
 | `favorites.html` | Saved pieces |
@@ -27,6 +28,8 @@ page, preserving the original URL.
 
 ## Assets
 
+- `assets/playlist.js` — playlist/reel config plus the embed-URL parsers.
+  The only file to edit when adding a playlist link or a clip.
 - `assets/app.js` — shared chrome (header, bottom nav, footer), cart, favorites,
   product cards, and the brand badge. All dynamic interpolation goes through
   `esc()`, matching this repo's XSS-safe convention.
@@ -101,6 +104,71 @@ and the account needs the `owner` role added explicitly.
   line items server-side from its own catalog and ignores any prices the browser
   sends, so a tampered cart cannot set its own total — which does mean prices
   live in two files until there is a real backend.
+
+## The playlist page (`playlist.html`)
+
+"The Sound" — the brand music playlist plus a video reel. Both are unconfigured
+until Otis pastes links in, and both show a setup card explaining exactly what
+to paste rather than rendering as broken.
+
+**Everything editable lives in one block** at the top of `assets/playlist.js`:
+`PLAYLIST_CONFIG` (three lines: `spotify`, `appleMusic`, `youtube`) and
+`VIDEO_REEL`. Paste the ordinary Share link — the parsers accept share links,
+`spotify:` URIs, `youtu.be` short links, watch links carrying a `list=`, and
+bare ids. A service left as `""` gets no tab; if only one is filled in, the tab
+strip hides itself. A link that cannot be parsed shows a visible warning rather
+than silently vanishing.
+
+### Players load on click, never on page load
+
+Nothing is requested from Spotify, Apple or YouTube until a visitor presses
+play. Each player is first drawn as a facade — our own card, a real `<button>`.
+Two reasons, both of which matter:
+
+- Those embeds set cookies and profile the visitor the instant they load. This
+  site has no consent banner, so auto-loading them would be tracking people who
+  never asked to listen.
+- Three embeds is several megabytes for the majority who never press play.
+
+The click is both the consent and the play button, so it costs nothing. **Do
+not "simplify" this by putting the iframes straight into the markup.** There is
+a test asserting zero third-party requests before the click.
+
+### The parsers are a security boundary
+
+Every configured value ends up in an iframe `src`. Each parser matches a strict
+pattern and then *rebuilds* the URL from the captured pieces — input is never
+passed through. That is what stops a mistyped or hostile value becoming a
+`javascript:` URL or a lookalike host like `open.spotify.com.evil.tld`. If you
+add a service, follow the same shape; do not relax a character class.
+
+`frame-src` in `netlify.toml` had to be widened to `open.spotify.com`,
+`embed.music.apple.com` and `www.youtube-nocookie.com`. YouTube uses the
+**nocookie** host deliberately. No `img-src` change was needed because the
+facades are drawn in CSS rather than fetching YouTube thumbnails — which also
+means no third-party request sneaks in through an image.
+
+## An icon-font trap (fixed, worth remembering)
+
+Material Symbols render as **ligatures**: the markup contains the literal word
+`shopping_cart`, and the font turns it into a glyph. Until that font loads, the
+browser lays out the actual word — about 135px instead of 24px. That pushed the
+header and the bottom bar sideways off a phone screen **on every page**, and
+adding a fifth nav item made it obvious.
+
+Fix is in `styles.css` on `.material-symbols-outlined`: `width: 1em; overflow:
+hidden`. A Material Symbol is drawn 1em square, so this is exact — layout is
+now identical before and after the font loads.
+
+Two related fixes went in at the same time:
+- Bottom-bar items were `w-1/4`, correct for four items but wrong for five.
+  They are now `flex-1 basis-0 min-w-0` — the `min-w-0` matters, because
+  without it flex honours min-content and refuses to divide evenly.
+- The footer brand lockup is a `nowrap` word beside an emblem and never fit a
+  half-width mobile column; it is now `col-span-2 md:col-span-1`.
+
+Test the phone viewport for `document.body.scrollWidth > window.innerWidth`,
+not just that things look right at desktop width.
 
 ## Building CSS
 

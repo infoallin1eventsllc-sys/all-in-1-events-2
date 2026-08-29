@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>420 FRIENDLY — The Sound</title>
+<meta name="description" content="The 420 Friendly playlist and video reel. The soundtrack to the drop."/>
+<link href="assets/tailwind.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link rel="icon" href="assets/favicon.ico" sizes="any"/>
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+
+<main class="pt-20 md:pt-[116px] max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+
+  <section class="pt-12 md:pt-16 pb-8">
+    <p class="font-label-caps text-label-caps text-tertiary flex items-center gap-2 mb-4">
+      <span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+      THE SOUND
+    </p>
+    <h1 class="font-headline-xl-mobile text-headline-xl-mobile md:font-headline-xl md:text-headline-xl text-on-surface uppercase tracking-tighter">
+      What the fits<br/><span class="text-secondary">sound like.</span>
+    </h1>
+    <p class="font-body-lg text-body-lg text-on-surface-variant mt-5 max-w-xl">
+      The rotation behind every drop. Put it on, take your time, embrace the love.
+    </p>
+  </section>
+
+  <!-- Music -->
+  <section class="pb-4">
+    <div id="player-tabs" class="flex flex-wrap gap-3 mb-6" role="tablist" aria-label="Choose a music service"></div>
+    <div id="player-panels"></div>
+  </section>
+
+  <!-- Video reel -->
+  <section class="mt-16 md:mt-20">
+    <div class="flex justify-between items-end mb-8">
+      <h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter">The Reel</h2>
+      <a href="drops.html" class="font-body-md text-body-md text-on-surface-variant hover:text-secondary transition-colors underline decoration-1 underline-offset-4">Next Drop</a>
+    </div>
+    <div id="video-reel"></div>
+  </section>
+
+  <!-- Members cross-sell, matching the pattern on drops.html -->
+  <section class="mt-16 border-t border-outline-variant/50 pt-10">
+    <p class="font-body-md text-body-md text-on-surface-variant">
+      New tracks go up with every drop.
+      <a href="members.html" class="text-secondary underline decoration-1 underline-offset-4 hover:text-tertiary transition-colors">Join the list</a>
+      and hear them first.
+    </p>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+
+<script src="assets/products.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/playlist.js"></script>
+<script>
+  renderChrome("PLAYLIST");
+  renderMusic("player-panels", "player-tabs");
+  renderReel("video-reel");
+</script>
+</body>
+</html>

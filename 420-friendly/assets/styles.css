@@ -58,6 +58,14 @@ body > * { position: relative; z-index: 1; }
   direction: ltr;
   -webkit-font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased;
+  /* Hold the glyph box before the icon font arrives. These render as
+     ligatures, so until the font loads the browser lays out the literal
+     words — "shopping_cart", "queue_music" — at full width, which pushed the
+     header and the bottom bar sideways off a phone screen on every page. A
+     Material Symbol is drawn 1em square, so pinning the box to that is exact:
+     the layout is identical before and after the font loads. */
+  width: 1em;
+  overflow: hidden;
 }
 
 /* Glassmorphism utility (brand signature, carried from the seed page) */
@@ -233,3 +241,31 @@ body > * { position: relative; z-index: 1; }
   .ticker-track { animation: none; }
   .animate-pulse { animation: none; }
 }
+
+/* ===== Playlist page — player facades =====
+ * A facade is our own card standing in where a third-party player will go; the
+ * real iframe is not created until it is clicked (see assets/playlist.js for
+ * why). It has to look like a finished player, not a loading state. */
+.player-facade {
+  background:
+    radial-gradient(120% 90% at 20% 10%, rgba(255, 251, 238, 0.95), transparent 60%),
+    linear-gradient(160deg, #fbfaf6 0%, #eeece5 60%, #e4e6df 100%);
+}
+
+/* Reel tiles are laid over dark artwork or a poster still, so the brand's
+   default dark-on-light text has to invert — and a still photo needs a scrim
+   under the text or the contrast depends on whatever was in the shot. */
+.player-facade--dark { position: relative; }
+.player-facade--dark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(to top, rgba(10, 14, 11, 0.72), rgba(10, 14, 11, 0.25));
+}
+.player-facade--dark > * {
+  position: relative;
+  color: #f4f3ef;
+}
+.player-facade--dark .material-symbols-outlined { color: #9dc4a8; }
+

@@ -7,6 +7,7 @@ const CART_KEY = "420_cart_v1";
 const NAV = [
   { href: "shop.html", label: "SHOP", icon: "storefront" },
   { href: "drops.html", label: "DROPS", icon: "bolt" },
+  { href: "playlist.html", label: "SOUND", icon: "queue_music" },
   { href: "portal.html", label: "PORTAL", icon: "dashboard" },
   { href: "cart.html", label: "BAG", icon: "shopping_cart" }
 ];
@@ -18,6 +19,7 @@ const PRIMARY_NAV = [
   { href: "shop.html?cat=TEES", label: "Tees" },
   { href: "shop.html?cat=HEADWEAR", label: "Headwear" },
   { href: "drops.html", label: "Drops" },
+  { href: "playlist.html", label: "Playlist" },
   { href: "members.html", label: "Members" }
 ];
 
@@ -332,7 +334,7 @@ function renderChrome(activeLabel) {
           : "";
         return (
           '<a href="' + item.href + '" class="relative flex flex-col items-center justify-center ' +
-          color + ' pt-2 hover:text-secondary transition-all active:scale-90 duration-300 w-1/4">' +
+          color + ' pt-2 hover:text-secondary transition-all active:scale-90 duration-300 flex-1 basis-0 min-w-0 overflow-hidden">' +
           '<span class="material-symbols-outlined mb-1"' + fill + ">" + item.icon + "</span>" +
           '<span class="font-label-caps text-label-caps text-[10px]">' + item.label + "</span>" +
           badge + "</a>"
@@ -368,10 +370,13 @@ function renderChrome(activeLabel) {
       ]) +
       column("THE BRAND", [
         { href: "drops.html", label: "Drop Calendar" },
+        { href: "playlist.html", label: "The Sound" },
         { href: "members.html", label: "Join the List" },
         { href: "cart.html", label: "Your Bag" }
       ]) +
-      '<div><div class="flex items-center gap-3">' +
+      // Full width on mobile: the lockup is a nowrap word beside an emblem and
+      // does not fit a half column, which pushed the footer off-screen.
+      '<div class="col-span-2 md:col-span-1"><div class="flex items-center gap-3">' +
       brandLockupHTML("h-20", "text-[26px]") +
       "</div>" +
       '<p class="font-body-md text-body-md text-on-surface-variant mt-3">Embrace the love. 420 Friendly is an apparel brand — every product is clothing, nothing more.</p></div>' +
