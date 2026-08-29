@@ -95,6 +95,28 @@ themselves are public shells containing no customer data.
 That's it. The portal will ask for the passcode and remember it for 12 hours,
 per browser tab.
 
+#### Make it work on deploy previews too
+
+Netlify environment variables carry a **scope** — the deploy contexts they
+apply to. A variable scoped to Production only is invisible to deploy
+previews, so the preview reports the passcode as unset even though the
+dashboard clearly shows it. That is the usual reason the portal cannot be
+tested before merging.
+
+When adding `OWNER_PASSCODE`, choose **"Same value for all deploy contexts"**.
+If it already exists, open it and confirm Deploy previews and Branch deploys
+are included, then trigger a redeploy — existing previews do not pick up an
+env var change on their own.
+
+The sign-in error names the context it is running in ("context
+\"deploy-preview\", branch \"...\""), so if it is still refused you can see
+immediately which deploy is missing the value.
+
+Use the same passcode everywhere, or a different one per context — Netlify
+supports both. What must **not** happen is a passcode committed to the repo as
+a "preview default": the preview URL is public and guessable, so that would be
+a backdoor into the portal with the secret published alongside it.
+
 Two properties worth knowing:
 
 - **Changing `OWNER_PASSCODE` instantly signs everyone out.** The signing key is

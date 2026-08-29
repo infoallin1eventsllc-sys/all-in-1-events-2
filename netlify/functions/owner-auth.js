@@ -18,6 +18,26 @@ const { issueToken, checkPasscode, normalizePasscode, SESSION_MS, MIN_PASSCODE_L
 // note returned by `too_short` below.
 const FAILURE_DELAY_MS = 700;
 
+/* Which deploy this is running on.
+ *
+ * Netlify sets CONTEXT to "production", "deploy-preview" or "branch-deploy",
+ * and environment variables can be scoped to some contexts and not others. The
+ * common way to get stuck is setting OWNER_PASSCODE for production only and
+ * then trying to test on a preview: the variable genuinely exists, the
+ * dashboard shows it, and the preview still says it is missing. Naming the
+ * context in the error turns that into a one-line fix instead of a hunt.
+ *
+ * CONTEXT and BRANCH are build metadata, not secrets — safe to show. This only
+ * ever appears on the "not configured" path, where there is no passcode to
+ * protect yet.
+ */
+function deployContext() {
+  const ctx = process.env.CONTEXT || null;
+  const branch = process.env.BRANCH || null;
+  if (!ctx) return "";
+  return branch ? ' (context "' + ctx + '", branch "' + branch + '")' : ' (context "' + ctx + '")';
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return json(405, { ok: false, error: "POST only" });
@@ -42,9 +62,12 @@ exports.handler = async (event) => {
     return json(503, {
       ok: false,
       error: "not_configured",
+      context: process.env.CONTEXT || null,
       message:
-        "OWNER_PASSCODE is not set. Add it in Netlify → Site settings → " +
-        "Environment variables, then redeploy."
+        "OWNER_PASSCODE is not set for this deploy" + deployContext() + ". " +
+        "Add it in Netlify → Site settings → Environment variables. If it is " +
+        "already set, check its scope — a variable scoped to Production only " +
+        "is invisible to deploy previews. Redeploy after changing it."
     });
   }
 
