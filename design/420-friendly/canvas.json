@@ -1,0 +1,14 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "A — Haze", "x": 0, "y": 0, "w": 1080, "h": 1080 },
+    { "file": "Neon.dc.html", "title": "B — Neon", "x": 1180, "y": 0, "w": 1080, "h": 1080 },
+    { "file": "Groove.dc.html", "title": "C — Groove", "x": 0, "y": 1180, "w": 1080, "h": 1080 },
+    { "file": "Stamp.dc.html", "title": "D — Stamp", "x": 1180, "y": 1180, "w": 1080, "h": 1080 }
+  ],
+  "annotations": [
+    { "id": "how-to-read", "x": -430, "y": 0, "w": 370, "text": "Four directions, not four shades of one. Pick an axis, then I build it out into the full lockup set.\n\nAll four animate — smoke drifts, neon flickers, the sunburst turns, the stamp ring rotates. Motion is off automatically for anyone with reduced-motion set.\n\nGreen is a tweak chip on every artboard." },
+    { "id": "axes", "x": -430, "y": 470, "w": 370, "text": "A — HAZE\nPremium nightlife. Closest to your events business. Archivo Black, rising smoke, breathing halo.\nTradeoff: least overtly 420.\n\nB — NEON\nSign shop. Highest energy, reads across a dark room. Real tube glow, one flickering numeral.\nTradeoff: needs dark backgrounds to work." },
+    { "id": "axes2", "x": -430, "y": 980, "w": 370, "text": "C — GROOVE\nThe authentic 420 lineage — 1970s counterculture. DynaPuff, sunburst, arced type, cream accent.\nTradeoff: playful, less premium.\n\nD — STAMP\nBadge/seal. Protest Guerrilla type. Most versatile at small sizes — merch, stickers, embroidery.\nTradeoff: most conventional." }
+  ],
+  "launch": { "view": "canvas" }
+}

@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Archivo:wght@400;600&display=swap">
+  <style>
+    body { margin: 0; background: #080C0E; font-family: Archivo, system-ui, sans-serif; }
+    a { color: #4FD98A; } a:hover { color: #7FE9AC; }
+    @keyframes flick { 0%,18%,22%,25%,53%,57%,100% { opacity: 1; } 20%,24%,55% { opacity: .28; } }
+    @keyframes hum { 0%,100% { opacity: .85; } 50% { opacity: 1; } }
+    .flicker { animation: flick 5.5s linear infinite; }
+    .hum { animation: hum 3.2s ease-in-out infinite; }
+    @media (prefers-reduced-motion: reduce) { .flicker,.hum { animation: none; opacity: 1; } }
+  </style>
+</helmet>
+
+<div style="width: 1080px; height: 1080px; background: #080C0E; overflow: hidden;">
+  <svg width="1080" height="1080" viewBox="0 0 1080 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <filter id="neon" x="-80%" y="-80%" width="260%" height="260%">
+        <feGaussianBlur stdDeviation="3" result="b1"></feGaussianBlur>
+        <feGaussianBlur stdDeviation="10" result="b2"></feGaussianBlur>
+        <feGaussianBlur stdDeviation="26" result="b3"></feGaussianBlur>
+        <feMerge>
+          <feMergeNode in="b3"></feMergeNode>
+          <feMergeNode in="b2"></feMergeNode>
+          <feMergeNode in="b1"></feMergeNode>
+          <feMergeNode in="SourceGraphic"></feMergeNode>
+        </feMerge>
+      </filter>
+    </defs>
+
+    <!-- back wall wash -->
+    <rect width="1080" height="1080" fill="#080C0E"></rect>
+    <ellipse cx="540" cy="500" rx="430" ry="330" fill="{{green}}" opacity="0.07"></ellipse>
+
+    <!-- tube frame -->
+    <rect class="hum" x="150" y="180" width="780" height="620" rx="48" ry="48"
+          stroke="{{green}}" stroke-width="7" fill="none" filter="url(#neon)" opacity="0.9"></rect>
+
+    <!-- 420 as tubes -->
+    <g filter="url(#neon)" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="20">
+      <g stroke="#EAFFF3">
+        <path d="M360 340 L268 500 L440 500"></path>
+        <path d="M360 340 L360 596"></path>
+      </g>
+      <g class="flicker" stroke="#EAFFF3">
+        <path d="M492 404 C492 356, 620 356, 620 406 C620 458, 500 520, 490 596 L628 596"></path>
+      </g>
+      <ellipse cx="762" cy="468" rx="86" ry="128" stroke="{{green}}"></ellipse>
+    </g>
+
+    <!-- leaf inside the zero -->
+    <g transform="translate(762, 528) scale(0.52)" stroke="{{green}}" stroke-width="17" fill="none"
+       stroke-linecap="round" stroke-linejoin="round" filter="url(#neon)">
+      <path d="M0 0 C-13 -35, -12 -72, 0 -100 C12 -72, 13 -35, 0 0 Z"></path>
+      <path d="M0 0 C-11 -29, -10 -60, 0 -84 C10 -60, 11 -29, 0 0 Z" transform="rotate(33)"></path>
+      <path d="M0 0 C-11 -29, -10 -60, 0 -84 C10 -60, 11 -29, 0 0 Z" transform="rotate(-33)"></path>
+      <path d="M0 0 C-9 -22, -8 -45, 0 -62 C8 -45, 9 -22, 0 0 Z" transform="rotate(66)"></path>
+      <path d="M0 0 C-9 -22, -8 -45, 0 -62 C8 -45, 9 -22, 0 0 Z" transform="rotate(-66)"></path>
+      <path d="M0 0 C-7 -14, -6 -29, 0 -40 C6 -29, 7 -14, 0 0 Z" transform="rotate(100)"></path>
+      <path d="M0 0 C-7 -14, -6 -29, 0 -40 C6 -29, 7 -14, 0 0 Z" transform="rotate(-100)"></path>
+      <path d="M0 0 L0 18"></path>
+    </g>
+
+    <text x="540" y="726" text-anchor="middle" fill="{{green}}" filter="url(#neon)"
+          font-family="Bungee, Archivo, sans-serif" font-size="72" letter-spacing="8">FRIENDLY</text>
+    <text x="540" y="880" text-anchor="middle" fill="#5C6B72" font-family="Archivo, sans-serif"
+          font-size="21" font-weight="400" letter-spacing="13">OPEN LATE · [YOUR CITY]</text>
+  </svg>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"green":{"editor":"color","default":"#3DFF8A","options":["#3DFF8A","#2E7D4F","#4FD98A","#00E5A0"],"section":"Brand"}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { green: this.props.green ?? '#3DFF8A' };
+  }
+}
+</script>
+</body>
+</html>

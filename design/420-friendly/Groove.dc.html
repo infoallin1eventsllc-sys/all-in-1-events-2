@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DynaPuff:wght@500;700&family=Archivo:wght@400;600&display=swap">
+  <style>
+    body { margin: 0; background: #12261A; font-family: Archivo, system-ui, sans-serif; }
+    a { color: #F2E4C2; } a:hover { color: #FFF4DC; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+    .rays { animation: spin 60s linear infinite; transform-origin: 540px 470px; }
+    .bob { animation: bob 5s ease-in-out infinite; }
+    @media (prefers-reduced-motion: reduce) { .rays,.bob { animation: none; } }
+  </style>
+</helmet>
+
+<div style="width: 1080px; height: 1080px; background: #12261A; overflow: hidden;">
+  <svg width="1080" height="1080" viewBox="0 0 1080 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <path id="arcbot" d="M190 620 A 350 350 0 0 0 890 620"></path>
+    </defs>
+
+    <rect width="1080" height="1080" fill="#12261A"></rect>
+
+    <!-- sunburst -->
+    <g class="rays" opacity="0.16">
+      <g fill="{{cream}}">
+        <path d="M540 470 L470 -180 L610 -180 Z"></path>
+        <path d="M540 470 L1120 120 L1190 240 Z"></path>
+        <path d="M540 470 L1190 700 L1120 820 Z"></path>
+        <path d="M540 470 L610 1120 L470 1120 Z"></path>
+        <path d="M540 470 L-40 820 L-110 700 Z"></path>
+        <path d="M540 470 L-110 240 L-40 120 Z"></path>
+      </g>
+    </g>
+
+    <!-- wavy rules -->
+    <path d="M170 250 C240 210, 310 290, 380 250 C450 210, 520 290, 590 250 C660 210, 730 290, 800 250 C860 216, 890 260, 910 250"
+          stroke="{{green}}" stroke-width="7" fill="none" stroke-linecap="round" opacity="0.85"></path>
+    <path d="M170 830 C240 790, 310 870, 380 830 C450 790, 520 870, 590 830 C660 790, 730 870, 800 830 C860 796, 890 840, 910 830"
+          stroke="{{green}}" stroke-width="7" fill="none" stroke-linecap="round" opacity="0.85"></path>
+
+    <!-- leaf -->
+    <g class="bob" transform="translate(540, 372) scale(0.60)" stroke="{{green}}" stroke-width="18" fill="none"
+       stroke-linecap="round" stroke-linejoin="round">
+      <path d="M0 0 C-13 -35, -12 -72, 0 -100 C12 -72, 13 -35, 0 0 Z"></path>
+      <path d="M0 0 C-11 -29, -10 -60, 0 -84 C10 -60, 11 -29, 0 0 Z" transform="rotate(33)"></path>
+      <path d="M0 0 C-11 -29, -10 -60, 0 -84 C10 -60, 11 -29, 0 0 Z" transform="rotate(-33)"></path>
+      <path d="M0 0 C-9 -22, -8 -45, 0 -62 C8 -45, 9 -22, 0 0 Z" transform="rotate(66)"></path>
+      <path d="M0 0 C-9 -22, -8 -45, 0 -62 C8 -45, 9 -22, 0 0 Z" transform="rotate(-66)"></path>
+      <path d="M0 0 C-7 -14, -6 -29, 0 -40 C6 -29, 7 -14, 0 0 Z" transform="rotate(100)"></path>
+      <path d="M0 0 C-7 -14, -6 -29, 0 -40 C6 -29, 7 -14, 0 0 Z" transform="rotate(-100)"></path>
+      <path d="M0 0 L0 18"></path>
+    </g>
+
+    <!-- 420, groovy -->
+    <text x="540" y="600" text-anchor="middle" fill="#0B1A12" font-family="DynaPuff, Archivo, sans-serif"
+          font-size="230" font-weight="700" opacity="0.85" transform="translate(9,9)">420</text>
+    <text x="540" y="600" text-anchor="middle" fill="{{cream}}" font-family="DynaPuff, Archivo, sans-serif"
+          font-size="230" font-weight="700">420</text>
+
+    <text fill="{{green}}" font-family="DynaPuff, Archivo, sans-serif" font-size="76" font-weight="500" letter-spacing="10">
+      <textPath href="#arcbot" startOffset="50%" text-anchor="middle">FRIENDLY</textPath>
+    </text>
+
+    <text x="540" y="940" text-anchor="middle" fill="{{cream}}" font-family="Archivo, sans-serif"
+          font-size="20" font-weight="600" letter-spacing="15" opacity="0.72">GOOD TIMES · GOOD PEOPLE</text>
+  </svg>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"green":{"editor":"color","default":"#4FD98A","options":["#4FD98A","#2E7D4F","#7FE9AC"],"section":"Brand"},"cream":{"editor":"color","default":"#F2E4C2","options":["#F2E4C2","#FFFFFF","#FFD98A"],"section":"Brand"}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      green: this.props.green ?? '#4FD98A',
+      cream: this.props.cream ?? '#F2E4C2'
+    };
+  }
+}
+</script>
+</body>
+</html>

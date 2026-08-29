@@ -1,0 +1,3 @@
+# Seeded canvas payload — regenerate from the .dc.html sources (see README).
+*.html
+!*.dc.html
