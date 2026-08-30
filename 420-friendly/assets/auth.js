@@ -58,10 +58,17 @@ async function submitPasscode(passcode) {
     return { ok: false, message: "Could not reach the sign-in service." };
   }
 
-  if (res.status === 404) {
+  // Several statuses all mean "no function answered here", and each host
+  // reports it differently — Netlify without the function deployed gives 404,
+  // a plain static server rejects POST with 501 or 405, a proxy in front may
+  // give 502. They share one cause and one fix, so they share one message.
+  if (res.status === 404 || res.status === 405 || res.status === 501 || res.status === 502) {
     return {
       ok: false,
-      message: "The sign-in function is not deployed. It runs on Netlify, not a plain static server."
+      message:
+        "The sign-in function is not running (HTTP " + res.status + "). It needs Netlify — " +
+        "a plain static server cannot run it. If this is the live site, the deploy did not " +
+        "include the functions."
     };
   }
 
@@ -69,7 +76,15 @@ async function submitPasscode(passcode) {
   try {
     data = await res.json();
   } catch {
-    return { ok: false, message: "The sign-in service sent an unreadable reply." };
+    // A non-JSON body means the function crashed or something in front of it
+    // answered instead. Naming the status is the difference between a
+    // five-minute check of the Netlify function log and an afternoon of guessing.
+    return {
+      ok: false,
+      message:
+        "The sign-in service replied with something unreadable (HTTP " + res.status + "). " +
+        "Check the function log in Netlify → Deploys → Functions."
+    };
   }
 
   if (res.ok && data.token) {
