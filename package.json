@@ -4,10 +4,11 @@
   "description": "Luxury event production website with AI concierge chatbot",
   "main": "index.html",
   "scripts": {
-    "dev": "python -m http.server 8000",
+    "dev": "python3 -m http.server 8000",
     "start": "netlify dev",
     "lint": "echo 'Install ESLint to lint JS files'",
-    "build:420": "npx -y tailwindcss@3.4.17 -c 420-friendly/tailwind.config.js -i 420-friendly/assets/tailwind.src.css -o 420-friendly/assets/tailwind.css --minify"
+    "build:420": "npx -y tailwindcss@3.4.17 -c 420-friendly/tailwind.config.js -i 420-friendly/assets/tailwind.src.css -o 420-friendly/assets/tailwind.css --minify",
+    "dev:note": "echo 'npm run dev is static only - the Portal, uploads and checkout need: npm start'"
   },
   "keywords": [
     "events",
