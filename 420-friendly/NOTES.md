@@ -324,8 +324,32 @@ the single biggest thing outstanding and it is Otis's call.
   ligatures, so before the icon font loaded the browser laid out the literal
   word `shopping_cart` at ~135px and pushed every page sideways off a phone.
 
-**Not yet proven on a real deploy:** Netlify Blobs. All media testing used an
-in-memory stand-in. One upload on the preview confirms it.
+### Added 2026-08-31
+
+- **`LOCAL-DEV.md`** — Otis now runs the site on his own Mac with `npm start`
+  (`netlify dev`), which serves the pages *and* the functions. Written for
+  someone new to Node projects. `.env.example` documents the variables.
+- **Full site audit**: 392 controls across 13 pages, zero dead buttons, zero
+  links to a missing page, 25 user flows clicked for real and all passing.
+- **Sign-in errors now name the HTTP status** — only 404 was recognised as "no
+  function here", so 501/405/502 gave a message that said nothing.
+
+**Netlify Blobs is now proven.** Running against a real `netlify dev`, a 5 MB
+file survived chunked upload, public listing and Range playback byte-identical.
+That was the one thing the earlier in-memory tests could not establish.
+
+**Known real issue, not yet fixed:** the only product photo is hotlinked from
+`lh3.googleusercontent.com/aida/...` — a temporary Google-generated image URL
+that will eventually expire and leave a broken image on the storefront. The
+other 7 products render typographic placeholder tiles. Needs a real image file
+committed to the repo, or uploaded via the Photos page.
+
+**Local-machine gotcha worth remembering** (cost most of a session): while
+`npm start` is running, that terminal cannot accept commands — pasted text goes
+into the server as keystrokes and silently does nothing. Use `Cmd+T` for a
+second tab. Also, his `~/all-in-1-events-2` was an old clone sitting on a
+different branch with local edits, so every `git checkout` aborted and the site
+404'd; `git stash -u` cleared it.
 
 ### Waiting on Otis — one variable each, all in Netlify → Site settings →
 ### Environment variables, then redeploy (env vars only apply to a new build)
