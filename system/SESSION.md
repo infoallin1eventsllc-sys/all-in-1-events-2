@@ -318,6 +318,45 @@ agent writes around these rather than inventing them:
 
 Filling those in is the highest-value edit in `system/brand-brain/`.
 
+### pay-webhook + stripe.ts recovered (2026-09-01)
+
+Two of the four uncommitted deployed functions are now in the repo:
+`supabase/functions/pay-webhook/index.ts` and `_shared/stripe.ts` (~450 lines).
+Both compile clean; all five Stripe event handlers present.
+
+This is careful code and it existed in exactly one place. What it does:
+
+- **The signature IS the authentication.** The endpoint must be public (Stripe
+  cannot present a Supabase JWT), so an HMAC over the *raw* bytes plus a
+  300-second timestamp tolerance is the whole gate. Parsing and re-serialising
+  the body first would break every signature — the comment says so, keep it.
+- **Constant-time comparison**, and every candidate signature is compared with
+  the result folded in rather than returned early, so response time does not
+  reveal which secret matched during a rotation.
+- **Idempotency by claiming the event id first.** Stripe retries until it gets
+  a 2xx and says an event may arrive twice; inserting into `payment_events`
+  before doing anything means a retry conflicts and stops.
+- **The bank-debit trap is handled.** `checkout.session.completed` arrives with
+  `payment_status: "unpaid"` for `us_bank_account`, settling days later via
+  `async_payment_succeeded`. Treating the first event as payment would mark
+  bank transfers paid before the money moved.
+- **A payment with no matching local row is still written down**, flagged with
+  an error note. Money that arrived unmatched must not vanish quietly.
+- **`charge.refunded` puts the invoice back to "Issued"**, so a refund does not
+  quietly overstate income.
+- **The browser is never trusted.** `success_url` is just a string anyone can
+  type; if visiting it marked an invoice paid, every invoice could be cleared
+  by visiting a link.
+
+**This path is invoice-shaped, not order-shaped.** `payments.invoice_id` points
+at `owner_invoices` (client_name, client_company, line_items) — it bills
+Meridian web clients. 420 Friendly retail checkout is a *separate*
+implementation at `netlify/functions/create-checkout-session.js`. Two payment
+paths, different shapes, do not confuse them.
+
+Still uncommitted and deployed: `owner`, `analyze`, `cardspike`. `analyze` is
+on a cron schedule.
+
 ## Open next steps (not done)
 - Set `MERIDIAN_INTAKE_URL` in Netlify so the bridge goes live (Otis's step).
 - ~~All in 1 Events index.html was dead.~~ **Fixed 2026-08-25.** `css/styles.css`,
