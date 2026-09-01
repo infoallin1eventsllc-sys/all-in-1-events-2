@@ -69,6 +69,24 @@ console.log(`swapped ${unsplashCount} unsplash hotlink(s) for a placeholder`);
 if (/url\(\/(?!\/)/.test(css)) throw new Error('an absolute url() survived inlining');
 js = js.split('/images/hero-earth.jpg').join(heroUri);
 if (js.includes('/images/hero-earth.jpg')) throw new Error('hero reference survived inlining');
+
+// Anything else the bundle reaches for by absolute path. Named assets were
+// listed one by one until the brand logos were added and silently rendered as
+// broken images in a published preview — the artifact has no origin, so an
+// absolute path resolves to nothing and fails without an error. Sweep for them
+// instead, and fail loudly if one cannot be embedded.
+const MIME = { png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', gif:'image/gif',
+               svg:'image/svg+xml', webp:'image/webp', ico:'image/x-icon' };
+for (const ref of new Set(js.match(/\/[a-z0-9][a-z0-9/_-]*\.(?:png|jpe?g|gif|svg|webp|ico)/gi) || [])) {
+  if (js.indexOf(ref) === -1) continue;
+  const onDisk = join(dist, ref.replace(/^\//, ''));
+  let bytes;
+  try { bytes = readFileSync(onDisk); }
+  catch { throw new Error(`bundle references ${ref} but it is not in dist — the preview would show a broken image`); }
+  const ext = ref.split('.').pop().toLowerCase();
+  js = js.split(ref).join(`data:${MIME[ext] || 'application/octet-stream'};base64,${bytes.toString('base64')}`);
+  console.log(`inlined ${ref} (${(bytes.length / 1024).toFixed(0)}KB)`);
+}
 for (const [path, uri] of Object.entries(media)) {
   js = js.split(path).join(uri);
   if (js.includes(path)) throw new Error(`reference survived inlining: ${path}`);
