@@ -219,6 +219,26 @@ chosen over an SEO suite because the customers are on Instagram and TikTok.
 ignores the system prompt entirely. The wiring is proven not to break; the
 payoff arrives with the key.
 
+### Facebook + Snapchat added (2026-09-01)
+
+Migration `0004`. Facebook Pages was a real gap — `meta_ads` (paid) existed but
+the free side, posting to a Page, did not. Worth knowing: **Instagram business
+accounts authenticate through a linked Facebook Page**, so one Meta OAuth grant
+covers both. Those two rows go live together or not at all.
+
+Snapchat is the honest one. Its public API is a **Marketing (ads) API** —
+there is no general endpoint for posting organic content to a profile or Story
+the way Meta and TikTok provide; Snap keeps organic posting inside its own app.
+So `snapchat` is seeded with status **`manual`**, a new status value added for
+exactly this: `not_configured` means "connect it and it works", `manual` means
+"no amount of configuration will automate this". A false promise on a dashboard
+costs more than an absent row. The system's useful role on Snapchat is drafting
+the caption, not publishing it.
+
+`snapchat_ads` is listed separately because that one *does* have an API — but
+it is ad spend, not organic reach, and should not be confused with the free
+channels around it.
+
 ## Open next steps (not done)
 - Set `MERIDIAN_INTAKE_URL` in Netlify so the bridge goes live (Otis's step).
 - ~~All in 1 Events index.html was dead.~~ **Fixed 2026-08-25.** `css/styles.css`,
