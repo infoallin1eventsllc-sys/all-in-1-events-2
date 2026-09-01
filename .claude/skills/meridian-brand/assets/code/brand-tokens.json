@@ -1,0 +1,24 @@
+{
+  "_source": "Read from the live Meridian Interface site, not chosen here. #0f172a appears 61 times in src/ and is the brand's ink; blue-600 is the only accent the site actually uses.",
+  "color": {
+    "ink":        { "value": "#0f172a", "use": "Wordmark, headings, the darkest surface. The brand colour." },
+    "body":       { "value": "#191c1f", "use": "Body copy." },
+    "surface":    { "value": "#f7f9fd", "use": "Page background." },
+    "accent":     { "value": "#2563eb", "use": "Links, primary buttons. Used sparingly and never in the mark." },
+    "muted":      { "value": "#475569", "use": "Subtext, the INTERFACE line on light backgrounds." },
+    "muted_dark": { "value": "#cbd5e1", "use": "The INTERFACE line on dark backgrounds." },
+    "hairline":   { "value": "#e2e8f0", "use": "Borders and rules." }
+  },
+  "font": {
+    "display": { "stack": "'Hanken Grotesk', 'Inter', system-ui, sans-serif", "use": "MERIDIAN wordmark, headings", "weight": 800, "tracking": "0.2em" },
+    "body":    { "stack": "'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif", "use": "INTERFACE line, all copy", "weight": 700, "tracking": "0.28em" }
+  },
+  "lockup": {
+    "_note": "Ratios, not pixels — the lockup scales from a favicon to a sign without redrawing.",
+    "gap_to_mark":        0.389,
+    "wordmark_to_mark":   0.5,
+    "subtext_to_mark":    0.3056,
+    "subtext_top_margin": 0.111,
+    "clear_space":        "0.25 x mark height on every side. Nothing enters it."
+  }
+}

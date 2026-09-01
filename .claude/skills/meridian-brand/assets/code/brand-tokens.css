@@ -1,0 +1,65 @@
+/* Meridian Interface — brand tokens.
+   Read from the live site rather than invented, so anything built with these
+   matches what a client already sees. Drop into :root and use the variables. */
+/* Fonts. The website self-hosts these at /fonts/*.woff2 and should keep doing
+   so — a CDN in the critical path is a dependency you cannot fix at 2am. For a
+   standalone page or an email template that has no build step, this is the
+   sanctioned fallback:
+
+     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400..900&family=Inter:wght@400..700&display=swap">
+
+   In an HTML email neither will load reliably. Use the PNG lockup there. */
+
+:root {
+  --meridian-ink:        #0f172a; /* wordmark, headings, darkest surface */
+  --meridian-body:       #191c1f; /* body copy */
+  --meridian-surface:    #f7f9fd; /* page background */
+  --meridian-accent:     #2563eb; /* links and primary buttons, used sparingly */
+  --meridian-muted:      #475569; /* the INTERFACE line on light */
+  --meridian-muted-dark: #cbd5e1; /* the INTERFACE line on dark */
+  --meridian-hairline:   #e2e8f0; /* borders and rules */
+
+  --meridian-font-display: 'Hanken Grotesk', 'Inter', system-ui, sans-serif;
+  --meridian-font-body:    'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* The lockup, sized off one number. Set --m to the mark height and the
+   wordmark, subtext, gap and clear space all follow. */
+.meridian-lockup {
+  --m: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--m) * 0.389);
+  padding: calc(var(--m) * 0.25);
+}
+.meridian-lockup__type { display: flex; flex-direction: column; text-align: left; }
+.meridian-lockup__word {
+  font-family: var(--meridian-font-display);
+  font-weight: 800;
+  font-size: calc(var(--m) * 0.5);
+  line-height: 1;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--meridian-ink);
+}
+.meridian-lockup__sub {
+  font-family: var(--meridian-font-body);
+  font-weight: 700;
+  font-size: calc(var(--m) * 0.3056);
+  line-height: 1;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  margin-top: calc(var(--m) * 0.111);
+  color: var(--meridian-muted);
+}
+/* On a dark surface, add .meridian-lockup--dark and swap the mark SVG for the
+   on-dark master. The wordmark inverts; the subtext does not go pure white. */
+.meridian-lockup--dark .meridian-lockup__word { color: #fff; }
+.meridian-lockup--dark .meridian-lockup__sub  { color: var(--meridian-muted-dark); }
+
+/* The mark sizes off the same --m as everything else. There is no light/dark
+   display toggle on purpose: an SVG gradient inside a display:none element is a
+   dead paint server, so a hidden mark blanks the visible one. Use
+   logo-snippet.html or logo-snippet-dark.html — one mark each. */
+.meridian-lockup__mark { width: var(--m); height: var(--m); flex-shrink: 0; display: block; }
