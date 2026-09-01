@@ -150,6 +150,17 @@ const shim = `
       }));
     };
     if (url.indexOf('/intake') !== -1) return reply({ ok: true, contact_id: 'preview' });
+
+    // Route by endpoint BEFORE action, because two different functions both
+    // answer to action "status" and mean different things by it: the owner's
+    // status reports whether a passcode is configured, the pay endpoint's
+    // reports whether Stripe is. Matching on the action alone made the Tech
+    // Stack tab claim a Stripe key was present when none exists — a preview
+    // that lies about money is worse than a preview that shows nothing.
+    if (url.indexOf('/pay') !== -1) {
+      return reply({ ok: true, configured: false, mode: 'unset', webhook_configured: false });
+    }
+
     switch (body.action) {
       case 'status':    return reply({ ok: true, configured: true });
       // Any passcode opens the preview. The real gate is a constant-time
