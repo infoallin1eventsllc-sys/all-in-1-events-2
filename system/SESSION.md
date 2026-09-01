@@ -4,7 +4,7 @@ Compact record of what was built and the current state, so work can resume later
 
 ---
 
-## ► START HERE (last updated end of Aug 23)
+## ► START HERE (last updated Sep 1)
 
 **Read this block first. The sections below it are a running log and some of the
 older entries have been overtaken — where they disagree with this block, this
@@ -14,7 +14,7 @@ block is right.**
 
 | Piece | State |
 |---|---|
-| **meridian-interface-website** | **LIVE** on Vercel at `meridian-interface-website.vercel.app`, deploying from `main`. All work is merged; nothing outstanding on a branch. |
+| **meridian-interface-website** | **LIVE** on Vercel, deploying from `main`. ⚠️ **Unmerged work on `claude/footer-studio-plate`: the real logo.** Until it merges, the live site still shows the wrong mark. |
 | **all-in-1-events-2** (this repo) | Working branch `claude/marketing-system-tech-stack-uds0mp`. Holds the marketing system in `system/` **and** the All in 1 Events *client* site at the root. |
 | **key-router** | Both PRs merged to `main`. **Not deployed to Render.** |
 | **Marketing system** | Deployed and scheduled, but in **mock mode** — it has produced **zero real AI outputs**. No API key configured, by Otis's decision. |
@@ -43,6 +43,41 @@ See **Open next steps** at the bottom of this file. **RUN_SECRET is now DONE**
 (Aug 21) — closed before any key exists and before publishing went in, which is
 the right order.
 
+### ⚠️ The logo was wrong for months — read this before touching branding
+
+`MeridianLogoMark` in the website repo drew a rounded, symmetric M with
+hand-written SVG paths. It shipped in that repo's **first commit** and everyone,
+including this assistant, took it for the real logo. It was not. It rendered in
+the header, the footer and every modal, and it reached a published client-facing
+form before Otis compared it and said so.
+
+His real mark: two ribbon strokes with flat angled tops, a **visible vertical
+meridian line** through the centre, cool slate left and neutral grey right.
+
+Fixed Sep 1. The invented paths are **deleted, not kept as a fallback** — a wrong
+logo that renders looks exactly like a right one, and nobody goes looking.
+
+Three things about his artwork that will bite if forgotten:
+
+1. **The wordmark is baked in at near-black**, so the lockup file dies on any
+   dark ground. Use a light plate behind it, or use `meridian-mark.png` beside
+   live text you can colour.
+2. **`meridian-icon-512.png` is not an app icon** — it is the whole lockup in a
+   square with no alpha.
+3. **There is no vector.** Largest file is 1024px. Signage, a vehicle wrap or
+   embroidery needs the mark properly redrawn first.
+
+### How files actually reach this session
+
+Chat attachments do **not** land on the container filesystem, and outbound
+egress is blocked (`meridianinterface.com` returns EGRESS_BLOCKED; curl gets 403
+on any non-allowlisted host). A whole session was lost to this. What works:
+
+- **A path under `/root/.claude/uploads/…`** — this is how the logo finally
+  arrived. If Otis references a file with `@`, look there first.
+- **Google Drive** via the connector.
+- **A git push** to a repo in scope.
+
 ### Source-of-truth docs
 
 - **`system/ARCHITECTURE.md`** — how the three repos connect, and the go-live order.
@@ -54,7 +89,8 @@ the right order.
 - **Owner:** Otis Williams — **Meridian Interface** (web/software studio). otis@meridianinterface.com · (281) 882-9198.
 - **Repo:** `infoallin1eventsllc-sys/all-in-1-events-2`, working branch **`claude/marketing-system-tech-stack-uds0mp`**.
 - The repo also holds the "All in 1 Events" client site (`index.html`). The marketing system + portfolio page are Meridian Interface's own portfolio/product work.
-- **Brand:** slate-on-ivory. `#3E4C63`/`#5B6472` slate, `#4F6D8C` steel, `#3E7C86` teal, ivory `#F5F4EF`, ink `#23262B`. Fonts: Sora (headings) + Inter (body). Logo = "M" monogram (rendered as inline SVG; real PNG goes at `assets/meridian-logo.png` and the header/footer auto-swap to it).
+- **Brand:** see the **`meridian-brand` skill** (`.claude/skills/meridian-brand/`) — it is the source of truth for the logo, colours, type and lockup rules. Do not restate them from here. Site palette: `#0f172a` ink, `#f7f9fd` surface, `#2563eb` accent. Fonts: Hanken Grotesk (display) + Inter (body), self-hosted in the website repo.
+- **Logo:** Otis's real artwork, supplied Sep 1, lives in the skill and in the website at `public/brand/`. **Raster only — no vector master exists.**
 
 ## Deliverables (all committed to the branch)
 1. **`marketing-system.html`** — portfolio page: the tech-stack architecture in Meridian brand. Uses Tailwind CDN.
@@ -1019,3 +1055,54 @@ clears on approval.
 
 Artifact: `https://claude.ai/code/artifact/ccd9bd39-3876-4da5-8a40-e411219ad6b7`
 Source kept at `system/loop-simulator.artifact.html`.
+
+---
+
+## Sep 1 — the logo, the brand skill, the footer plate
+
+**What changed**
+
+- **`meridian-brand` skill** (`.claude/skills/meridian-brand/`) — new. Otis's
+  real logo files, brand tokens as CSS and JSON, the React component, an HTML
+  snippet, and `proof-sheet.mjs`, which composes the artwork over every ground
+  it has to survive. Installable to `~/.claude/skills/` with a tested installer
+  script (sent to Otis, not committed — it lives in chat).
+- **Website** (`claude/footer-studio-plate`, **unmerged**) — real logo in the
+  header, footer and modals; `BuiltBy.tsx`, the studio signature plate for the
+  bottom of every site the studio ships. Its kicker is a prop so a client site
+  says "this website built by" and Meridian's own says something else.
+- **`system/tools/build-site-preview.mjs`** — now sweeps the bundle for every
+  absolute image path and embeds it, instead of a hardcoded list of filenames.
+  It threw the brand logos away silently before that.
+- **Project Intake artifact** — now on letterhead, but **still the invented
+  mark**. First thing to fix tomorrow.
+
+**Bugs worth not rediscovering**
+
+- A `<style>` rule of `.masthead .mark` outspecifies `.mark--dark`, so both
+  light and dark marks paint at once. Watch specificity when toggling variants.
+- An SVG gradient inside a `display:none` element is a **dead paint server**:
+  hide one mark and the *visible* one further down the page renders as nothing.
+  Two files with one mark each, never a hidden twin.
+- A locator screenshot rounds a flex box's fractional width **up**, which turns
+  a 384px square into 387×384 and gets an app icon rejected. Clip to a rounded
+  box.
+- A `loading="lazy"` image reports `naturalWidth === 0` until it nears the
+  viewport. Assert *after* scrolling, or the check reports a working image as
+  broken.
+
+**Artifacts**
+
+- Site preview (real logo): `add7c0c8-b97e-427b-bbd0-7188e7d2e8d0`
+- The older "Meridian Interface Site" (`4ee1e978…`) still shows the invented
+  mark and can be deleted.
+- Artifact **wake subscriptions are refused in this environment** (403,
+  "subscribing requires a session credential"). Do not claim to be watching one.
+
+**Next**
+
+1. Merge `claude/footer-studio-plate` — the live site is still wrong until then.
+2. Put the real logo on the Project Intake letterhead and republish
+   (`fa92200c-73ff-43d2-8ca8-c184107fed7c`).
+3. Everything on the pre-existing list: Stripe key, Anthropic key, rotate
+   `OWNER_PASSCODE`, delete `VITE_OWNER_PASSCODE`, Unsplash hotlinks.
