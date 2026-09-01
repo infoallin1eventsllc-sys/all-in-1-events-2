@@ -42,6 +42,30 @@ const media = {
   '/video/earth-loop.mp4':    `data:video/mp4;base64,${readFileSync(join(dist, 'video', 'earth-loop.mp4')).toString('base64')}`,
 };
 
+// Unsplash photographs are hotlinked from the live site. The artifact viewer's
+// CSP allows no image host at all, so in the preview every one of them fails to
+// load and the page fills with broken-image boxes. That is noise that hides
+// real defects while someone is testing, so they are swapped for an on-brand
+// placeholder here — in the PREVIEW ONLY. The deployed site still points at
+// Unsplash, which is its own outstanding item: 13 hotlinks that work until
+// Unsplash changes a URL or rate-limits, and that leak visitor traffic.
+const PLACEHOLDER = "data:image/svg+xml;base64," + Buffer.from(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1200" y2="800" gradientUnits="userSpaceOnUse">
+<stop stop-color="#3E4C63"/><stop offset="1" stop-color="#5B6472"/></linearGradient></defs>
+<rect width="1200" height="800" fill="url(#g)"/>
+<text x="600" y="392" text-anchor="middle" font-family="'Helvetica Neue',Arial,sans-serif"
+ font-size="30" font-weight="700" fill="#FFFFFF" opacity="0.92">Photograph</text>
+<text x="600" y="432" text-anchor="middle" font-family="'Helvetica Neue',Arial,sans-serif"
+ font-size="21" fill="#FFFFFF" opacity="0.6">loads on the live site \u2014 blocked in this preview</text>
+</svg>`
+).toString("base64");
+
+const unsplashCount = (js.match(/https:\/\/images\.unsplash\.com\/[^"']*/g) || []).length;
+js = js.replace(/https:\/\/images\.unsplash\.com\/[^"']*/g, PLACEHOLDER);
+if (js.includes("images.unsplash.com")) throw new Error("an unsplash reference survived");
+console.log(`swapped ${unsplashCount} unsplash hotlink(s) for a placeholder`);
+
 if (/url\(\/(?!\/)/.test(css)) throw new Error('an absolute url() survived inlining');
 js = js.split('/images/hero-earth.jpg').join(heroUri);
 if (js.includes('/images/hero-earth.jpg')) throw new Error('hero reference survived inlining');
