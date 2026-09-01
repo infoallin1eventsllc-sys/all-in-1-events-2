@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>420 FRIENDLY — Terms</title>
+<link href="assets/tailwind.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link rel="icon" href="assets/favicon.ico" sizes="any"/>
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+<main class="pt-20 md:pt-[116px] max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+  <div id="policy-root"></div>
+</main>
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+<script src="assets/products.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/crm.js"></script>
+<script src="assets/policy.js"></script>
+<script>
+  renderChrome("SHOP ALL");
+  renderPolicyPage({
+    kicker: "TERMS",
+    title: "Terms of sale",
+    standfirst: "The rules an order runs under. Plain language on purpose.",
+    body:
+      h("Who you are buying from") +
+      p("Orders are with " + pv(POLICY.legalName, "LEGAL NAME") + ", trading as 420 Friendly.") +
+      h("What we sell") +
+      p("<strong>Clothing. Only clothing.</strong> 420 Friendly is an apparel brand. Nothing offered here is a consumable, " +
+        "and nothing here is an offer to supply cannabis or any related product.") +
+      h("When an order becomes an order") +
+      p("Adding to your bag reserves nothing. A sale is formed when we take payment and send confirmation. " +
+        "Until that point, stock can go to someone else — which on a small run genuinely happens.") +
+      h("If we cannot fulfil it") +
+      p("If a piece sells out between your payment and our packing, we refund in full and tell you the same day. " +
+        "We will not substitute a different size or colour without asking.") +
+      h("Prices") +
+      p("Prices are in US dollars and shown before you pay. If a price is listed wrongly through an obvious error, " +
+        "we will contact you before charging you rather than silently cancelling.") +
+      h("Returns") +
+      p("Set out on the <a href=\"returns.html\" class=\"text-secondary underline decoration-1 underline-offset-4 hover:text-tertiary transition-colors\">returns page</a>, " +
+        "which forms part of these terms. Limited drops are " + esc(POLICY.limitedDropRule) + ".") +
+      h("Your account and the list") +
+      p("Joining the drop list is not an account and carries no obligation either way. You can leave at any time.") +
+      h("Our designs") +
+      p("The artwork, logo and product photography are ours. Buying a piece buys you the piece, not the right to reproduce the print.") +
+      h("Limits") +
+      p("We are responsible for getting you the item you paid for, or your money back. We are not liable beyond the value of the order.") +
+      h("Governing law") +
+      p("These terms are governed by the law of " + pv(POLICY.jurisdiction, "JURISDICTION") + ".") +
+      h("Changes") +
+      p("If these terms change, the version that applies to your order is the one live when you placed it.")
+  });
+</script>
+</body>
+</html>

@@ -138,8 +138,11 @@
       syncFav();
       toast(nowFav ? "SAVED TO FAVORITES" : "REMOVED FROM FAVORITES");
     });
+    // Was a toast with one line of advice. A real page carries the actual
+    // measurements and is reachable from the footer and from search, which a
+    // toast never is.
     document.getElementById("size-guide").addEventListener("click", () => {
-      toast("SIZE GUIDE: TRUE TO SIZE — SIZE UP FOR EXTRA ROOM");
+      window.location.href = "sizing.html";
     });
   }
 

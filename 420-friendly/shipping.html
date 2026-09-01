@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>420 FRIENDLY — Shipping</title>
+<link href="assets/tailwind.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link rel="icon" href="assets/favicon.ico" sizes="any"/>
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+<main class="pt-20 md:pt-[116px] max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+  <div id="policy-root"></div>
+</main>
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+<script src="assets/products.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/policy.js"></script>
+<script>
+  renderChrome("SHOP ALL");
+  renderPolicyPage({
+    kicker: "SHIPPING",
+    title: "Getting it to you",
+    standfirst: "Everything ships from the US. Small runs mean we pack in batches, not continuously.",
+    body:
+      h("Cost") +
+      ul([
+        "Free on orders over " + money0(POLICY.freeShippingOver) + ".",
+        "Otherwise a flat " + money0(POLICY.flatShipping) + ", however many pieces are in the order."
+      ]) +
+      h("Timing") +
+      p("We dispatch within <strong>" + esc(POLICY.dispatchDays) + "</strong>, then it is <strong>" +
+        esc(POLICY.transitDays) + "</strong> in transit. Drop weeks run at the slower end of that — " +
+        "a limited run all goes out at once.") +
+      p("Pre-orders ship with the drop they belong to, not before. The drop date on the product page is the ship date.") +
+      h("Where we ship") +
+      p("Currently " + esc(POLICY.shipsTo) + " only. " + esc(POLICY.internationalNote)) +
+      h("Tracking") +
+      p("You get a tracking number by email when the label is made. If it has been longer than the window above and nothing has arrived, " +
+        "email " + pv(POLICY.contactEmail, "CONTACT EMAIL") + " and a person will look it up.") +
+      h("If it arrives damaged") +
+      p("Photograph it before doing anything else and email us within 7 days. Damage in transit is on us and we replace it — " +
+        "if the run is sold out, you get a refund rather than a wait.")
+  });
+</script>
+</body>
+</html>

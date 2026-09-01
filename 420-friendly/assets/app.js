@@ -356,7 +356,7 @@ function renderChrome(activeLabel) {
 
     footerMount.innerHTML =
       '<footer class="border-t border-outline-variant/50 mt-24 pt-14 pb-10 px-margin-mobile md:px-margin-desktop">' +
-      '<div class="max-w-container-max mx-auto grid grid-cols-2 md:grid-cols-4 gap-10">' +
+      '<div class="max-w-container-max mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-10">' +
       column("SHOP", [
         { href: "shop.html", label: "All Products" },
         { href: "shop.html?cat=HOODIES%20%26%20CREWS", label: "Hoodies & Crews" },
@@ -375,6 +375,13 @@ function renderChrome(activeLabel) {
         { href: "members.html", label: "Join the List" },
         { href: "cart.html", label: "Your Bag" }
       ]) +
+      column("HELP", [
+        { href: "shipping.html", label: "Shipping" },
+        { href: "returns.html", label: "Returns" },
+        { href: "sizing.html", label: "Size Guide" },
+        { href: "faq.html", label: "FAQ" },
+        { href: "contact.html", label: "Contact" }
+      ]) +
       // Full width on mobile: the lockup is a nowrap word beside an emblem and
       // does not fit a half column, which pushed the footer off-screen.
       '<div class="col-span-2 md:col-span-1"><div class="flex items-center gap-3">' +
@@ -384,8 +391,17 @@ function renderChrome(activeLabel) {
       "</div>" +
       '<div class="max-w-container-max mx-auto mt-12 pt-6 border-t border-outline-variant/30 flex flex-col md:flex-row justify-between gap-2">' +
       '<p class="font-label-caps text-label-caps text-outline">&copy; 2026 420 FRIENDLY. ALL RIGHTS RESERVED.</p>' +
-      '<p class="font-label-caps text-label-caps text-outline">FREE US SHIPPING OVER $100</p>' +
-      "</div></footer>";
+      '<div class="flex flex-wrap gap-x-5 gap-y-2">' +
+      [
+        { href: "privacy.html", label: "PRIVACY" },
+        { href: "terms.html", label: "TERMS" },
+        { href: "shipping.html", label: "SHIPPING" },
+        { href: "returns.html", label: "RETURNS" }
+      ].map((l) =>
+        '<a href="' + l.href + '" class="font-label-caps text-label-caps text-outline hover:text-secondary transition-colors">' +
+        l.label + "</a>"
+      ).join("") +
+      "</div></div></footer>";
   }
 
   updateCartBadges();

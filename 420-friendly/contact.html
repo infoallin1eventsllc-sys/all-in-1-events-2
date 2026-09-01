@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>420 FRIENDLY — Contact</title>
+<meta name="description" content="Get in touch with 420 Friendly. A person answers."/>
+<link href="assets/tailwind.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link rel="icon" href="assets/favicon.ico" sizes="any"/>
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+
+<main class="pt-20 md:pt-[116px] max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+  <section class="pt-12 md:pt-16 pb-8 max-w-3xl">
+    <p class="font-label-caps text-label-caps text-tertiary mb-4">CONTACT</p>
+    <h1 class="font-headline-xl-mobile text-headline-xl-mobile md:font-headline-xl md:text-headline-xl text-on-surface uppercase tracking-tighter">
+      Talk to a person
+    </h1>
+    <p class="font-body-lg text-body-lg text-on-surface-variant mt-5">
+      Small operation. Messages are read by someone, not routed into a queue.
+    </p>
+  </section>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-gutter max-w-4xl pb-16">
+    <section>
+      <form id="contact-form" class="flex flex-col gap-4">
+        <div>
+          <label class="font-label-caps text-label-caps text-on-surface-variant" for="c-name">NAME</label>
+          <input id="c-name" name="name" type="text" autocomplete="name" required
+            class="mt-2 w-full rounded-xl bg-surface border border-outline-variant focus:border-secondary focus:ring-0
+                   text-on-surface placeholder:text-outline font-body-md text-body-md px-4 py-3"/>
+        </div>
+        <div>
+          <label class="font-label-caps text-label-caps text-on-surface-variant" for="c-email">EMAIL</label>
+          <input id="c-email" name="email" type="email" autocomplete="email" required
+            class="mt-2 w-full rounded-xl bg-surface border border-outline-variant focus:border-secondary focus:ring-0
+                   text-on-surface placeholder:text-outline font-body-md text-body-md px-4 py-3"/>
+        </div>
+        <div>
+          <label class="font-label-caps text-label-caps text-on-surface-variant" for="c-order">ORDER NUMBER <span class="text-outline">(if you have one)</span></label>
+          <input id="c-order" name="order" type="text"
+            class="mt-2 w-full rounded-xl bg-surface border border-outline-variant focus:border-secondary focus:ring-0
+                   text-on-surface placeholder:text-outline font-body-md text-body-md px-4 py-3"/>
+        </div>
+        <div>
+          <label class="font-label-caps text-label-caps text-on-surface-variant" for="c-message">MESSAGE</label>
+          <textarea id="c-message" name="message" rows="5" required
+            class="mt-2 w-full rounded-xl bg-surface border border-outline-variant focus:border-secondary focus:ring-0
+                   text-on-surface placeholder:text-outline font-body-md text-body-md px-4 py-3"></textarea>
+        </div>
+
+        <!-- Honeypot. Real people never see it; bots fill everything. Named
+             like a plausible field so it is worth filling in, and the server
+             answers 200 either way so a bot has no signal to retry on. -->
+        <div class="hidden" aria-hidden="true">
+          <label for="company_website">Company website</label>
+          <input id="company_website" name="company_website" type="text" tabindex="-1" autocomplete="off"/>
+        </div>
+
+        <button id="c-submit" type="submit"
+          class="mt-2 rounded-full bg-primary text-on-primary py-4 px-8 font-label-caps text-label-caps
+                 hover:bg-inverse-surface transition-all duration-300">
+          SEND
+        </button>
+        <p id="c-status" class="hidden font-label-caps text-label-caps mt-1"></p>
+      </form>
+    </section>
+
+    <aside class="flex flex-col gap-6">
+      <div class="border border-outline-variant/50 rounded-2xl p-6">
+        <p class="font-label-caps text-label-caps text-tertiary mb-3">BEFORE YOU WRITE</p>
+        <p class="font-body-md text-body-md text-on-surface-variant">
+          Most questions are answered faster on these:
+        </p>
+        <div class="flex flex-col gap-2 mt-4">
+          <a href="shipping.html" class="font-body-md text-body-md text-on-surface hover:text-secondary transition-colors">Where is my order?</a>
+          <a href="returns.html" class="font-body-md text-body-md text-on-surface hover:text-secondary transition-colors">I need to return something</a>
+          <a href="sizing.html" class="font-body-md text-body-md text-on-surface hover:text-secondary transition-colors">What size am I?</a>
+          <a href="faq.html" class="font-body-md text-body-md text-on-surface hover:text-secondary transition-colors">Everything else</a>
+        </div>
+      </div>
+
+      <div id="contact-email-card" class="border border-outline-variant/50 rounded-2xl p-6"></div>
+
+      <div class="border border-outline-variant/40 rounded-2xl bg-surface-container-low/40 p-6">
+        <p class="font-label-caps text-label-caps text-on-surface-variant mb-3">ONE THING WE CANNOT HELP WITH</p>
+        <p class="font-body-md text-body-md text-on-surface-variant">
+          420 Friendly is a clothing brand. We do not sell cannabis and cannot point you to anyone who does.
+        </p>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+
+<script src="assets/products.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/crm.js"></script>
+<script src="assets/policy.js"></script>
+<script>
+  renderChrome("SHOP ALL");
+
+  // The email card is rendered rather than hard-coded so an unset address shows
+  // the same "not configured" marker as every other policy value, instead of
+  // a mailto: link to nowhere.
+  document.getElementById("contact-email-card").innerHTML =
+    '<p class="font-label-caps text-label-caps text-tertiary mb-3">EMAIL US DIRECTLY</p>' +
+    (POLICY.contactEmail
+      ? '<a href="mailto:' + esc(POLICY.contactEmail) + '" class="font-body-lg text-body-lg text-on-surface ' +
+        'hover:text-secondary transition-colors underline decoration-1 underline-offset-4">' +
+        esc(POLICY.contactEmail) + "</a>"
+      : policyMissing("CONTACT EMAIL")) +
+    '<p class="font-body-md text-body-md text-on-surface-variant mt-3">We aim to reply within one business day.</p>';
+
+  const form = document.getElementById("contact-form");
+  const statusEl = document.getElementById("c-status");
+  const submitBtn = document.getElementById("c-submit");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const name = document.getElementById("c-name").value.trim();
+    const email = document.getElementById("c-email").value.trim();
+    const order = document.getElementById("c-order").value.trim();
+    const body = document.getElementById("c-message").value.trim();
+    if (!name || !email || !body) return;
+
+    submitBtn.disabled = true;
+    const label = submitBtn.textContent;
+    submitBtn.textContent = "SENDING…";
+    statusEl.classList.add("hidden");
+
+    // Goes through the same lead pipeline as the drop-list signup, so a
+    // customer question lands in the CRM as a contact rather than in an inbox
+    // nobody is watching. The order number is folded into the message because
+    // that is the field a human actually needs to look it up.
+    const result = await submitLead({
+      name,
+      email,
+      message: (order ? "Order " + order + " — " : "") + body,
+      source: "420-friendly:contact",
+      company_website: document.getElementById("company_website").value
+    });
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = label;
+    statusEl.textContent = result.delivered
+      ? "THANKS — WE'VE GOT IT AND WILL REPLY BY EMAIL"
+      : result.message;
+    statusEl.className =
+      "font-label-caps text-label-caps mt-1 " +
+      (result.delivered ? "text-tertiary" : "text-secondary");
+
+    if (result.delivered) form.reset();
+  });
+</script>
+</body>
+</html>

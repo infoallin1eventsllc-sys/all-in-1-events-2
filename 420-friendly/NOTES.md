@@ -16,6 +16,13 @@ Deploy preview: https://deploy-preview-3--allin1-events.netlify.app/420-friendly
 | `cart.html` | Bag: line items, quantity, subtotal, free-shipping meter |
 | `drops.html` | Drop calendar with live countdown |
 | `media.html` | **Owner** — upload music/video; appears on the front page |
+| `shipping.html` | Shipping policy |
+| `returns.html` | Returns policy — the limited-drop rule lives here |
+| `sizing.html` | Size guide (the product-page button now opens this) |
+| `faq.html` | FAQ — the only new page with nothing unset |
+| `contact.html` | Contact form, posts through the same `lead` function as Members |
+| `privacy.html` | Privacy — written from what the code actually does |
+| `terms.html` | Terms of sale |
 | `playlist.html` | "The Sound" — music playlist (Spotify/Apple/YouTube) and video reel |
 | `members.html` | Customer drop-list signup (public) |
 | `portal.html` | **Owner** — hub linking transactions, photos and marketing |
@@ -175,6 +182,46 @@ rather than published, and hidden/deleted items stop serving. The browser
 suite covers the gate, upload progress, rename/hide/delete, and the front-page
 player. Neither can prove Blobs itself behaves on a real deploy — that needs
 one upload on the preview to confirm.
+
+## Store policy pages (`assets/policy.js`)
+
+A storefront was missing every page a customer looks for before buying:
+shipping, returns, sizing, FAQ, contact, privacy, terms. All seven now exist.
+
+**Every value lives once, in `assets/policy.js`.** Shipping figures were
+previously prose inside `product.html`; a customer reading one threshold on a
+product page and a different one on the shipping page is how a chargeback
+starts. Both now read from `POLICY`.
+
+### Unset values are visible, not guessed
+
+`POLICY` fields set to `null` render as a red **"NOT SET"** chip, and any page
+containing one shows a **"THIS PAGE IS NOT FINISHED"** banner at the top. That
+is deliberate: a wrong returns address or an invented company name on a live
+storefront is worse than an obviously incomplete one — one is a gap, the other
+is a false promise a customer can act on.
+
+Still unset (all in `assets/policy.js`):
+
+| Field | Why it matters |
+|---|---|
+| `legalName` | Terms are unenforceable without naming who the contract is with |
+| `contactEmail` | Referenced by shipping, returns, sizing, privacy, contact |
+| `returnsAddress` | Nobody can return anything |
+| `jurisdiction` | Which state's law governs |
+| `whoPaysReturn` | Decides whether the customer pays return postage |
+| `SIZE_CHART.rows` | Real garment measurements — cannot be invented, a wrong one causes a return that is our fault |
+
+### Written from fact, not template
+
+`privacy.html` describes what this code actually does — localStorage for
+cart/favourites (never sent), email to the Meridian CRM, cards straight to
+Stripe/PayPal, and **Google Fonts receiving an IP address on every page**,
+which most generated policies omit. It also states plainly that there is no
+analytics or ad tracker, because there currently is not.
+
+Shipping and returns copy was taken from what the product page already claimed,
+so the store does not now contradict itself.
 
 ## The playlist page (`playlist.html`)
 
