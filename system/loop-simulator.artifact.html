@@ -1,0 +1,715 @@
+<title>Meridian Loop Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+
+<style>
+  :root {
+    --bg:         #F5F4EF;
+    --surface:    #FFFFFF;
+    --surface-2:  #EDECE5;
+    --text:       #23262B;
+    --text-dim:   #5C6068;
+    --rule:       #DAD8CF;
+    --rule-soft:  #E7E5DC;
+    --accent:     #3E7C86;
+    --accent-ink: #2C5D66;
+    --accent-wash:#DCEAEC;
+    --warn:       #A8712A;
+    --warn-wash:  #F6EBDA;
+    --idle:       #9A9C99;
+    --on-accent:  #FFFFFF;
+    --on-accent-ink: #FFFFFF;
+    --shadow:     0 1px 2px rgba(35,38,43,.05), 0 10px 28px -14px rgba(35,38,43,.22);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:#16181C; --surface:#1D2025; --surface-2:#24282E;
+      --text:#ECEAE3; --text-dim:#9BA1AB; --rule:#333941; --rule-soft:#2A2F36;
+      --accent:#63B3BE; --accent-ink:#8FD0D9; --accent-wash:#1E3A3F;
+      --warn:#D9A05B; --warn-wash:#3A2E1C; --idle:#6B7178;
+      --on-accent:#0F2225; --on-accent-ink:#0F2225;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -14px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:#16181C; --surface:#1D2025; --surface-2:#24282E;
+    --text:#ECEAE3; --text-dim:#9BA1AB; --rule:#333941; --rule-soft:#2A2F36;
+    --accent:#63B3BE; --accent-ink:#8FD0D9; --accent-wash:#1E3A3F;
+    --warn:#D9A05B; --warn-wash:#3A2E1C; --idle:#6B7178;
+    --on-accent:#0F2225; --on-accent-ink:#0F2225;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -14px rgba(0,0,0,.7);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    margin: 0; line-height: 1.55; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 44px 20px 80px;
+          display: flex; flex-direction: column; gap: 28px; }
+
+  .eyebrow { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 700;
+             letter-spacing: .16em; text-transform: uppercase; color: var(--accent-ink); }
+  h1 { font-family: Sora, ui-sans-serif, system-ui, sans-serif; font-weight: 800; font-size: clamp(1.9rem, 4vw, 2.7rem);
+       line-height: 1.06; letter-spacing: -.025em; margin: 8px 0 0; text-wrap: balance; }
+  .standfirst { color: var(--text-dim); max-width: 64ch; margin: 12px 0 0; font-size: 1.03rem; }
+
+  /* ---- control bar ---- */
+  .console {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 12px;
+    padding: 12px 14px; box-shadow: var(--shadow);
+  }
+  button {
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: .84rem; font-weight: 600;
+    background: var(--surface-2); color: var(--text);
+    border: 1px solid var(--rule); border-radius: 8px;
+    padding: 8px 14px; cursor: pointer; transition: background .15s, border-color .15s, transform .06s;
+  }
+  button:hover:not(:disabled) { background: var(--accent-wash); border-color: var(--accent); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: .42; cursor: not-allowed; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* The accent is dark enough in light theme and light enough in dark theme that
+     a fixed near-white/near-black label keeps contrast either way. */
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  button.primary:hover:not(:disabled) { background: var(--accent-ink); border-color: var(--accent-ink); color: var(--on-accent-ink); }
+  button.gate { border-color: var(--warn); background: var(--warn-wash); color: var(--warn); }
+  button.gate:disabled { border-color: var(--rule); background: var(--surface-2); color: var(--text); }
+
+  .clock {
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums;
+    font-size: 1.05rem; font-weight: 700; letter-spacing: .02em;
+    padding: 6px 12px; border-radius: 8px; background: var(--surface-2);
+    border: 1px solid var(--rule);
+  }
+  .clock .day { font-size: .72rem; font-weight: 500; color: var(--text-dim); margin-left: 6px; }
+  .spacer { flex: 1 1 auto; }
+  .speeds { display: flex; gap: 4px; }
+  .speeds button { padding: 6px 10px; font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .76rem; }
+  .speeds button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ---- stage ---- */
+  .stage { background: var(--surface); border: 1px solid var(--rule); border-radius: 14px;
+           padding: 20px 18px 10px; box-shadow: var(--shadow); overflow-x: auto; }
+  svg.loop { display: block; width: 100%; min-width: 760px; height: auto; }
+
+  .node-box { fill: var(--surface); stroke: currentColor; stroke-width: 1.5; transition: fill .25s, stroke .25s; }
+  .node-box.active { fill: var(--accent-wash); stroke: var(--accent); stroke-width: 2.5; }
+  .node-box.waiting { fill: var(--warn-wash); stroke: var(--warn); stroke-width: 2.5; }
+  .n-title { font-family: Sora, ui-sans-serif, system-ui, sans-serif; font-size: 14px; font-weight: 600; fill: currentColor; }
+  .n-sub   { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; fill: currentColor; opacity: .6; }
+  .n-count { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 15px; font-weight: 700;
+             fill: currentColor; font-variant-numeric: tabular-nums; }
+  .a-label { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; fill: currentColor; opacity: .7; }
+  .accent-t { fill: var(--accent-ink); opacity: 1; }
+  .warn-t   { fill: var(--warn); opacity: 1; }
+  .guide { fill: none; stroke: currentColor; stroke-width: 1.5; opacity: .55; }
+  .guide.ret { stroke: var(--accent); stroke-width: 2.5; opacity: .85; }
+  .guide.feed { stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 4 3; opacity: .8; }
+  .guide.watch { stroke: currentColor; stroke-width: 1.25; stroke-dasharray: 2 4; opacity: .45; }
+  .n-file { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px;
+            fill: currentColor; opacity: .72; }
+  .n-file.lit { fill: var(--accent-ink); opacity: 1; font-weight: 700; }
+  .node-box.alert { fill: var(--warn-wash); stroke: var(--warn); stroke-width: 2.5; }
+
+  /* ---- readouts ---- */
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+  .panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px;
+           padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+  .panel h2 { font-family: Sora, ui-sans-serif, system-ui, sans-serif; font-size: .82rem; font-weight: 600; margin: 0;
+              letter-spacing: .01em; }
+  .panel .hint { font-size: .78rem; color: var(--text-dim); margin: 0; }
+  .panel.brief { border-left: 3px solid var(--accent); }
+
+  .stat-row { display: flex; justify-content: space-between; align-items: baseline;
+              font-size: .84rem; padding: 3px 0; }
+  .stat-row .k { color: var(--text-dim); }
+  .stat-row .v { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 700;
+                 font-variant-numeric: tabular-nums; font-size: .95rem; }
+  .stat-row .v.warn { color: var(--warn); }
+  .stat-row .v.good { color: var(--accent-ink); }
+
+  #guidance { font-size: .84rem; margin: 0; }
+  #guidance b { color: var(--accent-ink); }
+  .stamp { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; color: var(--text-dim); }
+
+  #log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px;
+         max-height: 190px; overflow-y: auto; font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+  #log li { display: flex; gap: 8px; color: var(--text-dim); }
+  #log li .t { flex: 0 0 42px; opacity: .7; font-variant-numeric: tabular-nums; }
+  #log li.hi { color: var(--accent-ink); }
+  #log li.gate { color: var(--warn); }
+
+  .grid.two { grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); }
+  .panel.money { border-left: 3px solid var(--warn); }
+
+  .steps { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 0; }
+  .steps li { display: grid; grid-template-columns: 20px 1fr; gap: 10px; align-items: start;
+              font-size: .84rem; padding: 7px 0; position: relative; opacity: .45; transition: opacity .2s; }
+  .steps li em { display: block; font-style: normal; font-size: .74rem; color: var(--text-dim); }
+  .steps li .dot { width: 11px; height: 11px; border-radius: 50%; margin-top: 5px;
+                   border: 1.5px solid var(--rule); background: var(--surface); }
+  /* The connecting rail is drawn on the item, not between them, so it cannot
+     drift out of alignment when a line wraps. */
+  .steps li:not(:last-child)::before {
+    content: ""; position: absolute; left: 5px; top: 22px; bottom: -4px;
+    width: 1px; background: var(--rule);
+  }
+  .steps li.on { opacity: 1; }
+  .steps li.on .dot { border-color: var(--warn); background: var(--warn); }
+  .steps li.done .dot { border-color: var(--accent); background: var(--accent); }
+  .steps li.done { opacity: .85; }
+
+  .cover { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 7px;
+           font-size: .82rem; }
+  .cover li { display: grid; grid-template-columns: 74px 1fr; gap: 10px; align-items: baseline; }
+  .cover b { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px;
+             font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+             padding: 2px 0; text-align: center; border-radius: 3px; }
+  .cover b.yes   { color: var(--accent-ink); background: var(--accent-wash); }
+  .cover b.part  { color: var(--warn);       background: var(--warn-wash); }
+  .cover b.no    { color: var(--text-dim);   background: var(--surface-2); }
+  .cover b.never { color: var(--text-dim);   background: var(--surface-2); }
+
+  .note { font-size: .82rem; color: var(--text-dim); border-top: 1px solid var(--rule);
+          padding-top: 16px; max-width: 76ch; }
+  .note strong { color: var(--text); font-weight: 600; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition-duration: .01ms !important; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Meridian Interface · Live Architecture</div>
+    <h1>Watch the loop run.</h1>
+    <p class="standfirst">
+      The clock runs the real schedule. Press play and the system plans, writes, and waits —
+      then stops dead at the approval gate, because in draft mode nothing reaches an audience
+      without a person. That pause is the mechanism, not a bug. Below the loop: the six rows
+      every agent reads before it writes, the watchdog that notices when work stops moving,
+      and the separate lane that takes money.
+    </p>
+  </header>
+
+  <div class="console" role="group" aria-label="Simulation controls">
+    <button id="play" class="primary" type="button">▶ Play</button>
+    <div class="speeds" role="group" aria-label="Speed">
+      <button type="button" data-speed="1"  aria-pressed="false">1×</button>
+      <button type="button" data-speed="6"  aria-pressed="true">6×</button>
+      <button type="button" data-speed="30" aria-pressed="false">30×</button>
+    </div>
+    <div class="clock"><span id="clock">12:24</span><span class="day" id="day">day 1</span></div>
+    <div class="spacer"></div>
+    <button id="runnow" type="button">Run analyze now</button>
+    <button id="approve" class="gate" type="button" disabled>Approve 0 drafts</button>
+    <button id="lead" type="button">+ A lead arrives</button>
+    <button id="invoice" type="button">Send a payment link</button>
+    <button id="skip" type="button">Skip a week</button>
+    <button id="reset" type="button">Reset</button>
+  </div>
+
+  <div class="stage">
+    <svg class="loop" viewBox="0 0 1000 520" role="img"
+         aria-label="Animated diagram of the marketing loop: analyze measures and writes to the shared context, the orchestrator plans from it, the runner writes drafts, a person approves, channels publish, and results return to analyze.">
+      <defs>
+        <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+        </marker>
+        <marker id="at" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+
+      <!-- shared context: the six rows every agent reads before it writes -->
+      <rect id="box-ctx" class="node-box" x="310" y="20" width="380" height="128" rx="10"/>
+      <text class="n-title accent-t" x="500" y="42" text-anchor="middle">Shared context</text>
+      <text class="n-sub" x="500" y="58" text-anchor="middle">six rows in settings, editable without a redeploy</text>
+
+      <text class="n-file" x="336" y="80">business_profile</text>
+      <text class="n-file" x="336" y="96">icp_profiles</text>
+      <text class="n-file" x="336" y="112">services</text>
+      <text class="n-file" x="516" y="80">proof_points</text>
+      <text class="n-file" x="516" y="96">content_rules</text>
+      <text id="f-perf" class="n-file" x="516" y="112">performance</text>
+
+      <text id="ctx-state" class="n-sub accent-t" x="500" y="136" text-anchor="middle">awaiting first measurement</text>
+
+      <!-- feeds -->
+      <path id="p-m-ctx"   class="guide feed" d="M 110 212 L 110 178 L 326 178 L 326 148" marker-end="url(#at)"/>
+      <path id="p-ctx-p"   class="guide feed" d="M 400 148 L 400 178 L 302 178 L 302 208" marker-end="url(#at)"/>
+      <path id="p-ctx-w"   class="guide feed" d="M 600 148 L 600 178 L 494 178 L 494 208" marker-end="url(#at)"/>
+      <text class="a-label accent-t" x="196" y="171">writes results</text>
+      <text class="a-label accent-t" x="342" y="171">reads</text>
+      <text class="a-label accent-t" x="542" y="171">reads</text>
+
+      <!-- stages -->
+      <rect id="box-measure" class="node-box" x="30"  y="210" width="160" height="90" rx="10"/>
+      <rect id="box-plan"    class="node-box" x="222" y="210" width="160" height="90" rx="10"/>
+      <rect id="box-write"   class="node-box" x="414" y="210" width="160" height="90" rx="10"/>
+      <rect id="box-approve" class="node-box" x="606" y="210" width="160" height="90" rx="10"/>
+      <rect id="box-publish" class="node-box" x="798" y="210" width="172" height="90" rx="10"/>
+
+      <text class="n-title" x="110" y="238" text-anchor="middle">Measure</text>
+      <text class="n-sub"   x="110" y="255" text-anchor="middle">analyze · 12:30</text>
+      <text id="c-measure" class="n-count" x="110" y="285" text-anchor="middle">—</text>
+
+      <text class="n-title" x="302" y="238" text-anchor="middle">Plan</text>
+      <text class="n-sub"   x="302" y="255" text-anchor="middle">orchestrator · 13:00</text>
+      <text id="c-plan" class="n-count" x="302" y="285" text-anchor="middle">0 queued</text>
+
+      <text class="n-title" x="494" y="238" text-anchor="middle">Write</text>
+      <text class="n-sub"   x="494" y="255" text-anchor="middle">runner · every 2 min</text>
+      <text id="c-write" class="n-count" x="494" y="285" text-anchor="middle">0 written</text>
+
+      <text class="n-title" x="686" y="238" text-anchor="middle">Approve</text>
+      <text class="n-sub"   x="686" y="255" text-anchor="middle">a person · no timer</text>
+      <text id="c-approve" class="n-count" x="686" y="285" text-anchor="middle">0 waiting</text>
+
+      <text class="n-title" x="884" y="238" text-anchor="middle">Publish</text>
+      <text class="n-sub"   x="884" y="255" text-anchor="middle">channel adapters</text>
+      <text id="c-publish" class="n-count" x="884" y="285" text-anchor="middle">0 published</text>
+
+      <!-- forward edges -->
+      <path id="p-m-p" class="guide" d="M 190 255 L 216 255" marker-end="url(#a)"/>
+      <path id="p-p-w" class="guide" d="M 382 255 L 408 255" marker-end="url(#a)"/>
+      <path id="p-w-a" class="guide" d="M 574 255 L 600 255" marker-end="url(#a)"/>
+      <path id="p-a-pub" class="guide" d="M 766 255 L 792 255" marker-end="url(#a)"/>
+
+      <!-- return edge -->
+      <path id="p-return" class="guide ret" d="M 884 300 C 884 408, 110 408, 110 306" marker-end="url(#at)"/>
+      <rect x="378" y="382" width="244" height="24" rx="12" fill="var(--surface)"/>
+      <text class="a-label accent-t" x="500" y="399" text-anchor="middle">outcomes become the next brief</text>
+
+      <!-- intake -->
+      <rect id="box-intake" class="node-box" x="30" y="442" width="200" height="52" rx="9"/>
+      <text class="n-title" x="130" y="464" text-anchor="middle">Leads arrive</text>
+      <text id="c-leads" class="n-sub" x="130" y="481" text-anchor="middle">website → intake → CRM</text>
+      <path id="p-intake" class="guide" d="M 130 442 L 130 420 L 60 420 L 60 306" marker-end="url(#a)"/>
+
+      <!-- the watchdog. It does not move work along; it notices when work has
+           stopped moving, which is the failure that hides all the others. -->
+      <rect id="box-health" class="node-box" x="770" y="442" width="200" height="52" rx="9"/>
+      <text class="n-title" x="870" y="464" text-anchor="middle">System Health</text>
+      <text id="c-health" class="n-sub" x="870" y="481" text-anchor="middle">every 15 min · all clear</text>
+      <path id="p-watch" class="guide watch" d="M 800 442 L 740 442 L 740 306" marker-end="url(#a)"/>
+      <text class="a-label" x="748" y="436">watches</text>
+
+      <g id="packets"></g>
+    </svg>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>Live counters</h2>
+      <div class="stat-row"><span class="k">Drafts written</span><span class="v" id="s-written">0</span></div>
+      <div class="stat-row"><span class="k">Waiting on you</span><span class="v" id="s-waiting">0</span></div>
+      <div class="stat-row"><span class="k">Published</span><span class="v" id="s-published">0</span></div>
+      <div class="stat-row"><span class="k">Leads attributed</span><span class="v" id="s-leads">0</span></div>
+      <div class="stat-row"><span class="k">Cycles run</span><span class="v" id="s-cycles">0</span></div>
+    </div>
+
+    <div class="panel brief">
+      <h2>What the next plan will be told</h2>
+      <p id="guidance">Nothing measured yet. Press play — <b>analyze</b> runs at 12:30 and writes the first brief.</p>
+      <p class="stamp" id="stamp">settings.performance · never written</p>
+    </div>
+
+    <div class="panel">
+      <h2>Run log</h2>
+      <ul id="log" aria-live="polite"></ul>
+    </div>
+  </div>
+
+  <div class="grid two">
+
+    <div class="panel money">
+      <h2>The money lane</h2>
+      <p class="hint">
+        Separate from the content loop and driven by you, not the clock. An invoice becomes a
+        hosted checkout; the client pays on Stripe's page; the invoice flips to Paid only when a
+        signed message says so.
+      </p>
+      <ol id="money-steps" class="steps">
+        <li data-step="0"><span class="dot"></span><span>Invoice issued <em>owner portal</em></span></li>
+        <li data-step="1"><span class="dot"></span><span>Payment link created <em>hosted checkout · card, Apple&nbsp;Pay, Google&nbsp;Pay, bank transfer</em></span></li>
+        <li data-step="2"><span class="dot"></span><span>Client pays <em>on Stripe's domain — no card data touches this system</em></span></li>
+        <li data-step="3"><span class="dot"></span><span>Marked paid <em>signed webhook only, never the redirect</em></span></li>
+      </ol>
+      <p class="stamp" id="money-stamp">no payment key configured · nothing can be charged</p>
+    </div>
+
+    <div class="panel">
+      <h2>What this loop does and does not cover</h2>
+      <p class="hint">
+        Measured against the eight departments a full agency stack claims. Being able to name the
+        gaps is worth more than pretending there are none.
+      </p>
+      <ul class="cover">
+        <li><b class="yes">Runs</b> Lead capture, follow-up drafting, CRM</li>
+        <li><b class="yes">Runs</b> Content writing from the shared context</li>
+        <li><b class="yes">Runs</b> Measurement, and refusing to over-claim on thin data</li>
+        <li><b class="yes">Runs</b> Self-monitoring and alerting</li>
+        <li><b class="part">Partial</b> Creative — branded cards only, no photography or video</li>
+        <li><b class="part">Partial</b> Publishing — adapters built, no channel connected yet</li>
+        <li><b class="no">Absent</b> Search visibility, reviews and reputation</li>
+        <li><b class="never">By choice</b> Ad platforms. Publishing costs nothing; ad APIs spend your budget, and that deserves its own decision</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <p class="note">
+    <strong>This is a simulation of the mechanism, not a forecast.</strong> The schedule, the
+    approval gate, and the thresholds are the real ones — <code>analyze</code> refuses to rank
+    channels under 10 attributed leads, and reports <code>leads_per_post</code> as absent rather
+    than zero when nothing has been published. Lead arrivals are yours to trigger, because
+    predicting them would be the one dishonest thing this page could do.
+  </p>
+
+  <p class="note">
+    <strong>The alert threshold is the real one, so it is slow.</strong> A backlog is only raised
+    at five or more drafts whose oldest has waited a week — five on one morning is a busy Tuesday,
+    not an incident, and an alert that fires on day one is one nobody reads by day three. That
+    week takes minutes to watch at any speed here, which is why <em>Skip a week</em> exists:
+    the rule stays real and the clock becomes reachable. Lowering the threshold to make the
+    demonstration livelier would misrepresent the one number that decides whether you get
+    interrupted.
+  </p>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const $ = (id) => document.getElementById(id);
+  const svgNS = "http://www.w3.org/2000/svg";
+
+  /* ---------------- simulation state ---------------- */
+  const START_MIN = 12 * 60 + 24;         // 12:24, just before the first analyze
+  let S;
+
+  function fresh() {
+    return {
+      min: START_MIN, day: 1,
+      queued: 0, written: 0, waiting: 0, published: 0, leads: 0, cycles: 0,
+      measured: false, lastAnalyze: null,
+      guidance: null,
+      running: false,
+      oldestWaitDay: null,   // when the current backlog started piling up
+      alert: null,           // the one open alert, or null
+      money: -1,             // -1 idle, else index into the payment steps
+    };
+  }
+
+  /* ---------------- packet animation ---------------- */
+  const layer = $("packets");
+  const live = [];
+
+  function send(pathId, opts) {
+    const path = $(pathId);
+    if (!path) return;
+    const colour = opts && opts.accent ? "var(--accent)" : "currentColor";
+    const dur = reduce ? 1 : (opts && opts.dur) || 900;
+    const len = path.getTotalLength();
+    const dot = document.createElementNS(svgNS, "circle");
+    dot.setAttribute("r", opts && opts.big ? 6 : 4.5);
+    dot.setAttribute("fill", colour);
+    layer.appendChild(dot);
+    live.push({ el: dot, path, len, t0: performance.now(), dur });
+  }
+
+  function tickPackets(now) {
+    for (let i = live.length - 1; i >= 0; i--) {
+      const p = live[i];
+      const k = Math.min(1, (now - p.t0) / p.dur);
+      const pt = p.path.getPointAtLength(k * p.len);
+      p.el.setAttribute("cx", pt.x);
+      p.el.setAttribute("cy", pt.y);
+      if (k >= 1) { p.el.remove(); live.splice(i, 1); }
+    }
+    requestAnimationFrame(tickPackets);
+  }
+  requestAnimationFrame(tickPackets);
+
+  /* ---------------- node highlighting ---------------- */
+  function flash(boxId, ms) {
+    const b = $(boxId);
+    if (!b) return;
+    b.classList.add("active");
+    setTimeout(() => b.classList.remove("active"), reduce ? 200 : (ms || 1200));
+  }
+
+  /* ---------------- log ---------------- */
+  function log(text, cls) {
+    const ul = $("log");
+    const li = document.createElement("li");
+    if (cls) li.className = cls;
+    const t = document.createElement("span");
+    t.className = "t";
+    t.textContent = fmt(S.min);
+    const m = document.createElement("span");
+    m.textContent = text;
+    li.append(t, m);
+    ul.prepend(li);
+    while (ul.children.length > 40) ul.lastChild.remove();
+  }
+
+  const fmt = (m) => String(Math.floor(m / 60) % 24).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+
+  /* ---------------- the analyzer's real gating ---------------- */
+  function analyze() {
+    S.measured = true;
+    S.cycles++;
+    flash("box-measure", 1400);
+    send("p-m-ctx", { accent: true, big: true });
+
+    let g, stamp;
+    if (S.published === 0) {
+      g = "<b>Do not plan more content volume.</b> Nothing written has reached an audience yet, " +
+          "so more drafts cannot teach us anything — the bottleneck is approval and publishing, not writing.";
+      stamp = "sufficient_data: false · leads_per_post: null";
+    } else if (S.leads < 10) {
+      g = "<b>Keep publishing steadily</b> on the channels already in use. " + S.published +
+          " published and " + S.leads + " attributed lead" + (S.leads === 1 ? "" : "s") +
+          " — under the 10 needed before one channel can be called better than another.";
+      stamp = "sufficient_data: false · " + S.published + " published, " + S.leads + " leads";
+    } else {
+      const rate = (S.leads / S.published).toFixed(2);
+      g = "<b>Enough evidence to steer.</b> " + rate + " leads per published post across " +
+          S.published + " posts. Weight the next cycle toward what is producing.";
+      stamp = "sufficient_data: true · leads_per_post: " + rate;
+    }
+    S.guidance = g;
+    $("guidance").innerHTML = g;
+    $("stamp").textContent = "settings.performance · written " + fmt(S.min);
+    $("ctx-state").textContent = S.published === 0 ? "bottleneck: approval" :
+                                 S.leads < 10 ? "gathering evidence" : "steering on evidence";
+    flash("box-ctx", 1600);
+    log("analyze → wrote the brief", "hi");
+  }
+
+  function plan() {
+    if (!S.measured) return;
+    flash("box-plan", 1400);
+    send("p-ctx-p", { accent: true });
+    setTimeout(() => { if (S.running || reduce) send("p-m-p"); }, reduce ? 0 : 400);
+    const n = S.published === 0 && S.waiting >= 4 ? 1 : 3;   // it listens to its own guidance
+    S.queued += n;
+    log("orchestrator → planned " + n + " task" + (n === 1 ? "" : "s"), "hi");
+    if (n === 1) log("   (held back — the brief said stop writing)", "gate");
+    render();
+  }
+
+  function runner() {
+    if (S.queued <= 0) return;
+    S.queued--;
+    S.written++;
+    if (S.waiting === 0) S.oldestWaitDay = S.day;   // a fresh backlog starts now
+    S.waiting++;
+    flash("box-write", 700);
+    send("p-ctx-w", { accent: true, dur: 600 });
+    send("p-p-w", { dur: 500 });
+    setTimeout(() => { send("p-w-a", { dur: 500 }); flash("box-approve", 600); }, reduce ? 0 : 500);
+    log("runner → drafted 1, waiting for approval");
+    render();
+  }
+
+
+  /* ---------------- the watchdog ----------------
+     The real check_system_health() raises approval_backlog at five or more
+     drafts whose oldest has waited a week. Both halves matter: five drafts on
+     the same morning is a busy Tuesday, not an incident. An alert list that
+     fires on day one is one nobody reads by day three. */
+  const BACKLOG_MIN = 5, BACKLOG_DAYS = 7;
+
+  function healthcheck() {
+    const days = S.oldestWaitDay === null ? 0 : S.day - S.oldestWaitDay;
+    const shouldRaise = S.waiting >= BACKLOG_MIN && days >= BACKLOG_DAYS;
+
+    if (shouldRaise && !S.alert) {
+      S.alert = "approval_backlog";
+      log("health → raised: " + S.waiting + " drafts waiting " + days + " days", "gate");
+    } else if (!shouldRaise && S.alert) {
+      S.alert = null;
+      log("health → cleared: approval_backlog", "hi");
+    }
+    renderHealth();
+  }
+
+  function renderHealth() {
+    const box = $("box-health"), label = $("c-health");
+    box.classList.toggle("alert", !!S.alert);
+    label.textContent = S.alert
+      ? "1 open alert · drafts waiting"
+      : "every 15 min · all clear";
+  }
+
+  /* ---------------- the money lane ----------------
+     Deliberately not on the clock. Nothing here happens because time passed;
+     it happens because someone did something. */
+  const MONEY_LABELS = [
+    "invoice issued",
+    "payment link created",
+    "client paid on Stripe's page",
+    "marked paid by signed webhook",
+  ];
+
+  function advanceMoney() {
+    if (S.money >= MONEY_LABELS.length - 1) { S.money = -1; renderMoney(); return; }
+    S.money++;
+    log("payments → " + MONEY_LABELS[S.money], S.money === 3 ? "hi" : null);
+    renderMoney();
+  }
+
+  function renderMoney() {
+    document.querySelectorAll("#money-steps li").forEach((li) => {
+      const i = Number(li.dataset.step);
+      li.classList.toggle("on", i === S.money);
+      li.classList.toggle("done", S.money >= 0 && i < S.money);
+    });
+    const b = $("invoice");
+    b.textContent = S.money < 0 ? "Send a payment link"
+      : S.money >= MONEY_LABELS.length - 1 ? "Start another"
+      : "Next step";
+    $("money-stamp").textContent = S.money === 3
+      ? "payments.status: paid · the redirect was never trusted"
+      : "no payment key configured \u00b7 nothing can be charged";
+  }
+
+
+  /* The backlog alert needs five drafts that have waited a week. At any speed
+     this page offers, a week is minutes of watching — so the rule stays real
+     and the clock becomes reachable instead. Falsifying the threshold to make
+     the demo livelier would misrepresent the one number that decides whether
+     the owner gets interrupted. */
+  function skipWeek() {
+    S.day += 7;
+    log("\u2014 a week passes \u2014");
+    healthcheck();
+    render();
+  }
+
+  /* ---------------- human actions ---------------- */
+  function approve() {
+    if (S.waiting <= 0) return;
+    const n = S.waiting;
+    S.waiting = 0;
+    S.oldestWaitDay = null;
+    S.published += n;
+    flash("box-publish", 1400);
+    for (let i = 0; i < Math.min(n, 5); i++) {
+      setTimeout(() => send("p-a-pub", { accent: true }), reduce ? 0 : i * 130);
+    }
+    log("you approved " + n + " → published", "hi");
+    setTimeout(() => { if (!reduce) send("p-return", { accent: true, big: true, dur: 1800 }); }, 600);
+    render();
+  }
+
+  function newLead() {
+    S.leads++;
+    flash("box-intake", 900);
+    send("p-intake", { dur: 700 });
+    log("a lead arrived → CRM");
+    render();
+  }
+
+  /* ---------------- render ---------------- */
+  function render() {
+    $("clock").textContent = fmt(S.min);
+    $("day").textContent = "day " + S.day;
+    $("s-written").textContent = S.written;
+    $("s-published").textContent = S.published;
+    $("s-leads").textContent = S.leads;
+    $("s-cycles").textContent = S.cycles;
+
+    const w = $("s-waiting");
+    w.textContent = S.waiting;
+    w.className = "v" + (S.waiting > 0 ? " warn" : "");
+    $("s-published").className = "v" + (S.published > 0 ? " good" : "");
+
+    $("c-plan").textContent = S.queued + " queued";
+    $("c-write").textContent = S.written + " written";
+    $("c-approve").textContent = S.waiting + " waiting";
+    $("c-publish").textContent = S.published + " published";
+    $("c-measure").textContent = S.measured ? "day " + S.day : "—";
+    $("c-leads").textContent = S.leads + " lead" + (S.leads === 1 ? "" : "s") + " in CRM";
+
+    const box = $("box-approve");
+    box.classList.toggle("waiting", S.waiting > 0);
+
+    const btn = $("approve");
+    btn.disabled = S.waiting === 0;
+    btn.textContent = S.waiting === 0 ? "Approve 0 drafts"
+      : "Approve " + S.waiting + " draft" + (S.waiting === 1 ? "" : "s");
+  }
+
+  /* ---------------- clock ---------------- */
+  let speed = 6, timer = null;
+  const MS_PER_SIM_MIN = 220;
+
+  function step() {
+    S.min++;
+    if (S.min >= 24 * 60) { S.min = 0; S.day++; }
+    const hm = S.min % (24 * 60);
+    if (hm === 12 * 60 + 30) analyze();
+    if (hm === 13 * 60) plan();
+    if (S.min % 2 === 0) runner();
+    if (S.min % 15 === 0) healthcheck();
+    render();
+  }
+
+  function setRunning(on) {
+    S.running = on;
+    $("play").textContent = on ? "❚❚ Pause" : "▶ Play";
+    if (timer) { clearInterval(timer); timer = null; }
+    if (on) timer = setInterval(step, MS_PER_SIM_MIN / speed * 6);
+  }
+
+  /* ---------------- wiring ---------------- */
+  $("play").addEventListener("click", () => setRunning(!S.running));
+  $("approve").addEventListener("click", approve);
+  $("lead").addEventListener("click", newLead);
+  $("invoice").addEventListener("click", advanceMoney);
+  $("skip").addEventListener("click", skipWeek);
+  $("runnow").addEventListener("click", () => {
+    // The deployed function accepts a POST at any time; the 12:30 cron is a
+    // convenience, not a constraint. Planning follows so the effect is visible
+    // without waiting a simulated day for 13:00 to come round.
+    analyze();
+    setTimeout(plan, reduce ? 0 : 1100);
+  });
+  $("reset").addEventListener("click", () => {
+    setRunning(false);
+    S = fresh();
+    $("log").innerHTML = "";
+    $("guidance").innerHTML = "Nothing measured yet. Press play — <b>analyze</b> runs at 12:30 and writes the first brief.";
+    $("stamp").textContent = "settings.performance · never written";
+    $("ctx-state").textContent = "awaiting first measurement";
+    renderHealth();
+    renderMoney();
+    render();
+  });
+
+  document.querySelectorAll(".speeds button").forEach((b) => {
+    b.addEventListener("click", () => {
+      speed = Number(b.dataset.speed);
+      document.querySelectorAll(".speeds button").forEach((o) =>
+        o.setAttribute("aria-pressed", String(o === b)));
+      if (S.running) setRunning(true);
+    });
+  });
+
+  S = fresh();
+  renderHealth();
+  renderMoney();
+  render();
+})();
+</script>

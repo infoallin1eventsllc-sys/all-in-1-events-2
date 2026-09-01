@@ -970,3 +970,52 @@ browser only — this session cannot see them, so ask rather than assume.
 **The two items that unblock everything**, both one paste each and neither
 needing the LLC: `STRIPE_SECRET_KEY` (test mode) and `ANTHROPIC_API_KEY`, both
 as Supabase Edge Function secrets.
+
+
+---
+
+## Sep 1 — loop simulator updated from a second competitor video
+
+Otis uploaded a second Structure Webworks video (1:37, vertical): *"62 AI agents
+run an entire social media team"* — 20 modules, 8 departments, a numbered
+pipeline (01 SIGNALS, 03 ORCHESTRATOR, 04 KNOWLEDGE LAYER + ACCESS, 05
+DEPARTMENTS, 06 ENGAGE), and a "Brand OS file system" of markdown files
+(/brand-brain, /signals-seo, /content, /creative, /social, /reputation,
+/conversation, /reporting).
+
+Processed by extracting frames with the bundled ffmpeg-static and tiling them
+into 4x4 contact sheets — three images cover a 97-second video.
+
+**Used as a checklist, not a template.** Their claims were read for what
+Meridian genuinely has an answer to, and the simulator updated accordingly:
+
+- **Shared context opened up.** It was one opaque box; it is now the six real
+  `settings` rows (`business_profile`, `icp_profiles`, `services`,
+  `proof_points`, `content_rules`, `performance`), and `performance` lights up
+  when analyze writes it. Meridian's equivalent of their "brand brain" already
+  existed — it just was not visible on the page.
+- **System Health watchdog added**, running the genuine rule from
+  `check_system_health()`: five or more drafts whose oldest has waited a week.
+  It clears when the backlog is approved.
+- **The money lane added** (built Aug 23): invoice → hosted checkout → client
+  pays on Stripe → *marked paid by signed webhook only, never the redirect*.
+- **A coverage map added**, naming what the loop does not do — search
+  visibility and reputation absent, creative and publishing partial, ad
+  platforms excluded by choice.
+
+### A design flaw I built and then fixed
+
+The backlog alert needs seven simulated days. At every speed the page offers
+that is minutes of watching, so the feature would have been invisible in
+practice — built, correct, and never seen. Rather than lower the threshold to
+make the demo livelier (which would misrepresent the one number deciding
+whether Otis gets interrupted), a **Skip a week** control was added: the rule
+stays real and the clock becomes reachable.
+
+Verified in both themes: zero page errors, no horizontal scroll at 390px, money
+lane advances through all four states, and the watchdog stays quiet at three
+drafts, stays quiet at seven drafts on the same day, raises after a week, and
+clears on approval.
+
+Artifact: `https://claude.ai/code/artifact/ccd9bd39-3876-4da5-8a40-e411219ad6b7`
+Source kept at `system/loop-simulator.artifact.html`.
