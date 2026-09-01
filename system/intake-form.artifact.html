@@ -1,0 +1,451 @@
+<meta charset="utf-8" />
+<title>Meridian Project Intake</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+
+<style>
+  :root {
+    --ground:#F5F4EF; --surface:#FFFFFF; --surface-2:#EFEEE8;
+    --ink:#23262B; --ink-soft:#5B626C; --ink-faint:#8A8F97;
+    --rule:#DCDAD2; --rule-firm:#C4C2B8;
+    --steel:#4F6D8C; --steel-bg:#E6EDF4; --steel-deep:#3E5A76;
+    --good:#1B6B4F; --good-bg:#E4F0EA;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#15171B; --surface:#1C1F25; --surface-2:#23272E;
+      --ink:#E6E8EC; --ink-soft:#A6ADB7; --ink-faint:#767D87;
+      --rule:#2C3038; --rule-firm:#3C424C;
+      --steel:#8FB0CE; --steel-bg:#1E2A36; --steel-deep:#A8C4DC;
+      --good:#6DCFA6; --good-bg:#17302A;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#15171B; --surface:#1C1F25; --surface-2:#23272E;
+    --ink:#E6E8EC; --ink-soft:#A6ADB7; --ink-faint:#767D87;
+    --rule:#2C3038; --rule-firm:#3C424C;
+    --steel:#8FB0CE; --steel-bg:#1E2A36; --steel-deep:#A8C4DC;
+    --good:#6DCFA6; --good-bg:#17302A;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground); color: var(--ink); margin: 0;
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 44px 20px 96px; }
+
+  h1, h2, .eyebrow { font-family: Sora, Inter, sans-serif; text-wrap: balance; }
+  .eyebrow { font-size:11px; font-weight:600; letter-spacing:.16em; text-transform:uppercase;
+             color: var(--ink-faint); margin: 0 0 13px; }
+  h1 { font-size: clamp(27px,5vw,36px); font-weight:700; letter-spacing:-.02em; line-height:1.13; margin:0 0 12px; }
+  .lede { font-size:17px; color: var(--ink-soft); margin:0; max-width:60ch; }
+
+  .privacy {
+    margin-top: 18px; background: var(--steel-bg); border:1px solid var(--steel);
+    border-radius:3px; padding:14px 16px; font-size:14px; color: var(--ink);
+  }
+  .privacy strong { font-weight:600; }
+
+  .doc { display:flex; flex-direction:column; gap:32px; margin-top:32px; }
+  section { display:flex; flex-direction:column; gap:14px; }
+  section > header { border-top:2px solid var(--rule-firm); padding-top:15px; }
+  section h2 { font-size:19px; font-weight:700; margin:0 0 3px; letter-spacing:-.01em; }
+  section header p { margin:0; font-size:14px; color: var(--ink-soft); max-width:62ch; }
+
+  .field { display:flex; flex-direction:column; gap:6px; }
+  .field label { font-size:15px; font-weight:600; }
+  .field .hint { font-size:13px; color: var(--ink-soft); }
+  input[type="text"], textarea {
+    font-family: Inter, sans-serif; font-size:15px; color: var(--ink);
+    background: var(--surface); border:1px solid var(--rule); border-radius:3px;
+    padding:10px 12px; width:100%; resize:vertical;
+  }
+  textarea { min-height:76px; line-height:1.55; }
+  input:focus-visible, textarea:focus-visible, button:focus-visible, .pick:focus-within {
+    outline:2px solid var(--steel); outline-offset:1px;
+  }
+
+  .picks { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:9px; }
+  .pick {
+    display:grid; grid-template-columns:20px 1fr; gap:11px; align-items:start;
+    background: var(--surface); border:1px solid var(--rule); border-radius:3px;
+    padding:13px 14px; cursor:pointer; transition:border-color .12s, background .12s;
+  }
+  .pick:hover { border-color: var(--rule-firm); }
+  .pick input { width:18px; height:18px; margin:2px 0 0; accent-color: var(--steel); cursor:pointer; }
+  .pick.on { border-color: var(--steel); background: var(--steel-bg); }
+  .pick .t { font-size:14.5px; font-weight:600; }
+  .pick .s { font-size:12.5px; color: var(--ink-soft); }
+
+  [hidden] { display:none !important; }
+
+  .bar {
+    position:sticky; bottom:0; margin-top:34px;
+    background: var(--surface); border:1px solid var(--rule-firm); border-radius:3px;
+    padding:14px 16px; display:flex; flex-wrap:wrap; align-items:center; gap:12px;
+    box-shadow:0 -4px 18px -12px rgba(0,0,0,.35);
+  }
+  .count { font-family:"IBM Plex Mono",monospace; font-size:13px; color: var(--ink-soft);
+           font-variant-numeric:tabular-nums; }
+  .grow { flex:1 1 auto; }
+  button {
+    font-family:Inter,sans-serif; font-size:14px; font-weight:600; cursor:pointer;
+    border-radius:3px; padding:10px 16px; border:1px solid var(--rule);
+    background: var(--surface-2); color: var(--ink); transition:background .12s,border-color .12s;
+  }
+  button:hover { border-color: var(--rule-firm); }
+  button.primary { background: var(--steel); border-color: var(--steel); color:#fff; }
+  button.primary:hover { background: var(--steel-deep); border-color: var(--steel-deep); }
+  :root[data-theme="dark"] button.primary,
+  :root:not([data-theme="light"]) button.primary { color:#0F1E2A; }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) button.primary { color:#fff; } }
+
+  .out { display:flex; flex-direction:column; gap:10px; margin-top:16px; }
+  .out textarea {
+    font-family:"IBM Plex Mono",monospace; font-size:12.5px; line-height:1.55;
+    min-height:240px; background: var(--surface-2);
+  }
+  .said { font-size:13.5px; color: var(--good); background: var(--good-bg);
+          border:1px solid var(--good); border-radius:3px; padding:9px 12px; }
+
+  footer { margin-top:40px; padding-top:18px; border-top:1px solid var(--rule);
+           font-size:13px; color: var(--ink-faint); max-width:64ch; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; } }
+  @media (max-width:560px){ .wrap{ padding:30px 15px 84px; } }
+</style>
+
+<div class="wrap">
+
+  <p class="eyebrow">Meridian Interface</p>
+  <h1>Project Intake</h1>
+  <p class="lede">
+    Fifteen minutes of your answers saves us both a long call. Fill in what you know —
+    skip anything you are unsure about, and say so rather than guessing.
+  </p>
+
+  <div class="privacy">
+    <strong>Nothing here is sent anywhere.</strong> Your answers stay in this browser
+    until you press <em>Copy my answers</em> at the bottom and email them to us. You can
+    close this page and come back — what you have typed will still be here.
+    Please do not enter passwords, card numbers or account logins; we never need those,
+    and we will ask for anything like that separately and securely.
+  </div>
+
+  <div class="doc">
+
+    <!-- ---------------------------------------------------------- scope --- -->
+    <section>
+      <header>
+        <h2>What are we building?</h2>
+        <p>Tick everything you are considering. The form will only ask you about those.</p>
+      </header>
+      <div class="picks" id="scope">
+        <label class="pick"><input type="checkbox" data-scope="website" />
+          <span><span class="t">A website</span><span class="s">New, or replacing one you have</span></span></label>
+        <label class="pick"><input type="checkbox" data-scope="stack" />
+          <span><span class="t">Connected tools</span><span class="s">So information stops being typed twice</span></span></label>
+        <label class="pick"><input type="checkbox" data-scope="logo" />
+          <span><span class="t">Logo &amp; brand</span><span class="s">A mark and the files that go with it</span></span></label>
+        <label class="pick"><input type="checkbox" data-scope="crm" />
+          <span><span class="t">Customer records</span><span class="s">One place for enquiries and clients</span></span></label>
+        <label class="pick"><input type="checkbox" data-scope="dash" />
+          <span><span class="t">A dashboard</span><span class="s">The numbers you check, in one view</span></span></label>
+        <label class="pick"><input type="checkbox" data-scope="unsure" />
+          <span><span class="t">Not sure yet</span><span class="s">Tell us the problem, we will suggest</span></span></label>
+      </div>
+    </section>
+
+    <!-- --------------------------------------------------------- basics --- -->
+    <section data-section="Your business">
+      <header>
+        <h2>Your business</h2>
+        <p>The basics, so nothing we write sounds like it was written about someone else.</p>
+      </header>
+      <div class="field"><label for="f-biz">Business name</label>
+        <input type="text" id="f-biz" data-q="Business name" /></div>
+      <div class="field"><label for="f-does">What does the business do, in your own words?</label>
+        <textarea id="f-does" data-q="What the business does"></textarea></div>
+      <div class="field"><label for="f-where">Where are your customers?</label>
+        <span class="hint">A neighbourhood, a city, a region, or anywhere.</span>
+        <input type="text" id="f-where" data-q="Where customers are" /></div>
+      <div class="field"><label for="f-who">Who is your best kind of customer?</label>
+        <span class="hint">The ones you would take more of tomorrow.</span>
+        <textarea id="f-who" data-q="Best kind of customer"></textarea></div>
+    </section>
+
+    <!-- ------------------------------------------------------ how it runs -->
+    <section data-section="How work reaches you now">
+      <header>
+        <h2>How work reaches you now</h2>
+        <p>
+          This is the important part. The first question does most of the work — take
+          your time with it.
+        </p>
+      </header>
+      <div class="field">
+        <label for="f-journey">Walk us through the last customer you took on — from the first time you heard from them to the day you got paid.</label>
+        <span class="hint">Every step, even the boring ones. Who did what, and what were they waiting on?</span>
+        <textarea id="f-journey" data-q="Last customer, start to finish" style="min-height:150px"></textarea>
+      </div>
+      <div class="field"><label for="f-reach">How do people reach you, and roughly how many a week?</label>
+        <span class="hint">Phone, website form, Instagram, walk-in, referral — and rough numbers.</span>
+        <textarea id="f-reach" data-q="How people reach you, and how many"></textarea></div>
+      <div class="field"><label for="f-before">Between someone first contacting you and the work starting, what has to happen?</label>
+        <span class="hint">Site visits, quotes, approvals, deposits, scheduling.</span>
+        <textarea id="f-before" data-q="What happens before work starts"></textarea></div>
+      <div class="field"><label for="f-retype">What do you or your staff type into one place after already typing it somewhere else?</label>
+        <span class="hint">If you can, roughly how long does that take in a week?</span>
+        <textarea id="f-retype" data-q="What gets typed twice"></textarea></div>
+      <div class="field"><label for="f-miss">When something gets missed — an enquiry, a follow-up — what does that cost you?</label>
+        <span class="hint">A rough figure is fine. It changes what is worth building.</span>
+        <textarea id="f-miss" data-q="Cost of something being missed"></textarea></div>
+      <div class="field"><label for="f-who-else">Who else works in this, and what happens when you are away?</label>
+        <textarea id="f-who-else" data-q="Who else is involved"></textarea></div>
+    </section>
+
+    <!-- -------------------------------------------------------- website --- -->
+    <section data-need="website" data-section="Website" hidden>
+      <header><h2>The website</h2><p>What it needs to do, not what it should look like — that comes later.</p></header>
+      <div class="field"><label for="f-site-url">Do you have a site now? Paste the address.</label>
+        <input type="text" id="f-site-url" data-q="Current website" /></div>
+      <div class="field"><label for="f-site-wrong">If you have one, what is wrong with it?</label>
+        <textarea id="f-site-wrong" data-q="What is wrong with the current site"></textarea></div>
+      <div class="field"><label for="f-site-do">What should a visitor be able to DO on the new one?</label>
+        <span class="hint">Book, get a quote, pay, message you, download something, just call.</span>
+        <textarea id="f-site-do" data-q="What visitors should be able to do"></textarea></div>
+      <div class="field"><label for="f-site-like">Two or three sites you like — competitors or not — and what you like about them.</label>
+        <textarea id="f-site-like" data-q="Sites they like"></textarea></div>
+      <div class="field"><label for="f-site-edit">Who will change the words and pictures after it launches?</label>
+        <span class="hint">You, someone on staff, or you would rather ask us.</span>
+        <input type="text" id="f-site-edit" data-q="Who edits the site after launch" /></div>
+    </section>
+
+    <!-- ---------------------------------------------------------- stack --- -->
+    <section data-need="stack" data-section="Connected tools" hidden>
+      <header><h2>The tools you use</h2><p>What you already pay for, and what refuses to talk to what.</p></header>
+      <div class="field"><label for="f-tools">List everything the business runs on today.</label>
+        <span class="hint">Booking, invoicing, accounting, email, spreadsheets, a paper diary — all of it.</span>
+        <textarea id="f-tools" data-q="Tools in use today" style="min-height:110px"></textarea></div>
+      <div class="field"><label for="f-spend">Roughly what do these cost each month — and is any of it charged per person?</label>
+        <textarea id="f-spend" data-q="Monthly tool spend"></textarea></div>
+      <div class="field"><label for="f-hate">Which one causes the most trouble, and why?</label>
+        <textarea id="f-hate" data-q="Worst tool and why"></textarea></div>
+    </section>
+
+    <!-- ----------------------------------------------------------- logo --- -->
+    <section data-need="logo" data-section="Logo and brand" hidden>
+      <header><h2>Logo and brand</h2><p>Where it has to work decides how it gets drawn.</p></header>
+      <div class="field"><label for="f-logo-now">Do you have a logo now? What is wrong with it?</label>
+        <textarea id="f-logo-now" data-q="Current logo"></textarea></div>
+      <div class="field"><label for="f-logo-where">Where will it appear?</label>
+        <span class="hint">Van, shopfront sign, uniform, invoice, app icon, embroidery, social profile. Be specific — a mark that works on a sign may fail at postage-stamp size.</span>
+        <textarea id="f-logo-where" data-q="Where the logo will appear"></textarea></div>
+      <div class="field"><label for="f-logo-feel">Three words for how the business should come across.</label>
+        <span class="hint">And any colours you love or refuse to have.</span>
+        <textarea id="f-logo-feel" data-q="Brand feel and colours"></textarea></div>
+      <div class="field"><label for="f-logo-avoid">Any competitor's look you do NOT want to resemble?</label>
+        <textarea id="f-logo-avoid" data-q="Looks to avoid"></textarea></div>
+    </section>
+
+    <!-- ------------------------------------------------------------ crm --- -->
+    <section data-need="crm" data-section="Customer records" hidden>
+      <header><h2>Customer records</h2><p>What you need to know about a customer, and where they are up to.</p></header>
+      <div class="field"><label for="f-crm-fields">What do you need to remember about each customer?</label>
+        <span class="hint">Address, vehicle, property, allergies, contract dates, whatever matters in your work.</span>
+        <textarea id="f-crm-fields" data-q="What to remember per customer"></textarea></div>
+      <div class="field"><label for="f-crm-stages">What stages does a customer move through?</label>
+        <span class="hint">For example: enquiry → quoted → booked → done → invoiced → paid.</span>
+        <textarea id="f-crm-stages" data-q="Customer stages"></textarea></div>
+      <div class="field"><label for="f-crm-who">Who needs to see it, and is there anything they should NOT see?</label>
+        <textarea id="f-crm-who" data-q="Who sees the records"></textarea></div>
+    </section>
+
+    <!-- ------------------------------------------------------ dashboard --- -->
+    <section data-need="dash" data-section="Dashboard" hidden>
+      <header><h2>The dashboard</h2><p>Only the numbers you would actually act on.</p></header>
+      <div class="field"><label for="f-dash-nums">Which numbers do you check, or wish you could?</label>
+        <textarea id="f-dash-nums" data-q="Numbers to show"></textarea></div>
+      <div class="field"><label for="f-dash-when">How often do you look — daily, weekly, monthly?</label>
+        <input type="text" id="f-dash-when" data-q="How often they check" /></div>
+      <div class="field"><label for="f-dash-where">Where do those numbers live today?</label>
+        <span class="hint">A spreadsheet, your accountant, your booking system, your head.</span>
+        <textarea id="f-dash-where" data-q="Where the numbers live now"></textarea></div>
+      <div class="field"><label for="f-dash-do">If a number looked wrong on a Monday morning, what would you do about it?</label>
+        <span class="hint">If the honest answer is nothing, that number probably does not belong on the dashboard.</span>
+        <textarea id="f-dash-do" data-q="What they would do about a bad number"></textarea></div>
+    </section>
+
+    <!-- --------------------------------------------------------- unsure --- -->
+    <section data-need="unsure" data-section="The problem" hidden>
+      <header><h2>Tell us the problem instead</h2><p>You do not have to know what to buy. Describe what is going wrong.</p></header>
+      <div class="field"><label for="f-problem">What made you get in touch?</label>
+        <textarea id="f-problem" data-q="Why they got in touch" style="min-height:120px"></textarea></div>
+      <div class="field"><label for="f-ideal">If this went perfectly, what is different in six months?</label>
+        <textarea id="f-ideal" data-q="What success looks like"></textarea></div>
+    </section>
+
+    <!-- --------------------------------------------------- money & time --- -->
+    <section data-section="Budget and timing">
+      <header>
+        <h2>Budget and timing</h2>
+        <p>
+          Our prices are published on our website, so this is not a haggle — it tells us
+          which version of the work to propose.
+        </p>
+      </header>
+      <div class="field"><label for="f-budget">What range are you working with?</label>
+        <span class="hint">A range is fine. &ldquo;I do not know yet&rdquo; is also a real answer.</span>
+        <input type="text" id="f-budget" data-q="Budget range" /></div>
+      <div class="field"><label for="f-when">Is anything driving the timing?</label>
+        <span class="hint">A season, an opening, a lease, a contract ending, a competitor.</span>
+        <textarea id="f-when" data-q="What is driving the timing"></textarea></div>
+      <div class="field"><label for="f-else">Anything else we should know?</label>
+        <textarea id="f-else" data-q="Anything else"></textarea></div>
+      <div class="field"><label for="f-contact">Best name, email and phone for the reply</label>
+        <input type="text" id="f-contact" data-q="Contact details" /></div>
+    </section>
+
+  </div>
+
+  <div class="bar">
+    <span class="count" id="count">0 answered</span>
+    <span class="grow"></span>
+    <button type="button" id="clear">Clear</button>
+    <button type="button" class="primary" id="copy">Copy my answers</button>
+  </div>
+
+  <div class="out" id="out" hidden>
+    <div class="said" id="said" hidden></div>
+    <label for="brief" style="font-size:14px;font-weight:600;">
+      Your answers — paste this into a reply to our email
+    </label>
+    <textarea id="brief" readonly></textarea>
+  </div>
+
+  <footer>
+    Meridian Interface &middot; Houston, Texas &middot; meridianinterface.com<br />
+    If a question does not apply to you, leave it blank — we would rather have six
+    honest answers than eighteen guesses.
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var KEY = "meridian-intake-v1";
+  var $ = function (id) { return document.getElementById(id); };
+  var fields = Array.prototype.slice.call(document.querySelectorAll("[data-q]"));
+  var scopes = Array.prototype.slice.call(document.querySelectorAll("#scope input"));
+
+  // Everything lives in this browser only. Storage can be absent or throw
+  // outright (private windows, blocked site data), so every read and write is
+  // guarded and the page works with nothing stored at all.
+  function load() {
+    try { var raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : {}; }
+    catch (e) { return {}; }
+  }
+  function save() {
+    var s = { need: {}, ans: {} };
+    scopes.forEach(function (c) { s.need[c.dataset.scope] = c.checked; });
+    fields.forEach(function (f) { if (f.value.trim()) s.ans[f.id] = f.value; });
+    try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) { /* nothing to do */ }
+  }
+
+  function syncSections() {
+    scopes.forEach(function (c) {
+      c.closest(".pick").classList.toggle("on", c.checked);
+      document.querySelectorAll('[data-need="' + c.dataset.scope + '"]').forEach(function (sec) {
+        sec.hidden = !c.checked;
+      });
+    });
+  }
+
+  function answered() {
+    return fields.filter(function (f) {
+      var sec = f.closest("section");
+      return !sec.hidden && f.value.trim();
+    }).length;
+  }
+  function visibleCount() {
+    return fields.filter(function (f) { return !f.closest("section").hidden; }).length;
+  }
+  function paint() {
+    $("count").textContent = answered() + " of " + visibleCount() + " answered";
+  }
+
+  /* Build the brief. Only sections in scope and only questions actually
+     answered — a brief padded with blanks buries the real answers. */
+  function buildBrief() {
+    var out = [];
+    out.push("MERIDIAN INTERFACE — PROJECT INTAKE");
+    var wants = scopes.filter(function (c) { return c.checked; })
+      .map(function (c) { return c.closest(".pick").querySelector(".t").textContent; });
+    out.push("Interested in: " + (wants.length ? wants.join(", ") : "not specified"));
+    out.push("Completed: " + new Date().toISOString().slice(0, 10));
+    out.push("");
+
+    document.querySelectorAll("section[data-section]").forEach(function (sec) {
+      if (sec.hidden) return;
+      var rows = Array.prototype.slice.call(sec.querySelectorAll("[data-q]"))
+        .filter(function (f) { return f.value.trim(); });
+      if (!rows.length) return;
+      out.push("## " + sec.dataset.section);
+      rows.forEach(function (f) {
+        out.push("");
+        out.push(f.dataset.q + ":");
+        out.push(f.value.trim());
+      });
+      out.push("");
+    });
+
+    if (out.length <= 4) out.push("(No answers filled in yet.)");
+    return out.join("\n");
+  }
+
+  $("copy").addEventListener("click", function () {
+    var text = buildBrief();
+    $("brief").value = text;
+    $("out").hidden = false;
+    var said = $("said");
+    // The clipboard can be refused (permissions, an insecure origin). The text
+    // is on screen either way, so a refusal is an instruction, not a dead end.
+    function tell(msg) { said.textContent = msg; said.hidden = false; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(
+        function () { tell("Copied. Paste it into a reply to our email."); },
+        function () { tell("Could not copy automatically — select the text below and copy it."); }
+      );
+    } else {
+      tell("Select the text below and copy it into a reply to our email.");
+    }
+    $("out").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  $("clear").addEventListener("click", function () {
+    if (!window.confirm("Clear everything you have typed? This cannot be undone.")) return;
+    fields.forEach(function (f) { f.value = ""; });
+    scopes.forEach(function (c) { c.checked = false; });
+    try { localStorage.removeItem(KEY); } catch (e) { /* nothing to do */ }
+    syncSections(); paint();
+    $("out").hidden = true; $("said").hidden = true;
+  });
+
+  scopes.forEach(function (c) {
+    c.addEventListener("change", function () { syncSections(); save(); paint(); });
+  });
+  fields.forEach(function (f) {
+    f.addEventListener("input", function () { save(); paint(); });
+  });
+
+  var saved = load();
+  scopes.forEach(function (c) { if (saved.need && saved.need[c.dataset.scope]) c.checked = true; });
+  fields.forEach(function (f) { if (saved.ans && saved.ans[f.id]) f.value = saved.ans[f.id]; });
+  syncSections();
+  paint();
+})();
+</script>
