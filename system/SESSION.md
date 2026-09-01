@@ -160,6 +160,65 @@ localStorage, so a real visitor never became a lead.
   1 activity, 1 follow-up task queued. Test data then removed — counts back to
   4 contacts / 9 activities / 21 tasks.
 
+## Brand Brain + departments (2026-09-01)
+
+Prompted by a video Otis sent ("62 AI agents run an entire social media team",
+Structure Webworks) proposing an 8-department, ~35-tool stack. The structural
+half of that architecture — signals → orchestrator → departments → approval →
+engage → results — is what Meridian already is. The other half is roughly
+$800–1,500/month of SaaS, which is the wrong order for a business that has not
+taken its first order. Otis chose the free foundation plus one paid tool later.
+
+### What changed
+
+**Brand Brain.** The entire brand guidance in every prompt used to be one
+interpolated string: `Voice: ${profile.voice}` → "warm, professional, upscale".
+That is why drafts read like anyone's marketing. Now four documents per brand
+(`positioning`, `voice-guide`, `messaging-bank`, `tone-rules`) are loaded from
+`public.brand_brain` and composed into the system prompt by
+`_shared/brand.ts`.
+
+- Order is deliberate: positioning → voice → approved lines → **hard rules
+  last**, because a model weights the end of a system prompt most. Reordering
+  weakens the rules.
+- `tone-rules` carries the compliance load. For 420 Friendly that is the
+  never-imply-we-sell-cannabis rule — an apparel brand stays legal by staying an
+  apparel brand in every sentence. For events it is never confirm a date, never
+  quote a firm price, never say a booking is confirmed.
+- Degrades rather than breaks: a missing table, missing brand, or empty
+  documents fall back to the old one-line voice hint. 13 unit tests cover the
+  composition and every degrade path.
+
+**Authoring lives in the repo, the live copy lives in the database.** Markdown
+in `system/brand-brain/<brand>/`, pushed with `node cli.mjs brand-sync`. The
+edge functions cannot read the repo, so **editing Markdown changes nothing
+until the sync runs** — the single most confusing thing about the setup.
+
+**Departments.** `public.departments` (8 rows) plus `channels.department` and
+`channels.cost_note`. Turns the flat channel list into an honest inventory:
+`node cli.mjs departments` shows live/total per department and what a gap would
+cost. Currently **1 of 18 channels live** (Content Studio). Eight free channels
+were seeded — GSC, GA4, GBP insights, IG insights, review requests, review
+replies, Calendly — plus Metricool (~$20/mo) as the recommended first paid tool,
+chosen over an SEO suite because the customers are on Instagram and TikTok.
+
+### State
+
+- Migration `0003` applied. Advisors: only the usual INFO
+  `rls_enabled_no_policy`, matching every other table (deny-by-default,
+  service-role only). Nothing new introduced.
+- Both brands seeded in `brand_brain` (8 rows). Active brand is
+  `all-in-1-events` via `settings.business_profile.brand`; switch with a
+  `jsonb_set` on that key.
+- `orchestrator` (v15) and `runner` (v19) redeployed with `brand.ts` bundled.
+- Verified end to end: a queued `generate_content` task completed with no
+  error through the new runner.
+
+**What is NOT yet proven:** that the Brand Brain improves the writing. Without
+`ANTHROPIC_API_KEY` everything is mock, and the mock text is hardcoded — it
+ignores the system prompt entirely. The wiring is proven not to break; the
+payoff arrives with the key.
+
 ## Open next steps (not done)
 - Set `MERIDIAN_INTAKE_URL` in Netlify so the bridge goes live (Otis's step).
 - ~~All in 1 Events index.html was dead.~~ **Fixed 2026-08-25.** `css/styles.css`,
