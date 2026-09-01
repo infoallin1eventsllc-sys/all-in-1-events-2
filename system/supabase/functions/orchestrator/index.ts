@@ -7,6 +7,7 @@ import { serviceClient, getSetting } from "../_shared/supabase.ts";
 import { callClaude, extractJson, DEFAULT_MODEL } from "../_shared/claude.ts";
 import { loadBrandBrain, withBrand } from "../_shared/brand.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
+import { authorizedRun } from "../_shared/runauth.ts";
 
 type PlannedTask = { type: string; payload?: Record<string, unknown>; priority?: number };
 type Plan = { summary: string; tasks: PlannedTask[] };
@@ -22,6 +23,11 @@ const ALLOWED_TASK_TYPES = new Set([
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const sb = serviceClient();
+
+  // The anon key alone must not trigger a run — see _shared/runauth.ts.
+  if (!(await authorizedRun(req, sb))) {
+    return json({ ok: false, error: "unauthorized" }, 401);
+  }
 
   // Open a run record for observability.
   const { data: run } = await sb

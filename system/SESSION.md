@@ -239,6 +239,51 @@ the caption, not publishing it.
 it is ad spend, not organic reach, and should not be confused with the free
 channels around it.
 
+### Diagnostic + regression fix (2026-09-01)
+
+Full sweep: TypeScript compilation, imports, schema integrity, live function
+invocation, cron health, data integrity. Four findings, all fixed.
+
+**1. A regression I caused.** `_shared/runauth.ts` — the gate that stops the
+public anon key triggering a run — existed **only in the deployed `report`
+function and had never been committed**. Redeploying `runner` and
+`orchestrator` from repo source therefore silently stripped it from both;
+`runner` was answering 200 to a bare anon key. Recovered the file into the
+repo, re-wired both functions, redeployed (runner v20, orchestrator v16), and
+verified: **anon key alone → 401, run secret → 200.**
+
+The lesson is structural, not incidental: **deployed code that is not in the
+repo is invisible to every future change.** Any redeploy silently reverts it.
+
+**2. Deployed functions with no source anywhere.** Nine functions are deployed;
+the repo has five. `owner`, `analyze`, `cardspike` and `pay-webhook` have no
+source in this repo — and `analyze` is on a cron schedule, so it is actively
+running code nobody can fix or review. **Still outstanding.** Recovering them
+is a `mcp__Supabase__get_edge_function` per function, then commit.
+
+**3. Two orphaned channels.** `linkedin` and `webhook` had no department, so
+they were invisible in the inventory. Migration 0003 mapped an explicit key
+list, which drops anything added in between. Fixed, and `check_system_health`
+now raises `channels_orphaned` so it cannot recur silently.
+
+**4. Stale alert titles.** `raise_alert` refreshed severity, detail and meta on
+a repeat but not `title` — the field shown in a list. The backlog alert read
+"6 drafts waiting" over detail describing a larger backlog. Fixed; it now
+reads 14, matching reality.
+
+Also added a `brand_brain_empty` health check: if the active brand has no
+documents, drafts silently revert to the one-line voice hint the Brand Brain
+was built to replace, and nothing would have said so.
+
+Also recovered into the repo from the deployed `report`: a `claude.ts`
+mock-ordering fix (the report prompt matched the caption branch, so weekly
+summaries read like Instagram posts) and `x-run-secret` in the CORS allowlist.
+
+Verified clean after: 5 cron jobs healthy, 0 failed tasks, 0 errored runs, 0
+orphans, intake/runner/orchestrator/report/dashboard all responding correctly.
+One open alert — 14 drafts awaiting approval — which is a real state, not a
+fault.
+
 ## Open next steps (not done)
 - Set `MERIDIAN_INTAKE_URL` in Netlify so the bridge goes live (Otis's step).
 - ~~All in 1 Events index.html was dead.~~ **Fixed 2026-08-25.** `css/styles.css`,

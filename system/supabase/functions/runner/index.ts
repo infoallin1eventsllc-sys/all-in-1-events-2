@@ -9,6 +9,7 @@ import { loadBrandBrain, withBrand } from "../_shared/brand.ts";
 import { sendEmail, sendSms, publishContent } from "../_shared/channels.ts";
 import { cardDataUri, kickerFor } from "../_shared/card.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
+import { authorizedRun } from "../_shared/runauth.ts";
 
 type Task = {
   id: string;
@@ -21,6 +22,11 @@ type Task = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const sb = serviceClient();
+
+  // The anon key alone must not trigger a run — see _shared/runauth.ts.
+  if (!(await authorizedRun(req, sb))) {
+    return json({ ok: false, error: "unauthorized" }, 401);
+  }
 
   const { data: claimed, error } = await sb.rpc("claim_tasks", { p_limit: 10, p_worker: "runner" });
   if (error) return json({ ok: false, error: error.message }, 500);
