@@ -39,6 +39,28 @@ Match the job, not the brand name. Everything below is on this account.
 | Ad/analytics data pull | **Supermetrics** — 150+ sources |
 | Leads, deals, event projects | **monday.com** + the `monday-crm` plugin |
 | Database, auth, edge functions | **Supabase** |
+| Test a page, fill a form, verify a flow actually works | **Playwright MCP** — `browser_navigate`, `browser_snapshot`, `browser_click` *(local Claude Code only)* |
+| Messy real-world browsing, scraping, visual checks | The `browser-use` plugin |
+| Launch this project and screenshot it | The bundled `run` skill |
+
+**Playwright vs. browser-use — they overlap, so pick deliberately.** Playwright
+MCP works off the accessibility tree: precise, cheap, deterministic. Use it for
+structured work — verifying a page renders, filling and submitting a form,
+walking a checkout, regression-checking a client site before handoff.
+`browser-use` drives a real Chrome and sees pixels. Use it when the page is
+messy, login-gated, or when the visual result is the point.
+
+**Playwright MCP is stdio, not a claude.ai connector.** It launches a browser
+as a local process, so it exists only in Claude Code on Otis's own machine —
+it will never appear in the claude.ai connector list, and a remote or cloud
+session cannot use it (there is no browser there to drive). In a remote
+session, reach for `browser-use`, or write and run a Playwright script
+directly: the library and Chromium are usually preinstalled
+(`PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers`), so no MCP is required to
+automate a browser. Never run `playwright install` in those environments.
+
+Install, for reference — pinned per house rules, never `@latest`:
+`claude mcp add playwright -s user -- npx @playwright/mcp@0.0.80`
 
 ## Do not go looking for these
 

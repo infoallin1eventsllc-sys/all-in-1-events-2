@@ -42,6 +42,24 @@ Three are design-relevant and worth turning on.
 | Optimove | Marketing orchestration |
 | Oxford Economics | Macroeconomic data |
 
+## Local-only, not claude.ai connectors
+
+These run as local processes on Otis's own machine and will never appear in
+the claude.ai connector list. A remote or cloud session cannot use them.
+
+| Server | Install | Use for |
+|---|---|---|
+| **Playwright MCP** | `claude mcp add playwright -s user -- npx @playwright/mcp@0.0.80` | Accessibility-tree browser control: verify a page renders, fill and submit forms, walk a flow, regression-check a client site before handoff. Add `--headless` to suppress the window. `claude mcp list` verifies; `claude mcp remove playwright -s user` undoes. |
+
+Scope flags: `-s user` = every project on the machine, `-s local` = current
+project only, `-s project` = committed to the repo's `.mcp.json` and shared
+with collaborators.
+
+**In a remote session, do not report browser automation as unavailable.**
+Playwright the library plus Chromium are usually preinstalled there
+(`PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers`) — write and run a script
+directly. Never run `playwright install`; the browsers are already there.
+
 ## Seen intermittently
 
 These appeared mid-session and were not in the stable set. If a job calls for
