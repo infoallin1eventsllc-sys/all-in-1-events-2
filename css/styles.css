@@ -28,6 +28,13 @@
   direction: ltr;
   -webkit-font-feature-settings: 'liga';
   -webkit-font-smoothing: antialiased;
+  /* Hold the glyph box before the icon font arrives. These render as
+     ligatures, so until the font loads the browser lays out the literal
+     words — "arrow_forward", "event_seat" — at full width, which pushes
+     layout sideways. A Material Symbol is drawn 1em square, so pinning the
+     box to that is exact. Same fix already applied to 420 Friendly. */
+  width: 1em;
+  overflow: hidden;
 }
 
 /* ===== Chat panel visibility =====
