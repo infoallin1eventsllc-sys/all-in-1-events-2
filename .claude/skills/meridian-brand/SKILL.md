@@ -5,6 +5,25 @@ description: The Meridian Interface logo, colours, type and lockup rules, with r
 
 # Meridian Interface — brand
 
+> **The mark in `assets/logo/` is NOT the real logo. Otis confirmed this on
+> 2026-09-01.** It was rendered from `MeridianLogoMark` in the website repo,
+> which turned out to be a placeholder that shipped in the site's first commit —
+> not his artwork. The real mark is narrower, more angular, and has a visible
+> vertical stem; these files are a wide, symmetric, rounded M.
+>
+> **Do not put these files in front of a client.** Not on an invoice, a letter,
+> a proposal, a social card, or a deck. Everything else here — the tokens, the
+> type, the lockup ratios, the code, the renderer — was read from the live site
+> and stands. Only the artwork is wrong.
+>
+> To fix: drop the real logo in as `assets/logo/meridian-mark.svg` (and its
+> on-dark counterpart), re-run `assets/code/render-logo.mjs`, check
+> `proof-sheet.png`, and delete this notice.
+>
+> Known surfaces currently carrying the wrong mark: the website header, footer
+> and modals (`MeridianLogo.tsx`), the footer studio plate (`BuiltBy.tsx`), and
+> the Project Intake artifact's letterhead.
+
 Everything here derives from one source: the `MeridianLogoMark` paths that ship
 in the live website's header (`src/components/MeridianLogo.tsx`). The colours
 were read out of the site's own source, not chosen. Nothing in this folder is an
