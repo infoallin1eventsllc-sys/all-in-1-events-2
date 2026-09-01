@@ -1,0 +1,358 @@
+<meta charset="utf-8" />
+<title>Meridian Discovery Call</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" />
+
+<style>
+  /* Meridian's own palette, same tokens as the runbook and the checklist so
+     this sits in the same set of documents. */
+  :root {
+    --ground:    #F5F4EF;
+    --surface:   #FFFFFF;
+    --surface-2: #EFEEE8;
+    --ink:       #23262B;
+    --ink-soft:  #5B626C;
+    --ink-faint: #8A8F97;
+    --rule:      #DCDAD2;
+    --rule-firm: #C4C2B8;
+    --steel:     #4F6D8C;
+    --steel-bg:  #E6EDF4;
+    --slate:     #3E4C63;
+    --flag:      #8C3A33;
+    --flag-bg:   #F6E6E4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#15171B; --surface:#1C1F25; --surface-2:#23272E;
+      --ink:#E6E8EC; --ink-soft:#A6ADB7; --ink-faint:#767D87;
+      --rule:#2C3038; --rule-firm:#3C424C;
+      --steel:#8FB0CE; --steel-bg:#1E2A36; --slate:#A8B8CE;
+      --flag:#E58C82; --flag-bg:#321F1D;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#15171B; --surface:#1C1F25; --surface-2:#23272E;
+    --ink:#E6E8EC; --ink-soft:#A6ADB7; --ink-faint:#767D87;
+    --rule:#2C3038; --rule-firm:#3C424C;
+    --steel:#8FB0CE; --steel-bg:#1E2A36; --slate:#A8B8CE;
+    --flag:#E58C82; --flag-bg:#321F1D;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground); color: var(--ink);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 16px; line-height: 1.6; margin: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 48px 22px 88px; }
+
+  h1, h2, .q-text, .eyebrow { font-family: Sora, Inter, sans-serif; text-wrap: balance; }
+  .eyebrow {
+    font-size: 11px; font-weight: 600; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--ink-faint); margin: 0 0 14px;
+  }
+  h1 { font-size: clamp(28px, 5vw, 38px); font-weight: 700; letter-spacing: -.02em;
+       line-height: 1.12; margin: 0 0 12px; }
+  .lede { font-size: 17px; color: var(--ink-soft); margin: 0; max-width: 60ch; }
+
+  .doc { display: flex; flex-direction: column; gap: 40px; margin-top: 40px; }
+  .band { display: flex; flex-direction: column; gap: 16px; }
+  .band > header { border-top: 2px solid var(--rule-firm); padding-top: 16px; }
+  .band h2 { font-size: 20px; font-weight: 700; margin: 0 0 4px; letter-spacing: -.01em; }
+  .band header p { font-size: 14px; color: var(--ink-soft); margin: 0; max-width: 62ch; }
+
+  /* The questions are a real sequence — you work down them on the call — so
+     they are numbered. The number is a quiet marker, not a badge. */
+  .q { display: grid; grid-template-columns: 34px 1fr; gap: 16px; align-items: start; }
+  .q-num {
+    font-family: "IBM Plex Mono", monospace; font-size: 13px; font-weight: 500;
+    color: var(--ink-faint); padding-top: 5px; font-variant-numeric: tabular-nums;
+  }
+  .q-body { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
+  /* Big enough to read aloud at a glance while you are talking to someone. */
+  .q-text { font-size: 19px; font-weight: 600; line-height: 1.35; letter-spacing: -.01em; }
+  .q-note { display: grid; grid-template-columns: 88px 1fr; gap: 12px; font-size: 14px; }
+  .q-note dt {
+    font-family: "IBM Plex Mono", monospace; font-size: 10.5px; font-weight: 500;
+    letter-spacing: .07em; text-transform: uppercase; color: var(--ink-faint);
+    padding-top: 3px;
+  }
+  .q-note dd { margin: 0; color: var(--ink-soft); }
+  .q-note dd strong { color: var(--ink); font-weight: 600; }
+  .q + .q { border-top: 1px solid var(--rule); padding-top: 16px; }
+
+  .tablewrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 3px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 14px; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  thead th {
+    font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase;
+    color: var(--ink-faint); font-weight: 600; background: var(--surface-2);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  .shape {
+    font-family: "IBM Plex Mono", monospace; font-size: 11px; font-weight: 500;
+    color: var(--steel); background: var(--steel-bg);
+    padding: 2px 7px; border-radius: 2px; white-space: nowrap;
+  }
+  .flow { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--ink-soft); }
+
+  .flag {
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 3px;
+    padding: 15px 17px; display: flex; flex-direction: column; gap: 5px;
+  }
+  .flag h3 {
+    font-family: Inter, sans-serif; font-size: 15px; font-weight: 600; margin: 0;
+    color: var(--flag);
+  }
+  .flag p { margin: 0; font-size: 14px; color: var(--ink-soft); }
+  .flags { display: flex; flex-direction: column; gap: 10px; }
+
+  .close {
+    background: var(--surface); border: 1px solid var(--rule-firm);
+    border-left: 3px solid var(--steel);
+    border-radius: 3px; padding: 18px 20px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .close .say {
+    font-family: Sora, sans-serif; font-size: 16px; font-weight: 600;
+    line-height: 1.45; color: var(--ink);
+  }
+  .close p { margin: 0; font-size: 14px; color: var(--ink-soft); }
+
+  footer { margin-top: 44px; padding-top: 18px; border-top: 1px solid var(--rule);
+           font-size: 13px; color: var(--ink-faint); max-width: 64ch; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  @media (max-width: 560px) {
+    .wrap { padding: 32px 16px 64px; }
+    .q { grid-template-columns: 26px 1fr; gap: 11px; }
+    .q-note { grid-template-columns: 1fr; gap: 2px; }
+    .q-note dt { padding-top: 6px; }
+  }
+</style>
+
+<div class="wrap">
+
+  <p class="eyebrow">Meridian Interface · Sales</p>
+  <h1>Discovery Call</h1>
+  <p class="lede">
+    Seven questions, about twenty minutes, before you quote anything. They sort a
+    business into one of four shapes and surface where its work actually breaks.
+    Do not demo on this call.
+  </p>
+
+  <div class="doc">
+
+    <section class="band">
+      <header>
+        <h2>The questions</h2>
+        <p>
+          Ask them in order. The first one does most of the work — let them talk
+          through it without interrupting, and take notes rather than solving.
+        </p>
+      </header>
+
+      <div class="q">
+        <div class="q-num">01</div>
+        <div class="q-body">
+          <div class="q-text">
+            Walk me through the last customer you took on — from the first time you
+            heard from them to the day you got paid.
+          </div>
+          <dl class="q-note">
+            <dt>Why</dt>
+            <dd>One open question sorts most businesses on its own. Everything after this only refines it.</dd>
+            <dt>Listen for</dt>
+            <dd>Was there a <strong>quote</strong>? A <strong>booking</strong>? Did something get <strong>shipped</strong>? Does it keep going after the invoice?</dd>
+          </dl>
+        </div>
+      </div>
+
+      <div class="q">
+        <div class="q-num">02</div>
+        <div class="q-body">
+          <div class="q-text">How do people reach you — and roughly how many a week?</div>
+          <dl class="q-note">
+            <dt>Why</dt>
+            <dd>Volume decides whether a system pays for itself at all.</dd>
+            <dt>Listen for</dt>
+            <dd>More than one inbox. Phone <em>and</em> a form <em>and</em> Instagram DMs usually means the real problem is <strong>things get missed</strong>, not that anything is slow.</dd>
+          </dl>
+        </div>
+      </div>
+
+      <div class="q">
+        <div class="q-num">03</div>
+        <div class="q-body">
+          <div class="q-text">
+            Between someone first contacting you and the work actually starting,
+            what has to happen?
+          </div>
+          <dl class="q-note">
+            <dt>Why</dt>
+            <dd>This is what separates a quote-first business from an appointment business, and they need different plumbing.</dd>
+            <dt>Listen for</dt>
+            <dd>Site visits, measurements, approvals, deposits — and <strong>who is waiting on whom</strong>.</dd>
+          </dl>
+        </div>
+      </div>
+
+      <div class="q">
+        <div class="q-num">04</div>
+        <div class="q-body">
+          <div class="q-text">
+            What do you or your staff type into one place after already typing it
+            somewhere else?
+          </div>
+          <dl class="q-note">
+            <dt>Why</dt>
+            <dd>This is the sentence you quote back to them in the proposal. It names the waste in their own words.</dd>
+            <dt>Listen for</dt>
+            <dd>The same customer detail entered two or three times. Ask <strong>how long that takes a week</strong> — you want a number.</dd>
+          </dl>
+        </div>
+      </div>
+
+      <div class="q">
+        <div class="q-num">05</div>
+        <div class="q-body">
+          <div class="q-text">What are you paying for every month right now — and is it per person?</div>
+          <dl class="q-note">
+            <dt>Why</dt>
+            <dd>The case for owning the system instead of renting it usually writes itself here.</dd>
+            <dt>Listen for</dt>
+            <dd>Per-seat pricing. A fee that <strong>grows every time they hire</strong> is the strongest argument you have, and it is theirs, not yours.</dd>
+          </dl>
+        </div>
+      </div>
+
+      <div class="q">
+        <div class="q-num">06</div>
+        <div class="q-body">
+          <div class="q-text">When something gets missed — an enquiry, a follow-up — what does that cost you?</div>
+          <dl class="q-note">
+            <dt>Why</dt>
+            <dd>Without a number you cannot justify a price, and they will push back on it later instead of now.</dd>
+            <dt>Listen for</dt>
+            <dd>A real figure. A missed quote for a contractor is thousands; a missed haircut is sixty dollars. <strong>Those two businesses should not get the same proposal.</strong></dd>
+          </dl>
+        </div>
+      </div>
+
+      <div class="q">
+        <div class="q-num">07</div>
+        <div class="q-body">
+          <div class="q-text">Who else touches this, and what happens when you are away?</div>
+          <dl class="q-note">
+            <dt>Why</dt>
+            <dd>Decides logins, permissions and handover — and tells you who actually signs.</dd>
+            <dt>Listen for</dt>
+            <dd>&ldquo;Only me.&rdquo; A one-person business buys very differently from one with staff, and needs far less.</dd>
+          </dl>
+        </div>
+      </div>
+    </section>
+
+    <section class="band">
+      <header>
+        <h2>Sorting what you heard</h2>
+        <p>
+          By shape, not by industry. A dentist and a barber have nearly identical
+          plumbing; a dentist and a hospital do not.
+        </p>
+      </header>
+
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr><th>If they said</th><th>Shape</th><th>The spine you build</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Every customer books a time; price is known up front</td>
+              <td><span class="shape">appointment</span></td>
+              <td class="flow">book → remind → visit → follow up → ask for a review</td>
+            </tr>
+            <tr>
+              <td>Every job is priced individually; there is a visit or a spec first</td>
+              <td><span class="shape">quote-first</span></td>
+              <td class="flow">enquire → spec → quote → approve → deposit → schedule</td>
+            </tr>
+            <tr>
+              <td>They sell items; something gets handed over or shipped</td>
+              <td><span class="shape">order</span></td>
+              <td class="flow">catalogue → order → pay → fulfil → buy again</td>
+            </tr>
+            <tr>
+              <td>The relationship continues; they bill monthly or per matter</td>
+              <td><span class="shape">caseload</span></td>
+              <td class="flow">intake → matter → recurring bill → status updates</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p style="font-size:14px;color:var(--ink-soft);margin:0;max-width:64ch;">
+        The marketing layer is nearly the same on all four — that is the loop you
+        already run. What differs is the operations layer underneath, which is why
+        the second build of a shape is much faster than the first.
+      </p>
+    </section>
+
+    <section class="band">
+      <header>
+        <h2>When not to sell it</h2>
+        <p>Saying so on the call costs you one job and earns you the referral.</p>
+      </header>
+
+      <div class="flags">
+        <div class="flag">
+          <h3>Under about five enquiries a week</h3>
+          <p>Automation cannot pay for itself at that volume. Sell them a website that converts better, and revisit in a year.</p>
+        </div>
+        <div class="flag">
+          <h3>They cannot say what a miss costs</h3>
+          <p>Then they do not yet believe it costs anything, and every number you quote will feel expensive. Send them away to count for two weeks.</p>
+        </div>
+        <div class="flag">
+          <h3>They want it to run with nobody watching</h3>
+          <p>Have the approval conversation now, not at handover. A system that publishes unsupervised will eventually publish something they hate, and it will be your name on it.</p>
+        </div>
+        <div class="flag">
+          <h3>Three people describe the process three different ways</h3>
+          <p>The problem is the process, not the tools. Wiring it up will automate the disagreement. Offer the mapping work on its own first.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="band">
+      <header>
+        <h2>How to end it</h2>
+        <p>One specific next step. No pressure, no package named yet.</p>
+      </header>
+
+      <div class="close">
+        <div class="say">
+          &ldquo;I&rsquo;ll write up what I heard and what I&rsquo;d build, with a price,
+          in two working days. If I don&rsquo;t think it&rsquo;s worth the money, I&rsquo;ll
+          tell you that instead.&rdquo;
+        </div>
+        <p>
+          Then do exactly that. The second sentence is what makes the first one
+          credible, so it has to be true at least once — and the call where you talk
+          someone out of spending is the one they tell other owners about.
+        </p>
+      </div>
+    </section>
+
+  </div>
+
+  <footer>
+    Keep the filled-in notes. After three or four calls the same answers start
+    repeating, and that is when a shape is worth turning into a reusable
+    template — not before.
+  </footer>
+</div>
