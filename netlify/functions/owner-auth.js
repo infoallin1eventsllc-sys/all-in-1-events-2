@@ -20,22 +20,36 @@ const FAILURE_DELAY_MS = 700;
 
 /* Which deploy this is running on.
  *
- * Netlify sets CONTEXT to "production", "deploy-preview" or "branch-deploy",
- * and environment variables can be scoped to some contexts and not others. The
- * common way to get stuck is setting OWNER_PASSCODE for production only and
- * then trying to test on a preview: the variable genuinely exists, the
- * dashboard shows it, and the preview still says it is missing. Naming the
- * context in the error turns that into a one-line fix instead of a hunt.
+ * Environment variables can be scoped to some deploy contexts and not others,
+ * and the common way to get stuck is setting OWNER_PASSCODE for production only
+ * and then testing on a preview: the variable genuinely exists, the dashboard
+ * shows it, and the preview still reports it missing. Naming the context turns
+ * that into a one-line fix instead of a hunt.
  *
- * CONTEXT and BRANCH are build metadata, not secrets — safe to show. This only
- * ever appears on the "not configured" path, where there is no passcode to
- * protect yet.
+ * Derived from the request host, not from `process.env.CONTEXT`. CONTEXT is a
+ * *build*-time variable and is not injected into the function runtime, so the
+ * env-var version of this silently returned nothing and the message shipped
+ * without the context it promised. The hostname is always present and says the
+ * same thing:
+ *
+ *   deploy-preview-3--site.netlify.app  → a pull-request preview
+ *   branch-name--site.netlify.app       → a branch deploy
+ *   site.netlify.app / a custom domain  → production
+ *
+ * The host is attacker-controllable in principle, but this only ever labels an
+ * error on the path where no passcode is configured, so there is nothing to
+ * protect and nothing to spoof into.
  */
-function deployContext() {
-  const ctx = process.env.CONTEXT || null;
-  const branch = process.env.BRANCH || null;
-  if (!ctx) return "";
-  return branch ? ' (context "' + ctx + '", branch "' + branch + '")' : ' (context "' + ctx + '")';
+function deployContext(event) {
+  const host = String(
+    (event.headers && (event.headers.host || event.headers.Host)) || ""
+  ).toLowerCase();
+  if (!host) return "";
+
+  const preview = host.match(/^deploy-preview-(\d+)--/);
+  if (preview) return ' (this is deploy preview #' + preview[1] + ', not production)';
+  if (/^[^.]+--/.test(host)) return " (this is a branch deploy, not production)";
+  return " (this is the production deploy)";
 }
 
 exports.handler = async (event) => {
@@ -64,7 +78,7 @@ exports.handler = async (event) => {
       error: "not_configured",
       context: process.env.CONTEXT || null,
       message:
-        "OWNER_PASSCODE is not set for this deploy" + deployContext() + ". " +
+        "OWNER_PASSCODE is not set for this deploy" + deployContext(event) + ". " +
         "Add it in Netlify → Site settings → Environment variables. If it is " +
         "already set, check its scope — a variable scoped to Production only " +
         "is invisible to deploy previews. Redeploy after changing it."
