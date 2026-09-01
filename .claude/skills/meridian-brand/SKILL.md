@@ -1,89 +1,83 @@
 ---
 name: meridian-brand
-description: The Meridian Interface logo, colours, type and lockup rules, with ready-to-use PNG/SVG files and drop-in code. Use whenever something carries the Meridian Interface name — invoices, letterhead, client letters, proposals, discovery and intake forms, social cards, favicons, avatars, decks, email signatures, the website header, or any generated image — so the brand comes out identical every time instead of being re-guessed.
+description: The Meridian Interface logo, colours, type and lockup rules, with his real logo files and drop-in code. Use whenever something carries the Meridian Interface name — invoices, letterhead, client letters, proposals, discovery and intake forms, social cards, favicons, avatars, decks, email signatures, the website header, or any generated image — so the brand comes out identical every time instead of being re-guessed.
 ---
 
 # Meridian Interface — brand
 
-> **The mark in `assets/logo/` is NOT the real logo. Otis confirmed this on
-> 2026-09-01.** It was rendered from `MeridianLogoMark` in the website repo,
-> which turned out to be a placeholder that shipped in the site's first commit —
-> not his artwork. The real mark is narrower, more angular, and has a visible
-> vertical stem; these files are a wide, symmetric, rounded M.
->
-> **Do not put these files in front of a client.** Not on an invoice, a letter,
-> a proposal, a social card, or a deck. Everything else here — the tokens, the
-> type, the lockup ratios, the code, the renderer — was read from the live site
-> and stands. Only the artwork is wrong.
->
-> To fix: drop the real logo in as `assets/logo/meridian-mark.svg` (and its
-> on-dark counterpart), re-run `assets/code/render-logo.mjs`, check
-> `proof-sheet.png`, and delete this notice.
->
-> Known surfaces currently carrying the wrong mark: the website header, footer
-> and modals (`MeridianLogo.tsx`), the footer studio plate (`BuiltBy.tsx`), and
-> the Project Intake artifact's letterhead.
+The artwork here is Otis's own, supplied by him. The colours and type were read
+out of the live site's source, not chosen. Nothing in this folder is an
+interpretation of the brand.
 
-Everything here derives from one source: the `MeridianLogoMark` paths that ship
-in the live website's header (`src/components/MeridianLogo.tsx`). The colours
-were read out of the site's own source, not chosen. Nothing in this folder is an
-interpretation of the brand — it is the brand, exported.
-
-**Never redraw the mark.** If a size or format is missing, re-run the renderer
-(below). Hand-drawing a "close enough" M is how a brand quietly drifts.
+**Never redraw the mark.** Every file here traces back to
+`meridian-lockup.png`, his transparent master; `meridian-mark.png` is a crop of
+it, not a reconstruction. A hand-drawn "close enough" M is how a brand quietly
+drifts — and it already happened once: this repo shipped an invented SVG M for
+months and it reached a published client form before anyone compared it.
 
 ## The mark
 
-A folded ribbon that reads as an **M**: two outer legs, two inner folds that
-arch over and dive to the centre, and a vertical meridian line through the
-middle. The overlap has a real drop shadow, which is what makes it read as
-folded rather than flat.
+Two ribbon strokes forming an **M** with flat, angled tops and rounded outer
+corners, cut through the centre by a thin vertical line — the meridian. The left
+stroke is cool blue-slate, the right a neutral grey, so the two halves read as
+distinct planes.
+
+## Format: raster only
+
+There is **no vector master.** The largest file is 1024px. That is fine for
+screens and ordinary print, and not enough for a sign, a vehicle wrap, or
+embroidery. If any of those come up, the mark needs redrawing as a vector by
+someone treating this artwork as the reference — a real job, not an export.
 
 ## Files
 
-### `assets/logo/` — finished art
+### `assets/logo/` — the artwork
 
-| File | Size | Use it for |
-|---|---|---|
-| `meridian-lockup-light.png` | 1923×576 | Mark + wordmark on **light** backgrounds. Letterhead, invoices, proposals, light decks. |
-| `meridian-lockup-dark.png` | 1923×576 | The same lockup on **dark** backgrounds. Dark decks, navy email headers, social cards. |
-| `meridian-mark.png` | 384×384 | Mark alone, transparent, drawn for light backgrounds. Favicons, inline bullets, watermarks. |
-| `meridian-mark-tile.png` | 576×576 | Mark on a rounded navy tile. **Profile pictures and app icons** — anywhere the background is out of your control. |
-| `meridian-mark.svg` | vector | The mark for print, signage, vinyl, or any size above ~1000px. |
-| `meridian-mark-on-dark.svg` | vector | Same, drawn for dark backgrounds. |
-| `proof-sheet.png` | — | Every variant on its intended background at real sizes. Look here before shipping. |
+| File | Size | Alpha | Use it for |
+|---|---|---|---|
+| `meridian-lockup.png` | 885×550 | yes | **The master.** Mark + wordmark, transparent. Letterhead, invoices, proposals, the footer plate — anywhere the ground is light. |
+| `meridian-mark.png` | 342×333 | yes | The mark alone, cropped from the master. Use beside your own live text when you need the wordmark to be a colour the file cannot give you. Favicons, avatars, watermarks. |
+| `meridian-logo-square.png` | 1024×1024 | **no** | The lockup on an off-white ground, square. Largest file available. |
+| `meridian-icon-512.png` | 512×512 | **no** | The lockup letterboxed into a square on off-white. See the warning below. |
+| `proof-sheet.png` | — | — | Every file on every ground it has to survive, at the sizes where logos fail. Look here before shipping. |
 
-All four PNGs have a genuine alpha channel, so they drop onto any background
-without a white box. The two lockups are the same pixel dimensions, so swapping
-one for the other never reflows a layout.
+### Three things the proof sheet shows
+
+**The wordmark is near-black, so the lockup dies on dark grounds.** Direct on
+navy the mark survives and the words sink into the background. This is the most
+likely way to ship something embarrassing. Two fixes: a light plate behind it,
+or `meridian-mark.png` beside live text you control the colour of.
+
+**The mark alone is fine on dark.** Its gradient is light enough to hold against
+navy down to about 20px. Only the wordmark has the problem.
+
+**`meridian-icon-512.png` is not an app icon.** It is the whole lockup squeezed
+into a square, so at any real icon size the words turn to mush — and it has no
+transparency, so it shows a pale box on a dark home screen. For an app icon or a
+social avatar, put `meridian-mark.png` on a plate of your own instead.
 
 ### `assets/code/` — for anything being built
 
-- **`MeridianLogo.tsx`** — the React component, with `iconOnly`, `lightText`,
-  `size` and `singleLine` props. Use this in any React surface; it beats an
-  image because it stays sharp and costs no network request.
-- **`logo-snippet.html`** / **`logo-snippet-dark.html`** — the same lockup as
-  plain HTML with inline SVG, one file per background. For static pages and
-  anything without a build step. Use the file that matches the background.
-- **`brand-tokens.css`** — CSS custom properties plus a `.meridian-lockup` class
-  that scales the whole lockup off one number (`--m`, the mark height).
-- **`brand-tokens.json`** — the same values as data, for generators, edge
-  functions, and anything that composes images server-side.
-- **`render-logo.mjs`** — regenerates every PNG and SVG above from the paths.
-- **`qa-sheet.mjs`** — rebuilds `proof-sheet.png`.
+- **`MeridianLogo.tsx`** — the React component. Renders `meridian-mark.png`
+  beside live text, so the wordmark can be dark on a light header and light on a
+  dark footer. Props: `size`, `iconOnly`, `lightText`, `singleLine`.
+- **`logo-snippet.html`** — the same thing in plain HTML, with the dark-ground
+  variant beside it. For static pages and anything without a build step.
+- **`brand-tokens.css`** / **`brand-tokens.json`** — colours, type and the
+  lockup ratios, as CSS variables and as data.
+- **`proof-sheet.mjs`** — rebuilds `proof-sheet.png` from the files in
+  `assets/logo/`. Run it after changing any artwork, and then *look at it*.
 
-### One gotcha worth knowing
+### One divergence, on purpose
 
-There is deliberately **no light/dark toggle class** on the HTML lockup, and it
-is not an oversight. An SVG gradient inside a `display:none` element is a dead
-paint server: put both marks in one snippet and hide one, and the *visible* mark
-on the next lockup down the page silently renders as nothing. It was built that
-way first and caught in review. Two files with one mark each cannot fail that
-way.
-
-Mixing both snippets on one page is safe — their gradient ids differ (`_l` vs
-`_d`) — and so is repeating the same lockup at different sizes. In React, use
-`MeridianLogo.tsx`, which generates unique ids per instance with `useId()`.
+The website sets the wordmark as **live text in Hanken Grotesk, stacked**, next
+to the mark. Otis's lockup file has it **in a plain grotesk, on one line**.
+Those do not match, and the reason is contrast: his wordmark is baked in at
+near-black and would vanish on the navy footer, while live text can be any
+colour. Where the ground is light — the footer plate, letterhead, invoices — use
+his lockup file and the question does not arise. Worth a decision at some point:
+either accept the two treatments, or set the wordmark in his typeface
+everywhere and always give it a light plate.
 
 ## Colour
 
@@ -129,51 +123,46 @@ other logo — enters that box.
 
 ### Minimum sizes
 
-Checked against the proof sheet, not assumed:
+Read off the proof sheet, not assumed:
 
-- **Full lockup: 28px tall minimum.** Below that INTERFACE closes up and stops
-  being a word.
-- **Mark alone: 24px minimum**, and prefer 32px. At 16px the ribbon folds start
-  to merge and it reads as a smudge.
-- Under 24px, use the **tile** instead — the solid background holds the shape
-  together where the strokes cannot.
+- **Full lockup: 26px tall minimum.** Below that the wordmark closes up. At 40px
+  it is comfortable.
+- **Mark alone: 20px minimum**, and prefer 32px. The meridian line is the first
+  thing to disappear.
 
-### Choosing a variant
+### Choosing a file
 
-1. Light background you control → `lockup-light`.
-2. Dark background you control → `lockup-dark`.
-3. Background you do **not** control (a social avatar, someone's email client, a
-   partner's deck) → `mark-tile`. This is the single most common mistake:
-   shipping the transparent mark somewhere that turns out to be dark, or
-   magenta, and having it vanish.
-4. Print, signage, or anything above ~1000px → the **SVG**, never the PNG.
+1. **Light ground you control** → `meridian-lockup.png`. This is the default and
+   the most faithful thing you can ship.
+2. **Dark ground you control** → the lockup on a light plate, or
+   `meridian-mark.png` beside your own text.
+3. **Ground you do not control** (a social avatar, someone's email client, a
+   partner's deck) → `meridian-mark.png` on a plate of your own. This is the
+   most common way to ship something broken: sending a transparent lockup
+   somewhere that turns out to be dark.
+4. **Signage, a wrap, embroidery, anything above ~1000px** → none of these.
+   Commission a vector first; see *Format: raster only*.
 
 ## Never
 
-- Never recolour the mark, add a stroke, or flatten out the drop shadow — the
-  shadow is what makes the fold legible.
+- Never recolour the mark or add a stroke. The two-tone split — cool slate left,
+  neutral grey right — is the design.
 - Never stretch it. Scale both dimensions together.
-- Never set the wordmark in a substitute font. If Hanken Grotesk is not
-  available, use the PNG lockup rather than a fallback face.
-- Never place the transparent mark on a busy photograph. Use the tile.
-- Never rebuild the mark from a screenshot or a raster trace. Re-run the
-  renderer instead.
+- Never put the lockup file straight onto a dark background. The wordmark is
+  near-black and disappears; the proof sheet shows exactly what that looks like.
+- Never use `meridian-icon-512.png` as an app icon or avatar. It is the whole
+  lockup in a square with no transparency.
+- Never rebuild the mark from a screenshot, a trace, or from memory. Crop the
+  master instead — that is all `meridian-mark.png` is.
 
-## Regenerating
+## Regenerating the proof sheet
 
 ```bash
 cd assets/code
 ln -s /path/to/system/tools/node_modules node_modules   # needs playwright-core
-node render-logo.mjs /path/to/meridian-interface-website
+node proof-sheet.mjs
 ```
 
-It reads the woff2 files straight out of the website repo, so the wordmark is
-rendered in the real face rather than a lookalike, and it screenshots at a
-device scale of 3 with `omitBackground` for true alpha. Screenshots are clipped
-to a rounded box on purpose: flex layout shrink-wraps to a fractional width, and
-an app icon that comes out 387×384 instead of 384×384 gets rejected by the
-stores.
-
-If the mark ever changes in `MeridianLogo.tsx`, copy the new file into
-`assets/code/`, mirror the path changes into `render-logo.mjs`, re-run it, and
-**look at `proof-sheet.png`** before committing. Rendering is not verification.
+After changing any file in `assets/logo/`, run it and **look at the result**.
+Rendering is not verification. The invented mark this skill originally shipped
+rendered perfectly; it was just the wrong logo.

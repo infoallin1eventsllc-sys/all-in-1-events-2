@@ -58,8 +58,6 @@
 .meridian-lockup--dark .meridian-lockup__word { color: #fff; }
 .meridian-lockup--dark .meridian-lockup__sub  { color: var(--meridian-muted-dark); }
 
-/* The mark sizes off the same --m as everything else. There is no light/dark
-   display toggle on purpose: an SVG gradient inside a display:none element is a
-   dead paint server, so a hidden mark blanks the visible one. Use
-   logo-snippet.html or logo-snippet-dark.html — one mark each. */
-.meridian-lockup__mark { width: var(--m); height: var(--m); flex-shrink: 0; display: block; }
+/* The mark, when you are placing it beside your own text rather than using the
+   whole lockup file. One artwork, no light/dark variants — it reads on both. */
+.meridian-lockup__mark { width: var(--m); height: var(--m); flex-shrink: 0; display: block; object-fit: contain; }
