@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta name="robots" content="noindex, nofollow"/>
+<title>420 FRIENDLY — Photo Portal</title>
+<link href="assets/tailwind.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link rel="icon" href="assets/favicon.ico" sizes="any"/>
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+
+<main class="pt-20 md:pt-[116px] max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop pb-16">
+
+  <div id="gate"></div>
+
+  <div id="photo-content" class="hidden">
+  <div class="mt-8 rounded-xl border border-secondary/40 bg-secondary-container/60 px-5 py-4">
+    <p class="font-label-caps text-label-caps text-on-secondary-container">STORED IN THIS BROWSER ONLY</p>
+    <p class="font-body-md text-body-md text-on-secondary-container mt-2">
+      Photos are saved to this browser's local database. They are not uploaded to a server, so they
+      will not appear on your phone, for customers, or on the live site. Connect object storage to
+      publish them — see <span class="font-mono">NOTES.md</span>.
+    </p>
+  </div>
+
+  <section class="pt-10 pb-6 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <p class="font-label-caps text-label-caps text-tertiary mb-2">OWNER PORTAL</p>
+      <h1 class="font-headline-xl-mobile text-headline-xl-mobile md:font-headline-xl md:text-headline-xl text-on-surface uppercase tracking-tighter">
+        Photos
+      </h1>
+    </div>
+    <span id="signout-slot"></span>
+    <a href="owner.html" class="rounded-full border border-outline-variant text-on-surface py-3 px-6 font-label-caps text-label-caps hover:border-tertiary hover:text-tertiary transition-all duration-300 flex items-center gap-2">
+      <span class="material-symbols-outlined text-[18px]">receipt_long</span>TRANSACTIONS
+    </a>
+  </section>
+
+  <!-- Drop zone -->
+  <section>
+    <div id="drop" tabindex="0" role="button" aria-label="Add photos"
+         class="border-2 border-dashed border-outline-variant rounded-2xl bg-surface-container-low/50 px-6 py-12 text-center cursor-pointer transition-colors hover:border-tertiary focus:border-tertiary focus:outline-none">
+      <span class="material-symbols-outlined text-outline text-[42px]">add_photo_alternate</span>
+      <p class="font-label-caps text-label-caps text-on-surface mt-3">DROP PHOTOS HERE OR CLICK TO CHOOSE</p>
+      <p class="font-body-md text-[13px] text-on-surface-variant mt-2">
+        JPG, PNG, WebP or HEIC. Large images are resized to 1600px and re-encoded as WebP before saving.
+      </p>
+      <input id="file-input" type="file" accept="image/*" multiple class="hidden"/>
+    </div>
+    <div id="upload-status" class="hidden mt-4 font-label-caps text-label-caps text-tertiary"></div>
+    <div id="upload-errors" class="hidden mt-3 space-y-1"></div>
+  </section>
+
+  <!-- Library -->
+  <section class="mt-12">
+    <div class="flex flex-wrap items-end justify-between gap-4 mb-6">
+      <h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter">Library</h2>
+      <p id="lib-stats" class="font-label-caps text-label-caps text-on-surface-variant"></p>
+    </div>
+    <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter"></div>
+    <p id="empty" class="hidden font-body-md text-body-md text-on-surface-variant py-12 text-center">
+      No photos yet. Add some above and assign them to products.
+    </p>
+  </section>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+
+<script src="assets/products.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/auth.js"></script>
+<script src="assets/store.js"></script>
+<script>
+  renderChrome("PHOTOS");
+
+  const grid = document.getElementById("grid");
+  const drop = document.getElementById("drop");
+  const input = document.getElementById("file-input");
+  const statusEl = document.getElementById("upload-status");
+  const errorsEl = document.getElementById("upload-errors");
+
+  // Object URLs are revoked between renders so repeated refreshes do not leak.
+  let urls = [];
+  function releaseURLs() {
+    urls.forEach((u) => URL.revokeObjectURL(u));
+    urls = [];
+  }
+
+  function productOptions(selected) {
+    return (
+      '<option value="">— Unassigned —</option>' +
+      CATALOG.map((p) =>
+        '<option value="' + esc(p.id) + '"' + (p.id === selected ? " selected" : "") + ">" +
+        esc(p.name) + "</option>").join("")
+    );
+  }
+
+  async function render() {
+    releaseURLs();
+    let rows = [];
+    try {
+      rows = await listPhotos();
+    } catch (err) {
+      grid.innerHTML = "";
+      document.getElementById("empty").classList.remove("hidden");
+      document.getElementById("empty").textContent =
+        "Could not open local photo storage in this browser (" + err.message + ").";
+      return;
+    }
+
+    document.getElementById("empty").classList.toggle("hidden", rows.length > 0);
+
+    const totalBytes = rows.reduce((s, r) => s + r.size, 0);
+    const assigned = rows.filter((r) => r.productId).length;
+    const est = await storageEstimate();
+    document.getElementById("lib-stats").textContent =
+      rows.length + " PHOTO" + (rows.length === 1 ? "" : "S") +
+      " · " + formatBytes(totalBytes) + " · " + assigned + " ASSIGNED" +
+      (est && est.quota ? " · " + Math.round((est.usage / est.quota) * 100) + "% OF BROWSER QUOTA" : "");
+
+    grid.innerHTML = rows.map((r) => {
+      const url = URL.createObjectURL(r.blob);
+      urls.push(url);
+      const saved = r.originalSize > r.size
+        ? Math.round((1 - r.size / r.originalSize) * 100) + "% smaller"
+        : "";
+      return (
+        '<div class="border border-outline-variant/50 rounded-xl overflow-hidden bg-surface-container-low/60">' +
+        '<div class="relative aspect-[4/5] bg-surface-container overflow-hidden">' +
+        '<img src="' + url + '" alt="' + esc(r.name) + '" class="w-full h-full object-cover"/>' +
+        (r.productId
+          ? '<span class="absolute top-3 left-3 glass-panel rounded-full px-3 py-1 font-label-caps text-label-caps text-tertiary">ON PRODUCT</span>'
+          : "") +
+        "</div>" +
+        '<div class="p-4 space-y-3">' +
+        '<p class="font-body-md text-[13px] text-on-surface truncate" title="' + esc(r.name) + '">' + esc(r.name) + "</p>" +
+        '<p class="font-label-caps text-label-caps text-on-surface-variant">' +
+        r.width + "×" + r.height + " · " + esc(formatBytes(r.size)) +
+        (saved ? " · " + esc(saved) : "") + "</p>" +
+        '<label class="sr-only" for="assign-' + esc(r.id) + '">Assign to product</label>' +
+        '<select id="assign-' + esc(r.id) + '" data-assign="' + esc(r.id) + '" ' +
+        'class="w-full bg-surface border border-outline-variant text-on-surface font-body-md text-[13px] rounded-lg px-3 py-2 focus:border-secondary focus:ring-0 cursor-pointer">' +
+        productOptions(r.productId) + "</select>" +
+        '<div class="flex gap-2">' +
+        '<a href="' + url + '" download="' + esc(r.name) + '" class="flex-1 text-center rounded-full border border-outline-variant text-on-surface py-2 font-label-caps text-label-caps hover:border-tertiary hover:text-tertiary transition-colors">SAVE</a>' +
+        '<button data-del="' + esc(r.id) + '" class="flex-1 rounded-full border border-outline-variant text-on-surface py-2 font-label-caps text-label-caps hover:border-error hover:text-error transition-colors">DELETE</button>' +
+        "</div></div></div>"
+      );
+    }).join("");
+
+    grid.querySelectorAll("[data-assign]").forEach((sel) =>
+      sel.addEventListener("change", async () => {
+        try {
+          await assignPhoto(sel.dataset.assign, sel.value || null);
+          toast(sel.value ? "ASSIGNED — IT NOW SHOWS ON THAT PRODUCT" : "UNASSIGNED");
+          render();
+        } catch (err) {
+          toast("COULD NOT ASSIGN: " + err.message.toUpperCase());
+        }
+      }));
+
+    grid.querySelectorAll("[data-del]").forEach((btn) =>
+      btn.addEventListener("click", async () => {
+        try {
+          await deletePhoto(btn.dataset.del);
+          toast("PHOTO DELETED");
+          render();
+        } catch (err) {
+          toast("COULD NOT DELETE: " + err.message.toUpperCase());
+        }
+      }));
+  }
+
+  async function handleFiles(fileList) {
+    const files = [...fileList].filter((f) => f.type.startsWith("image/") || /\.hei[cf]$/i.test(f.name));
+    const skipped = [...fileList].length - files.length;
+    if (!files.length) {
+      toast(skipped ? "THOSE FILES ARE NOT IMAGES" : "NO FILES SELECTED");
+      return;
+    }
+
+    errorsEl.innerHTML = "";
+    errorsEl.classList.add("hidden");
+    statusEl.classList.remove("hidden");
+
+    const failures = [];
+    for (let i = 0; i < files.length; i++) {
+      statusEl.textContent = "PROCESSING " + (i + 1) + " OF " + files.length + "…";
+      try {
+        await addPhoto(files[i]);
+      } catch (err) {
+        // One unreadable file must not abort the rest of the batch.
+        failures.push(files[i].name + " — " + err.message);
+      }
+    }
+
+    statusEl.classList.add("hidden");
+    const ok = files.length - failures.length;
+    if (ok) toast("ADDED " + ok + " PHOTO" + (ok === 1 ? "" : "S"));
+    if (failures.length) {
+      errorsEl.classList.remove("hidden");
+      errorsEl.innerHTML = failures.map((f) =>
+        '<p class="font-body-md text-[13px] text-error">Could not add ' + esc(f) + "</p>").join("");
+    }
+    render();
+  }
+
+  drop.addEventListener("click", () => input.click());
+  drop.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); }
+  });
+  input.addEventListener("change", () => { handleFiles(input.files); input.value = ""; });
+
+  ["dragenter", "dragover"].forEach((ev) =>
+    drop.addEventListener(ev, (e) => {
+      e.preventDefault();
+      drop.classList.add("border-tertiary", "bg-tertiary-container/40");
+    }));
+  ["dragleave", "drop"].forEach((ev) =>
+    drop.addEventListener(ev, (e) => {
+      e.preventDefault();
+      drop.classList.remove("border-tertiary", "bg-tertiary-container/40");
+    }));
+  drop.addEventListener("drop", (e) => {
+    if (e.dataTransfer && e.dataTransfer.files) handleFiles(e.dataTransfer.files);
+  });
+
+  window.addEventListener("beforeunload", releaseURLs);
+
+  // Photos live in this browser's own IndexedDB — there is no server-side data
+  // here to protect, so this gate is consistency with the orders page rather
+  // than a security boundary of its own.
+  requireOwner("gate", async () => {
+    document.getElementById("photo-content").classList.remove("hidden");
+    document.getElementById("signout-slot").innerHTML = signOutButtonHTML();
+    wireSignOut();
+    await render();
+  });
+</script>
+</body>
+</html>

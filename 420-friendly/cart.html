@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>420 FRIENDLY — Bag</title>
+<link href="assets/tailwind.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link rel="icon" href="assets/favicon.ico" sizes="any"/>
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+
+<main class="pt-20 md:pt-[116px] max-w-6xl mx-auto px-margin-mobile md:px-margin-desktop">
+  <section class="pt-12 pb-8">
+    <h1 class="font-headline-xl-mobile text-headline-xl-mobile md:font-headline-xl md:text-headline-xl text-on-surface uppercase tracking-tighter">Your Bag</h1>
+  </section>
+
+  <div id="cart-root"></div>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+
+<script src="assets/products.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/store.js"></script>
+<script>
+  renderChrome("BAG");
+
+  const FREE_SHIP_AT = 100;
+  const root = document.getElementById("cart-root");
+
+  function renderCart() {
+    const cart = getCart();
+    if (cart.length === 0) {
+      root.innerHTML =
+        '<div class="text-center py-16 border border-outline-variant/30 rounded-2xl bg-surface-container-low/50">' +
+        '<span class="material-symbols-outlined text-outline text-[48px]">shopping_bag</span>' +
+        '<p class="font-label-caps text-label-caps text-on-surface-variant mt-4 mb-8">YOUR BAG IS EMPTY</p>' +
+        '<a href="shop.html" class="inline-block rounded-full bg-primary text-on-primary py-4 px-8 font-label-caps text-label-caps hover:bg-inverse-surface transition-all duration-300">SHOP THE DROP</a>' +
+        "</div>";
+      return;
+    }
+
+    const rows = cart.map((line, i) => {
+      const p = getProduct(line.id);
+      if (!p) return "";
+      return (
+        '<div class="flex gap-4 py-6">' +
+        '<a href="product.html?id=' + esc(p.id) + '" class="relative w-24 h-28 shrink-0 overflow-hidden bg-surface-container-low">' +
+        productArtHTML(p, "sm") + "</a>" +
+        '<div class="flex-1 min-w-0">' +
+        '<div class="flex justify-between gap-2">' +
+        '<div>' +
+        '<a href="product.html?id=' + esc(p.id) + '" class="font-body-md text-body-md text-on-surface hover:text-secondary transition-colors">' + esc(p.name) + "</a>" +
+        '<p class="font-body-md text-body-md text-on-surface-variant">' + esc(p.subtitle) + "</p>" +
+        '<p class="font-label-caps text-label-caps text-on-surface-variant mt-1">SIZE: ' + esc(line.size) + "</p>" +
+        "</div>" +
+        '<span class="font-label-caps text-label-caps text-tertiary whitespace-nowrap">' + esc(money(p.price * line.qty)) + "</span></div>" +
+        '<div class="flex items-center gap-4 mt-4">' +
+        '<div class="flex items-center border border-outline-variant rounded-full">' +
+        '<button data-action="dec" data-index="' + i + '" aria-label="Decrease quantity" class="px-3 py-1.5 text-on-surface hover:text-secondary transition-colors font-label-caps text-label-caps">&minus;</button>' +
+        '<span class="px-2 font-label-caps text-label-caps text-on-surface tabular-nums">' + line.qty + "</span>" +
+        '<button data-action="inc" data-index="' + i + '" aria-label="Increase quantity" class="px-3 py-1.5 text-on-surface hover:text-secondary transition-colors font-label-caps text-label-caps">+</button></div>' +
+        '<button data-action="remove" data-index="' + i + '" aria-label="Remove item" class="text-outline hover:text-error transition-colors flex items-center">' +
+        '<span class="material-symbols-outlined text-[20px]">delete</span></button>' +
+        "</div></div></div>"
+      );
+    }).join("");
+
+    const subtotal = cartSubtotal();
+    const shipMsg = subtotal >= FREE_SHIP_AT
+      ? '<p class="font-body-md text-[13px] text-tertiary mt-4">Free US shipping unlocked.</p>'
+      : '<p class="font-body-md text-[13px] text-on-surface-variant mt-4">You\'re ' + esc(money(FREE_SHIP_AT - subtotal)) + " from free US shipping.</p>";
+
+    root.innerHTML =
+      '<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">' +
+      '<div class="lg:col-span-8 divide-y divide-outline-variant/50 border-y border-outline-variant/50">' + rows + "</div>" +
+      '<aside class="lg:col-span-4">' +
+      '<div class="lg:sticky lg:top-[132px] ambient-glow rounded-2xl bg-surface-container-low/80 border border-outline-variant/30 p-6">' +
+      '<h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter mb-6">Summary</h2>' +
+      '<div class="flex justify-between font-label-caps text-label-caps text-on-surface-variant"><span>SUBTOTAL</span><span class="text-on-surface">' + esc(money(subtotal)) + "</span></div>" +
+      '<div class="flex justify-between font-label-caps text-label-caps text-on-surface-variant mt-3"><span>SHIPPING</span><span>' + (subtotal >= FREE_SHIP_AT ? "FREE" : "AT CHECKOUT") + "</span></div>" +
+      '<div class="border-t border-outline-variant/50 my-4"></div>' +
+      '<div class="flex justify-between font-label-caps text-label-caps text-on-surface"><span>ESTIMATED TOTAL</span><span>' + esc(money(subtotal)) + "</span></div>" +
+      '<button id="checkout" class="w-full rounded-full bg-primary text-on-primary py-4 px-6 font-label-caps text-label-caps hover:bg-inverse-surface transition-all duration-300 flex items-center justify-center gap-2 mt-6">' +
+      "CHECKOUT" +
+      '<span class="material-symbols-outlined text-[18px]">arrow_forward</span></button>' +
+      shipMsg +
+      '<p class="font-body-md text-[13px] text-outline mt-2">Card, Apple Pay, Google Pay, Cash App, PayPal and Venmo at checkout.</p>' +
+      "</div></aside></div>";
+
+    root.querySelectorAll("button[data-action]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const line = getCart()[Number(btn.dataset.index)];
+        if (!line) return;
+        const action = btn.dataset.action;
+        if (action === "inc") setLineQty(line.id, line.size, line.qty + 1);
+        if (action === "dec") setLineQty(line.id, line.size, line.qty - 1);
+        if (action === "remove") setLineQty(line.id, line.size, 0);
+        renderCart();
+      });
+    });
+
+    document.getElementById("checkout").addEventListener("click", () => {
+      location.href = "checkout.html";
+    });
+  }
+
+  whenPhotosReady(renderCart);
+</script>
+</body>
+</html>

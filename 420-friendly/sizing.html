@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>420 FRIENDLY — Size Guide</title>
+<link href="assets/tailwind.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link rel="icon" href="assets/favicon.ico" sizes="any"/>
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+<main class="pt-20 md:pt-[116px] max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+  <div id="policy-root"></div>
+</main>
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+<script src="assets/products.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/policy.js"></script>
+
+<script>
+  renderChrome("SHOP ALL");
+  const chart = SIZE_CHART.rows
+    ? "<div class=\"overflow-x-auto\"><table class=\"w-full text-left font-body-md text-body-md text-on-surface-variant border-y border-outline-variant/50 my-6\">" +
+      "<thead><tr class=\"font-label-caps text-label-caps text-on-surface\">" +
+      "<th class=\"py-3 pr-4\">SIZE</th><th class=\"py-3 pr-4\">CHEST</th><th class=\"py-3 pr-4\">LENGTH</th><th class=\"py-3\">SLEEVE</th>" +
+      "</tr></thead><tbody>" +
+      SIZE_CHART.rows.map(function (r) {
+        return "<tr class=\"border-t border-outline-variant/40\">" +
+          "<td class=\"py-3 pr-4 font-label-caps text-label-caps text-on-surface\">" + esc(r.size) + "</td>" +
+          "<td class=\"py-3 pr-4 tabular-nums\">" + esc(r.chest) + "</td>" +
+          "<td class=\"py-3 pr-4 tabular-nums\">" + esc(r.length) + "</td>" +
+          "<td class=\"py-3 tabular-nums\">" + esc(r.sleeve) + "</td></tr>";
+      }).join("") + "</tbody></table></div>"
+    : p(policyMissing("MEASUREMENTS") +
+        " &mdash; a size chart cannot be guessed. Measure one piece from each run laid flat " +
+        "(chest pit-to-pit, length collar-to-hem, sleeve shoulder-to-cuff) and add the rows to " +
+        "<span class=\"font-label-caps text-label-caps\">SIZE_CHART</span> in assets/policy.js. " +
+        "A made-up measurement causes a return, and the return is our fault.");
+
+  renderPolicyPage({
+    kicker: "SIZE GUIDE",
+    title: "How it fits",
+    standfirst: esc(SIZE_CHART.fit),
+    body:
+      h("Measurements") +
+      p(esc(SIZE_CHART.note)) +
+      chart +
+      h("How to measure yourself") +
+      ul([
+        "<strong>Chest</strong> — take a t-shirt that fits you the way you want this to fit, lay it flat, measure armpit to armpit.",
+        "<strong>Length</strong> — from the base of the collar straight down to the hem.",
+        "Compare those two numbers to the table. That is more reliable than measuring your body."
+      ]) +
+      h("Between sizes?") +
+      p("These are cut oversized already. If you are between sizes and want the intended fit, take the smaller one.") +
+      h("Still unsure") +
+      p("Email " + pv(POLICY.contactEmail, "CONTACT EMAIL") + " with your usual size in a brand you own and we will tell you straight.")
+  });
+</script>
+</body>
+</html>

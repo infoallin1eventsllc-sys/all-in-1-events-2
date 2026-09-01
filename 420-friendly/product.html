@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>420 FRIENDLY — Product</title>
+<link href="assets/tailwind.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link rel="icon" href="assets/favicon.ico" sizes="any"/>
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+
+<main class="pt-20 md:pt-[116px] max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+  <div id="product-root"></div>
+
+  <!-- Related products -->
+  <section id="related" class="hidden mt-20">
+    <h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter mb-8">Complete the Fit</h2>
+    <div id="related-grid" class="grid grid-cols-1 sm:grid-cols-3 gap-x-gutter gap-y-10"></div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+
+<script src="assets/products.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/store.js"></script>
+<script>
+  renderChrome("SHOP ALL");
+
+  const params = new URLSearchParams(location.search);
+  const product = getProduct(params.get("id") || "vibrant-hoodie");
+  const root = document.getElementById("product-root");
+  let selectedSize = null;
+
+  function renderNotFound() {
+    root.innerHTML =
+      '<div class="text-center py-24">' +
+      '<p class="font-label-caps text-label-caps text-tertiary mb-4">404 — PIECE NOT FOUND</p>' +
+      '<h1 class="font-headline-xl-mobile text-headline-xl-mobile text-on-surface uppercase tracking-tighter mb-8">That drop doesn\'t exist.</h1>' +
+      '<a href="shop.html" class="inline-block rounded-full bg-primary text-on-primary py-4 px-8 font-label-caps text-label-caps hover:bg-inverse-surface transition-all duration-300">BACK TO SHOP</a>' +
+      "</div>";
+  }
+
+  function accordion(title, bodyHTML, open) {
+    return (
+      '<details class="group border-t border-outline-variant/50"' + (open ? " open" : "") + ">" +
+      '<summary class="flex justify-between items-center py-5 cursor-pointer list-none font-label-caps text-label-caps text-on-surface hover:text-secondary transition-colors">' +
+      esc(title) +
+      '<span class="material-symbols-outlined text-[20px] transition-transform group-open:rotate-180">expand_more</span>' +
+      "</summary>" +
+      '<div class="pb-6 font-body-md text-body-md text-on-surface-variant space-y-3">' + bodyHTML + "</div>" +
+      "</details>"
+    );
+  }
+
+  function renderProduct() {
+    document.title = "420 FRIENDLY — " + product.name;
+    selectedSize = product.sizes.length === 1 ? product.sizes[0] : null;
+
+    const detailsBody =
+      "<p>" + esc(product.blurb) + "</p>" +
+      '<ul class="space-y-2 pt-2">' +
+      product.features.map((f) =>
+        '<li class="flex items-start gap-3">' +
+        '<span class="material-symbols-outlined text-secondary text-[20px]">check_circle</span>' +
+        "<span>" + esc(f) + "</span></li>"
+      ).join("") +
+      "</ul>" +
+      '<p class="pt-2">Colorway: ' + esc(product.colors.join(" · ")) + "</p>";
+
+    const shippingBody =
+      "<p>Free US shipping on orders over $100. Standard shipping 3&ndash;5 business days.</p>" +
+      "<p>Unworn pieces can be returned within 30 days of delivery. Limited-drop items are exchanged for size only &mdash; when a run is gone, it's gone.</p>";
+
+    root.innerHTML =
+      // Breadcrumb
+      '<nav class="mt-6 mb-4 font-label-caps text-label-caps text-on-surface-variant" aria-label="Breadcrumb">' +
+      '<a href="shop.html" class="hover:text-secondary transition-colors">SHOP</a>' +
+      '<span class="mx-2 text-outline">/</span>' +
+      '<span class="text-on-surface">' + esc(product.category) + "</span></nav>" +
+
+      '<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">' +
+      // Gallery
+      '<div class="col-span-1 md:col-span-7 lg:col-span-8">' +
+      '<div class="relative aspect-[4/5] overflow-hidden bg-surface-container-low">' +
+      productArtHTML(product, "lg") +
+      '<div class="absolute top-4 left-4 glass-panel px-4 py-2 rounded-full border border-tertiary/30">' +
+      '<span class="font-label-caps text-label-caps ' + badgeTone(product.badge) + ' flex items-center gap-2">' +
+      '<span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>' + esc(product.badge) + "</span></div>" +
+      "</div></div>" +
+
+      // Buy rail (Nike pattern: sticky info column)
+      '<div class="col-span-1 md:col-span-5 lg:col-span-4">' +
+      '<div class="md:sticky md:top-[132px] py-4 md:py-0 md:pl-4 lg:pl-8">' +
+      '<p class="font-label-caps text-label-caps text-tertiary mb-2">' + esc(product.subtitle.toUpperCase()) + "</p>" +
+      '<h1 class="font-headline-xl-mobile text-headline-xl-mobile md:font-headline-xl md:text-headline-xl text-on-surface uppercase tracking-tighter">' + esc(product.name) + "</h1>" +
+      '<p class="font-body-lg text-body-lg text-on-surface mt-3">' + esc(money(product.price)) + "</p>" +
+
+      '<div class="mt-8">' +
+      '<div class="flex justify-between items-center mb-3">' +
+      '<span class="font-label-caps text-label-caps text-on-surface">SELECT SIZE</span>' +
+      '<button id="size-guide" class="font-label-caps text-label-caps text-secondary underline decoration-1 underline-offset-4">SIZE GUIDE</button></div>' +
+      '<div id="sizes" class="grid grid-cols-' + Math.min(product.sizes.length, 4) + ' gap-2"></div></div>' +
+
+      '<div class="flex flex-col gap-3 mt-8">' +
+      '<button id="add-to-bag" class="w-full rounded-full bg-primary text-on-primary py-4 px-6 font-label-caps text-label-caps hover:bg-inverse-surface transition-all duration-300 flex items-center justify-center gap-2">' +
+      (product.badge === "PRE-ORDER" ? "PRE-ORDER" : "ADD TO BAG") +
+      '<span class="material-symbols-outlined text-[18px]">shopping_bag</span></button>' +
+      '<button id="fav-btn" class="w-full rounded-full border border-outline-variant text-on-surface py-4 px-6 font-label-caps text-label-caps hover:border-secondary hover:text-secondary transition-all duration-300 flex items-center justify-center gap-2">' +
+      '<span id="fav-label">FAVORITE</span>' +
+      '<span id="fav-icon" class="material-symbols-outlined text-[18px]">favorite</span></button></div>' +
+
+      '<div class="mt-10">' +
+      accordion("DETAILS & FIT", detailsBody, true) +
+      accordion("SHIPPING & RETURNS", shippingBody, false) +
+      '<div class="border-t border-outline-variant/50"></div>' +
+      "</div>" +
+      "</div></div></div>";
+
+    renderSizes();
+    syncFav();
+
+    document.getElementById("add-to-bag").addEventListener("click", () => {
+      if (!selectedSize) {
+        toast("PICK A SIZE FIRST");
+        return;
+      }
+      addToCart(product.id, selectedSize);
+    });
+    document.getElementById("fav-btn").addEventListener("click", () => {
+      const nowFav = toggleFav(product.id);
+      syncFav();
+      toast(nowFav ? "SAVED TO FAVORITES" : "REMOVED FROM FAVORITES");
+    });
+    // Was a toast with one line of advice. A real page carries the actual
+    // measurements and is reachable from the footer and from search, which a
+    // toast never is.
+    document.getElementById("size-guide").addEventListener("click", () => {
+      window.location.href = "sizing.html";
+    });
+  }
+
+  function syncFav() {
+    const fav = isFav(product.id);
+    document.getElementById("fav-label").textContent = fav ? "FAVORITED" : "FAVORITE";
+    const icon = document.getElementById("fav-icon");
+    icon.style.fontVariationSettings = fav ? "'FILL' 1" : "'FILL' 0";
+    icon.classList.toggle("text-tertiary", fav);
+  }
+
+  function renderSizes() {
+    const wrap = document.getElementById("sizes");
+    wrap.innerHTML = "";
+    product.sizes.forEach((size) => {
+      const btn = document.createElement("button");
+      const active = size === selectedSize;
+      btn.className = active
+        ? "rounded border border-secondary bg-surface-container text-secondary py-3 font-label-caps text-label-caps transition-colors"
+        : "rounded border border-outline-variant hover:border-secondary hover:text-secondary text-on-surface py-3 font-label-caps text-label-caps transition-colors";
+      btn.textContent = size;
+      btn.addEventListener("click", () => {
+        selectedSize = size;
+        renderSizes();
+      });
+      wrap.appendChild(btn);
+    });
+  }
+
+  function renderRelated() {
+    const sameCat = CATALOG.filter((p) => p.id !== product.id && p.category === product.category);
+    const others = CATALOG.filter((p) => p.id !== product.id && p.category !== product.category);
+    const picks = [...sameCat, ...others].slice(0, 3);
+    document.getElementById("related").classList.remove("hidden");
+    document.getElementById("related-grid").innerHTML = picks.map(productCardHTML).join("");
+  }
+
+  whenPhotosReady(() => {
+    if (product) {
+      renderProduct();
+      renderRelated();
+    } else {
+      renderNotFound();
+    }
+  });
+</script>
+</body>
+</html>

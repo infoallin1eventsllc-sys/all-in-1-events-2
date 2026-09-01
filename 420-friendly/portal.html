@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta name="robots" content="noindex, nofollow"/>
+<title>420 FRIENDLY — Owner Portal</title>
+<link href="assets/tailwind.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link rel="icon" href="assets/favicon.ico" sizes="any"/>
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+
+<main class="pt-20 md:pt-[116px] max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop pb-16">
+
+  <div id="gate"></div>
+
+  <div id="portal-content" class="hidden">
+    <section class="pt-10 pb-8 flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p class="font-label-caps text-label-caps text-tertiary mb-2">OWNER PORTAL</p>
+        <h1 class="font-headline-xl-mobile text-headline-xl-mobile md:font-headline-xl md:text-headline-xl text-on-surface uppercase tracking-tighter">
+          Your dashboard
+        </h1>
+        <p class="font-body-lg text-body-lg text-on-surface-variant mt-4 max-w-xl">
+          Everything that runs the business, in one place.
+        </p>
+      </div>
+      <span id="signout-slot"></span>
+    </section>
+
+    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
+
+      <a href="owner.html" class="group block border border-outline-variant/50 rounded-2xl bg-surface-container-low/60 p-6 hover:border-tertiary transition-colors">
+        <span class="material-symbols-outlined text-tertiary text-[34px]">receipt_long</span>
+        <h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter mt-4 group-hover:text-tertiary transition-colors">
+          Transactions
+        </h2>
+        <p class="font-body-md text-body-md text-on-surface-variant mt-2">
+          Orders, invoices and revenue. Search, filter, open any invoice to print, or export the lot to CSV.
+        </p>
+        <span class="font-label-caps text-label-caps text-on-surface mt-5 inline-flex items-center gap-2">
+          OPEN <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+        </span>
+      </a>
+
+      <a href="photos.html" class="group block border border-outline-variant/50 rounded-2xl bg-surface-container-low/60 p-6 hover:border-tertiary transition-colors">
+        <span class="material-symbols-outlined text-tertiary text-[34px]">photo_library</span>
+        <h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter mt-4 group-hover:text-tertiary transition-colors">
+          Photos
+        </h2>
+        <p class="font-body-md text-body-md text-on-surface-variant mt-2">
+          Upload product photography and assign a picture to a product — it then replaces that product's placeholder across the shop.
+        </p>
+        <span class="font-label-caps text-label-caps text-on-surface mt-5 inline-flex items-center gap-2">
+          OPEN <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+        </span>
+      </a>
+
+      <a href="media.html" class="group block border border-outline-variant/50 rounded-2xl bg-surface-container-low/60 p-6 hover:border-tertiary transition-colors">
+        <span class="material-symbols-outlined text-tertiary text-[34px]">library_music</span>
+        <h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter mt-4 group-hover:text-tertiary transition-colors">
+          Music &amp; Video
+        </h2>
+        <p class="font-body-md text-body-md text-on-surface-variant mt-2">
+          Upload a track or a clip and it plays on the front page. Nothing to copy or paste.
+        </p>
+        <span class="font-label-caps text-label-caps text-on-surface mt-5 inline-flex items-center gap-2">
+          OPEN <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+        </span>
+      </a>
+
+      <a href="../marketing-system.html" class="group block border border-outline-variant/50 rounded-2xl bg-surface-container-low/60 p-6 hover:border-tertiary transition-colors">
+        <span class="material-symbols-outlined text-tertiary text-[34px]">hub</span>
+        <h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter mt-4 group-hover:text-tertiary transition-colors">
+          Marketing
+        </h2>
+        <p class="font-body-md text-body-md text-on-surface-variant mt-2">
+          The always-on system: how the orchestrator, agents and CRM fit together. Signups from the site land in that CRM.
+        </p>
+        <span class="font-label-caps text-label-caps text-on-surface mt-5 inline-flex items-center gap-2">
+          OPEN <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+        </span>
+      </a>
+
+    </section>
+
+    <section class="mt-10 border border-outline-variant/40 rounded-2xl bg-surface-container-low/40 p-6">
+      <p class="font-label-caps text-label-caps text-on-surface-variant mb-3">CUSTOMER-FACING</p>
+      <p class="font-body-md text-body-md text-on-surface-variant">
+        The drop list customers sign up to lives at
+        <a href="members.html" class="text-secondary underline decoration-1 underline-offset-4 hover:text-tertiary transition-colors">Members</a>.
+        That page is public by design — it is how people join the list.
+      </p>
+    </section>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+
+<script src="assets/products.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/auth.js"></script>
+<script>
+  renderChrome("PORTAL");
+
+  requireOwner("gate", async () => {
+    document.getElementById("portal-content").classList.remove("hidden");
+    document.getElementById("signout-slot").innerHTML = signOutButtonHTML();
+    wireSignOut();
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>420 FRIENDLY — FAQ</title>
+<link href="assets/tailwind.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link rel="icon" href="assets/favicon.ico" sizes="any"/>
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+<main class="pt-20 md:pt-[116px] max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+  <div id="policy-root"></div>
+</main>
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+<script src="assets/products.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/policy.js"></script>
+
+<script>
+  renderChrome("SHOP ALL");
+  renderPolicyPage({
+    kicker: "FAQ",
+    title: "Questions",
+    standfirst: "The ones we actually get asked. If yours is not here, email us — a person answers.",
+    body:
+      h("Do you sell cannabis?") +
+      p("No. <strong>420 Friendly is a clothing brand.</strong> Every product is apparel and nothing else. " +
+        "We do not sell, supply or ship anything you consume, and we cannot help you find any.") +
+      h("Why do things sell out and not come back?") +
+      p("Runs are genuinely small and we do not restock them. That is a production decision, not a sales tactic — " +
+        "when a piece is gone it is gone, and we would rather that be true than say it and restock anyway.") +
+      h("How do I get a piece before it sells out?") +
+      p("<a href=\"members.html\" class=\"text-secondary underline decoration-1 underline-offset-4 hover:text-tertiary transition-colors\">Join the list</a>. " +
+        "Members see every drop 24 hours early, and some stock is held back from the public run.") +
+      h("What is the fabric?") +
+      p("450gsm cotton fleece on the hoodies and crews — heavier than most of what it sits next to on a rail. " +
+        "Prints are high-density, not thin transfers. Per-piece details are on each product page.") +
+      h("How does it fit?") +
+      p("Oversized and boxy. See the <a href=\"sizing.html\" class=\"text-secondary underline decoration-1 underline-offset-4 hover:text-tertiary transition-colors\">size guide</a>.") +
+      h("When will my order arrive?") +
+      p(esc(POLICY.dispatchDays) + " to dispatch, then " + esc(POLICY.transitDays) + ". Full detail on " +
+        "<a href=\"shipping.html\" class=\"text-secondary underline decoration-1 underline-offset-4 hover:text-tertiary transition-colors\">shipping</a>.") +
+      h("Can I return it?") +
+      p("Standard pieces, yes — " + POLICY.returnWindowDays + " days. Limited drops are " + esc(POLICY.limitedDropRule) + ", " +
+        "because the run does not come back. See <a href=\"returns.html\" class=\"text-secondary underline decoration-1 underline-offset-4 hover:text-tertiary transition-colors\">returns</a>.") +
+      h("Do you ship internationally?") +
+      p(esc(POLICY.internationalNote)) +
+      h("How do I contact a person?") +
+      p("<a href=\"contact.html\" class=\"text-secondary underline decoration-1 underline-offset-4 hover:text-tertiary transition-colors\">Here</a>. " +
+        "It is a small operation, so it is genuinely a person.")
+  });
+</script>
+</body>
+</html>

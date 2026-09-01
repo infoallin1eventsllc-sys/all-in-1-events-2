@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>420 FRIENDLY — Privacy</title>
+<link href="assets/tailwind.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link rel="icon" href="assets/favicon.ico" sizes="any"/>
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+<main class="pt-20 md:pt-[116px] max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+  <div id="policy-root"></div>
+</main>
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+<script src="assets/products.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/crm.js"></script>
+<script src="assets/policy.js"></script>
+<script>
+  renderChrome("SHOP ALL");
+  renderPolicyPage({
+    kicker: "PRIVACY",
+    title: "What we collect",
+    standfirst: "Written from what this site actually does, not from a template. If the site changes, this changes.",
+    body:
+      h("The short version") +
+      p("We collect your email if you join the list, and your name, email and address if you order. " +
+        "We never see your card number. We do not sell anything about you to anyone.") +
+      h("Stored only in your browser") +
+      p("Your bag and your favourites live in your own browser (localStorage). They are never sent to us and we cannot see them. " +
+        "Clearing your browser data deletes them, and they do not follow you to another device.") +
+      h("Sent to us") +
+      ul([
+        "<strong>Your email</strong>, if you join the drop list. It goes into our own customer database and is used to tell you about drops.",
+        "<strong>Order details</strong> — name, email, shipping address, what you bought — kept so we can ship it and handle a return."
+      ]) +
+      h("Payments") +
+      p("Card details go straight to <strong>Stripe</strong> or <strong>PayPal</strong> and never touch this site or our servers. " +
+        "We receive confirmation that a payment succeeded and the last four digits — nothing more. " +
+        "Their privacy policies govern what they do with it.") +
+      h("Third parties that see something") +
+      ul([
+        "<strong>Netlify</strong> hosts the site and therefore sees requests to it, including IP addresses.",
+        "<strong>Supabase</strong> stores our customer database.",
+        "<strong>Google Fonts</strong> serves the typefaces. Loading a font sends your IP address to Google. " +
+          "This is worth knowing because it happens on every page whether or not you interact with anything.",
+        "<strong>Stripe and PayPal</strong>, at checkout only."
+      ]) +
+      p("There is currently <strong>no analytics and no advertising tracker</strong> on this site. Nothing follows you around the internet. " +
+        "If that changes this page changes with it.") +
+      h("How long we keep it") +
+      p("Order records for as long as tax and accounting rules require. List emails until you unsubscribe.") +
+      h("Your rights") +
+      p("Email " + pv(POLICY.contactEmail, "CONTACT EMAIL") + " to see what we hold on you, correct it, or have it deleted. " +
+        "Deletion cannot remove an order record we are legally required to keep, but it removes everything else.") +
+      h("Unsubscribing") +
+      p("Every list email has an unsubscribe link. It works immediately and you do not have to explain yourself.") +
+      h("Who we are") +
+      p("This site is operated by " + pv(POLICY.legalName, "LEGAL NAME") + ".")
+  });
+</script>
+</body>
+</html>
