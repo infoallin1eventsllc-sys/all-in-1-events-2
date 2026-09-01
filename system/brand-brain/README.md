@@ -38,6 +38,21 @@ argue instead of speak.
 `tone-rules.md` is not stylistic. It is the one the agent must never override,
 which is why it is last in the prompt and phrased as rules rather than advice.
 
+## The three brands
+
+| Folder | Business | What it sells |
+|---|---|---|
+| `all-in-1-events/` | All in 1 Events | Photo booths |
+| `420-friendly/` | 420 Friendly | Cannabis-themed streetwear |
+| `meridian-interface/` | Meridian Interface | Websites, apps, marketing systems |
+
+They are genuinely different voices — a photo booth reassures, a streetwear
+brand states and stops, an agency publishes numbers. That is the whole reason
+these are separate documents rather than one shared "voice" setting.
+
+Anything marked **NEEDS OTIS** in a positioning file is a gap the agent writes
+around rather than invents. Filling those in is the highest-value edit here.
+
 ## Which brand is active
 
 `settings.business_profile.brand` selects it. One system, one active brand at a

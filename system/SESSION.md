@@ -284,6 +284,40 @@ orphans, intake/runner/orchestrator/report/dashboard all responding correctly.
 One open alert — 14 drafts awaiting approval — which is a real state, not a
 fault.
 
+### Three businesses, corrected (2026-09-01)
+
+Otis clarified what each business actually is. **One correction matters: All in
+1 Events is a PHOTO BOOTH business**, not full-service event production. The
+brief written earlier claimed "lighting, photo booth and DJ — one team", which
+was invented — a positioning document that sells services he does not offer is
+worse than none, because it produces bookings he has to refuse.
+
+| Brand | Business | Brand brain |
+|---|---|---|
+| `all-in-1-events` | Photo booths | Corrected + live |
+| `420-friendly` | Cannabis-themed streetwear | Live |
+| `meridian-interface` | Websites, apps, marketing systems | **New** — live |
+
+`meridian-interface` had no brief at all, despite being the brand every queued
+draft was actually about. It now has one, built on the two things that are
+genuinely differentiating: **the price is published**, and **the site is wired
+to something**. Its hard rules ban ranking/traffic/revenue guarantees and any
+price not on the website — the second is what makes the first credible.
+
+Its tone-rules also ban implying ads or SEO retainers, since claiming work he
+does not do wins a lead and then loses a client.
+
+**Gaps deliberately left, marked `NEEDS OTIS` in the positioning files.** The
+agent writes around these rather than inventing them:
+- **All in 1 Events**: booth types, what a package includes, price range,
+  service area, what he refuses.
+- **Meridian Interface**: the "$3,800 landing page / $8,500 for 3–7 pages"
+  figures came out of a *placeholder draft*, so they are **unverified** and
+  flagged as such in three places. Confirm or replace before anything using
+  them is published.
+
+Filling those in is the highest-value edit in `system/brand-brain/`.
+
 ## Open next steps (not done)
 - Set `MERIDIAN_INTAKE_URL` in Netlify so the bridge goes live (Otis's step).
 - ~~All in 1 Events index.html was dead.~~ **Fixed 2026-08-25.** `css/styles.css`,
