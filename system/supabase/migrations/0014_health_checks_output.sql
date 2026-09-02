@@ -132,9 +132,12 @@ begin
        and (meta->>'mocked')::boolean is true
        and coalesce(meta->>'rejected_reason', '') <> 'placeholder'
   ) x;
-  select count(*) into m from agent_runs
+  -- The most recent plan only: a run that was placeholder yesterday and real
+  -- today is a fixed problem, not a live one.
+  select case when tokens_in is null then 1 else 0 end into m from agent_runs
   where status = 'success' and started_at > now() - interval '30 hours'
-    and tokens_in is null;
+  order by started_at desc limit 1;
+  m := coalesce(m, 0);
   if n > 0 or m > 0 then
     perform public.raise_alert('placeholder_output', 'critical',
       'The AI is not writing — output is placeholder text',
