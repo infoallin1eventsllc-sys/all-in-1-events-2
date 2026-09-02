@@ -82,6 +82,10 @@ Deno.serve(async (req) => {
       `can be measured later. If a "What actually happened" section appears above, treat its guidance as ` +
       `instructions about THIS cycle, not background reading. ` +
       `Only use these task types: generate_content, send_email, send_sms, publish_content, follow_up_lead. ` +
+      `generate_content payload: channel (tiktok, instagram, facebook, linkedin), kind ("post" for a caption with a ` +
+      `branded image card, or "video" for a 20-second vertical clip of large on-brand type — hook, three beats, ` +
+      `the price, a call to action — that works on TikTok, Reels, Facebook and LinkedIn alike), topic, icp. ` +
+      `TikTok takes video only, so a tiktok task must be kind "video". Aim for one or two videos a week; the rest posts. ` +
       `Respect autonomy="${(agent as Record<string, unknown>).autonomy}". In "draft" mode ONLY generate_content and ` +
       `follow_up_lead are executed: publishing and sending are the owner's decisions, made from the approval queue, ` +
       `so put any publish/send recommendation in the summary rather than the task list. Never invent contact details.`;

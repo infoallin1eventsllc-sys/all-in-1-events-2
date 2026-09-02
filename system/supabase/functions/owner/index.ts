@@ -382,6 +382,111 @@ Deno.serve(async (req) => {
       return json({ ok: true, imported: data?.length ?? 0 });
     }
 
+    /* ------------------------------------------------ marketing approvals -- */
+    // The approval queue has had no button. The dashboard function cannot be
+    // one — Supabase serves it as text/plain — and the CLI is not something
+    // the owner opens. These actions are the button; the portal renders them.
+
+    case "content_list": {
+      const { data, error } = await sb
+        .from("content_items")
+        .select("id, channel, kind, title, body, image_url, status, meta, created_at, published_at, external_id")
+        .in("status", ["pending_approval", "scheduled", "approved", "published", "failed"])
+        .order("created_at", { ascending: false })
+        .limit(60);
+      if (error) return json({ ok: false, error: error.message }, 500);
+      const { data: chans } = await sb.from("channels").select("key, label");
+      return json({ ok: true, items: data ?? [], channels: chans ?? [] });
+    }
+
+    case "content_approve": {
+      const id = String(body.id ?? "");
+      if (!id) return json({ ok: false, error: "id required" }, 400);
+      const { data: item } = await sb.from("content_items").select("id, status, channel, meta").eq("id", id).maybeSingle();
+      if (!item) return json({ ok: false, error: "not found" }, 404);
+      if (!["pending_approval", "failed", "rejected"].includes(item.status)) {
+        return json({ ok: false, error: `cannot approve an item that is ${item.status}` }, 409);
+      }
+      const { publish: _p, publish_pending: _q, ...meta } = (item.meta ?? {}) as Record<string, unknown>;
+      await sb.from("content_items").update({
+        status: "approved",
+        meta: { ...meta, approved_at: new Date().toISOString(), approved_by: "owner" },
+      }).eq("id", id);
+      await sb.from("tasks").insert({ type: "publish_content", payload: { content_item_id: id }, priority: 20 });
+      return json({ ok: true, id, status: "approved", queued: "publish_content" });
+    }
+
+    case "content_reject": {
+      const id = String(body.id ?? "");
+      if (!id) return json({ ok: false, error: "id required" }, 400);
+      const reason = String(body.reason ?? "").slice(0, 300);
+      const { data: item } = await sb.from("content_items").select("id, meta").eq("id", id).maybeSingle();
+      if (!item) return json({ ok: false, error: "not found" }, 404);
+      await sb.from("content_items").update({
+        status: "rejected",
+        meta: { ...((item.meta ?? {}) as Record<string, unknown>), rejected_reason: reason || "rejected by owner", rejected_at: new Date().toISOString() },
+      }).eq("id", id);
+      return json({ ok: true, id, status: "rejected" });
+    }
+
+    case "content_update": {
+      // Edit the words before approving. A rendered video keeps its clip —
+      // the caption under it changes, the on-screen text does not.
+      const id = String(body.id ?? "");
+      if (!id) return json({ ok: false, error: "id required" }, 400);
+      const patch: Record<string, unknown> = {};
+      if (typeof body.title === "string") patch.title = body.title.slice(0, 300);
+      if (typeof body.body === "string") patch.body = body.body.slice(0, 5000);
+      if (!Object.keys(patch).length) return json({ ok: false, error: "nothing to update" }, 400);
+      const { data, error } = await sb.from("content_items").update(patch)
+        .eq("id", id).eq("status", "pending_approval").select("id, title, body").maybeSingle();
+      if (error) return json({ ok: false, error: error.message }, 500);
+      if (!data) return json({ ok: false, error: "only items awaiting approval can be edited" }, 409);
+      return json({ ok: true, item: data });
+    }
+
+    case "message_list": {
+      const { data, error } = await sb
+        .from("messages")
+        .select("id, contact_id, channel, to_addr, subject, body, status, error, meta, created_at, sent_at, contacts(full_name)")
+        .in("status", ["draft", "queued", "sent", "failed"])
+        .eq("direction", "outbound")
+        .order("created_at", { ascending: false })
+        .limit(60);
+      if (error) return json({ ok: false, error: error.message }, 500);
+      const provider = !!(Deno.env.get("SENDGRID_API_KEY") && Deno.env.get("SENDGRID_FROM_EMAIL"));
+      return json({ ok: true, messages: data ?? [], email_provider_connected: provider });
+    }
+
+    case "message_send": {
+      const id = String(body.id ?? "");
+      if (!id) return json({ ok: false, error: "id required" }, 400);
+      const { data: msg } = await sb.from("messages").select("id, status, channel, to_addr").eq("id", id).maybeSingle();
+      if (!msg) return json({ ok: false, error: "not found" }, 404);
+      if (!["draft", "failed"].includes(msg.status)) return json({ ok: false, error: `cannot send a message that is ${msg.status}` }, 409);
+      if (!msg.to_addr) return json({ ok: false, error: "this contact has no address to send to" }, 409);
+      await sb.from("messages").update({ status: "queued", error: null }).eq("id", id);
+      await sb.from("tasks").insert({
+        type: msg.channel === "sms" ? "send_sms" : "send_email",
+        payload: { message_id: id },
+        priority: 40,
+      });
+      return json({ ok: true, id, status: "queued" });
+    }
+
+    case "message_reject": {
+      const id = String(body.id ?? "");
+      if (!id) return json({ ok: false, error: "id required" }, 400);
+      const { data: msg } = await sb.from("messages").select("id, meta").eq("id", id).maybeSingle();
+      if (!msg) return json({ ok: false, error: "not found" }, 404);
+      await sb.from("messages").update({
+        status: "failed",
+        error: "rejected by owner",
+        meta: { ...((msg.meta ?? {}) as Record<string, unknown>), rejected_reason: "owner" },
+      }).eq("id", id);
+      return json({ ok: true, id, status: "rejected" });
+    }
+
     default:
       return json({ ok: false, error: `unknown action: ${action}` }, 400);
   }
