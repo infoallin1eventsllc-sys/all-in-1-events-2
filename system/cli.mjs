@@ -143,7 +143,8 @@ const cmds = {
   async approve(args) {
     const id = args[0];
     if (!id) return console.error("usage: approve <content_id>");
-    await patch(`content_items?id=eq.${id}`, { status: "approved" });
+    // The owner's stamp: the database refuses to approve or publish without it.
+    await patch(`content_items?id=eq.${id}`, { status: "approved", meta: { approved_by: "owner", approved_at: new Date().toISOString() } });
     await post("tasks", { type: "publish_content", payload: { content_item_id: id }, priority: 60 });
     console.log(`✓ approved and queued for publish: ${id}`);
   },

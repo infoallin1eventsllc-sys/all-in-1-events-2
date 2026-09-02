@@ -465,7 +465,12 @@ Deno.serve(async (req) => {
       if (!msg) return json({ ok: false, error: "not found" }, 404);
       if (!["draft", "failed"].includes(msg.status)) return json({ ok: false, error: `cannot send a message that is ${msg.status}` }, 409);
       if (!msg.to_addr) return json({ ok: false, error: "this contact has no address to send to" }, 409);
-      await sb.from("messages").update({ status: "queued", error: null }).eq("id", id);
+      const { data: full } = await sb.from("messages").select("meta").eq("id", id).maybeSingle();
+      await sb.from("messages").update({
+        status: "queued", error: null,
+        // The owner's stamp. The database refuses to queue or send without it.
+        meta: { ...((full?.meta ?? {}) as Record<string, unknown>), approved_by: "owner", approved_at: new Date().toISOString() },
+      }).eq("id", id);
       await sb.from("tasks").insert({
         type: msg.channel === "sms" ? "send_sms" : "send_email",
         payload: { message_id: id },
