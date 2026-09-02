@@ -125,10 +125,12 @@ begin
     select meta->>'error' as err from content_items
      where created_by = 'agent' and created_at > now() - interval '24 hours'
        and (meta->>'mocked')::boolean is true
+       and status <> 'rejected'            -- already retired: not a live problem
     union all
     select meta->>'error' from messages
      where direction = 'outbound' and created_at > now() - interval '24 hours'
        and (meta->>'mocked')::boolean is true
+       and coalesce(meta->>'rejected_reason', '') <> 'placeholder'
   ) x;
   select count(*) into m from agent_runs
   where status = 'success' and started_at > now() - interval '30 hours'
