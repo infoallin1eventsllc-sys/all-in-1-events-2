@@ -1105,4 +1105,28 @@ Source kept at `system/loop-simulator.artifact.html`.
 2. Put the real logo on the Project Intake letterhead and republish
    (`fa92200c-73ff-43d2-8ca8-c184107fed7c`).
 3. Everything on the pre-existing list: Stripe key, Anthropic key, rotate
-   `OWNER_PASSCODE`, delete `VITE_OWNER_PASSCODE`, Unsplash hotlinks.
+   `OWNER_PASSCODE`, delete `VITE_OWNER_PASSCODE`.
+
+---
+
+## Sep 2 — real logo everywhere, stock photographs gone
+
+- `claude/footer-studio-plate` **merged to main** — the live site carries the
+  real logo. Intake form and Discovery Call republished on letterhead; the
+  Discovery Call carries an INTERNAL · SALES tag because it is a script, not a
+  client document.
+- **Unsplash: closed.** Six hotlinks were dead code (never rendered; the
+  testimonial avatars had no caller — `TESTIMONIALS` is empty). The remaining
+  twelve photographs of laptops are replaced by thirteen rendered mockups from
+  `system/tools/render-work-images.mjs` → website `public/images/work/`. Zero
+  external image requests now. **On `claude/prune-dead-hotlinks`, unmerged.**
+- The portfolio was already honestly labelled "Concept & Sample Work" — no
+  misrepresentation to fix, which was the worry going in.
+- Renderer rules worth keeping: charts fill their box with constant stroke
+  (`vector-effect: non-scaling-stroke`); app chrome uses real icons; JPEG not
+  PNG for gradient grounds (2.6MB → 948KB); and **a logo-service illustration
+  must show a fictional client, never MERIDIAN over a mark that is not his.**
+- Egress is blocked, so the "download and self-host" route was never
+  available; rendering locally was the only path that did not need Otis's Mac.
+
+**Next:** merge `claude/prune-dead-hotlinks`; then the four key-blocked items.
