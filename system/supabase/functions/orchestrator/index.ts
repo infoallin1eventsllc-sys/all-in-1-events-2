@@ -82,8 +82,9 @@ Deno.serve(async (req) => {
       `can be measured later. If a "What actually happened" section appears above, treat its guidance as ` +
       `instructions about THIS cycle, not background reading. ` +
       `Only use these task types: generate_content, send_email, send_sms, publish_content, follow_up_lead. ` +
-      `Respect autonomy="${(agent as Record<string, unknown>).autonomy}": in "draft" mode, prefer generate_content and follow_up_lead ` +
-      `(a human approves before anything is sent/published). Never invent contact details.`;
+      `Respect autonomy="${(agent as Record<string, unknown>).autonomy}". In "draft" mode ONLY generate_content and ` +
+      `follow_up_lead are executed: publishing and sending are the owner's decisions, made from the approval queue, ` +
+      `so put any publish/send recommendation in the summary rather than the task list. Never invent contact details.`;
 
     const prompt =
       `Here is the current context as JSON:\n\n${JSON.stringify(context, null, 2)}\n\n` +
@@ -120,10 +121,23 @@ Deno.serve(async (req) => {
     }
 
     // Enqueue valid tasks, mapping follow_up_lead onto queued leads.
+    //
+    // In draft mode the planner may only DRAFT. The first real planning run
+    // correctly identified that nothing had ever been published and asked to
+    // publish two existing drafts — but it cannot see draft ids, so those
+    // tasks carried instructions instead of a content_item_id and failed on
+    // every retry. More to the point, in draft mode publishing and sending are
+    // the owner's call, made from the approval queue. Those recommendations
+    // are kept in the stored plan for the owner to read; they are not queued.
+    const autonomy = String((agent as Record<string, unknown>).autonomy || "draft");
+    const ownerOnly = new Set(["publish_content", "send_email", "send_sms"]);
     let created = 0;
+    let leftForOwner = 0;
     const toInsert: Record<string, unknown>[] = [];
     for (const t of plan.tasks ?? []) {
       if (!ALLOWED_TASK_TYPES.has(t.type)) continue;
+      if (autonomy !== "auto" && ownerOnly.has(t.type)) { leftForOwner++; continue; }
+      if (t.type === "publish_content" && !t.payload?.content_item_id) { leftForOwner++; continue; }
       if (t.type === "follow_up_lead") {
         // Fan out to each new lead that has no follow-up task yet.
         for (const lead of newLeads.data ?? []) {
@@ -159,6 +173,8 @@ Deno.serve(async (req) => {
 
     return json({
       ok: true, mocked: result.mocked, summary: plan.summary, tasks_created: created,
+      // Recommendations the planner made that only the owner can act on.
+      ...(leftForOwner ? { left_for_owner: leftForOwner } : {}),
       // Surfaced rather than swallowed: a planning run that silently fell back
       // to placeholder output looks identical to one that worked.
       ...(result.error ? { error: result.error } : {}),

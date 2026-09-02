@@ -66,7 +66,11 @@ Deno.serve(async (req) => {
     body: out.text, metrics,
   }).select("id").single();
 
-  return json({ ok: true, report_id: report?.id, mocked: out.mocked, metrics });
+  return json({
+    ok: true, report_id: report?.id, mocked: out.mocked, metrics,
+    // Why it fell back to placeholder text, not just that it did.
+    ...(out.error ? { error: out.error } : {}),
+  });
 });
 
 function countBy(rows: Record<string, unknown>[], key: string): Record<string, number> {
