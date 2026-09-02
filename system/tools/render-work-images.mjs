@@ -10,7 +10,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
-import { RESET, W, H } from './work-scenes/base.mjs';
+import { RESET, W, H, LIGHT, DARK } from './work-scenes/base.mjs';
 import * as D from './work-scenes/dashboards.mjs';
 import * as P from './work-scenes/products.mjs';
 import * as B from './work-scenes/brand.mjs';
@@ -20,25 +20,24 @@ const OUT = process.argv[2] || '/workspace/meridian-interface-website/public/ima
 
 /** Light and dark grounds. Each scene picks one; the tokens are the same names
     either way so a scene body never branches on theme. */
-const LIGHT = `--bg:#fbfcfd;--card:#ffffff;--ink:#1b2430;--dim:#6b7684;--line:#e2e7ee`;
-const DARK  = `--bg:#0d1117;--card:#141a22;--ink:#e6ebf1;--dim:#8b96a3;--line:#232c37`;
+// Ramps live with the design system now, not here.
 
 const SCENES = {
   /* Portfolio concepts */
   'bi-dashboard':      { html: D.finance,       theme: LIGHT },
   'crm-pipeline':      { html: D.crm,           theme: LIGHT },
   'analytics-hub':     { html: D.analytics,     theme: DARK  },
-  'cloud-platform':    { html: P.cloud,         theme: LIGHT },
-  'banking-app':       { html: P.banking,       theme: DARK  },
-  'fitness-app':       { html: P.fitness,       theme: LIGHT },
-  'coffee-identity':   { html: B.coffee,        theme: LIGHT },
-  'storefront':        { html: P.storefront,    theme: LIGHT },
+  'cloud-platform':    { html: P.cloud,          theme: LIGHT },
+  'banking-app':       { html: P.banking,        theme: DARK  },
+  'fitness-app':       { html: P.fitness,        theme: LIGHT },
+  'coffee-identity':   { html: B.coffee,         theme: LIGHT },
+  'storefront':        { html: P.storefront,     theme: LIGHT },
   /* Service cards */
-  'svc-web':           { html: S.webDesign,     theme: LIGHT },
-  'svc-app':           { html: S.appDesign,     theme: DARK  },
-  'svc-dashboard':     { html: S.dashboardDesign, theme: LIGHT },
-  'svc-logo':          { html: S.logoDesign,    theme: LIGHT },
-  'svc-full':          { html: S.fullPackage,   theme: DARK  },
+  'svc-web':           { html: S.webDesign,      theme: LIGHT },
+  'svc-app':           { html: S.appDesign,      theme: DARK  },
+  'svc-dashboard':     { html: S.dashboardDesign,theme: LIGHT },
+  'svc-logo':          { html: S.logoDesign,     theme: LIGHT },
+  'svc-full':          { html: S.fullPackage,    theme: DARK  },
 };
 
 fs.mkdirSync(OUT, { recursive: true });
