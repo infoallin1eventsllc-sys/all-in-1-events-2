@@ -37,13 +37,13 @@ export const W = 1600, H = 1000;
    branches on theme. */
 export const LIGHT = `
   --bg:#f3f4f6; --surface:#ffffff; --surface-2:#f8f9fb; --surface-3:#eef0f3;
-  --ink:#16191d; --ink-2:#3d434b; --dim:#6f7680; --faint:#9aa1ab;
-  --line:rgba(22,25,29,.10); --line-2:rgba(22,25,29,.06);
+  --ink:#0a0c0f; --ink-2:#33383f; --dim:#767c85; --faint:#a3a9b2;
+  --line:rgba(10,12,15,.085); --line-2:rgba(10,12,15,.05);
   --chrome:#e9ebee; --chrome-ink:#5b626b`;
 export const DARK = `
   --bg:#0f1216; --surface:#161a20; --surface-2:#1b2027; --surface-3:#21272f;
-  --ink:#eef0f3; --ink-2:#c5cad2; --dim:#8b929c; --faint:#5f6670;
-  --line:rgba(238,240,243,.10); --line-2:rgba(238,240,243,.06);
+  --ink:#f7f8fa; --ink-2:#c8cdd4; --dim:#868d97; --faint:#5b626c;
+  --line:rgba(247,248,250,.085); --line-2:rgba(247,248,250,.05);
   --chrome:#0b0d10; --chrome-ink:#8b929c`;
 
 export const RESET = `
@@ -226,3 +226,41 @@ export const status = (label, c) => `<span style="display:inline-flex;align-item
 
 export const avatar = (initials, c = 'var(--surface-3)') => `<span style="width:24px;height:24px;border-radius:50%;background:${c};
   display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--ink-2);flex-shrink:0">${initials}</span>`;
+
+/* ─── Metric card ──────────────────────────────────────────────────────────
+ * The Stripe pattern: a number, a trend indicator and a sparkline on every
+ * card. The first version had a number and a delta string, which is what a
+ * report looks like; this is what a product looks like.
+ *
+ * Numerals are tabular and right-aligned wherever they sit in a column. A
+ * column of figures that does not align is the fastest way for a financial
+ * interface to look amateur.
+ */
+export const trend = (delta, dir, c) => `
+  <span style="display:inline-flex;align-items:center;gap:3px;font-size:12.5px;font-weight:500;color:${c}">
+    ${dir === 'flat' ? '' : `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.6"
+       stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(${dir==='up'?0:180}deg)"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`}${delta}
+  </span>`;
+
+export const sparkline = (pts, c, { w = 74, h = 22 } = {}) => {
+  const max = Math.max(...pts), min = Math.min(...pts);
+  const x = i => (i / (pts.length - 1)) * w;
+  const y = v => h - ((v - min) / ((max - min) || 1)) * (h - 4) - 2;
+  const d = pts.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block;overflow:visible">
+    <path d="${d}" fill="none" stroke="${c}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${x(pts.length-1).toFixed(1)}" cy="${y(pts[pts.length-1]).toFixed(1)}" r="2" fill="${c}"/>
+  </svg>`;
+};
+
+export const metric = ({ label, value, delta, dir = 'up', sub, spark, c = '#2f7a5b', lead = false }) => `
+<div class="card" style="padding:${lead ? '18px 20px' : '16px 18px'};display:flex;flex-direction:column;gap:11px">
+  <div style="display:flex;align-items:center">
+    <span class="cap">${label}</span>
+    ${spark ? `<span style="margin-left:auto;opacity:.9">${sparkline(spark, c)}</span>` : ''}
+  </div>
+  <div class="display num" style="font-size:${lead ? '38px' : '30px'};color:var(--ink)">${value}</div>
+  <div style="display:flex;align-items:center;gap:7px">
+    ${trend(delta, dir, c)}${sub ? `<span style="font-size:12.5px;color:var(--faint)">${sub}</span>` : ''}
+  </div>
+</div>`;

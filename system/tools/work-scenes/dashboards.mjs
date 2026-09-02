@@ -1,4 +1,4 @@
-import { full, shell, line, gridlines, icon, avatar } from './base.mjs';
+import { full, shell, line, gridlines, icon, avatar, metric, sparkline, trend } from './base.mjs';
 
 /* ── p7 · Financial & Revenue BI ───────────────────────────────────────────
    Operate. An executive reads this before a board call, so one figure leads
@@ -37,17 +37,14 @@ export const finance = () => full(shell({
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
-      ${[['Net revenue','$14.82M','+6.4%','vs forecast','#2f7a5b',true],
-         ['Gross margin','61.3%','+120bps','vs Q2','#2f7a5b'],
-         ['Operating cash','$3.94M','−5.1%','vs Q2','#a8543c'],
-         ['Runway','19 mo','—','unchanged','#6f7680']].map(([k,v,d,sub,c,lead])=>`
-        <div class="card" style="padding:16px 18px;${lead?`border-color:${c}44;box-shadow:inset 3px 0 0 ${c}`:''}">
-          <div class="cap">${k}</div>
-          <div class="display num" style="font-size:${lead?'40px':'32px'};margin-top:10px;color:var(--ink)">${v}</div>
-          <div style="display:flex;align-items:center;gap:6px;margin-top:9px;font-size:12.5px">
-            <span class="num" style="color:${c};font-weight:500">${d}</span><span style="color:var(--faint)">${sub}</span>
-          </div>
-        </div>`).join('')}
+      ${metric({label:'Net revenue',value:'$14.82M',delta:'6.4%',dir:'up',sub:'vs forecast',
+                spark:[9.1,9.8,9.5,10.9,11.6,11.2,12.7,13.6,13.1,14.0,14.5,14.82],c:'#2f7a5b',lead:true})}
+      ${metric({label:'Gross margin',value:'61.3%',delta:'120bps',dir:'up',sub:'vs Q2',
+                spark:[57.1,57.8,58.4,58.1,59.2,59.8,60.1,60.4,60.9,61.0,61.2,61.3],c:'#2f7a5b'})}
+      ${metric({label:'Operating cash',value:'$3.94M',delta:'5.1%',dir:'down',sub:'vs Q2',
+                spark:[4.4,4.5,4.3,4.4,4.2,4.3,4.1,4.2,4.0,4.1,3.98,3.94],c:'#a8543c'})}
+      ${metric({label:'Runway',value:'19 mo',delta:'unchanged',dir:'flat',
+                spark:[19,19,19,19,19,19,19,19,19,19,19,19],c:'#767c85'})}
     </div>
 
     <div style="display:grid;grid-template-columns:1.62fr 1fr;gap:14px;flex:1;min-height:0">
@@ -196,13 +193,35 @@ export const analytics = () => full(shell({
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
-      ${[['Week-4 retention','38.2%','+2.1 pts'],['Median session','6m 41s','+18s'],
-         ['Activation','54.9%','−0.6 pts'],['At risk','1,204','+92']].map(([k,v,d])=>`
-        <div class="card" style="padding:16px 18px">
-          <div class="cap">${k}</div>
-          <div class="display num" style="font-size:30px;margin-top:10px">${v}</div>
-          <div class="num" style="font-size:12.5px;color:var(--dim);margin-top:9px">${d}</div>
-        </div>`).join('')}
+      ${metric({label:'Week-4 retention',value:'38.2%',delta:'2.1 pts',dir:'up',
+                spark:[33,34,33,35,36,35,37,36,37,38,38,38.2],c:'#c8913a'})}
+      ${metric({label:'Median session',value:'6m 41s',delta:'18s',dir:'up',
+                spark:[5.9,6.0,5.8,6.1,6.2,6.1,6.3,6.2,6.4,6.5,6.6,6.7],c:'#c8913a'})}
+      ${metric({label:'Activation',value:'54.9%',delta:'0.6 pts',dir:'down',
+                spark:[56,56.2,55.8,55.9,55.4,55.6,55.2,55.3,55.0,55.1,54.9,54.9],c:'#867e70'})}
+      ${metric({label:'At risk',value:'1,204',delta:'92',dir:'up',
+                spark:[980,1010,1040,1030,1080,1090,1120,1140,1150,1180,1190,1204],c:'#a8543c'})}
+    </div>
+
+    <!-- AI output as a first-class surface rather than a chat widget floating
+         over the old UI. This is the 2026 pattern Attio and Hex established,
+         and it dates a dashboard mockup more than anything else in the frame. -->
+    <div class="card" style="padding:15px 18px;display:flex;align-items:flex-start;gap:13px;
+                border-color:#c8913a30;background:linear-gradient(90deg,#c8913a0d,transparent 60%)">
+      <span style="width:26px;height:26px;border-radius:6px;background:#c8913a1f;color:#c8913a;
+                   display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">
+        ${icon('target',{s:15})}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13.5px;color:var(--ink);line-height:1.55">
+          Week-2 retention is <strong style="font-weight:600">7.4 points higher</strong> for cohorts that
+          completed onboarding within 48 hours. The Jul 7 cohort is the strongest on record.
+        </div>
+        <div style="display:flex;gap:8px;margin-top:11px">
+          ${['Segment by onboarding time','Compare to Q2'].map(t=>`
+            <span style="font-size:12px;color:var(--ink-2);border:1px solid var(--line);border-radius:4px;padding:5px 10px">${t}</span>`).join('')}
+        </div>
+      </div>
+      <span style="font-size:11px;color:var(--faint);white-space:nowrap">Generated 2m ago</span>
     </div>
 
     <div class="card" style="padding:18px 20px;flex:1;display:flex;flex-direction:column;min-height:0">

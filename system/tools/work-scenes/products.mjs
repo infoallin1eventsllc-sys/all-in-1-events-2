@@ -1,4 +1,4 @@
-import { full, stage, window_, shell, phone, line, gridlines, icon, status, avatar } from './base.mjs';
+import { full, stage, window_, shell, phone, line, gridlines, icon, status, avatar, metric, sparkline } from './base.mjs';
 
 /* ── p1 · Enterprise cloud console ─────────────────────────────────────────
    Density is the deliverable. Someone running fleets wants a lot at once, so
@@ -35,41 +35,43 @@ export const cloud = () => full(shell({
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
-      ${[['Healthy','331','#2f7a5b'],['Degraded','14','#b0812f'],['Offline','3','#a8543c'],['p95 latency','82ms','#6f7680']].map(([k,v,c])=>`
-        <div class="card" style="padding:16px 18px;display:flex;align-items:center;gap:14px">
-          <span style="width:8px;height:8px;border-radius:50%;background:${c};box-shadow:0 0 0 4px color-mix(in srgb,${c} 16%,transparent)"></span>
-          <div><div class="cap">${k}</div>
-            <div class="display num" style="font-size:28px;margin-top:6px">${v}</div></div>
-        </div>`).join('')}
+      ${metric({label:'Healthy nodes',value:'331',delta:'4',dir:'up',sub:'last hour',
+                spark:[318,322,320,325,327,326,329,328,330,329,331,331],c:'#2f7a5b'})}
+      ${metric({label:'Degraded',value:'14',delta:'3',dir:'up',sub:'last hour',
+                spark:[8,9,9,10,11,10,12,12,13,13,14,14],c:'#b0812f'})}
+      ${metric({label:'Offline',value:'3',delta:'1',dir:'up',sub:'last hour',
+                spark:[1,1,2,2,2,2,2,3,3,3,3,3],c:'#a8543c'})}
+      ${metric({label:'p95 latency',value:'82ms',delta:'6ms',dir:'down',sub:'vs 24h',
+                spark:[94,92,90,91,88,89,86,87,85,84,83,82],c:'#2f7a5b'})}
     </div>
 
     <div class="card" style="flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0">
-      <div style="display:grid;grid-template-columns:2.2fr 1.1fr .7fr 1.5fr 1.2fr 1fr;gap:18px;padding:13px 20px;
+      <div style="display:grid;grid-template-columns:2.2fr 1.1fr .6fr 1.4fr 1.1fr 1fr;gap:18px;padding:13px 20px;
                   border-bottom:1px solid var(--line);background:var(--surface-2)">
-        ${['Cluster','Region','Nodes','CPU','Version','Status'].map(h=>`<span class="cap" style="font-size:10.5px">${h}</span>`).join('')}
+        ${['Cluster','Region','Nodes','CPU','24h','Status'].map((h,i)=>`<span class="cap" style="font-size:10.5px;${i===2||i===3?'text-align:right':''}">${h}</span>`).join('')}
       </div>
       <div style="flex:1;display:flex;flex-direction:column">
-      ${[['prod-eu-west-1','eu-west-1','64','71','1.29.4','Healthy','#2f7a5b'],
-         ['prod-us-east-2','us-east-2','88','64','1.29.4','Healthy','#2f7a5b'],
-         ['prod-ap-south-1','ap-south-1','42','89','1.28.9','Degraded','#b0812f'],
-         ['stage-us-west-1','us-west-1','24','38','1.29.4','Healthy','#2f7a5b'],
-         ['prod-sa-east-1','sa-east-1','36','12','1.28.9','Offline','#a8543c'],
-         ['edge-eu-north-1','eu-north-1','18','44','1.29.4','Healthy','#2f7a5b'],
-         ['prod-ca-central','ca-central-1','30','58','1.29.4','Healthy','#2f7a5b'],
-         ['batch-us-east-1','us-east-1','46','76','1.29.1','Healthy','#2f7a5b'],
-         ['prod-eu-central','eu-central-1','52','67','1.29.4','Healthy','#2f7a5b'],
-         ['edge-ap-east-1','ap-east-1','14','29','1.29.4','Healthy','#2f7a5b']].map(([n,r,nodes,cpu,ver,st,c])=>`
-        <div style="display:grid;grid-template-columns:2.2fr 1.1fr .7fr 1.5fr 1.2fr 1fr;gap:18px;padding:0 20px;
+      ${[['prod-eu-west-1','eu-west-1','64','71','1.29.4','Healthy','#2f7a5b',[62,64,63,66,68,67,70,69,71,70,72,71]],
+         ['prod-us-east-2','us-east-2','88','64','1.29.4','Healthy','#2f7a5b',[58,59,61,60,62,61,63,62,64,63,65,64]],
+         ['prod-ap-south-1','ap-south-1','42','89','1.28.9','Degraded','#b0812f',[71,74,73,78,80,79,83,85,84,87,88,89]],
+         ['stage-us-west-1','us-west-1','24','38','1.29.4','Healthy','#2f7a5b',[41,40,39,40,38,39,37,38,37,38,38,38]],
+         ['prod-sa-east-1','sa-east-1','36','12','1.28.9','Offline','#a8543c',[64,62,58,51,44,38,29,22,18,15,13,12]],
+         ['edge-eu-north-1','eu-north-1','18','44','1.29.4','Healthy','#2f7a5b',[40,41,42,41,43,42,44,43,45,44,44,44]],
+         ['prod-ca-central','ca-central-1','30','58','1.29.4','Healthy','#2f7a5b',[54,55,54,56,57,56,58,57,59,58,58,58]],
+         ['batch-us-east-1','us-east-1','46','76','1.29.1','Healthy','#2f7a5b',[68,70,69,72,73,72,75,74,76,75,77,76]],
+         ['prod-eu-central','eu-central-1','52','67','1.29.4','Healthy','#2f7a5b',[62,63,64,63,65,64,66,65,67,66,67,67]],
+         ['edge-ap-east-1','ap-east-1','14','29','1.29.4','Healthy','#2f7a5b',[33,32,31,32,30,31,29,30,29,30,29,29]]].map(([n,r,nodes,cpu,ver,st,c,spark])=>`
+        <div style="display:grid;grid-template-columns:2.2fr 1.1fr .6fr 1.4fr 1.1fr 1fr;gap:18px;padding:0 20px;
                     border-bottom:1px solid var(--line-2);font-size:13.5px;align-items:center;flex:1">
           <span style="font-weight:500">${n}</span>
           <span style="color:var(--dim)">${r}</span>
-          <span class="num" style="color:var(--dim)">${nodes}</span>
-          <div style="display:flex;align-items:center;gap:10px">
-            <div style="flex:1;max-width:90px;height:4px;border-radius:2px;background:var(--surface-3);overflow:hidden">
+          <span class="num" style="color:var(--ink-2);text-align:right">${nodes}</span>
+          <div style="display:flex;align-items:center;gap:10px;justify-content:flex-end">
+            <div style="flex:1;height:4px;border-radius:2px;background:var(--surface-3);overflow:hidden">
               <div style="width:${cpu}%;height:100%;background:${c};opacity:.85"></div></div>
-            <span class="num" style="font-size:12.5px;color:var(--dim)">${cpu}%</span>
+            <span class="num" style="font-size:12.5px;color:var(--ink-2);width:34px;text-align:right">${cpu}%</span>
           </div>
-          <span class="num" style="color:var(--dim)">${ver}</span>
+          <span style="display:flex;justify-content:flex-start;opacity:.75">${sparkline(spark,c,{w:64,h:18})}</span>
           ${status(st,c)}
         </div>`).join('')}
       </div>
