@@ -29,7 +29,7 @@ const SCENES = {
   'analytics-hub':     { html: D.analytics,     theme: DARK  },
   'cloud-platform':    { html: P.cloud,          theme: LIGHT },
   'banking-app':       { html: P.banking,        theme: DARK  },
-  'fitness-app':       { html: P.fitness,        theme: LIGHT },
+  'apparel-studio':    { html: P.apparel,        theme: LIGHT },
   'coffee-identity':   { html: B.coffee,         theme: LIGHT },
   'storefront':        { html: P.storefront,     theme: LIGHT },
   /* Service cards */

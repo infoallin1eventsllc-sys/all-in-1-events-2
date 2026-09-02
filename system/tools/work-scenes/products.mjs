@@ -143,69 +143,149 @@ export const banking = () => stage(`
     </div>`, { w: 476, x: 838, y: 28, rot: 4 })}
 `, { tone: 'dark' });
 
-/* ── p4 · Fitness · light ──────────────────────────────────────────────────
-   Warmer and lighter than the banking pair on purpose. Two products for two
-   audiences should not share a mood. */
-export const fitness = () => stage(`
+/* ── p4 · Apparel design & brand studio · light ────────────────────────────
+   Mixed mode. The garment canvas is Experience — the artwork is the product,
+   so it gets the room. The specification beneath it is Operate: colourways,
+   placement in millimetres, a size run and a print method are the things a
+   factory needs to be right, and they are what separate an apparel tool from a
+   drawing toy. Warm neutrals, because a studio app for a clothing label should
+   not look like the banking one. */
+export const apparel = () => stage(`
   ${phone(`
-    <div style="padding:70px 24px 0;height:100%;background:#fbfaf8;display:flex;flex-direction:column;gap:16px">
+    <div style="padding:70px 22px 0;height:100%;background:#faf8f5;display:flex;flex-direction:column;gap:15px">
       <div style="display:flex;align-items:center;gap:10px">
-        <div><div style="font-size:12.5px;color:#8a8378">Wednesday, 12 March</div>
-          <div style="font-family:Hanken;font-weight:700;font-size:23px;color:#242019;margin-top:3px;letter-spacing:-.01em">Push · Week 6</div></div>
-        <span style="margin-left:auto;width:34px;height:34px;border-radius:50%;background:#f0ece5;
-                     display:flex;align-items:center;justify-content:center;color:#6b6459">${icon('more',{s:16})}</span>
+        <div><div style="font-size:12px;color:#8f877c">Drop 04 · Spring</div>
+          <div style="font-family:Hanken;font-weight:700;font-size:21px;color:#221f1b;margin-top:3px;letter-spacing:-.01em">Heavyweight tee</div></div>
+        <span style="margin-left:auto;font-size:11px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;
+                     color:#7a6a4f;background:#f0e8d8;border:1px solid #e2d6be;border-radius:4px;padding:4px 8px">Draft</span>
       </div>
-      <div style="display:flex;gap:9px">
-        ${[['Volume','14.2k','kg'],['Sets','21','done'],['Time','48','min']].map(([k,v,u])=>`
-          <div style="flex:1;border:1px solid #e6e1d8;border-radius:6px;padding:11px 12px;background:#fff">
-            <div style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:#8a8378">${k}</div>
-            <div class="num" style="font-family:Hanken;font-weight:700;font-size:22px;color:#242019;margin-top:5px">${v}<span style="font-size:11px;color:#8a8378;font-weight:400;margin-left:2px">${u}</span></div>
-          </div>`).join('')}
+
+      <!-- the garment canvas -->
+      <div style="background:#fff;border:1px solid #e8e2d9;border-radius:8px;padding:18px;position:relative">
+        <div style="display:flex;justify-content:center">
+          <svg width="180" height="196" viewBox="0 0 120 130">
+            <path d="M40 14 L28 20 L14 34 L26 46 L33 40 L33 118 A2 2 0 0035 120 L85 120 A2 2 0 0087 118 L87 40 L94 46 L106 34 L92 20 L80 14
+                     C76 22 70 26 60 26 C50 26 44 22 40 14 Z"
+                  fill="#2f3540" stroke="#232830" stroke-width="1"/>
+            <path d="M40 14 C44 22 50 26 60 26 C70 26 76 22 80 14" fill="none" stroke="#454c58" stroke-width="1.4"/>
+            <!-- the placed artwork -->
+            <g transform="translate(60 66)">
+              <circle r="15.5" fill="none" stroke="#d8c9a8" stroke-width="1.6"/>
+              <path d="M-8 5 L-2.5 -7 L3 5 M-5.6 0.5 L0.4 0.5" fill="none" stroke="#d8c9a8"
+                    stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M5 -6 L5 6" stroke="#d8c9a8" stroke-width="2.4" stroke-linecap="round"/>
+            </g>
+            <rect x="44" y="50" width="32" height="32" fill="none" stroke="#7ea8d8" stroke-width="0.8" stroke-dasharray="2 2"/>
+          </svg>
+        </div>
+        <div style="position:absolute;left:16px;top:16px;font-size:10px;letter-spacing:.06em;
+                    text-transform:uppercase;color:#a89e91">Front</div>
+        <div style="position:absolute;right:16px;bottom:16px;font-size:10.5px;color:#7ea8d8;
+                    background:#eef4fb;border-radius:3px;padding:3px 7px">100 × 100 mm</div>
       </div>
-      <div style="display:flex;align-items:center;margin-top:2px">
-        <span style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:#8a8378">Today's session</span>
-        <span class="num" style="margin-left:auto;font-size:12px;color:#8a8378">2 of 4</span>
-      </div>
-      ${[['Bench press','4 × 8','62.5 kg',1],['Incline dumbbell','3 × 10','24 kg',1],
-         ['Cable fly','3 × 12','18 kg',0],['Overhead press','4 × 6','45 kg',0]].map(([n,st,w,done])=>`
-        <div style="display:flex;align-items:center;gap:12px;padding:12px 13px;border:1px solid ${done?'#dde5dc':'#e6e1d8'};
-                    border-radius:6px;background:${done?'#f4f7f3':'#fff'}">
-          <div style="width:20px;height:20px;border-radius:50%;border:1.5px solid ${done?'#4a7c59':'#d6cfc4'};
-                      background:${done?'#4a7c59':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0">
-            ${done?icon('check',{s:11,c:'#fff'}):''}</div>
-          <div style="min-width:0"><div style="font-size:14px;font-weight:500;color:#242019">${n}</div>
-            <div class="num" style="font-size:12px;color:#8a8378;margin-top:2px">${st} · ${w}</div></div>
-          <span style="margin-left:auto;color:#c4bdb1">${icon('more',{s:15})}</span>
-        </div>`).join('')}
-    </div>`, { w: 476, x: 196, y: 104, rot: -5 })}
-  ${phone(`
-    <div style="padding:70px 24px 0;height:100%;background:#fbfaf8;display:flex;flex-direction:column;gap:18px">
-      <div style="display:flex;align-items:center"><span style="font-size:17px;font-weight:600;color:#242019">This week</span>
-        <span style="margin-left:auto;font-size:12px;color:#8a8378">Mar 10–16</span></div>
-      <div style="display:flex;justify-content:center;padding:8px 0 4px;position:relative">
-        <svg width="184" height="184" viewBox="0 0 100 100">
-          ${[['#4a7c59',82,0],['#b0713f',64,1],['#5b7f96',47,2]].map(([c,pct,i])=>{
-            const r=42-i*11, C=2*Math.PI*r;
-            return `<circle cx="50" cy="50" r="${r}" fill="none" stroke="#ece7de" stroke-width="7.5"/>
-                    <circle cx="50" cy="50" r="${r}" fill="none" stroke="${c}" stroke-width="7.5" stroke-linecap="round"
-                      stroke-dasharray="${(C*pct/100).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 50 50)"/>`;
-          }).join('')}
-        </svg>
-        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-42%);text-align:center">
-          <div class="num" style="font-family:Hanken;font-weight:700;font-size:28px;color:#242019">82%</div>
-          <div style="font-size:10.5px;color:#8a8378;letter-spacing:.05em">OF GOAL</div>
+
+      <div>
+        <div style="display:flex;align-items:center;margin-bottom:9px">
+          <span style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:#8f877c">Colourway</span>
+          <span style="margin-left:auto;font-size:11.5px;color:#221f1b">Slate / Sand</span>
+        </div>
+        <div style="display:flex;gap:9px">
+          ${[['#2f3540',1],['#8c8578',0],['#b9ae97',0],['#f0ece4',0],['#6d3f36',0]].map(([c,on])=>`
+            <span style="width:34px;height:34px;border-radius:50%;background:${c};
+              box-shadow:${on?'0 0 0 2px #faf8f5,0 0 0 3.5px #221f1b':'inset 0 0 0 1px #00000014'}"></span>`).join('')}
         </div>
       </div>
-      ${[['Training','4 of 5 days','#4a7c59'],['Steps','61,204','#b0713f'],['Sleep','7h 12m avg','#5b7f96']].map(([k,v,c])=>`
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="width:8px;height:8px;border-radius:2px;background:${c}"></span>
-          <span style="font-size:14px;color:#242019">${k}</span>
-          <span class="num" style="margin-left:auto;font-size:14px;font-weight:500;color:#5c5648">${v}</span>
-        </div>`).join('')}
-      <div style="border-top:1px solid #e6e1d8;padding-top:14px;margin-top:auto;margin-bottom:22px;display:flex;align-items:center;gap:10px">
-        <span style="color:#8a8378">${icon('check',{s:15})}</span>
-        <div><div style="font-size:12.5px;color:#242019">Synced from Watch</div>
-          <div style="font-size:11.5px;color:#8a8378;margin-top:1px">4 minutes ago</div></div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:2px">
+        ${[['Print method','Water-based screen'],['Placement','Centre front, 70 mm'],['Size run','XS – 3XL']].map(([k,v])=>`
+          <div style="display:flex;font-size:12.5px;padding:9px 11px;background:#fff;
+                      border:1px solid #e8e2d9;border-radius:6px">
+            <span style="color:#8f877c">${k}</span>
+            <span style="margin-left:auto;color:#221f1b;font-weight:500">${v}</span>
+          </div>`).join('')}
+      </div>
+
+      <div style="background:#fff;border:1px solid #e8e2d9;border-radius:8px;padding:15px 16px;margin-top:2px">
+        <div style="display:flex;align-items:center;margin-bottom:12px">
+          <span style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:#8f877c">Unit costing</span>
+          <span style="margin-left:auto;font-size:11px;color:#4a7c59;background:#eaf2ec;border-radius:3px;padding:2px 7px">62% margin</span>
+        </div>
+        ${[['Blank, 240 gsm','$8.40'],['Screen, 2 colour','$3.15'],['Label &amp; finishing','$1.20']].map(([k,v])=>`
+          <div style="display:flex;font-size:12.5px;margin-bottom:8px">
+            <span style="color:#8f877c">${k}</span>
+            <span class="num" style="margin-left:auto;color:#221f1b">${v}</span>
+          </div>`).join('')}
+        <div style="display:flex;font-size:13px;padding-top:10px;border-top:1px solid #eee8de">
+          <span style="color:#221f1b;font-weight:500">Landed · RRP</span>
+          <span class="num" style="margin-left:auto;color:#221f1b;font-weight:600">$12.75 · $34</span>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:9px;margin-top:2px;margin-bottom:24px">
+        <div style="flex:1;text-align:center;padding:13px;border-radius:6px;background:#221f1b;color:#f7f5f1;font-size:13.5px;font-weight:500">Send to sampling</div>
+        <div style="width:48px;display:flex;align-items:center;justify-content:center;border-radius:6px;
+                    border:1px solid #e0d9cd;color:#8f877c">${icon('more',{s:17})}</div>
+      </div>
+    </div>`, { w: 476, x: 196, y: 104, rot: -5 })}
+  ${phone(`
+    <div style="padding:70px 22px 0;height:100%;background:#faf8f5;display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;align-items:center">
+        <span style="font-size:17px;font-weight:600;color:#221f1b">Brand kit</span>
+        <span style="margin-left:auto;font-size:12px;color:#8f877c">Kestrel Supply Co.</span>
+      </div>
+
+      <!-- the mark, on its grid -->
+      <div style="background:#fff;border:1px solid #e8e2d9;border-radius:8px;padding:20px;
+                  display:flex;justify-content:center">
+        <div style="position:relative;width:150px;height:150px">
+          <svg width="150" height="150" viewBox="0 0 100 100" style="position:absolute;inset:0">
+            ${Array.from({length:7},(_,i)=>`<line x1="${i*16.6}" y1="0" x2="${i*16.6}" y2="100" stroke="#00000010" stroke-width="0.5"/>
+              <line x1="0" y1="${i*16.6}" x2="100" y2="${i*16.6}" stroke="#00000010" stroke-width="0.5"/>`).join('')}
+            <circle cx="50" cy="50" r="34" fill="none" stroke="#00000010" stroke-width="0.5"/>
+            <path d="M32 66 L50 26 L68 66 M39.5 50 L60.5 50" fill="none" stroke="#221f1b"
+                  stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M62 24 L62 62" stroke="#8c7a55" stroke-width="4" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:9px">
+        ${[['#221f1b','#f0ece4'],['#f0ece4','#221f1b'],['#6d3f36','#f0ece4']].map(([bg,fg])=>`
+          <div style="flex:1;height:56px;border-radius:6px;background:${bg};border:1px solid #00000012;
+                      display:flex;align-items:center;justify-content:center">
+            <svg width="21" height="21" viewBox="0 0 100 100"><path d="M32 66 L50 26 L68 66 M39.5 50 L60.5 50"
+              fill="none" stroke="${fg}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>`).join('')}
+      </div>
+
+      <!-- applied: the woven label -->
+      <div style="background:#fff;border:1px solid #e8e2d9;border-radius:8px;padding:16px">
+        <div style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+                    color:#8f877c;margin-bottom:11px">Applied · woven label</div>
+        <div style="background:#221f1b;border-radius:3px;padding:15px 12px;display:flex;
+                    flex-direction:column;align-items:center;gap:7px">
+          <svg width="20" height="20" viewBox="0 0 100 100"><path d="M32 66 L50 26 L68 66 M39.5 50 L60.5 50"
+            fill="none" stroke="#f0ece4" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div style="font-family:Hanken;font-weight:700;font-size:12px;letter-spacing:.22em;color:#f0ece4">KESTREL</div>
+          <div style="font-size:7.5px;letter-spacing:.2em;color:#8c7a55">SUPPLY CO. · MMXIX</div>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #e8e2d9;border-radius:8px;padding:16px">
+        <div style="font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+                    color:#8f877c;margin-bottom:11px">Typeface</div>
+        <div style="font-family:Hanken;font-weight:700;font-size:30px;color:#221f1b;letter-spacing:-.01em;line-height:1">Aa Bb Cc</div>
+        <div style="display:flex;gap:14px;margin-top:11px;font-size:11.5px;color:#8f877c">
+          <span>Hanken Grotesk</span><span>·</span><span>400 / 500 / 700</span>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:9px;margin-top:2px;margin-bottom:24px">
+        ${[['Label stock','Damask, 32 mm'],['Care label','Satin, 4 language'],['Hangtag','450 gsm, uncoated']].map(([k,v])=>`
+          <div style="display:flex;font-size:12.5px">
+            <span style="color:#8f877c">${k}</span>
+            <span style="margin-left:auto;color:#221f1b;font-weight:500">${v}</span>
+          </div>`).join('')}
       </div>
     </div>`, { w: 476, x: 838, y: 28, rot: 4 })}
 `);
