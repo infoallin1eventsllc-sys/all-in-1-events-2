@@ -20,7 +20,11 @@ a channel on.
 | **LinkedIn** | ✅ Working | Organization URN + an OAuth token | Days — LinkedIn approval |
 | **Email (SendGrid)** | ✅ Working | `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL` | Minutes — free tier |
 | **SMS (Twilio)** | ✅ Working | `TWILIO_*` secrets | Minutes — paid per message |
-| TikTok, YouTube, WordPress, Google Business Profile | ↪ via webhook | Reach them through the webhook adapter | Minutes |
+| **TikTok** (video) | ✅ Built | A TikTok developer app, audited, with a refresh token | Days to weeks — TikTok audit |
+| **Instagram Reels / Facebook video** | ✅ Built | The Meta connection above | Same review |
+| **LinkedIn video** | ✅ Built | The LinkedIn connection above | Same approval |
+| **Video rendering** (Shotstack) | ✅ Built | A Shotstack API key | **Minutes** — free tier |
+| YouTube, WordPress, Google Business Profile | ↪ via webhook | Reach them through the webhook adapter | Minutes |
 | Google Ads, Meta Ads | ❌ **Not built, on purpose** | — | See below |
 
 ### Why the ad platforms are not here
@@ -141,6 +145,99 @@ on conflict (key) do nothing;
 ```
 
 Then it publishes through the webhook adapter with no code change at all.
+
+---
+
+## Short-form video (TikTok, Reels, Facebook, LinkedIn)
+
+TikTok takes only video, and Reels is where Instagram's reach is, so a caption
+is not a post there. The planner can ask for `kind: "video"`; the runner has
+Claude write a five-scene script (a hook, three beats, the price, a call to
+action), Shotstack renders 20 seconds of large on-brand type at 1080×1920, and
+the MP4 and a poster frame are copied into the public `social-videos` bucket.
+The item then joins the approval queue with the clip attached. One clip serves
+all four platforms.
+
+### Turning on rendering — five minutes
+
+1. Sign up at shotstack.io. The free sandbox renders with a watermark; the
+   production key does not.
+2. Copy the API key, then in the SQL editor:
+
+```sql
+select public.set_channel('shotstack_api_key', 'PASTE_KEY_HERE');
+select public.set_channel('shotstack_env', 'v1');   -- or 'stage' for the watermarked sandbox
+```
+
+Each call answers with a sentence — `Saved shotstack_api_key: 40 characters,
+starts abc123, ends wxyz.` — or a refusal saying what was wrong. Nothing else
+to redeploy. The next video task renders.
+
+Optional soundtrack: `select public.set_channel('video_music_url', 'https://…/track.mp3');`
+
+### Every setting goes in the same way
+
+`set_channel(name, value)` is the one door for all platform credentials. It
+checks the value for the shape of the mistake it is most likely to be — a name
+pasted instead of a value, a stray space, a URL without https — and never
+prints the value back. The names it accepts:
+
+```
+webhook_url, webhook_secret
+meta_page_id, meta_page_token, meta_ig_user_id
+linkedin_org_urn, linkedin_token, linkedin_version
+tiktok_client_key, tiktok_client_secret, tiktok_refresh_token, tiktok_privacy
+shotstack_api_key, shotstack_env, video_music_url
+```
+
+### TikTok
+
+The Content Posting API needs an app that TikTok has reviewed, and until the
+review passes it only posts **privately** (visible to the account owner). The
+adapter asks TikTok which privacy levels the app is allowed and uses the best
+one, so a pre-audit post lands privately rather than failing.
+
+1. **developers.tiktok.com** → Manage apps → Create. Answers that fit this
+   system: *App name* "Meridian Interface Studio"; *Category* Business /
+   Marketing; *Description* "Posts our own short brand videos to our own
+   TikTok account after the owner approves each one. No third-party users."
+2. Add the **Content Posting API** product. Request scopes `user.info.basic`,
+   `video.publish`. Choose **Direct Post**.
+3. Under Content Posting API → **URL properties**, verify the storage domain
+   `glzodwhyavexpuusbqjy.supabase.co` — TikTok pulls the MP4 from there and
+   refuses unverified hosts.
+4. Submit for review. While waiting, the app works in sandbox against your
+   own account.
+5. Authorize your account once (Login Kit → the app's authorization URL) and
+   keep the **refresh token** from the response. Then:
+
+```sql
+select public.set_channel('tiktok_client_key',    'YOUR_CLIENT_KEY');
+select public.set_channel('tiktok_client_secret', 'YOUR_CLIENT_SECRET');
+select public.set_channel('tiktok_refresh_token', 'YOUR_REFRESH_TOKEN');
+```
+
+The refresh token lasts a year; the adapter mints a day-long access token from
+it on every publish and saves a rotated refresh token back automatically.
+
+### What "published" means for video
+
+Every video platform accepts the file and finishes in its own time. The
+adapter returns *pending*; the item shows as `scheduled` with the platform's
+note ("instagram is processing the video"); the runner looks again in ninety
+seconds. Only the platform's own **complete** moves an item to `published`.
+Nothing is marked done on a promise.
+
+---
+
+## Nothing is released without the owner
+
+Stated by Otis on Sep 2 and enforced by the database, not by code: a content
+item cannot become `approved`, `scheduled` or `published`, and a message
+cannot be `queued` or `sent`, unless its meta carries `approved_by = 'owner'`.
+The owner portal's approve and send actions and the CLI set that stamp when he
+clicks; nothing else does. Any other path — including a future "auto" mode —
+fails with *"requires owner approval. Nothing is released without it."*
 
 ---
 

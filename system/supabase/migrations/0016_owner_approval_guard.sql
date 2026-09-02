@@ -13,7 +13,7 @@
 
 create or replace function public.require_owner_approval()
 returns trigger
-language plpgsql as $$
+language plpgsql set search_path to 'public' as $$
 declare
   stamped boolean := coalesce(new.meta->>'approved_by', '') = 'owner';
 begin

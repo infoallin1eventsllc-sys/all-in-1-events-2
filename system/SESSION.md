@@ -4,7 +4,7 @@ Compact record of what was built and the current state, so work can resume later
 
 ---
 
-## ► START HERE (last updated Sep 1)
+## ► START HERE (last updated Sep 2)
 
 **Read this block first. The sections below it are a running log and some of the
 older entries have been overtaken — where they disagree with this block, this
@@ -17,7 +17,10 @@ block is right.**
 | **meridian-interface-website** | **LIVE** on Vercel, deploying from `main`. ⚠️ **Unmerged work on `claude/footer-studio-plate`: the real logo.** Until it merges, the live site still shows the wrong mark. |
 | **all-in-1-events-2** (this repo) | Working branch `claude/marketing-system-tech-stack-uds0mp`. Holds the marketing system in `system/` **and** the All in 1 Events *client* site at the root. |
 | **key-router** | Both PRs merged to `main`. **Not deployed to Render.** |
-| **Marketing system** | Deployed and scheduled, but in **mock mode** — it has produced **zero real AI outputs**. No API key configured, by Otis's decision. |
+| **Marketing system** | **LIVE on a real Anthropic key** since Sep 2 (the key was saved under the wrong secret name for two weeks; `_shared/claude.ts` now also reads `settings.anthropic.api_key`, where it lives today). First real plan, post, four lead follow-ups and a video script all produced and verified. Placeholder backlog cleared. |
+| **Short-form video** | Built Sep 2. `kind: "video"` → Claude script → Shotstack render → MP4 + poster in the `social-videos` bucket → approval queue. **No Shotstack key yet** — scripts land in the queue marked not rendered. Adapters for TikTok (Content Posting API), Instagram Reels, Facebook video, LinkedIn video, with a `pending` state for platform processing. **No platform credentials yet.** Setup in `CHANNELS.md`. |
+| **Owner approval** | **Enforced by trigger (0016)**: nothing becomes approved/scheduled/published or queued/sent without `meta.approved_by = 'owner'`. The `owner` function has `content_list/approve/reject/update` and `message_list/send/reject`; **the portal tab that calls them is not built** (website repo not in this session). Until it is, approval is the CLI. |
+| **Health check** | Now also checks *output*: `placeholder_output` (critical) fires within 15 min if drafts are filler or the last plan spent no tokens; `no_recent_drafts` after two quiet days. Both verified against real data. |
 | **Owner invoice portal** | Server-side auth, live and working. Invoices in Postgres behind RLS. Five tabs: Invoices & Pricing, Client Answers, Campaign Links, **System Health**, Photo Control. |
 | **System Health** | Live. Checks every 15 min; alerts raise and clear on their own. Key Router probed on each load. **No email notification** — needs a SendGrid key. |
 | **Payments** | Half built (Aug 23). Tables live, `pay-webhook` deployed and signature-tested. `pay` written but **not deployed**; no portal button. Blocked on a Stripe key. |
@@ -36,6 +39,13 @@ you are touching before committing here.
    and failed logins throttle at 8 per 15 minutes — but it should not stay.
 2. **Delete `VITE_OWNER_PASSCODE` from the Vercel project.** Inert now, but a
    dead credential sitting readable in a public bundle should not linger.
+
+### Open items after Sep 2
+
+- **Otis:** rotate keys at console.anthropic.com (keep `…ywAA`, delete the rest — four keys are exposed, three as Supabase secret *names*); delete the six junk secret rows and the `keycheck` function; set a spend cap.
+- **Otis:** a Shotstack key (`select public.set_channel('shotstack_api_key', …)`) turns video rendering on; Meta / LinkedIn / TikTok credentials per `CHANNELS.md`. Confirm or correct the four draft customer profiles in `settings.icp_profiles`.
+- **Next session:** the portal's Marketing tab (website repo) against the `owner` actions above, so approval is a button. The `dashboard` function cannot be that UI — Supabase serves it as text/plain (verified).
+- **Next session:** `claude/prune-dead-hotlinks` on the website repo is still unmerged; the live site shows the old portfolio.
 
 ### What to pick up next
 
