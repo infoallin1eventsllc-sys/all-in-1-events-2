@@ -8,6 +8,7 @@
 //   3. neither             → deterministic mock, so the whole pipeline stays
 //      testable end-to-end before any key exists.
 import Anthropic from "npm:@anthropic-ai/sdk@0.68.0";
+import { serviceClient } from "./supabase.ts";
 
 export const DEFAULT_MODEL = "claude-opus-5";
 
@@ -28,6 +29,46 @@ type CallOpts = {
 
 export function hasKey(): boolean {
   return !!Deno.env.get("ANTHROPIC_API_KEY") || !!Deno.env.get("KEYROUTER_URL");
+}
+
+/**
+ * Where the Anthropic key comes from.
+ *
+ * The edge secret is still preferred and nothing changes when it is set
+ * correctly. The `settings` fallback exists because the Secrets page can
+ * silently keep an old value: this project spent two weeks producing
+ * placeholder copy with a 16-character string in that field, and repeated
+ * saves did not change it.
+ *
+ * A key is only accepted if it looks like one. That matters more than it
+ * sounds — the whole failure was a field holding something that was not a key,
+ * and treating it as one produced a 401 on every call with nothing to show for
+ * it. A label typed into either place is now ignored rather than sent.
+ *
+ * `settings` is service-role only behind deny-by-default RLS, the same place
+ * the run secret lives for the same reason: it can be rotated with one UPDATE
+ * and no redeploy.
+ */
+const looksLikeKey = (v: string | undefined | null): boolean =>
+  !!v && v.startsWith("sk-ant-") && v.length > 40 && !/\s/.test(v);
+
+let settingsKey: string | null | undefined; // undefined = not looked up yet
+
+async function resolveKey(): Promise<string | undefined> {
+  const env = Deno.env.get("ANTHROPIC_API_KEY")?.trim();
+  if (looksLikeKey(env)) return env;
+
+  if (settingsKey === undefined) {
+    try {
+      const { data } = await serviceClient()
+        .from("settings").select("value").eq("key", "anthropic").maybeSingle();
+      const k = String((data?.value as { api_key?: string } | null)?.api_key ?? "").trim();
+      settingsKey = looksLikeKey(k) ? k : null;
+    } catch {
+      settingsKey = null;
+    }
+  }
+  return settingsKey ?? undefined;
 }
 
 /** Rough token estimate for the pre-flight routing decision (~4 chars/token). */
@@ -83,7 +124,7 @@ async function viaKeyRouter(opts: CallOpts, model: string): Promise<ClaudeResult
 }
 
 export async function callClaude(opts: CallOpts): Promise<ClaudeResult> {
-  const key = Deno.env.get("ANTHROPIC_API_KEY");
+  const key = await resolveKey();
   const routerUrl = Deno.env.get("KEYROUTER_URL");
   const model = opts.model || DEFAULT_MODEL;
 
