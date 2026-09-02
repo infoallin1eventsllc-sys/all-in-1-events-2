@@ -98,10 +98,26 @@ Deno.serve(async (req) => {
       prompt,
       model: String((agent as Record<string, unknown>).model || DEFAULT_MODEL),
       thinking: true,
-      maxTokens: 2000,
+      // Adaptive thinking spends from the same output budget as the answer.
+      // At 2000 the reasoning consumed it all and the plan JSON was truncated
+      // mid-object, so extractJson returned null and the run enqueued nothing
+      // while reporting success. The plan itself is only a few hundred tokens;
+      // the headroom is for the thinking that precedes it.
+      maxTokens: 8000,
     });
 
-    const plan = extractJson<Plan>(result.text) ?? { summary: result.text.slice(0, 200), tasks: [] };
+    // An unparseable reply is a failed run, not a successful one. It used to
+    // fall back to a truncated string and record status="success" with zero
+    // tasks — indistinguishable, on the dashboard, from a cycle that genuinely
+    // had nothing to do. This is the same class of silent failure that let the
+    // system produce placeholder copy for two weeks without complaining.
+    const plan = extractJson<Plan>(result.text);
+    if (!plan) {
+      const detail = result.mocked
+        ? "no working Anthropic key, so the planner returned placeholder text"
+        : `model reply was not valid JSON (${result.text.length} chars, ${result.usage?.output_tokens ?? "?"} output tokens \u2014 likely truncated)`;
+      throw new Error(`could not parse a plan: ${detail}`);
+    }
 
     // Enqueue valid tasks, mapping follow_up_lead onto queued leads.
     let created = 0;
