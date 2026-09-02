@@ -141,7 +141,12 @@ Deno.serve(async (req) => {
       finished_at: new Date().toISOString(),
     }).eq("id", run?.id);
 
-    return json({ ok: true, mocked: result.mocked, summary: plan.summary, tasks_created: created });
+    return json({
+      ok: true, mocked: result.mocked, summary: plan.summary, tasks_created: created,
+      // Surfaced rather than swallowed: a planning run that silently fell back
+      // to placeholder output looks identical to one that worked.
+      ...(result.error ? { error: result.error } : {}),
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await sb.from("agent_runs").update({

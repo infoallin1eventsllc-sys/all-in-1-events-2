@@ -160,7 +160,15 @@ async function generateContent(sb: SupabaseClient, task: Task) {
     // image_source is worth storing: "embedded_card" is the one value that
     // means this item cannot go to Instagram, and that should be visible
     // without re-deriving it from the URL.
-    meta: { mocked: out.mocked, topic, icp, image_source: imageSource },
+    // `error` is the reason this item is placeholder text. Without it a
+    // degraded system is indistinguishable from a working one: the pipeline
+    // keeps running, drafts keep appearing, and nothing anywhere says the API
+    // call failed. This system wrote placeholder copy for two weeks on an
+    // invalid key and the only trace was that `mocked` stayed true.
+    meta: {
+      mocked: out.mocked, topic, icp, image_source: imageSource,
+      ...(out.error ? { error: out.error } : {}),
+    },
   }).select("id").single();
 
   return {
@@ -209,7 +217,10 @@ async function followUpLead(sb: SupabaseClient, task: Task) {
     contact_id: contactId, channel: "email", direction: "outbound",
     to_addr: contact.email, subject, body,
     status: shouldSend ? "queued" : "draft",
-    meta: { mocked: out.mocked, reason: "lead_follow_up" },
+    meta: {
+      mocked: out.mocked, reason: "lead_follow_up",
+      ...(out.error ? { error: out.error } : {}),
+    },
   }).select("id").single();
 
   await sb.from("activities").insert({
