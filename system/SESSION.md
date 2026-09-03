@@ -44,7 +44,7 @@ you are touching before committing here.
 
 - **Otis:** rotate keys at console.anthropic.com (keep `…ywAA`, delete the rest — four keys are exposed, three as Supabase secret *names*); delete the six junk secret rows and the `keycheck` function; set a spend cap.
 - **Otis:** a Shotstack key (`select public.set_channel('shotstack_api_key', …)`) turns video rendering on; Meta / LinkedIn / TikTok credentials per `CHANNELS.md`. Confirm or correct the four draft customer profiles in `settings.icp_profiles`.
-- **Website:** `claude/prune-dead-hotlinks` now also carries the Marketing tab (10 commits ahead of `main`). Merging it puts the approve button, the real portfolio and the honest Photo Control on the live site in one go.
+- **Website:** `claude/prune-dead-hotlinks` **merged to `main` Sep 3 (PR #3)** — the Marketing tab, real portfolio and honest Photo Control are in production. A Connections panel (which platforms are wired, with the `set_channel` line for each) followed on `claude/marketing-connections` (PR #4), backed by the `owner` function's `channels_status` action.
 - **Next session:** `claude/prune-dead-hotlinks` on the website repo is still unmerged; the live site shows the old portfolio.
 
 ### What to pick up next
