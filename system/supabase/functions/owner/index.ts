@@ -445,6 +445,43 @@ Deno.serve(async (req) => {
       return json({ ok: true, item: data });
     }
 
+    case "channels_status": {
+      // Which platforms are wired. Booleans only — a credential's presence is
+      // the owner's business, its value never leaves the server. Each entry
+      // carries the one line that turns it on, so the portal can show it
+      // beside the switch instead of sending him to a document.
+      const { data } = await sb.from("settings").select("value").eq("key", "channels").maybeSingle();
+      const stored = (data?.value ?? {}) as Record<string, string | undefined>;
+      const has = (setting: string, env: string) => !!(Deno.env.get(env) || stored[setting]);
+      const line = (k: string) => `select public.set_channel('${k}', 'PASTE_VALUE_HERE');`;
+      return json({
+        ok: true,
+        connections: [
+          { key: "video", label: "Video rendering (Shotstack)", connected: has("shotstack_api_key", "SHOTSTACK_API_KEY"),
+            what: "Turns video scripts into 20-second branded clips for TikTok, Reels, Facebook and LinkedIn.",
+            needs: ["shotstack_api_key"], lines: [line("shotstack_api_key")], signup: "https://shotstack.io" },
+          { key: "tiktok", label: "TikTok", connected: has("tiktok_client_key", "TIKTOK_CLIENT_KEY") && has("tiktok_client_secret", "TIKTOK_CLIENT_SECRET") && has("tiktok_refresh_token", "TIKTOK_REFRESH_TOKEN"),
+            what: "Posts approved videos to your TikTok account. Private-only until TikTok audits the app.",
+            needs: ["tiktok_client_key", "tiktok_client_secret", "tiktok_refresh_token"],
+            lines: [line("tiktok_client_key"), line("tiktok_client_secret"), line("tiktok_refresh_token")], signup: "https://developers.tiktok.com" },
+          { key: "meta", label: "Instagram + Facebook", connected: has("meta_page_token", "META_PAGE_TOKEN") && has("meta_page_id", "META_PAGE_ID"),
+            what: "Posts and Reels to Instagram, posts and video to your Facebook Page.",
+            needs: ["meta_page_id", "meta_page_token", "meta_ig_user_id"],
+            lines: [line("meta_page_id"), line("meta_page_token"), line("meta_ig_user_id")], signup: "https://business.facebook.com" },
+          { key: "linkedin", label: "LinkedIn", connected: has("linkedin_token", "LINKEDIN_TOKEN") && has("linkedin_org_urn", "LINKEDIN_ORG_URN"),
+            what: "Posts and video to your company page.",
+            needs: ["linkedin_org_urn", "linkedin_token"], lines: [line("linkedin_org_urn"), line("linkedin_token")], signup: "https://www.linkedin.com/developers" },
+          { key: "webhook", label: "Automation webhook (Make / Zapier)", connected: has("webhook_url", "CHANNEL_WEBHOOK_URL"),
+            what: "Hands every approved post to an automation tool that can reach any platform without API approvals.",
+            needs: ["webhook_url"], lines: [line("webhook_url")], signup: "https://www.make.com" },
+          { key: "email", label: "Email (SendGrid)", connected: !!(Deno.env.get("SENDGRID_API_KEY") && Deno.env.get("SENDGRID_FROM_EMAIL")),
+            what: "Sends approved lead follow-ups. Until then Send is off and drafts are kept.",
+            needs: ["SENDGRID_API_KEY", "SENDGRID_FROM_EMAIL"], lines: [], signup: "https://sendgrid.com",
+            note: "These two go in as Supabase Edge Function secrets, not through set_channel." },
+        ],
+      });
+    }
+
     case "message_list": {
       const { data, error } = await sb
         .from("messages")
