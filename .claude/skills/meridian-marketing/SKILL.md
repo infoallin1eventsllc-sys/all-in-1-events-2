@@ -21,6 +21,16 @@ the constraints that aren't obvious. For the deepest detail, read
 `system/SESSION.md` (state snapshot) and `system/README.md` (full guide) — this
 file is the fast path.
 
+## State as of Sep 3 (read before the sections below — older lines they contradict are stale)
+
+- **Live on a real Anthropic key** since Sep 2. The key resolves from `settings.anthropic.api_key` (fallback in `_shared/claude.ts`) because the edge secret `ANTHROPIC_API_KEY` still holds a 16-character label. Do not "fix" the secret from here; the fallback is the working path.
+- **Owner approval is a database trigger** (migration 0016): nothing becomes approved/scheduled/published or queued/sent without `meta.approved_by = 'owner'`. Only the `owner` function's `content_*`/`message_*` actions and the CLI set it. Never work around this.
+- **Approval UI** is the website portal's **Marketing** tab (`meridian-interface-website`, merged to `main`). The `dashboard` edge function cannot be a UI — Supabase serves it as text/plain (verified).
+- **Video**: `kind: "video"` → script → Shotstack render → `social-videos` bucket → queue, with a browser `ScriptPlayer` on the card until a clip exists. No Shotstack key yet. Adapters for TikTok / Reels / Facebook video / LinkedIn video exist with a `pending` state; no platform credentials yet.
+- **Credentials go in through `select public.set_channel(name, value)`** (migration 0015), which refuses the shapes past mistakes took. `CHANNELS.md` has the per-platform steps and TikTok form answers.
+- **Health check watches output** (0014): `placeholder_output` fires within 15 min if drafts are filler.
+- Full detail and the day-by-day log: `system/SESSION.md`.
+
 ## The mental model
 
 A scheduled agent plans marketing work, drafts content and follow-ups with

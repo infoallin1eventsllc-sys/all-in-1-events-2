@@ -40,6 +40,28 @@ you are touching before committing here.
 2. **Delete `VITE_OWNER_PASSCODE` from the Vercel project.** Inert now, but a
    dead credential sitting readable in a public bundle should not linger.
 
+### End of Sep 3 — where to pick up
+
+Website `main` is production and carries everything: PR #3 (Marketing tab,
+real portfolio, honest Photo Control), #4 (Connections panel), #5 (loop
+simulator moved off the public Services page into the owner Tech Stack tab),
+#6 (ScriptPlayer — a video script plays on its card before any clip exists;
+script lines click to play from that screen). Otis saw "6 items waiting for
+your approval" on the live site. Tomorrow is his troubleshooting pass.
+
+Things to check first tomorrow, in order:
+1. Production actually serves the latest build (the Marketing tab shows a
+   phone with a play button on the TikTok card). He has twice been looking
+   at the stale branch preview `meridian-interfac-git-e91add-…vercel.app`;
+   the real URL is meridianinterface.com.
+2. The Marketing tab against the real backend: content_list, message_list,
+   channels_status all answer; approve on one item moves it to "Posting now"
+   then "Approved — not posted: no … account connected yet".
+3. Any icon rendering as literal text = a name with j/q/x/z; the subset font
+   cannot form those. Swap the name.
+4. The `dashboard` edge function is dead weight (served as text/plain); it
+   can be deleted.
+
 ### Open items after Sep 2
 
 - **Otis:** rotate keys at console.anthropic.com (keep `…ywAA`, delete the rest — four keys are exposed, three as Supabase secret *names*); delete the six junk secret rows and the `keycheck` function; set a spend cap.
