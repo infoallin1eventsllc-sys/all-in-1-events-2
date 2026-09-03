@@ -19,7 +19,7 @@ block is right.**
 | **key-router** | Both PRs merged to `main`. **Not deployed to Render.** |
 | **Marketing system** | **LIVE on a real Anthropic key** since Sep 2 (the key was saved under the wrong secret name for two weeks; `_shared/claude.ts` now also reads `settings.anthropic.api_key`, where it lives today). First real plan, post, four lead follow-ups and a video script all produced and verified. Placeholder backlog cleared. |
 | **Short-form video** | Built Sep 2. `kind: "video"` → Claude script → Shotstack render → MP4 + poster in the `social-videos` bucket → approval queue. **No Shotstack key yet** — scripts land in the queue marked not rendered. Adapters for TikTok (Content Posting API), Instagram Reels, Facebook video, LinkedIn video, with a `pending` state for platform processing. **No platform credentials yet.** Setup in `CHANNELS.md`. |
-| **Owner approval** | **Enforced by trigger (0016)**: nothing becomes approved/scheduled/published or queued/sent without `meta.approved_by = 'owner'`. The `owner` function has `content_list/approve/reject/update` and `message_list/send/reject`; **the portal tab that calls them is not built** (website repo not in this session). Until it is, approval is the CLI. |
+| **Owner approval** | **Enforced by trigger (0016)**: nothing becomes approved/scheduled/published or queued/sent without `meta.approved_by = 'owner'`. The `owner` function has `content_list/approve/reject/update` and `message_list/send/reject`, and the portal's **Marketing tab** (`src/components/MarketingQueue.tsx` on `claude/prune-dead-hotlinks` in the website repo) renders the queue with Approve / Edit / Reject and Send / Reject. Verified headlessly against mocked backend data at 1280 and 390 wide. |
 | **Health check** | Now also checks *output*: `placeholder_output` (critical) fires within 15 min if drafts are filler or the last plan spent no tokens; `no_recent_drafts` after two quiet days. Both verified against real data. |
 | **Owner invoice portal** | Server-side auth, live and working. Invoices in Postgres behind RLS. Five tabs: Invoices & Pricing, Client Answers, Campaign Links, **System Health**, Photo Control. |
 | **System Health** | Live. Checks every 15 min; alerts raise and clear on their own. Key Router probed on each load. **No email notification** — needs a SendGrid key. |
@@ -44,7 +44,7 @@ you are touching before committing here.
 
 - **Otis:** rotate keys at console.anthropic.com (keep `…ywAA`, delete the rest — four keys are exposed, three as Supabase secret *names*); delete the six junk secret rows and the `keycheck` function; set a spend cap.
 - **Otis:** a Shotstack key (`select public.set_channel('shotstack_api_key', …)`) turns video rendering on; Meta / LinkedIn / TikTok credentials per `CHANNELS.md`. Confirm or correct the four draft customer profiles in `settings.icp_profiles`.
-- **Next session:** the portal's Marketing tab (website repo) against the `owner` actions above, so approval is a button. The `dashboard` function cannot be that UI — Supabase serves it as text/plain (verified).
+- **Website:** `claude/prune-dead-hotlinks` now also carries the Marketing tab (10 commits ahead of `main`). Merging it puts the approve button, the real portfolio and the honest Photo Control on the live site in one go.
 - **Next session:** `claude/prune-dead-hotlinks` on the website repo is still unmerged; the live site shows the old portfolio.
 
 ### What to pick up next
