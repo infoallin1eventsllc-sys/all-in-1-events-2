@@ -23,12 +23,34 @@ optional `gallery` on `PortfolioItem`, a set of screens.
   read "5 / 10" and let arrows wander between products.
 - Only pieces with a picture are clickable; the remaining concepts stay inert.
 
-**Still open on the three uploaded products** (`scratchpad/products/`): Aurora's
-"Member FDIC" / "Aurora Reserve Bank, N.A." lines, its Google-Fonts icon
-dependency and its sideways scroll on a phone; FinSight naming Deloitte &
-Touche with a fabricated SEC CIK; ORCHESTRA's SOC 2 / ISO / HIPAA claims; and
-unused Gemini scaffolding plus `"react-example"` package names in all three.
-All three now carry the shared `BuiltByMeridian` plate and a favicon.
+**The three uploaded products are fixed** (`scratchpad/products/`, delivered as
+zips). What changed:
+
+- **Regulated language gone.** Aurora's "Member FDIC", "Aurora Reserve Bank,
+  N.A." and the FDIC/FINMA supervision paragraph are replaced; its Disclosures
+  panel now states plainly that Aurora is fictional. FinSight no longer names
+  Deloitte & Touche, carries no fabricated SEC CIK, and drops "PCAOB Audited" /
+  "SOX 404 Certified". ORCHESTRA's "SOC 2 Type II Certified", "FedRAMP High
+  Ready", "99.999% SLA Guarantee" and "ISO 27001 & HIPAA" strip now states what
+  the software does rather than what it is certified for.
+- **Type is self-hosted in all three.** Aurora's icon font is subset to the 36
+  glyphs it uses (45 KB). This was the worst failure: icons are ligatures, so
+  without the font the UI fills with `shield_person`, `signal_cellular_4_bar`.
+- **Aurora**: the decorative glow no longer drags a 230px horizontal scroll on a
+  phone (`overflow-x: clip` on the scroll container); the hotlinked
+  googleusercontent card image — which already failed and would have rotted — is
+  drawn in CSS instead.
+- **All three**: dead deps removed (`@google/genai`, `express`, `dotenv`,
+  `motion`, `tsx`, `esbuild`), real package names, `.env.example` demanding an
+  unused `GEMINI_API_KEY` deleted, `build` now typechecks first.
+- Each carries the `BuiltByMeridian` plate with a `note` saying it is a
+  demonstration, plus a favicon.
+
+**The check that matters**: `scratchpad/verify-products.mjs` serves each build
+with *every external request blocked* and asserts no outside calls, no banned
+claim strings, no sideways scroll on a phone, and — measuring painted width
+rather than text, since a ligature's text is its own name either way — that no
+icon renders as a word. All three pass.
 
 ## Sep 4 — the Meridian Stack Planner (client product)
 
