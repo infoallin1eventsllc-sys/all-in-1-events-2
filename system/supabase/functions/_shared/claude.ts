@@ -71,6 +71,12 @@ async function resolveKey(): Promise<string | undefined> {
   return settingsKey ?? undefined;
 }
 
+/** Is any route to a model configured? Cheap enough to answer on every status ping. */
+export async function keyAvailable(): Promise<boolean> {
+  if (Deno.env.get("KEYROUTER_URL")) return true;
+  return !!(await resolveKey());
+}
+
 /** Rough token estimate for the pre-flight routing decision (~4 chars/token). */
 function estimateTokens(opts: CallOpts): number {
   const chars = (opts.system?.length ?? 0) + (opts.prompt?.length ?? 0);
