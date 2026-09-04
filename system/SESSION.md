@@ -53,6 +53,17 @@ the plan. Verified against the live CRM on Sep 4 and the test row deleted.
 — free" link beside the booking button, rendered only when `VITE_PLANNER_URL`
 is set in the site's Vercel project.
 
+**Honesty, round two (Sep 4).** The department playbooks badged themselves
+"4.8x ROI" and claimed "deflects 52% of tier-1 tickets with 94% CSAT"; the ROI
+screen reported $618,990 saved, 10,746% return and a three-day payback. Both
+were template fiction. Playbook badges now carry Meridian's build sequencing
+(most start here / common second / third or fourth / larger teams only) and the
+copy is in a business owner's words. The ROI model takes the one-off build cost
+(default $7,500, the published rate) and a realisation rate (default 50%) and
+reports payback in months, with a derivation table for every figure. Presets
+open on 4/12/45/250-person businesses. At the defaults: 38 hrs/week freed,
+$25,500/yr, 3.5-month payback.
+
 **To deploy the planner app.** Vercel → import `meridian-interface-website` as a
 second project → Root Directory `planner`, framework Vite, output `dist` →
 domain `planner.meridianinterface.com`. No environment variables needed.
