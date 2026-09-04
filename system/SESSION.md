@@ -64,6 +64,20 @@ reports payback in months, with a derivation table for every figure. Presets
 open on 4/12/45/250-person businesses. At the defaults: 38 hrs/week freed,
 $25,500/yr, 3.5-month payback.
 
+**What it is for (Otis, Sep 4).** A showpiece for prospects who ask what a tech
+stack would do for their business — proof the studio can design and build one,
+not a self-serve product. It therefore has to open without a domain, and the
+client has to leave with something.
+
+- **Proposal sheet.** The Proposal button renders the plan as a one-page
+  document on Meridian letterhead and prints to PDF. It uses the `plain`
+  one-liner on each catalogue component, not the technical description.
+- **One-file offline copy.** `scratchpad/standalone.mjs` inlines the build
+  (fonts, logo, code) into a single `.html` that works from `file://` with the
+  network fully blocked. That is the meeting-room copy.
+- Workflow presets and playbooks are written for a Houston small business, with
+  the two big-company examples labelled as such.
+
 **To deploy the planner app.** Vercel → import `meridian-interface-website` as a
 second project → Root Directory `planner`, framework Vite, output `dist` →
 domain `planner.meridianinterface.com`. No environment variables needed.
