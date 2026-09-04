@@ -4,6 +4,29 @@ Compact record of what was built and the current state, so work can resume later
 
 ---
 
+## Sep 4 — four working demos live on the website
+
+The products are no longer only pictures. Each is built with `DEMO_BASE` set to
+the folder it is served from and copied into the site's `public/demos/`, so they
+ship with the site — no extra Vercel project, no extra domain:
+
+  /demos/stack-planner/   /demos/finsight/   /demos/aurora/   /demos/orchestra/
+
+Portfolio tiles and the Impact detail panel carry an "Open the working demo"
+button (`demo` on `PortfolioItem`), and the Stack Planner section's long-dark
+"Open it yourself" button now points at the hosted copy.
+
+Three traps, all recorded in `public/demos/README.txt`:
+- Without `DEMO_BASE` every asset points at the site root and the demo is blank.
+- Vite rewrites HTML and CSS but **not string literals in JS** — the mark and
+  lockup go through `import.meta.env.BASE_URL`.
+- Files in `public/` are copied unprocessed, so Aurora's self-hosted font URLs
+  had to become relative.
+
+Refreshing a demo means rebuilding its source with `DEMO_BASE` and copying the
+output back. `scratchpad/demos-check.mjs` verifies all four paths render, with
+artwork resolving, no icons as words, no 4xx and no JS errors.
+
 ## Sep 4 — the portfolio shows real products
 
 Four of the nine portfolio pieces are now built products rather than concepts:
