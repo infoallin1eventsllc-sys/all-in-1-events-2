@@ -41,6 +41,18 @@ deployed v1, `verify_jwt` off because the app is public):
 - Verified live on Sep 4: status `ai:true`, a real plan for a Houston plumbing
   company, a real refund-workflow trace, and a 400 on a too-short goal.
 
+**The plan reaches you.** The export panel takes a name, an email or phone and
+an optional note, and `send_plan` forwards the plan to the same `intake`
+webhook the booking form uses — a contact with the plan in `meta.message`,
+source `meridian-website:stack-planner`, an activity, and a follow-up queued.
+Its allowance is 5/hour and counted separately from the AI calls (migration
+`0018`), because running out of advisor drafts must never stop someone sending
+the plan. Verified against the live CRM on Sep 4 and the test row deleted.
+
+**Finding it.** The website's Tech Stack service shows a "Plan your stack first
+— free" link beside the booking button, rendered only when `VITE_PLANNER_URL`
+is set in the site's Vercel project.
+
 **To deploy the planner app.** Vercel → import `meridian-interface-website` as a
 second project → Root Directory `planner`, framework Vite, output `dist` →
 domain `planner.meridianinterface.com`. No environment variables needed.

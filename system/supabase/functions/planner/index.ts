@@ -10,8 +10,12 @@ import { callClaude, extractJson, keyAvailable } from "../_shared/claude.ts";
 import { serviceClient } from "../_shared/supabase.ts";
 
 const MODEL = "claude-sonnet-5"; // the workhorse tier: plenty for a proposal, priced for a public tool
-const LIMIT_PER_HOUR = 12;
 const FIELD_MAX = 600;
+const PLAN_MAX = 20_000; // a plan the client exported, not free-form input
+
+// Per action, per address, per hour. Sending a plan is the point of the tool,
+// so its allowance is counted separately from the model calls (migration 0018).
+const LIMITS: Record<string, number> = { advisor: 12, simulate: 12, send_plan: 5 };
 
 const CORS = {
   "access-control-allow-origin": "*",
@@ -64,14 +68,17 @@ Deno.serve(async (req) => {
   if (action === "status") {
     return json({ ok: true, ai: await keyAvailable(), model: MODEL });
   }
-  if (action !== "advisor" && action !== "simulate") return json({ ok: false, error: "unknown action" }, 400);
+  if (!(action in LIMITS)) return json({ ok: false, error: "unknown action" }, 400);
 
   const sb = serviceClient();
   const { data: allowed, error: rlErr } = await sb.rpc("planner_allow", {
-    p_ip_hash: await ipHash(req), p_action: action, p_limit: LIMIT_PER_HOUR, p_window: "1 hour",
+    p_ip_hash: await ipHash(req), p_action: action, p_limit: LIMITS[action], p_window: "1 hour",
   });
   if (rlErr) return json({ ok: false, error: "planner unavailable" }, 503);
   if (!allowed) return json({ ok: false, error: "hourly allowance used" }, 429);
+
+  // Sending a plan needs no model, so it works even with the advisor offline.
+  if (action === "send_plan") return await sendPlan(body);
 
   if (!(await keyAvailable())) {
     return json({ ok: false, error: "The AI advisor is offline right now. Everything else on this page still works, and Meridian can run this with you on a call." }, 503);
@@ -126,3 +133,70 @@ ${SIMULATE_SHAPE}`,
   if (!steps || steps.length === 0) return json({ ok: false, error: "The simulator gave an answer this page could not read. Try again." }, 502);
   return json({ ok: true, steps, model: MODEL, usage: r.usage });
 });
+
+/**
+ * The client sends the plan they just built to Meridian.
+ *
+ * This is what turns the planner from a brochure into a lead source: the
+ * person who spent twenty minutes choosing a stack is the most qualified
+ * enquiry the studio gets, and until now the only thing they could do with the
+ * result was download a file. The plan goes to the same `intake` webhook the
+ * website's booking form uses, so it lands as a contact with an activity and a
+ * queued follow-up — one lead path, not two.
+ *
+ * The webhook secret stays server-side, which is the reason this hop exists at
+ * all rather than the browser calling intake directly.
+ */
+async function sendPlan(body: Record<string, unknown>): Promise<Response> {
+  const email = clean(body.email).toLowerCase();
+  const phone = clean(body.phone);
+  if (!email && !phone) return json({ ok: false, error: "Add an email address or a phone number so we can reply." }, 400);
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    return json({ ok: false, error: "That email address does not look right." }, 400);
+  }
+
+  const plan = String(body.plan ?? "").trim().slice(0, PLAN_MAX);
+  if (plan.length < 40) return json({ ok: false, error: "Build a plan first, then send it." }, 400);
+
+  const name = clean(body.name);
+  const company = clean(body.company);
+  const note = clean(body.note);
+  const stage = clean(body.stage);
+
+  const message = [
+    "Sent from the Meridian Stack Planner.",
+    stage ? `Stage: ${stage}` : null,
+    note ? `What they said: ${note}` : null,
+    "",
+    "--- the plan they built ---",
+    plan,
+  ].filter((l) => l !== null).join("\n");
+
+  const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/intake`;
+  const secret = Deno.env.get("WEBHOOK_SECRET");
+  const anon = Deno.env.get("SUPABASE_ANON_KEY");
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(secret ? { "x-webhook-secret": secret } : {}),
+        ...(anon ? { authorization: `Bearer ${anon}` } : {}),
+      },
+      body: JSON.stringify({
+        name: name || null, email: email || null, phone: phone || null, company: company || null,
+        message,
+        source: "meridian-website:stack-planner",
+        consent_email: !!email,
+      }),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok || out?.ok === false) {
+      return json({ ok: false, error: "We could not file that just now. Email it to otis@meridianinterface.com and it will not be lost." }, 502);
+    }
+    return json({ ok: true });
+  } catch {
+    return json({ ok: false, error: "We could not reach the studio's system. Email the plan to otis@meridianinterface.com and it will not be lost." }, 502);
+  }
+}
