@@ -78,6 +78,20 @@ client has to leave with something.
 - Workflow presets and playbooks are written for a Houston small business, with
   the two big-company examples labelled as such.
 
+**Finished out (Sep 4).** The proposal now prints the AI advisor's phased
+rollout and its guardrail recommendations when one was generated — section
+numbers are assigned as they render, since that section is conditional. The
+sheet was clipping its own figures on a phone; label and value now stack below
+`sm`, and the headless check fails on any element wider than its container.
+Last invented metrics relabelled: the autonomy score says it is a judgement,
+and the guard card states the rule instead of promising an outcome. The
+planner README carries the house rule: no number nobody measured.
+
+Three headless suites guard it, all in the session scratchpad:
+`planner-shots.mjs` (every tab, two widths), `proposal-full-check.mjs`
+(advisor → proposal, numbering, clipping, print media) and `offline-check.mjs`
+(the single file from `file://` with the network blocked).
+
 **To deploy the planner app.** Vercel → import `meridian-interface-website` as a
 second project → Root Directory `planner`, framework Vite, output `dist` →
 domain `planner.meridianinterface.com`. No environment variables needed.
