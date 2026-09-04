@@ -92,6 +92,17 @@ Three headless suites guard it, all in the session scratchpad:
 (advisor → proposal, numbering, clipping, print media) and `offline-check.mjs`
 (the single file from `file://` with the network blocked).
 
+**On the website (Sep 4).** The landing page now carries a Stack Planner
+product section between the services and the concept grid — a browser-framed
+screenshot of the real app, four things a client gets, a booking button, and an
+"open it yourself" link that only appears once `VITE_PLANNER_URL` is set — plus
+three more real screens under it. Screenshots are shot from the built app by
+`scratchpad/shoot-product.mjs` into `public/images/portfolio/`; re-run it after
+any visual change to the planner so the website's pictures do not drift from
+the product. Portfolio entry `p10` now reads Meridian Interface / 2026 with
+that photo, and is filtered out of the concept grid. Also fixed: the site had a
+manifest but no icon, so every page load 404'd on /favicon.ico.
+
 **To deploy the planner app.** Vercel → import `meridian-interface-website` as a
 second project → Root Directory `planner`, framework Vite, output `dist` →
 domain `planner.meridianinterface.com`. No environment variables needed.
