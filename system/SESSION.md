@@ -4,6 +4,32 @@ Compact record of what was built and the current state, so work can resume later
 
 ---
 
+## Sep 4 — the portfolio shows real products
+
+Four of the nine portfolio pieces are now built products rather than concepts:
+the Stack Planner, FinSight (BI dashboard), Aurora Reserve (private banking)
+and ORCHESTRA (cloud console). Each carries real screenshots and, via the new
+optional `gallery` on `PortfolioItem`, a set of screens.
+
+- **Shooting them:** `scratchpad/shoot-portfolio.mjs` serves each product's
+  build and shoots 1600x900 at 1.5x into `public/images/portfolio/`. Webfonts
+  are fetched with curl and handed to the page, because Chromium cannot reach
+  Google Fonts from the sandbox — without that, Aurora photographs with every
+  icon rendered as its own name (`shield_person`, `signal_cellular_4_bar`).
+  Re-run it after any visual change so the site's pictures do not drift.
+- **Clicking enlarges.** `src/components/Lightbox.tsx`: Escape and backdrop
+  close, arrows walk the set, the page locks while open, focus returns to the
+  thumbnail. Sets are scoped per product — a grid-wide set made the counter
+  read "5 / 10" and let arrows wander between products.
+- Only pieces with a picture are clickable; the remaining concepts stay inert.
+
+**Still open on the three uploaded products** (`scratchpad/products/`): Aurora's
+"Member FDIC" / "Aurora Reserve Bank, N.A." lines, its Google-Fonts icon
+dependency and its sideways scroll on a phone; FinSight naming Deloitte &
+Touche with a fabricated SEC CIK; ORCHESTRA's SOC 2 / ISO / HIPAA claims; and
+unused Gemini scaffolding plus `"react-example"` package names in all three.
+All three now carry the shared `BuiltByMeridian` plate and a favicon.
+
 ## Sep 4 — the Meridian Stack Planner (client product)
 
 Otis built an "agentic tech stack for growing businesses" app in Google AI
