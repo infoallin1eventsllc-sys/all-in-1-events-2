@@ -4,6 +4,48 @@ Compact record of what was built and the current state, so work can resume later
 
 ---
 
+## Sep 4 — the Meridian Stack Planner (client product)
+
+Otis built an "agentic tech stack for growing businesses" app in Google AI
+Studio and asked for it to become a Meridian Interface product for clients.
+It now lives in the **website repo**, at `planner/`, on branch `planner`.
+
+**What it is.** A planning and sales tool, not a running stack: five layers,
+a stack builder with monthly estimates, a workflow that runs step by step and
+stops for a person, an ROI model, a governance screen, and an exportable plan
+(Markdown or JSON) a client brings to a call.
+
+**What changed from the AI Studio original.**
+- Brand: Otis's mark and lockup, Hanken Grotesk + Inter self-hosted, the site's
+  colour tokens, light ground. Contact details and a booking link carrying
+  `utm_source=stack-planner` on every screen.
+- Honesty: the invented "99.4% clearance", "Fortune 500 Ready", "ARB Approved"
+  and "SOC 2 Verified 0 Exceptions" claims are gone. Governance now labels each
+  item **Designed in**, **Pattern available**, or **Client obtains**, and says
+  plainly that certifications belong to the business and its vendors.
+- Models: Claude-first catalogue with published per-token prices (Sonnet 5,
+  Opus 5, Haiku 4.5, cloud-hosted inference) instead of Gemini entries.
+- Backend: the Express/Gemini server is gone. Two model-backed features (the AI
+  advisor and the custom workflow trace) call the new Supabase **`planner`**
+  function.
+
+**The `planner` edge function** (this repo, `system/supabase/functions/planner`,
+deployed v1, `verify_jwt` off because the app is public):
+- `{"action":"status"}` → `{ok, ai, model}` — whether a model is connected.
+- `{"action":"advisor", ...profile}` → a five-layer plan as JSON.
+- `{"action":"simulate", goal, companyContext}` → 4-6 agent steps as JSON.
+- Cost is bounded by migration `0017_planner_rate_limit.sql`: 12 AI calls per
+  hashed address per hour (`planner_allow`), input fields capped at 600 chars,
+  output tokens capped per action. No key or a model error returns a 503 the
+  app shows as "AI advisor offline" — never placeholder text.
+- Verified live on Sep 4: status `ai:true`, a real plan for a Houston plumbing
+  company, a real refund-workflow trace, and a 400 on a too-short goal.
+
+**To deploy the planner app.** Vercel → import `meridian-interface-website` as a
+second project → Root Directory `planner`, framework Vite, output `dist` →
+domain `planner.meridianinterface.com`. No environment variables needed.
+
+
 ## ► START HERE (last updated Sep 2)
 
 **Read this block first. The sections below it are a running log and some of the
