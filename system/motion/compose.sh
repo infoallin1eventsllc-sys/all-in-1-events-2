@@ -5,11 +5,15 @@
 # not at guessed offsets — a caption describing the merch screen has to land
 # while the merch screen is actually on screen.
 #
-# Usage: ./compose.sh <raw-dir> <card-prefix> <out.mp4>
+# Usage: ./compose.sh <raw-dir> <card-prefix> <out.mp4> [music.wav]
+#
+# Music: a licensed track (Adobe Stock audio, licensed on Otis's account — see
+# audio/LICENSE.md) trimmed to the clip, faded, and loudness-normalised to the
+# -16 LUFS social platforms expect. Never an unlicensed file.
 set -euo pipefail
 cd "$(dirname "$0")"
 FF=$(cat .ffmpeg)
-RAW=$1; PFX=$2; OUT=$3
+RAW=$1; PFX=$2; OUT=$3; MUSIC=${4:-}
 
 SRC=$(ls "$RAW"/*.webm | head -1)
 BEATS="$RAW/beats.json"
@@ -58,5 +62,15 @@ $FF -y -v error -loop 1 -i assets/end.png -t $END_SEC \
   -vf "fps=30,format=yuv420p" -c:v libx264 -preset slow -crf 20 -r 30 seg-end.mp4
 
 printf "file 'seg-title.mp4'\nfile 'seg-body.mp4'\nfile 'seg-end.mp4'\n" > list.txt
-$FF -y -v error -f concat -safe 0 -i list.txt -c copy "$OUT"
-echo "wrote $OUT  ($NCAP captions over ${BODY}s of footage)"
+if [ -n "$MUSIC" ]; then
+  $FF -y -v error -f concat -safe 0 -i list.txt -c copy silent.mp4
+  TOTAL=$(python3 -c "print($TITLE_SEC + $BODY + $END_SEC)")
+  $FF -y -v error -i silent.mp4 -i "$MUSIC" \
+    -filter_complex "[1:a]atrim=0:$TOTAL,afade=t=in:st=0:d=0.6,afade=t=out:st=$(python3 -c "print($TOTAL-1.8)"):d=1.8,loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000[a]" \
+    -map 0:v -map "[a]" -c:v copy -c:a aac -b:a 192k -shortest "$OUT"
+  rm -f silent.mp4
+  echo "wrote $OUT  ($NCAP captions over ${BODY}s of footage, music: $(basename "$MUSIC"))"
+else
+  $FF -y -v error -f concat -safe 0 -i list.txt -c copy "$OUT"
+  echo "wrote $OUT  ($NCAP captions over ${BODY}s of footage, no audio)"
+fi
