@@ -4,6 +4,92 @@ Compact record of what was built and the current state, so work can resume later
 
 ---
 
+## Sep 5 — the storefront rebuilt, and a bar that reaches every demo
+
+Otis sent the e-commerce storefront (`modern_street_1.zip`). It was already
+hosted at `/demos/modern-street/`, but from a bundle that **hotlinked all ten
+product photographs** from AI Studio's temporary `aida-public` host. On a
+storefront the photographs are the product, so that demo was one expiry away
+from showing a client empty frames.
+
+Rebuilt from source. Merged as website PR #19.
+
+**The one that mattered most: a live card form.** The checkout asked a real
+visitor for a real card number, expiry and CVC, on a page hosted publicly. It
+transmitted nothing — but browsers offer to autofill card fields, and a visitor
+could type a real number into a demo. Replaced with a fixed, non-editable panel
+that says on screen that no payment is taken and that a live shop hands this
+step to a processor. There is now **no card input anywhere in the app**, and a
+test asserts it.
+
+Also fixed: two brand names fighting ("The Curated." in the header, footer and
+checkout vs MODERN_STREET in the title, policies and copyright); claims a client
+would inherit and be liable for (carbon-neutral shipping, verified
+carbon-capture offsets, organic milling, Stripe named as the processor, a
+256-bit encryption standard, and a 1993 founding date for a label that does not
+exist); three font families on Google's CDN, self-hosted as two; and eight
+unused dependencies, 128 packages lighter.
+
+**Photography.** Generative image tools are not available on the Adobe
+connector, but Stock search and licensing are, and apparel plates came back
+free-licensed. Eight licensed to Meridian, then normalised locally: trim each
+to its garment, composite onto one shared ground, place at one shared scale.
+Six shoots then read as one catalogue. Two were recoloured to match their copy
+(a red shell jacket to cobalt by rotating only red hues, which the desaturated
+backdrop is immune to). One recolour was **abandoned**: darkening a light hoodie
+to charcoal needed a spatial mask, the flood fill leaked at the soft shoulder
+edges, and the result had halos — so a real black hoodie plate was sourced
+instead. Cheaper than fighting a bad cutout.
+
+**Two bugs the sub-path build exposed, affecting every demo.** Self-hosted font
+URLs (`url(/fonts/…)` inside `public/`, which Vite copies unprocessed and never
+rewrites) and the Meridian mark in `BuiltByMeridian` were both absolute. Under
+`/demos/<slug>/` they resolve against the site root. They work today only
+because the site happens to serve the same files at `/brand/` — coincidence, not
+design. Both now resolve against `import.meta.env.BASE_URL`.
+
+**`tools/brand-demos.mjs`** gained a `.fixed.top-0` rule: the storefront pins
+its own header to the viewport top, where it sat behind the Meridian bar with
+its logo and nav hidden. The `.sticky.top-0` rule already there did not cover
+it. The selector targets the literal `top-0` class so full-screen `inset-0`
+modal overlays are untouched.
+
+While fixing that I made the tool **re-stampable** — it strips the bar it finds
+and writes the current one, so a change to the bar reaches all seven demos in
+one pass instead of only new ones. That was not optional: the first attempt to
+re-stamp used a regex whose lookahead ran past the bar's own closing tag into
+the next one and **deleted `<div id="root">` from all seven demos**, blanking
+every one of them (React error #299). Restored from git. The tool now refuses to
+write a file if stripping the old bar would remove the app root, and the removal
+patterns are anchored to the bar's own `</a></div>`. Do not loosen them.
+
+**Source is now tracked.** `storefront/` joins `planner/` in the website repo.
+Before this, only built output was in git for six of the seven demos — the
+sources lived in a scratchpad that dies with the container, so none of them
+could have been rebuilt. Verified it builds from its committed location.
+
+Two of my own test assertions were wrong before they were right, both worth
+remembering: `document.querySelector` for the modal's image matched one of the
+nine grid tiles behind it, and `innerText` returns text as CSS renders it, so a
+`text-transform: uppercase` eyebrow reads ACQUISITION CONFIRMED and a
+case-sensitive regex misses. A third was worse — the promo-code test asserted
+`() => true`. It now types a code and checks the total moves, and checks a bad
+code is rejected.
+
+Also: `additionalImages` was typed on `Product` and populated in the catalogue
+but never rendered anywhere. The product view now has a thumbnail strip.
+
+**Verified:** 12 storefront checks; all seven demos render with the bar pinned,
+nothing hidden behind it, no broken images, no page errors; portfolio `p6`
+opens a four-image gallery scoped to that product; root typecheck and site
+build clean.
+
+**Still open:** three portfolio entries remain concepts without images — the
+apparel design & brand studio app, the artisan coffee brand identity, and the
+CRM sales & lead pipeline portal. Otis has more products to send.
+
+---
+
 ## Sep 4 — four working demos live on the website
 
 The products are no longer only pictures. Each is built with `DEMO_BASE` set to
