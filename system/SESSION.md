@@ -82,6 +82,26 @@ design built locally (`sound-design.py` → `reel-sound-design.wav`) because
 Clipkit cannot be fed a local file from here; finish = he exports the MP4 from
 the editor, I mux. He liked v1.
 
+**Sizzle finished locally (night).** Otis: "make the music and the video sync
+up… it did not show any of the images on the modern street." Both fixed, and
+the finished piece rendered here rather than waiting on his export:
+- The blank tiles were a Clipkit repeat bug — a repeated `image` with
+  `source: "{src}"` preloads only its first row. `clipkit/fix-photos.py` now
+  writes six explicit image elements (unique layers; the hosted validator
+  rejects duplicate layers in a group). Add-to-bag button and cursor moved
+  down 18 px so the button clears the long product name.
+- Local render path (README "Rendering it here"): `@clipkit/renderer` +
+  Playwright, `/opt/google/chrome/chrome` symlink, assets inlined as `data:`
+  URIs by `clipkit/make-local.py` (file:// and proxied hosts never load in
+  the harness), and `clipkit/frames.mjs` because Playwright's Chromium has no
+  H.264 WebCodecs encoder — it renders frame by frame through the same
+  harness into ffmpeg. `reel-sound-design.wav` muxed under it → 
+  `meridian-sizzle.mp4`, sent in chat, unpublished, awaiting his approval.
+- Hosted project `1dbefc73…` carries the same six photo elements (public
+  meridianinterface.com URLs) but its preview still shows them blank —
+  Clipkit's renderer cannot fetch that host; `ingest_asset` from it was
+  refused by policy. The local MP4 is the true version.
+
 **Still pending from before:** Shotstack key (`settings.channels` is `{}`),
 Photo Control overrides on p7/p10 still beat committed screenshots, the
 production URL vs the frozen branch preview, old-key cleanup, spend cap,

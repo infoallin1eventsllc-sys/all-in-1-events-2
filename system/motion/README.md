@@ -154,3 +154,32 @@ the site's: ink `#0F172A` stage, white product cards with `#E2E8F0`
 hairlines, accent `#2563EB`, tracked-caps kickers with the short rule, Hanken
 Grotesk 800 for display (loaded from Google Fonts via `fonts[]`). No violet.
 `sound-design.py` carries 126 cues against these times.
+
+**Rendering it here (Sep 6, night).** Clipkit's hosted export is the normal
+path, but the finished MP4 with the sound design was rendered locally:
+
+1. `npm i @clipkit/cli @clipkit/renderer playwright` in a scratch dir, then
+   `ln -sf /opt/pw-browsers/chromium /opt/google/chrome/chrome` — the
+   renderer hard-codes that Chrome path.
+2. The harness page is served from `http://127.0.0.1`, so `file://` assets
+   never load and remote fonts/photos are blocked by the proxy. Put the woff2
+   fonts in `fonts/` and the six product photos in `images/`, then
+   `clipkit/make-local.py` rewrites every `src`/`source` to a `data:` URI
+   (`sizzle-inline.json`, ~850 KB).
+3. `clipkit render --local` fails with "Encoder creation error": Playwright's
+   Chromium has no H.264 WebCodecs encoder. `clipkit/frames.mjs` drives the
+   same harness frame by frame (it patches the harness to expose the runtime),
+   pipes PNGs into ffmpeg → `sizzle-silent.mp4`. About 0.6 s a frame, 15 min
+   for the 47 s piece. `clipkit still -t N` works unchanged for spot checks.
+4. Mux `reel-sound-design.wav` under it (command above).
+
+**The empty product tiles** were a Clipkit repeat bug: a repeated `image`
+with `source: "{src}"` preloads only its first `repeat_data` row, so five of
+six tiles rendered blank (hosted and local alike). `clipkit/fix-photos.py`
+replaces `s-photo` with six explicit image elements (`s-photo-0…5`, unique
+layers — the hosted validator rejects duplicate layers in a group). The
+hosted project has the same six elements pointing at the public
+`meridianinterface.com/demos/modern-street/images/products/*.jpg` URLs, but
+its preview still shows them blank — the site is unreachable from Clipkit's
+renderer or blocks the fetch; `ingest_asset` from that domain was refused by
+the sandbox policy. Local render is the source of truth for the photos.

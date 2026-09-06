@@ -1812,51 +1812,6 @@
     },
     {
      "x": {
-      "expr": "130 + mod(i,3)*400"
-     },
-     "y": {
-      "expr": "112 + floor(i/3)*300"
-     },
-     "id": "s-garment",
-     "time": 17.7,
-     "type": "shape",
-     "layer": 7,
-     "width": 180,
-     "height": 150,
-     "duration": "end",
-     "animations": [
-      {
-       "time": "start",
-       "type": "fade-in",
-       "duration": 0.35
-      }
-     ],
-     "fill_color": "{c}",
-     "repeat_data": [
-      {
-       "c": "#0F172A"
-      },
-      {
-       "c": "#94A3B8"
-      },
-      {
-       "c": "#334155"
-      },
-      {
-       "c": "#CBD5E1"
-      },
-      {
-       "c": "#1E293B"
-      },
-      {
-       "c": "#64748B"
-      }
-     ],
-     "border_radius": 14,
-     "repeat_stagger": 0.14
-    },
-    {
-     "x": {
       "expr": "60 + mod(i,3)*400"
      },
      "y": {
@@ -1885,16 +1840,16 @@
        "txt": "Tailored Joggers"
       },
       {
-       "txt": "Slate Crewneck"
+       "txt": "Tech Shell Jacket"
       },
       {
-       "txt": "Cloud Tee"
+       "txt": "Oversized Hoodie"
       },
       {
-       "txt": "Night Overshirt"
+       "txt": "Core Sneakers"
       },
       {
-       "txt": "Ash Cap"
+       "txt": "Utility Wide-Leg Cargo"
       }
      ],
      "repeat_stagger": 0.14
@@ -1929,23 +1884,23 @@
        "txt": "$145.00 USD"
       },
       {
-       "txt": "$85.00 USD"
+       "txt": "$210.00 USD"
       },
       {
-       "txt": "$60.00 USD"
+       "txt": "$120.00 USD"
       },
       {
-       "txt": "$110.00 USD"
+       "txt": "$180.00 USD"
       },
       {
-       "txt": "$45.00 USD"
+       "txt": "$185.00 USD"
       }
      ],
      "repeat_stagger": 0.14
     },
     {
      "x": 240,
-     "y": 296,
+     "y": 314,
      "id": "s-btn",
      "time": 19.2,
      "type": "shape",
@@ -1979,7 +1934,7 @@
     },
     {
      "x": 240,
-     "y": 296,
+     "y": 314,
      "id": "s-btn-t",
      "text": "ADD TO BAG",
      "time": 19.25,
@@ -2044,7 +1999,7 @@
          "time": 0.9,
          "value": [
           318,
-          318
+          336
          ],
          "easing": "ease-in-out-cubic",
          "in_tangent": [
@@ -2127,6 +2082,132 @@
      "fill_color": "#FFFFFF",
      "text_align": "center",
      "vertical_align": "middle"
+    },
+    {
+     "type": "image",
+     "id": "s-photo-0",
+     "layer": 7,
+     "time": 17.7,
+     "duration": "end",
+     "x": 52,
+     "y": 100,
+     "width": 336,
+     "height": 172,
+     "fit": "cover",
+     "border_radius": 8,
+     "source": "https://meridianinterface.com/demos/modern-street/images/products/hoodie-charcoal.jpg",
+     "animations": [
+      {
+       "type": "fade-in",
+       "time": "start",
+       "duration": 0.35
+      }
+     ]
+    },
+    {
+     "type": "image",
+     "id": "s-photo-1",
+     "layer": 12,
+     "time": 17.84,
+     "duration": "end",
+     "x": 452,
+     "y": 100,
+     "width": 336,
+     "height": 172,
+     "fit": "cover",
+     "border_radius": 8,
+     "source": "https://meridianinterface.com/demos/modern-street/images/products/joggers.jpg",
+     "animations": [
+      {
+       "type": "fade-in",
+       "time": "start",
+       "duration": 0.35
+      }
+     ]
+    },
+    {
+     "type": "image",
+     "id": "s-photo-2",
+     "layer": 13,
+     "time": 17.98,
+     "duration": "end",
+     "x": 852,
+     "y": 100,
+     "width": 336,
+     "height": 172,
+     "fit": "cover",
+     "border_radius": 8,
+     "source": "https://meridianinterface.com/demos/modern-street/images/products/shell-jacket.jpg",
+     "animations": [
+      {
+       "type": "fade-in",
+       "time": "start",
+       "duration": 0.35
+      }
+     ]
+    },
+    {
+     "type": "image",
+     "id": "s-photo-3",
+     "layer": 14,
+     "time": 18.12,
+     "duration": "end",
+     "x": 52,
+     "y": 400,
+     "width": 336,
+     "height": 172,
+     "fit": "cover",
+     "border_radius": 8,
+     "source": "https://meridianinterface.com/demos/modern-street/images/products/hoodie-light.jpg",
+     "animations": [
+      {
+       "type": "fade-in",
+       "time": "start",
+       "duration": 0.35
+      }
+     ]
+    },
+    {
+     "type": "image",
+     "id": "s-photo-4",
+     "layer": 15,
+     "time": 18.26,
+     "duration": "end",
+     "x": 452,
+     "y": 400,
+     "width": 336,
+     "height": 172,
+     "fit": "cover",
+     "border_radius": 8,
+     "source": "https://meridianinterface.com/demos/modern-street/images/products/sneakers.jpg",
+     "animations": [
+      {
+       "type": "fade-in",
+       "time": "start",
+       "duration": 0.35
+      }
+     ]
+    },
+    {
+     "type": "image",
+     "id": "s-photo-5",
+     "layer": 16,
+     "time": 18.4,
+     "duration": "end",
+     "x": 852,
+     "y": 400,
+     "width": 336,
+     "height": 172,
+     "fit": "cover",
+     "border_radius": 8,
+     "source": "https://meridianinterface.com/demos/modern-street/images/products/cargo.jpg",
+     "animations": [
+      {
+       "type": "fade-in",
+       "time": "start",
+       "duration": 0.35
+      }
+     ]
     }
    ],
    "x_anchor": "50%",
