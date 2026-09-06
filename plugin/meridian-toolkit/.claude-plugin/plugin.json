@@ -1,11 +1,13 @@
 {
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "meridian-toolkit",
-  "version": "0.1.0",
-  "description": "Otis's cross-project toolkit: stack map and brand tokens, engineering ground rules, back-end-only auth architecture, aesthetic defaults, design craft principles, and image-to-3D scene building.",
+  "version": "0.2.0",
+  "description": "Otis's cross-project toolkit: stack map and brand tokens, engineering ground rules, back-end-only auth architecture, aesthetic defaults, design craft principles, image-to-3D scene building, and a client-site scaffold.",
   "author": {
     "name": "Otis Williams",
     "email": "infoallin1eventsllc@gmail.com"
   },
-  "skills": ["./skills"]
+  "skills": [
+    "./skills"
+  ]
 }

@@ -42,6 +42,18 @@ Match the job, not the brand name. Everything below is on this account.
 | Test a page, fill a form, verify a flow actually works | **Playwright MCP** — `browser_navigate`, `browser_snapshot`, `browser_click` *(local Claude Code only)* |
 | Messy real-world browsing, scraping, visual checks | The `browser-use` plugin |
 | Launch this project and screenshot it | The bundled `run` skill |
+| Recommend hooks/skills/MCPs/subagents for any repo | **`claude-code-setup`** plugin (`claude plugin install claude-code-setup@claude-plugins-official`), then "recommend automations for this project" |
+| Ship a change through the definition-of-done gate | `/ship` — branch, secrets, dangling refs, SESSION.md, docs, then commit+push |
+| Keep the installable plugin in step with `.claude/skills` | `/sync-toolkit` |
+| Find paths that files reference but that don't exist | the `broken-reference-auditor` agent |
+| Review a Supabase function or migration against the auth rules | the `edge-function-reviewer` agent |
+| Start a client site the house way | `/client-site-scaffold <name>` |
+| Which host serves the site, platform env vars, release order | the `meridian-deploy` skill |
+
+**Two guards run automatically in this repo** (`.claude/settings.json`): a
+commit on `main` is refused, and a commit whose staged diff contains a
+key-shaped secret is refused. They are why a commit can "fail" with no git
+error — read the reason they print; do not work around them.
 
 **Playwright vs. browser-use — they overlap, so pick deliberately.** Playwright
 MCP works off the accessibility tree: precise, cheap, deterministic. Use it for

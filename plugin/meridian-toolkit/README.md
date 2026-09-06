@@ -11,6 +11,7 @@ plugin so they load in **every** project instead of only in this repo.
 | `taste` | Otis's aesthetic defaults and slop list |
 | `awesome-design` | Twelve craft principles plus the squint/grayscale/phone/stranger shipping test |
 | `img2threejs` | Image or floor plan to an interactive 3D scene |
+| `client-site-scaffold` | `/client-site-scaffold <name>` — a new client site the house way, in one pass |
 
 ## Install
 
@@ -41,8 +42,8 @@ set. Personal settings stay out of it.
 ## Editing
 
 `plugin/meridian-toolkit/skills/` is the source of truth for the plugin.
-`.claude/skills/` in this repo holds the same six for local use here. When a
-skill changes, update both, then bump `version` in
+`.claude/skills/` in this repo is the source of truth; `/sync-toolkit` copies
+the cross-project ones here. When a skill changes, run `/sync-toolkit`, then bump `version` in
 `.claude-plugin/plugin.json` and push.
 
 Validate before pushing:
