@@ -83,6 +83,29 @@ Deno.serve(async (req) => {
     return json({ ok: true, assets: data ?? [] });
   }
 
+  // Which renderer secrets the runtime can see — names only, never values.
+  // Exists because "I added the secret" and "the function sees the secret"
+  // are different facts, and a misspelled name is invisible from the outside.
+  if (action === "status") {
+    const names = Object.keys(Deno.env.toObject());
+    const { data } = await sb.from("settings").select("value").eq("key", "channels").maybeSingle();
+    const stored = (data?.value ?? {}) as Record<string, unknown>;
+    return json({
+      ok: true,
+      env: {
+        CLIPKIT_API_KEY: !!Deno.env.get("CLIPKIT_API_KEY")?.trim(),
+        CLIPKIT_MUSIC_URL: !!Deno.env.get("CLIPKIT_MUSIC_URL")?.trim(),
+        SHOTSTACK_API_KEY: !!Deno.env.get("SHOTSTACK_API_KEY")?.trim(),
+        names_like_clipkit: names.filter((n) => /clip/i.test(n)),
+      },
+      settings_channels: {
+        clipkit_api_key: !!stored.clipkit_api_key,
+        clipkit_music_url: !!stored.clipkit_music_url,
+        shotstack_api_key: !!stored.shotstack_api_key,
+      },
+    });
+  }
+
   if (action !== "ingest") return json({ ok: false, error: `unknown action ${action}` }, 400);
 
   const url = String(body.url ?? "").trim();
