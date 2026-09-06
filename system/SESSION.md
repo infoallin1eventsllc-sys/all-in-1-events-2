@@ -64,6 +64,16 @@ at the menu and reaches the merch screen); same music track on everything — sw
 energetic if wanted; dashboards recorded at 760 px are legible but smaller
 than the phone app, the trade is fewer tiles per frame.
 
+**Later on Sep 6 — reel approved, drive template built.** Otis kept
+`meridian-reel.mp4` as-is ("I like that one. Let's save it and keep it").
+For the single-product clips he asked for more drive and more graphics, so
+`compose-drive.py` + `make-drive-assets.py` were added: word-by-word title
+with a sweeping band, white-flash cut, corner tag, progress bar, zoom punch
+per beat, spring-pop captions with feature chips, popping end card, and a
+second licensed track (Adobe Stock 449240428 "In Your Blood"). Outputs
+`big-boy-subs-drive.mp4` and `modern-street-drive.mp4`, sent in chat,
+unpublished.
+
 **Still pending from before:** Shotstack key (`settings.channels` is `{}`),
 Photo Control overrides on p7/p10 still beat committed screenshots, the
 production URL vs the frozen branch preview, old-key cleanup, spend cap,
