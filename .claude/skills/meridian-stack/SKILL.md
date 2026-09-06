@@ -49,6 +49,8 @@ Match the job, not the brand name. Everything below is on this account.
 | Review a Supabase function or migration against the auth rules | the `edge-function-reviewer` agent |
 | Start a client site the house way | `/client-site-scaffold <name>` |
 | Which host serves the site, platform env vars, release order | the `meridian-deploy` skill |
+| A decision worth arguing over — client, price, direction, hire | `/council <question>` — five seats, blind review, chairman. Seven subagents; user-invoked only |
+| Poke holes in one plan without the full council | **Devil's Advocate** connector — `run_premortem`, `challenge_assumptions` *(connected; authorize per session)* |
 
 **Two guards run automatically in this repo** (`.claude/settings.json`): a
 commit on `main` is refused, and a commit whose staged diff contains a
