@@ -123,3 +123,25 @@ gated with `enable=between(...)` and `eof_action=pass`, then the static
 frame takes over. Without the `enable` gate the sequence's first frame can
 show early; without `eof_action=pass` its last frame repeats forever.
 Rendering is slow (~2 min a clip): every chip is two more inputs.
+
+## The Clipkit sizzle (`clipkit/meridian-sizzle.json`, `sound-design.py`)
+
+Otis's brief: dark navy, glowing blue/violet, a wireframe that assembles and
+snaps into a finished site, a dashboard animating up, CRM cards sliding in,
+code flying in and resolving to UI, the wordmark pulsing. Authored as one
+Clipkit JSON (no footage) — project `1dbefc73-fa7a-462c-89fb-0c371af00d44`,
+editor: https://www.clipkit.dev/public-editor?id=1dbefc73-fa7a-462c-89fb-0c371af00d44
+Music in the project: Adobe Stock 513024064 (looped). The full sound design
+(clicks per wireframe line, chimes on snaps, risers, bass swell, hit) cannot
+be hosted for Clipkit from this sandbox, so `sound-design.py` builds it
+locally as `reel-sound-design.wav`, cue-for-cue against the element times;
+mux it under the exported picture:
+
+```bash
+ffmpeg -i clipkit-export.mp4 -i reel-sound-design.wav -map 0:v -map 1:a -c:v copy -c:a aac -b:a 192k -shortest meridian-sizzle.mp4
+```
+
+Clipkit rules that bit: row keys `t`, `c`, `r` are reserved (time and
+expression names) — use `txt`, `col`, `row`; children of a group with
+`time: 0` take absolute times; keep every scene as a group whose opacity
+track fades it in/out; blur on ≤3 elements, one particle emitter.
