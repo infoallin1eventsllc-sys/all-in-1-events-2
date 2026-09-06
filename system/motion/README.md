@@ -100,3 +100,26 @@ recording. The Big Boy Subs window starts at the menu, not the hero, so the
 9 s reaches the merch screen the narration mentions — the title card already
 sets the scene. When a voice-over names something, the window must show it;
 shift the window before re-recording the voice.
+
+## The "drive" template (`compose-drive.py`)
+
+The punchier single-product cut Otis asked for after keeping the reel:
+word-by-word title with a band that sweeps in, a white flash into the
+footage, a corner tag and a top progress bar, a small zoom punch on each beat,
+captions and feature chips that pop with a spring, and an end card that pops.
+Music: Adobe Stock 449240428 "In Your Blood" (licensed, free tier).
+
+```bash
+python3 make-drive-assets.py
+python3 compose-drive.py raw-bbs bbs big-boy-subs-drive.mp4 audio/in-your-blood.wav 1.25
+python3 compose-drive.py raw-ms  ms  modern-street-drive.mp4 audio/in-your-blood.wav 1.2
+```
+
+**How the pops work, and why.** ffmpeg cannot scale an overlay per frame and
+keep its alpha, so anything that pops is rendered by PIL as an 14–22 frame
+PNG sequence (scale 0.72 → overshoot → 1, alpha 0 → 1), fed with
+`-framerate 30 -i name_%03d.png`, time-shifted with `setpts=PTS+start/TB`,
+gated with `enable=between(...)` and `eof_action=pass`, then the static
+frame takes over. Without the `enable` gate the sequence's first frame can
+show early; without `eof_action=pass` its last frame repeats forever.
+Rendering is slow (~2 min a clip): every chip is two more inputs.
