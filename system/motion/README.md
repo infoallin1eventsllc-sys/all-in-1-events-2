@@ -73,3 +73,24 @@ Two more traps it carries:
   cannot feed two filters — name labels distinctly and `asplit`. The ducker
   ends when its shorter sidechain ends, so `apad` the voice-over to full length
   or the clip is silently truncated.
+
+## The three-product reel (`compose-reel.py`)
+
+Title → phone app → two dashboards → end card, ~31 s, one voice-over across
+all of it. `make-reel-assets.py` renders the title layers, the band captions
+and the panel background, and the tech-stack still (`tech-stack-promo.png`).
+
+```bash
+HOLD=2800 node capture.mjs big-boy-subs raw-bbs2
+HOLD=3000 node capture.mjs finsight raw-fin tablet
+HOLD=3000 node capture.mjs stack-planner raw-stack tablet
+python3 make-reel-assets.py && python3 compose-reel.py
+```
+
+**Dashboards must be recorded at 760 px wide (`tablet` mode), not desktop.**
+A 1200 px desktop layout scaled into a 1080-wide phone frame leaves the type a
+few pixels tall — it read as a thumbnail. At 760 the grids and charts survive
+and the 1.42x scale keeps the numbers legible; at 540 the KPI tiles stack into
+a single column and stop looking like a dashboard. Each product segment is a
+window of its recording, sped up 1.3–1.5x, framed on the slate-to-ink panel
+background with a caption in the band underneath.

@@ -24,19 +24,25 @@ import fs from 'node:fs';
 //                  media queries still see 1080px, so any desktop breakpoint fires.
 // mode 'mobile'  — a true 540x960 viewport so mobile breakpoints apply; compose
 //                  upscales it. Use this for anything with a desktop layout.
+// mode 'desktop' — 1200x1500 viewport, no zoom: dashboards keep their real
+//                  sidebar layout; compose frames the recording as a panel.
 const [,, slug, outDir, mode = 'zoom'] = process.argv;
-const MOBILE = mode === 'mobile';
+// mode 'tablet'  — 760x1064: dashboards keep a two-column grid but the type
+//                  survives the 1.42x scale into a phone frame. Use for dashboards.
+const MOBILE = mode === 'mobile', DESKTOP = mode === 'desktop', TABLET = mode === 'tablet';
+const HOLD = Number(process.env.HOLD || 4200);
+const VP = TABLET ? { width: 760, height: 1064 } : DESKTOP ? { width: 1200, height: 1500 } : MOBILE ? { width: 540, height: 960 } : { width: 1080, height: 1920 };
 fs.mkdirSync(outDir, { recursive: true });
 
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--no-sandbox','--hide-scrollbars'] });
 const ctx = await b.newContext({
-  viewport: MOBILE ? { width: 540, height: 960 } : { width: 1080, height: 1920 },
-  recordVideo: { dir: outDir, size: MOBILE ? { width: 540, height: 960 } : { width: 1080, height: 1920 } },
+  viewport: VP,
+  recordVideo: { dir: outDir, size: VP },
 });
 const p = await ctx.newPage();
 await p.goto(`http://localhost:4600/demos/${slug}/`, { waitUntil: 'networkidle' });
 await p.addStyleTag({ content: '#meridian-demo-bar{display:none!important}body{padding-top:0!important}'
-  + (MOBILE ? '' : 'html{zoom:2}') });
+  + ((MOBILE || DESKTOP || TABLET) ? '' : 'html{zoom:2}') });
 await p.waitForTimeout(1500);
 
 const T0 = Date.now();
@@ -60,13 +66,37 @@ const click = async (fn) => {
   return ok;
 };
 /** Mark a still stretch that a caption can sit over. */
-const beat = async (label, hold=4200) => {
+const beat = async (label, hold=HOLD) => {
   const start = now();
   await p.waitForTimeout(hold);
   beats.push({ label, start, end: now() });
 };
 
+const nav = async (re) => {
+  const ok = await p.evaluate((src) => {
+    const e = [...document.querySelectorAll('nav a, nav button, aside a, aside button, [role=tab], a, button')]
+      .find(b => new RegExp(src, 'i').test(b.innerText.trim()));
+    e?.click(); return !!e;
+  }, re.source);
+  await p.waitForTimeout(1100);
+  if (!ok) throw new Error('nav not found: ' + re);
+};
 const script = {
+  'finsight': async () => {
+    await beat('lt0');
+    await nav(/^Real-Time Revenue/); await ease(0.12, 1400);
+    await beat('lt1');
+    await nav(/^Cash Flow/); await ease(0.10, 1400);
+    await beat('lt2');
+  },
+  'stack-planner': async () => {
+    await ease(0.06, 1200);
+    await beat('lt0');
+    await nav(/^Build your stack/); await p.waitForTimeout(400); await ease(0.30, 1600);
+    await beat('lt1');
+    await nav(/^Watch a workflow run/); await p.waitForTimeout(400); await ease(0.50, 1600);
+    await beat('lt2');
+  },
   'big-boy-subs': async () => {
     await ease(0.26);
     await beat('lt0');                                   // hero / ordering
