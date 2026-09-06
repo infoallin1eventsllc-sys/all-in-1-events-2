@@ -4,6 +4,74 @@ Compact record of what was built and the current state, so work can resume later
 
 ---
 
+## Sep 6 — motion graphics: two clips, a reel, a still, and the hosting wall
+
+Otis asked whether the tech stack could make short social videos from the
+products Meridian built, then for sound, someone talking, and "Fortune 500"
+motion. Everything below is **unpublished, awaiting his approval** — the
+standing rule holds and the DB trigger enforces it.
+
+**Delivered (sent to Otis in chat; scratchpad is ephemeral):**
+- `big-boy-subs-social.mp4`, `modern-street-social.mp4` — first cut with
+  licensed music.
+- `big-boy-subs-dynamic.mp4` — kinetic title, swipe/fade transitions, sliding
+  captions, self-building end card, voice-over over ducked music.
+- `meridian-reel.mp4` (31 s) — title → Big Boy Subs → FinSight dashboard →
+  Stack Planner (the tech stack) → end card, one narration across all three.
+- `tech-stack-promo.png` — 1080×1350 still of the Stack Planner.
+- `meridian-motion-2026-09-06.zip` (45 MB) — all of the above plus raw
+  recordings with `beats.json`, voice-overs, cards and layers.
+
+**Tooling, all in `system/motion/`** (pushed): `capture.mjs` (zoom / mobile /
+tablet / desktop modes, beat timestamps), `cards.py`, `make-cards.py`,
+`make-layers.py`, `make-reel-assets.py`, `compose.sh`, `compose-dynamic.py`,
+`compose-reel.py`. README carries every trap that cost a rebuild — read it
+before touching any of this.
+
+**Assets and where they live:**
+- Music: Adobe Stock audio 1196747893 "Building the Future", licensed on
+  Otis's Adobe account (free tier, no charge). Re-download any time with
+  `asset_license_and_download_stock` — no second licence. `audio/LICENSE.md`.
+- Voice-overs: vidIQ (ElevenLabs "Brian", id `nPczCjzI2devNBz1zQrb`), 14
+  credits each, two generated (BBS-only script; three-product reel script).
+  28 of 150 monthly credits spent; resets Oct 6.
+- A Descript project "Meridian - Big Boy Subs social (motion source)"
+  (`257513ce-1286-44e6-a786-ad9fa032efe0`) holds the clean BBS footage, the
+  music cut, the BBS voice-over and the mark — the only durable copy outside
+  the zip.
+- A Clipkit project (`90f07330-eb31-4b10-a761-9eee60ac9aca`, editor at
+  clipkit.dev/public-editor?id=…) holds the music and BBS voice-over. Footage
+  never got in — see the wall below.
+
+**The hosting wall.** Clipkit, vidIQ and HeyGen ingest media from a public
+URL, and this sandbox can PUT only to some hosts: Adobe's upload hosts
+(`at.adobe.com`, `acp-aep-cs-blobstore…adobe.io`) are blocked by network
+policy; Descript's Google-Storage upload URLs work. Getting a *readable* URL
+back was then refused by the permission layer three ways — pushing 11 MB of
+media to the public repo, publishing from Descript, and finally fetching the
+mark from meridianinterface.com into Clipkit. Stopped there rather than route
+around it. Otis has two options on the table: drop the footage into the
+Clipkit editor himself, or say he's fine with media in the public repo.
+
+**Connector map for video:** vidIQ (voice, music, motion-graphic cards,
+scripts) is the workhorse; Adobe = licensed music + speech clean-up; Clipkit
+= 3D/particle motion once footage is in; Descript = text-based editing;
+HyperFrames compose is vendor-disabled for this kind of session.
+
+**Open decisions for tomorrow:** approve or reject the four clips and the
+still; the reel's narration says "sell the merch" but its 9 s Big Boy Subs
+window ends before the merch screen (re-record 14 credits, or lengthen the
+segment); same music track on everything — swap for something more
+energetic if wanted; dashboards recorded at 760 px are legible but smaller
+than the phone app, the trade is fewer tiles per frame.
+
+**Still pending from before:** Shotstack key (`settings.channels` is `{}`),
+Photo Control overrides on p7/p10 still beat committed screenshots, the
+production URL vs the frozen branch preview, old-key cleanup, spend cap,
+Meta/LinkedIn/TikTok credentials.
+
+---
+
 ## Sep 5 — the storefront rebuilt, and a bar that reaches every demo
 
 Otis sent the e-commerce storefront (`modern_street_1.zip`). It was already
