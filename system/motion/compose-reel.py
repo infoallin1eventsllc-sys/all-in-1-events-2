@@ -14,10 +14,12 @@ def raw(d):
     return src, b, max(0.0, dur(src) - b['total'] - 0.4)
 
 TITLE, END, X = 2.8, 4.2, 0.5
-# (dir, caption prefix, window seconds of recording, speed, framing)
-SEGS = [('raw-bbs2', 'assets/reel-bbs', 11.7, 1.3, 'phone'),
-        ('raw-fin',  'assets/fin',      11.9, 1.4, 'panel'),
-        ('raw-stack','assets/stack',    12.75,1.5, 'panel')]
+# (dir, caption prefix, start offset into the recording, window seconds, speed, framing)
+# Big Boy Subs starts at the menu so the window reaches the merch screen the
+# narration mentions; the hero is implied by the title card.
+SEGS = [('raw-bbs2', 'assets/reel-bbs', 8.5, 11.6, 1.3, 'phone'),
+        ('raw-fin',  'assets/fin',      0.0, 11.9, 1.4, 'panel'),
+        ('raw-stack','assets/stack',    0.0, 12.75,1.5, 'panel')]
 
 # ---- title -----------------------------------------------------------------
 L = lambda n: f'assets/layers/reel-{n}.png'
@@ -35,9 +37,9 @@ run([*ins,'-filter_complex',fc,'-map','[v]','-t',str(TITLE),'-c:v','libx264','-p
 
 # ---- product segments ------------------------------------------------------
 seg_files, seg_len = [], []
-for n,(d,pfx,win,speed,framing) in enumerate(SEGS):
+for n,(d,pfx,start,win,speed,framing) in enumerate(SEGS):
     src,b,lead = raw(d); length = win/speed
-    ins = ['-ss',f'{lead:.3f}','-t',str(win),'-i',src]
+    ins = ['-ss',f'{lead+start:.3f}','-t',str(win),'-i',src]
     if framing == 'phone':
         parts=[f"[0:v]setpts=PTS/{speed},scale=1080:1920:flags=lanczos,fps={FPS},format=yuva420p[base]"]
     else:
@@ -47,8 +49,9 @@ for n,(d,pfx,win,speed,framing) in enumerate(SEGS):
     chain='[base]'; k=1 if framing=='phone' else 2
     for i,bt in enumerate(b['beats']):
         p=f'{pfx}-{bt["label"]}.png'
-        if not os.path.exists(p) or bt['start']/speed >= length-0.8: continue
-        s,e = bt['start']/speed, min(bt['end']/speed, length-0.05)
+        bs, be = bt['start']-start, bt['end']-start
+        if not os.path.exists(p) or be <= 0.6 or bs/speed >= length-0.8: continue
+        s,e = max(bs,0.15)/speed, min(be/speed, length-0.05)
         ins += ['-loop','1','-t',str(length),'-i',p]
         parts.append(f"[{k}:v]format=yuva420p,fade=in:st={s:.2f}:d=0.35:alpha=1,fade=out:st={e-0.35:.2f}:d=0.35:alpha=1[c{k}]")
         parts.append(f"{chain}[c{k}]overlay=x=0:y='70*{ease(f'{s:.2f}',0.55)}':enable='between(t,{s:.2f},{e:.2f})'[b{k}]"); chain=f'[b{k}]'; k+=1

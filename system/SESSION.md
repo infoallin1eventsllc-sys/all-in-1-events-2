@@ -59,9 +59,8 @@ scripts) is the workhorse; Adobe = licensed music + speech clean-up; Clipkit
 HyperFrames compose is vendor-disabled for this kind of session.
 
 **Open decisions for tomorrow:** approve or reject the four clips and the
-still; the reel's narration says "sell the merch" but its 9 s Big Boy Subs
-window ends before the merch screen (re-record 14 credits, or lengthen the
-segment); same music track on everything — swap for something more
+still (the reel's merch mismatch is fixed — its Big Boy Subs window now starts
+at the menu and reaches the merch screen); same music track on everything — swap for something more
 energetic if wanted; dashboards recorded at 760 px are legible but smaller
 than the phone app, the trade is fewer tiles per frame.
 

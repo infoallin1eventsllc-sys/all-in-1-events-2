@@ -94,3 +94,9 @@ and the 1.42x scale keeps the numbers legible; at 540 the KPI tiles stack into
 a single column and stop looking like a dashboard. Each product segment is a
 window of its recording, sped up 1.3–1.5x, framed on the slate-to-ink panel
 background with a caption in the band underneath.
+
+Each segment in `compose-reel.py` also carries a **start offset** into its
+recording. The Big Boy Subs window starts at the menu, not the hero, so the
+9 s reaches the merch screen the narration mentions — the title card already
+sets the scene. When a voice-over names something, the window must show it;
+shift the window before re-recording the voice.
