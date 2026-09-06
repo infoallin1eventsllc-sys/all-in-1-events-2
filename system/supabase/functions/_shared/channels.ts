@@ -113,6 +113,10 @@ export type ChannelConfig = {
   shotstack_api_key?: string;
   shotstack_env?: string; // "stage" (sandbox, watermarked) or "v1" (production)
   video_music_url?: string; // optional soundtrack, an MP3 URL
+  /** Clipkit cloud rendering — the renderer behind the approved sizzle.
+      Preferred over Shotstack when both are set. See _shared/clipkit.ts. */
+  clipkit_api_key?: string;
+  clipkit_music_url?: string; // a track already hosted for Clipkit (its own asset store, or any public MP3/WAV)
 };
 
 // deno-lint-ignore no-explicit-any
@@ -136,6 +140,8 @@ export async function loadChannelConfig(sb: any): Promise<ChannelConfig> {
     shotstack_api_key: env("SHOTSTACK_API_KEY") ?? stored.shotstack_api_key,
     shotstack_env: env("SHOTSTACK_ENV") ?? stored.shotstack_env,
     video_music_url: env("VIDEO_MUSIC_URL") ?? stored.video_music_url,
+    clipkit_api_key: env("CLIPKIT_API_KEY") ?? stored.clipkit_api_key,
+    clipkit_music_url: env("CLIPKIT_MUSIC_URL") ?? stored.clipkit_music_url,
   };
 }
 

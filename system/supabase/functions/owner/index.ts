@@ -457,8 +457,11 @@ Deno.serve(async (req) => {
       return json({
         ok: true,
         connections: [
-          { key: "video", label: "Video rendering (Shotstack)", connected: has("shotstack_api_key", "SHOTSTACK_API_KEY"),
-            what: "Turns video scripts into 20-second branded clips for TikTok, Reels, Facebook and LinkedIn.",
+          { key: "clipkit", label: "Video rendering (Clipkit)", connected: has("clipkit_api_key", "CLIPKIT_API_KEY"),
+            what: "The renderer behind the approved sizzle. Turns the agents' video scripts into motion pieces in the website's own palette, for TikTok, Reels, Facebook and LinkedIn. Uses Clipkit render credits.",
+            needs: ["clipkit_api_key"], lines: [line("clipkit_api_key")], signup: "https://clipkit.dev" },
+          { key: "video", label: "Video rendering (Shotstack, fallback)", connected: has("shotstack_api_key", "SHOTSTACK_API_KEY"),
+            what: "Older type-card renderer; used only when Clipkit is not connected.",
             needs: ["shotstack_api_key"], lines: [line("shotstack_api_key")], signup: "https://shotstack.io" },
           { key: "tiktok", label: "TikTok", connected: has("tiktok_client_key", "TIKTOK_CLIENT_KEY") && has("tiktok_client_secret", "TIKTOK_CLIENT_SECRET") && has("tiktok_refresh_token", "TIKTOK_REFRESH_TOKEN"),
             what: "Posts approved videos to your TikTok account. Private-only until TikTok audits the app.",

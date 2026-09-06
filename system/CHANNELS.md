@@ -158,7 +158,44 @@ the MP4 and a poster frame are copied into the public `social-videos` bucket.
 The item then joins the approval queue with the clip attached. One clip serves
 all four platforms.
 
-### Turning on rendering — five minutes
+### Where the videos come from (Sep 6)
+
+Three sources, in this order:
+
+1. **The media library first.** Otis approved the rendered sizzle and rejected
+   25 of 27 text-card drafts, so every video task now starts by choosing an
+   approved clip from `media_assets` (kind `video`, `approved_by = 'owner'`)
+   and writing the caption for it. Posts do the same with stills and clips.
+   Pieces get in with `node system/motion/attach.mjs <file> --slug … --approved`
+   (see system/motion/README.md); only `--approved` pieces are offered.
+2. **Clipkit**, when no approved clip fits. Clipkit rendered the sizzle; with
+   a key the runner authors a composition in the website's own palette from
+   the script (hook, three beats, price, call to action), submits it to
+   Clipkit's cloud renderer and collects the MP4 into `social-videos`.
+   Portrait for TikTok and Instagram, landscape for LinkedIn and Facebook.
+3. **Shotstack**, the older ivory type-card renderer, only when Clipkit is
+   not connected.
+
+With none of these, the item lands in the queue as `needs_render` with the
+script as the brief, for the motion pipeline to render by hand.
+
+### Turning on Clipkit — five minutes
+
+1. Sign in at clipkit.dev (the account that owns the sizzle project) →
+   account → API keys. Cloud renders spend Clipkit credits; a 402 from the
+   API is "out of credits" and the item fails with that reason.
+2. In the SQL editor:
+
+```sql
+select public.set_channel('clipkit_api_key', 'PASTE_KEY_HERE');
+select public.set_channel('clipkit_music_url', 'https://…/track.mp3');   -- optional soundtrack
+```
+
+The music URL must be reachable by Clipkit's renderer: the Adobe Stock loop
+already hosted in the sizzle project works
+(`https://api.clipkit.dev/storage/v1/object/public/assets/anon/c140aa36-47f4-4157-9c8b-c38fea44abab.audio`).
+
+### Turning on Shotstack (fallback)
 
 1. Sign up at shotstack.io. The free sandbox renders with a watermark; the
    production key does not.
@@ -188,6 +225,7 @@ meta_page_id, meta_page_token, meta_ig_user_id
 linkedin_org_urn, linkedin_token, linkedin_version
 tiktok_client_key, tiktok_client_secret, tiktok_refresh_token, tiktok_privacy
 shotstack_api_key, shotstack_env, video_music_url
+clipkit_api_key, clipkit_music_url
 ```
 
 ### TikTok
@@ -229,6 +267,14 @@ seconds. Only the platform's own **complete** moves an item to `published`.
 Nothing is marked done on a promise.
 
 ---
+
+## Approved but not connected is not "published"
+
+`publishContent` returns a mock result when a channel has no credentials.
+The runner used to stamp such an item `published`. It no longer does: the
+item stays `approved` with `meta.publish.note = "no <channel> credentials —
+nothing was sent"`, visibly waiting, and goes out when the platform is
+connected and the owner approves it again.
 
 ## Nothing is released without the owner
 

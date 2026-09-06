@@ -12,6 +12,8 @@ import { hostCard } from "../_shared/cardhost.ts";
 import { submitRender, collectRender, parseScript, videoKey, videoConfigured, type VideoScript, type RenderHandle } from "../_shared/video.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
 import { authorizedRun } from "../_shared/runauth.ts";
+import { loadLibrary, renderLibraryBlock, pickAsset, preferredAspect, type LibraryAsset } from "../_shared/library.ts";
+import { submitClipkit, collectClipkit, clipkitConfigured, type ClipkitHandle } from "../_shared/clipkit.ts";
 
 type Task = {
   id: string;
@@ -120,11 +122,19 @@ async function generateContent(sb: SupabaseClient, task: Task) {
   // design" and a post only this studio could publish.
   const business = await contextBlock(sb);
 
+  // Library-first: the post is built on an approved piece from the motion
+  // pipeline whenever one shows the thing the post is about. The model
+  // chooses the piece (by id) and writes the words around it. It may return
+  // no piece — then the older card path below applies.
+  const library = await loadLibrary(sb);
   const out = await callClaude({
-    system: `You write ${kind} content for ${profile.name}.\n\n${business}\n\n` +
+    system: `You write ${kind} content for ${profile.name}.\n\n${business}\n\n${renderLibraryBlock(library)}\n\n` +
       `Follow the writing rules above exactly. Ground the piece in ONE customer profile's ` +
       `pains or buying triggers, and use only the listed proof points as evidence. ` +
-      `Return a short JSON object {"title": "...", "body": "..."} only.`,
+      `Every post is built on a library piece when one shows what the post talks about: pick its id. ` +
+      `Write the words to sit under that clip or image — refer to what the viewer is seeing, do not describe ` +
+      `something that is not in the piece. If nothing in the library fits, set asset_id to null. ` +
+      `Return a short JSON object {"title": "...", "body": "...", "asset_id": "<library id or null>"} only.`,
     prompt: `Write a ${kind} for the "${channel}" channel about: ${topic}. Keep it on-brand and ready to post.`,
     model: String(agent.model || DEFAULT_MODEL),
     maxTokens: 1200,
@@ -132,10 +142,12 @@ async function generateContent(sb: SupabaseClient, task: Task) {
 
   let title: string | null = null;
   let body = out.text;
+  let asset: LibraryAsset | null = null;
   try {
     const j = JSON.parse(out.text.replace(/```(?:json)?|```/g, "").trim());
     title = j.title ?? null;
     body = j.body ?? out.text;
+    asset = pickAsset(library, j.asset_id);
   } catch { /* keep raw text as body */ }
 
   // Three ways to get a picture, best first.
@@ -151,11 +163,19 @@ async function generateContent(sb: SupabaseClient, task: Task) {
   const cardTitle = title ?? topic;
   const cardOpts = { title: cardTitle, kicker: kickerFor(kind) };
 
-  const libraryImage = await pickLibraryImage(sb, `${topic} ${kind} ${channel}`);
+  // (0) The chosen library piece — a still, or a clip with its poster frame.
+  //     A clip attached to a post publishes as video on every channel that
+  //     takes one (meta.video below is what the adapters read).
+  const libraryImage = asset
+    ? (asset.kind === "video" ? asset.poster_url : asset.url)
+    : await pickLibraryImage(sb, `${topic} ${kind} ${channel}`);
   const hosted = libraryImage ? null : await hostCard(sb, cardOpts);
   const imageUrl = libraryImage ?? hosted?.url ?? cardDataUri(cardOpts);
 
-  const imageSource = libraryImage ? "library" : hosted ? "hosted_card" : "embedded_card";
+  const imageSource = asset ? "library" : libraryImage ? "library_tags" : hosted ? "hosted_card" : "embedded_card";
+  const videoMeta = asset?.kind === "video"
+    ? { video: { state: "ready", url: asset.url, poster: asset.poster_url, source: "library", asset_id: asset.id } }
+    : {};
 
   const autonomy = String(agent.autonomy || "draft");
   const { data } = await sb.from("content_items").insert({
@@ -172,6 +192,8 @@ async function generateContent(sb: SupabaseClient, task: Task) {
     // invalid key and the only trace was that `mocked` stayed true.
     meta: {
       mocked: out.mocked, topic, icp, image_source: imageSource,
+      ...(asset ? { asset_id: asset.id, asset_title: asset.title } : {}),
+      ...videoMeta,
       ...(out.error ? { error: out.error } : {}),
     },
   }).select("id").single();
@@ -181,6 +203,7 @@ async function generateContent(sb: SupabaseClient, task: Task) {
     status: autonomy === "auto" ? "approved" : "pending_approval",
     mocked: out.mocked,
     image_source: imageSource,
+    ...(asset ? { asset_id: asset.id } : {}),
   };
 }
 
@@ -199,6 +222,49 @@ async function generateVideo(sb: SupabaseClient, task: Task) {
   const topic = String(task.payload.topic ?? "an update for our audience");
   const icp = task.payload.icp ? String(task.payload.icp) : null;
   const business = await contextBlock(sb);
+
+  // Library first. The clips that came out of the motion pipeline and that
+  // Otis approved are the videos; the model chooses one and writes the
+  // caption. Only when no approved clip fits does it fall through to the
+  // older path (a Shotstack type-card render, if a key exists) or, failing
+  // that, to a render request the motion pipeline picks up.
+  const clips = await loadLibrary(sb, "video");
+  if (clips.length) {
+    const pick = await callClaude({
+      system: `You choose and caption short videos for ${profile.name}.\n\n${business}\n\n${renderLibraryBlock(clips)}\n\n` +
+        `Follow the writing rules above exactly. Choose the ONE library clip that best makes this point for the ` +
+        `"${channel}" channel (it prefers ${preferredAspect(channel)}; another aspect is acceptable if the content fits better). ` +
+        `Write the caption to sit under that clip — refer to what the viewer sees, and use only listed proof points. ` +
+        `If no clip fits, return {"asset_id": null, "why": "..."}. Otherwise return ONLY JSON: ` +
+        `{"asset_id":"<library id>","title":"<one line, under 60 characters>","caption":"...","hashtags":["#..."]}`,
+      prompt: `The video is for the "${channel}" channel about: ${topic}.`,
+      model: String(agent.model || DEFAULT_MODEL),
+      maxTokens: 900,
+    });
+    let chosen: LibraryAsset | null = null;
+    let j: Record<string, unknown> = {};
+    try {
+      j = JSON.parse(pick.text.replace(/```(?:json)?|```/g, "").trim());
+      chosen = pickAsset(clips, j.asset_id);
+    } catch { /* fall through */ }
+    if (chosen) {
+      const hashtags = Array.isArray(j.hashtags) ? j.hashtags.map(String).slice(0, 8) : [];
+      const body = [String(j.caption ?? ""), hashtags.join(" ")].filter(Boolean).join("\n\n");
+      const autonomy = String(agent.autonomy || "draft");
+      const { data } = await sb.from("content_items").insert({
+        channel, kind: "video", title: String(j.title ?? chosen.title ?? topic).slice(0, 200), body,
+        image_url: chosen.poster_url,
+        status: autonomy === "auto" ? "approved" : "pending_approval",
+        created_by: "agent",
+        meta: {
+          mocked: pick.mocked, topic, icp, image_source: "library", asset_id: chosen.id, asset_title: chosen.title,
+          video: { state: "ready", url: chosen.url, poster: chosen.poster_url, source: "library", asset_id: chosen.id },
+          ...(pick.error ? { error: pick.error } : {}),
+        },
+      }).select("id").single();
+      return { content_item_id: data?.id, video: "ready", source: "library", asset_id: chosen.id, mocked: pick.mocked };
+    }
+  }
 
   const out = await callClaude({
     system: `You write short vertical videos for ${profile.name} — 20 seconds of large on-screen text, no voiceover.\n\n${business}\n\n` +
@@ -230,21 +296,37 @@ async function generateVideo(sb: SupabaseClient, task: Task) {
   const poster = cardDataUri({ title: script.hook, kicker: "SHORT VIDEO" });
   const body = [script.caption, script.hashtags.join(" ")].filter(Boolean).join("\n\n");
 
-  let handle: RenderHandle | null = null;
+  // Renderer order: Clipkit (the engine behind the approved sizzle, in the
+  // website's own palette) before Shotstack (the older ivory type cards).
+  let handle: RenderHandle | ClipkitHandle | null = null;
   let renderError: string | null = null;
-  const configured = await videoConfigured(sb);
+  const useClipkit = await clipkitConfigured(sb);
+  const configured = useClipkit || await videoConfigured(sb);
   if (configured) {
     try {
-      handle = await submitRender(sb, script);
+      handle = useClipkit
+        ? await submitClipkit(sb, script, preferredAspect(channel) as "9:16" | "16:9")
+        : await submitRender(sb, script);
     } catch (err) {
       renderError = err instanceof Error ? err.message : String(err);
     }
   }
 
   const autonomy = String(agent.autonomy || "draft");
+  // No renderer: this becomes a render request for the motion pipeline
+  // (system/motion). The script is the brief; attach.mjs lands the finished
+  // clip and flips the state to ready. The item is visible in the queue
+  // so the owner can see what is waiting on a render, and why.
   const video = handle
-    ? { state: "rendering", provider: handle.provider, render_id: handle.render_id, env: handle.env, key }
-    : { state: configured ? "failed" : "not_configured", error: renderError ?? (configured ? undefined : "no video renderer configured (SHOTSTACK_API_KEY)") };
+    ? { state: "rendering", provider: handle.provider, render_id: handle.render_id, env: "env" in handle ? handle.env : undefined, key }
+    : configured
+      ? { state: "failed", error: renderError }
+      : {
+        state: "needs_render",
+        template: channel === "tiktok" || channel === "instagram" ? "drive" : "reel",
+        brief: script,
+        note: "no approved library clip fit and no renderer is configured — render with system/motion and attach with attach.mjs",
+      };
 
   const { data } = await sb.from("content_items").insert({
     channel, kind: "video", title: script.hook, body, image_url: poster,
@@ -261,7 +343,7 @@ async function generateVideo(sb: SupabaseClient, task: Task) {
   if (handle && data?.id) {
     await sb.from("tasks").insert({
       type: "collect_video",
-      payload: { content_item_id: data.id, render_id: handle.render_id, env: handle.env, key, autonomy },
+      payload: { content_item_id: data.id, provider: handle.provider, render_id: handle.render_id, env: "env" in handle ? handle.env : undefined, key, autonomy },
       priority: 30,
       max_attempts: 8,
       run_at: new Date(Date.now() + 40_000).toISOString(),
@@ -274,16 +356,14 @@ async function generateVideo(sb: SupabaseClient, task: Task) {
 /** Is the clip ready? Copy it in and put the item in the queue; else come back. */
 async function collectVideo(sb: SupabaseClient, task: Task) {
   const itemId = String(task.payload.content_item_id ?? "");
-  const handle: RenderHandle = {
-    provider: "shotstack",
-    render_id: String(task.payload.render_id ?? ""),
-    env: String(task.payload.env ?? "v1"),
-  };
+  const provider = String(task.payload.provider ?? "shotstack");
   const key = String(task.payload.key ?? itemId);
   const { data: item } = await sb.from("content_items").select("id, status, meta, image_url").eq("id", itemId).maybeSingle();
   if (!item) throw new Error(`content_item ${itemId} not found`);
 
-  const res = await collectRender(sb, handle, key);
+  const res = provider === "clipkit"
+    ? await collectClipkit(sb, { provider: "clipkit", render_id: String(task.payload.render_id ?? "") }, key)
+    : await collectRender(sb, { provider: "shotstack", render_id: String(task.payload.render_id ?? ""), env: String(task.payload.env ?? "v1") }, key);
   const meta = (item.meta ?? {}) as Record<string, unknown>;
 
   if (res.state === "rendering") {
@@ -455,6 +535,16 @@ async function publishContentTask(sb: SupabaseClient, task: Task) {
   }
 
   const { publish_pending: _gone, ...rest } = meta;
+  if (res.ok && res.mocked) {
+    // Nothing is connected for this channel, so nothing went out. The item
+    // stays approved — visibly not published — rather than being stamped
+    // "published" by a stub. Connect the platform in the Marketing tab and
+    // approve again to send it.
+    await sb.from("content_items").update({
+      meta: { ...rest, publish: { ...res, note: `no ${item.channel} credentials — nothing was sent` } },
+    }).eq("id", itemId);
+    return { published: false, mocked: true, channel: item.channel, note: "no credentials for this channel" };
+  }
   await sb.from("content_items").update({
     status: res.ok ? "published" : "failed",
     published_at: res.ok ? new Date().toISOString() : null,

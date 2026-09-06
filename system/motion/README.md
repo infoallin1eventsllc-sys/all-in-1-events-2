@@ -183,3 +183,39 @@ hosted project has the same six elements pointing at the public
 its preview still shows them blank — the site is unreachable from Clipkit's
 renderer or blocks the fetch; `ingest_asset` from that domain was refused by
 the sandbox policy. Local render is the source of truth for the photos.
+
+## Into the marketing stack (`attach.mjs`, the media library)
+
+Otis approved the sizzle on Sep 6 and asked for the motion work to feed the
+marketing system instead of the text cards it was drafting. Three pieces:
+
+- **`media_assets` is the library** (migration 0019: `kind`, `poster_url`,
+  `description`, `meta`, `approved_by`). The runner and the planner read only
+  rows with `approved_by = 'owner'`; every video task chooses one of those
+  clips and writes its caption, every post carries one of its pieces when
+  one shows what the post is about. Write the `description` for a reader
+  choosing between pieces: what it shows, who it is for.
+- **`attach.mjs` lands a finished file** from a machine that can reach
+  Supabase (this sandbox cannot; neither can any relay we tried — Adobe,
+  Descript, monday.com uploads are all blocked or unreadable from here):
+
+  ```bash
+  node system/motion/attach.mjs meridian-sizzle.mp4 --slug meridian-sizzle \
+    --title "Meridian Interface sizzle" --aspect 16:9 --duration 47 \
+    --description "47-second reel of what the studio builds: website assembling, mobile app, Modern Street storefront, revenue dashboard, CRM, five-layer AI stack, wordmark." \
+    --tags sizzle,website,app,storefront,dashboard,crm,stack --approved
+  ```
+
+  Needs `system/.env` (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) and Node 18+;
+  ffmpeg on the PATH gives it a poster frame. It uploads to
+  `social-videos/library/<slug>.mp4`, upserts the library row, and flips any
+  content item waiting on that file (`meta.video.state = "awaiting_file"`)
+  to `ready`. The three approved sizzle items (LinkedIn, Facebook, Instagram)
+  are waiting on exactly this command.
+- **Clipkit is the agents' renderer** (`_shared/clipkit.ts`) once
+  `clipkit_api_key` is set — the composition grammar of the sizzle (ink
+  stage, grid, kicker + rule, Hanken Grotesk display, accent bar, wordmark
+  close) generated from a script. Portrait for TikTok/Reels, landscape for
+  LinkedIn/Facebook. The `media` edge function ingests any fetchable URL
+  into the library server-side, for a future host that this sandbox can
+  reach.

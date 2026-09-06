@@ -8,6 +8,7 @@ import { callClaude, extractJson, DEFAULT_MODEL } from "../_shared/claude.ts";
 import { contextBlock } from "../_shared/context.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
 import { authorizedRun } from "../_shared/runauth.ts";
+import { loadLibrary, renderLibraryBlock } from "../_shared/library.ts";
 
 type PlannedTask = { type: string; payload?: Record<string, unknown>; priority?: number };
 type Plan = { summary: string; tasks: PlannedTask[] };
@@ -71,10 +72,12 @@ Deno.serve(async (req) => {
 
     // The shared context layer: the same business brief every agent reads.
     const business = await contextBlock(sb);
+    // The approved media library: what the content can actually be built on.
+    const library = await loadLibrary(sb);
 
     const system =
       `You are the marketing operations agent for ${(profile as Record<string, unknown>).name}.\n\n` +
-      `${business}\n\n` +
+      `${business}\n\n${renderLibraryBlock(library)}\n\n` +
       `You plan a small batch of concrete marketing tasks each run. Be practical and non-repetitive. ` +
       `When planning generate_content tasks, set payload.topic to a SPECIFIC angle aimed at one of ` +
       `the customer profiles above (e.g. their pains or buying triggers) — never a generic "update for our audience". ` +
@@ -85,7 +88,11 @@ Deno.serve(async (req) => {
       `generate_content payload: channel (tiktok, instagram, facebook, linkedin), kind ("post" for a caption with a ` +
       `branded image card, or "video" for a 20-second vertical clip of large on-brand type — hook, three beats, ` +
       `the price, a call to action — that works on TikTok, Reels, Facebook and LinkedIn alike), topic, icp. ` +
-      `TikTok takes video only, so a tiktok task must be kind "video". Aim for one or two videos a week; the rest posts. ` +
+      `TikTok takes video only, so a tiktok task must be kind "video". ` +
+      `Content is built on the media library above: videos are chosen from its approved clips and posts carry one of its ` +
+      `pieces whenever a piece shows what the post is about — the studio's own work, not a typographic card. When the ` +
+      `library has video, plan video first (up to three a week across channels) and choose topics the library can show; ` +
+      `when a topic has no piece, say so in the summary as a render request rather than planning a post that has nothing to show. ` +
       `Respect autonomy="${(agent as Record<string, unknown>).autonomy}". In "draft" mode ONLY generate_content and ` +
       `follow_up_lead are executed: publishing and sending are the owner's decisions, made from the approval queue, ` +
       `so put any publish/send recommendation in the summary rather than the task list. Never invent contact details.`;

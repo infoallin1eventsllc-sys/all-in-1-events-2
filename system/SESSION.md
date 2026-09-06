@@ -102,6 +102,48 @@ the finished piece rendered here rather than waiting on his export:
   Clipkit's renderer cannot fetch that host; `ingest_asset` from it was
   refused by policy. The local MP4 is the true version.
 
+**Approved, and the stack rebuilt around the motion work (late night).**
+Otis: "I approve it. Put it in my marketing stack… use this program that
+generated these videos to generate all the marketing… all content submitted
+to the internal invoice and pricing manager." Then: his agents post to
+Instagram, TikTok, Facebook, LinkedIn — what upgrades them to produce from
+Clipkit?
+- **Three approved content items** for the sizzle (LinkedIn `3ae20330…`,
+  Facebook `67851fc7…`, Instagram `2718a5be…`), `approved_by: owner`,
+  `approved_via: chat 2026-09-06`, captions in the site's voice,
+  `meta.video.state = awaiting_file` with the expected bucket URL. Not
+  queued for publish: no platform is connected, and the file is not in the
+  bucket yet.
+- **The file cannot leave this sandbox** for Supabase: storage is blocked,
+  Descript exposes no readable URL, monday.com's upload host is blocked and
+  board creation was refused. Stopped. He lands it from his Mac with one
+  command (`system/motion/attach.mjs`, README), which also flips the three
+  items to ready.
+- **Media library** (migration 0019) — `media_assets.kind/poster_url/
+  description/meta/approved_by`. `_shared/library.ts`. Runner: posts and
+  videos are library-first (Claude picks the piece by id, writes the words
+  for it); the planner sees the library and plans video first. Only
+  `approved_by = 'owner'` pieces are offered — his approval of the piece
+  itself, set by `attach.mjs --approved`.
+- **Clipkit as the agents' renderer** — `_shared/clipkit.ts` builds a
+  composition from the script in the sizzle's grammar and drives Clipkit's
+  cloud API (`POST /api/v1/renders`, poll, fetch `output_url` → bucket),
+  read from `@clipkit/cli` 1.6. Order: library → Clipkit → Shotstack →
+  `needs_render` request. Migration 0020 adds `clipkit_api_key` and
+  `clipkit_music_url` to `set_channel`; the Connections strip shows Clipkit
+  first. **He needs to paste a Clipkit API key** (clipkit.dev → account →
+  API keys; credits are spent per render).
+- **Stub publish no longer says published.** With no credentials the item
+  stays `approved` with `meta.publish.note`. It used to be stamped
+  `published` with nothing sent.
+- **New `media` edge function** (verify_jwt, run-secret gate): ingests a
+  fetchable URL into the bucket and the library; `list` returns the
+  library. Deployed with runner v31, orchestrator v29, owner v20. Runner and
+  media answer; the orchestrator call timed out at pg_net's 5 s (its Claude
+  call is longer) — check `agent_runs`.
+- Also fixed: the Modern Street "no images in the boxes" (repeat-image
+  preload bug in Clipkit) — same fix in the hosted project.
+
 **Still pending from before:** Shotstack key (`settings.channels` is `{}`),
 Photo Control overrides on p7/p10 still beat committed screenshots, the
 production URL vs the frozen branch preview, old-key cleanup, spend cap,
