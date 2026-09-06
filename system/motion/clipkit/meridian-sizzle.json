@@ -1,0 +1,2384 @@
+{
+ "width": 1920,
+ "camera": {
+  "z": [
+   {
+    "time": 0,
+    "value": 0
+   },
+   {
+    "time": 5.3,
+    "value": 90,
+    "easing": "ease-in-out-sine"
+   },
+   {
+    "time": 5.6,
+    "value": 30
+   },
+   {
+    "time": 10.9,
+    "value": 110,
+    "easing": "ease-in-out-sine"
+   },
+   {
+    "time": 11.2,
+    "value": 40
+   },
+   {
+    "time": 15.9,
+    "value": 120,
+    "easing": "ease-in-out-sine"
+   },
+   {
+    "time": 16.2,
+    "value": 50
+   },
+   {
+    "time": 20,
+    "value": 140,
+    "easing": "ease-in-out-sine"
+   },
+   {
+    "time": 20.3,
+    "value": 60
+   },
+   {
+    "time": 24,
+    "value": 120,
+    "easing": "ease-in-out-sine"
+   }
+  ],
+  "perspective": 1600
+ },
+ "height": 1080,
+ "styles": {
+  "ui": {
+   "fill_color": "#E2E8F0",
+   "font_family": "Inter, sans-serif",
+   "font_weight": 700
+  },
+  "mono": {
+   "fill_color": "#93C5FD",
+   "font_family": "JetBrains Mono, Menlo, monospace",
+   "font_weight": 500
+  },
+  "muted": {
+   "fill_color": "#94A3B8",
+   "font_family": "Inter, sans-serif",
+   "font_weight": 500
+  }
+ },
+ "duration": 24,
+ "elements": [
+  {
+   "z": -200,
+   "id": "bg",
+   "time": 0,
+   "type": "shape",
+   "layer": 1,
+   "width": "100%",
+   "height": "100%",
+   "duration": "end",
+   "gradient": {
+    "type": "linear",
+    "angle": 160,
+    "stops": [
+     {
+      "color": "#0B1226",
+      "offset": 0
+     },
+     {
+      "color": "#0F172A",
+      "offset": 0.55
+     },
+     {
+      "color": "#111827",
+      "offset": 1
+     }
+    ]
+   }
+  },
+  {
+   "x": {
+    "expr": "i*80"
+   },
+   "y": 0,
+   "z": -150,
+   "id": "gridv",
+   "time": 0,
+   "type": "shape",
+   "layer": 2,
+   "width": 1,
+   "height": 1080,
+   "repeat": 25,
+   "opacity": 0.07,
+   "duration": "end",
+   "fill_color": "#60A5FA"
+  },
+  {
+   "x": 0,
+   "y": {
+    "expr": "i*80"
+   },
+   "z": -150,
+   "id": "gridh",
+   "time": 0,
+   "type": "shape",
+   "layer": 3,
+   "width": 1920,
+   "height": 1,
+   "repeat": 14,
+   "opacity": 0.07,
+   "duration": "end",
+   "fill_color": "#60A5FA"
+  },
+  {
+   "x": 960,
+   "y": 560,
+   "z": -180,
+   "id": "glow-blob",
+   "time": 0,
+   "type": "shape",
+   "layer": 4,
+   "shape": "ellipse",
+   "width": 1500,
+   "height": 900,
+   "duration": "end",
+   "gradient": {
+    "type": "radial",
+    "stops": [
+     {
+      "color": "rgba(37,99,235,0.30)",
+      "offset": 0
+     },
+     {
+      "color": "rgba(124,58,237,0.10)",
+      "offset": 0.6
+     },
+     {
+      "color": "rgba(11,18,38,0)",
+      "offset": 1
+     }
+    ]
+   },
+   "x_anchor": "50%",
+   "y_anchor": "50%",
+   "animations": [
+    {
+     "time": "start",
+     "type": "drift",
+     "distance": 60,
+     "duration": 24
+    }
+   ]
+  },
+  {
+   "x": 960,
+   "y": 540,
+   "id": "s1",
+   "clip": true,
+   "time": 0,
+   "type": "group",
+   "layer": 10,
+   "width": 1200,
+   "height": 720,
+   "duration": "end",
+   "elements": [
+    {
+     "x": 0,
+     "y": 0,
+     "id": "w-head",
+     "time": 0.2,
+     "type": "shape",
+     "layer": 2,
+     "width": {
+      "expr": "ease(t,0,0.6,0,1200)"
+     },
+     "height": 64,
+     "duration": "end",
+     "fill_color": "rgba(0,0,0,0)",
+     "stroke_color": "#3B82F6",
+     "stroke_width": 2,
+     "border_radius": 8
+    },
+    {
+     "x": 0,
+     "y": 96,
+     "id": "w-hero",
+     "time": 0.9,
+     "type": "shape",
+     "layer": 3,
+     "width": {
+      "expr": "ease(t,0,0.7,0,760)"
+     },
+     "height": 300,
+     "duration": "end",
+     "fill_color": "rgba(0,0,0,0)",
+     "stroke_color": "#3B82F6",
+     "stroke_width": 2,
+     "border_radius": 8
+    },
+    {
+     "x": 800,
+     "y": 96,
+     "id": "w-aside",
+     "time": 1.4,
+     "type": "shape",
+     "layer": 4,
+     "width": {
+      "expr": "ease(t,0,0.6,0,400)"
+     },
+     "height": 300,
+     "duration": "end",
+     "fill_color": "rgba(0,0,0,0)",
+     "stroke_color": "#7C3AED",
+     "stroke_width": 2,
+     "border_radius": 8
+    },
+    {
+     "x": {
+      "expr": "i*410"
+     },
+     "y": 430,
+     "id": "w-cols",
+     "time": 1.9,
+     "type": "shape",
+     "layer": 5,
+     "width": {
+      "expr": "ease(t,0,0.5,0,380)"
+     },
+     "height": 240,
+     "repeat": 3,
+     "duration": "end",
+     "fill_color": "rgba(0,0,0,0)",
+     "stroke_color": "#3B82F6",
+     "stroke_width": 2,
+     "border_radius": 8,
+     "repeat_stagger": 0.2
+    },
+    {
+     "x": 32,
+     "y": {
+      "expr": "140 + i*38"
+     },
+     "id": "w-lines",
+     "time": 2.6,
+     "type": "shape",
+     "layer": 6,
+     "width": {
+      "expr": "ease(t,0,0.4,0,w)"
+     },
+     "height": 12,
+     "opacity": 0.5,
+     "duration": "end",
+     "fill_color": "#3B82F6",
+     "repeat_data": [
+      {
+       "w": 520
+      },
+      {
+       "w": 460
+      },
+      {
+       "w": 500
+      },
+      {
+       "w": 300
+      }
+     ],
+     "border_radius": 6,
+     "repeat_stagger": 0.1
+    },
+    {
+     "x": 0,
+     "y": 0,
+     "id": "f-head",
+     "time": 3.6,
+     "type": "shape",
+     "layer": 10,
+     "width": 1200,
+     "height": 64,
+     "effects": [
+      {
+       "type": "glow",
+       "color": "#3B82F6",
+       "radius": 24,
+       "intensity": [
+        {
+         "time": 0,
+         "value": 0
+        },
+        {
+         "time": 0.25,
+         "value": 1.4
+        },
+        {
+         "time": 1,
+         "value": 0.35
+        }
+       ]
+      }
+     ],
+     "duration": "end",
+     "gradient": {
+      "type": "linear",
+      "angle": 90,
+      "stops": [
+       {
+        "color": "#131F3E",
+        "offset": 0
+       },
+       {
+        "color": "#0F172A",
+        "offset": 1
+       }
+      ]
+     },
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.25
+      }
+     ],
+     "border_radius": 8
+    },
+    {
+     "x": 0,
+     "y": 96,
+     "id": "f-hero",
+     "time": 3.75,
+     "type": "shape",
+     "layer": 11,
+     "width": 760,
+     "height": 300,
+     "effects": [
+      {
+       "type": "glow",
+       "color": "#3B82F6",
+       "radius": 24,
+       "intensity": [
+        {
+         "time": 0,
+         "value": 0
+        },
+        {
+         "time": 0.25,
+         "value": 1.4
+        },
+        {
+         "time": 1,
+         "value": 0.35
+        }
+       ]
+      }
+     ],
+     "duration": "end",
+     "gradient": {
+      "type": "linear",
+      "angle": 135,
+      "stops": [
+       {
+        "color": "#152244",
+        "offset": 0
+       },
+       {
+        "color": "#0F172A",
+        "offset": 1
+       }
+      ]
+     },
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.25
+      }
+     ],
+     "border_radius": 8
+    },
+    {
+     "x": 800,
+     "y": 96,
+     "id": "f-aside",
+     "time": 3.9,
+     "type": "shape",
+     "layer": 12,
+     "width": 400,
+     "height": 300,
+     "effects": [
+      {
+       "type": "glow",
+       "color": "#7C3AED",
+       "radius": 24,
+       "intensity": [
+        {
+         "time": 0,
+         "value": 0
+        },
+        {
+         "time": 0.25,
+         "value": 1.4
+        },
+        {
+         "time": 1,
+         "value": 0.35
+        }
+       ]
+      }
+     ],
+     "duration": "end",
+     "gradient": {
+      "type": "linear",
+      "angle": 135,
+      "stops": [
+       {
+        "color": "#1B1A3F",
+        "offset": 0
+       },
+       {
+        "color": "#0F172A",
+        "offset": 1
+       }
+      ]
+     },
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.25
+      }
+     ],
+     "border_radius": 8
+    },
+    {
+     "x": {
+      "expr": "i*410"
+     },
+     "y": 430,
+     "id": "f-cols",
+     "time": 4,
+     "type": "shape",
+     "layer": 13,
+     "width": 380,
+     "height": 240,
+     "repeat": 3,
+     "duration": "end",
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.25
+      },
+      {
+       "time": "start",
+       "type": "scale-in",
+       "easing": "ease-out-back",
+       "duration": 0.3
+      }
+     ],
+     "fill_color": "#121C38",
+     "stroke_color": "#24304F",
+     "stroke_width": 1,
+     "border_radius": 8,
+     "repeat_stagger": 0.1
+    },
+    {
+     "x": 24,
+     "y": 14,
+     "id": "f-brand",
+     "text": "MERIDIAN",
+     "time": 3.7,
+     "type": "text",
+     "layer": 20,
+     "style": "ui",
+     "duration": "end",
+     "font_size": 22,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "letter_spacing": 3
+    },
+    {
+     "x": {
+      "expr": "760 + i*120"
+     },
+     "y": 20,
+     "id": "f-nav",
+     "text": "{txt}",
+     "time": 3.7,
+     "type": "text",
+     "layer": 21,
+     "style": "muted",
+     "duration": "end",
+     "font_size": 18,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "repeat_data": [
+      {
+       "txt": "Work"
+      },
+      {
+       "txt": "Services"
+      },
+      {
+       "txt": "Contact"
+      }
+     ]
+    },
+    {
+     "x": 32,
+     "y": 130,
+     "id": "f-h1",
+     "text": "Built to convert.",
+     "time": 3.9,
+     "type": "text",
+     "layer": 22,
+     "style": "ui",
+     "duration": "end",
+     "font_size": 52,
+     "animations": [
+      {
+       "time": "start",
+       "type": "text-slide",
+       "split": "word",
+       "easing": "ease-out-cubic",
+       "stagger": 0.08,
+       "duration": 0.5,
+       "direction": "up"
+      }
+     ]
+    },
+    {
+     "x": 32,
+     "y": 210,
+     "id": "f-sub",
+     "text": "Websites, apps and dashboards for growing companies.",
+     "time": 4.1,
+     "type": "text",
+     "layer": 23,
+     "style": "muted",
+     "duration": "end",
+     "font_size": 22,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.4
+      }
+     ]
+    },
+    {
+     "x": 32,
+     "y": 280,
+     "id": "f-btn",
+     "time": 4.3,
+     "type": "shape",
+     "layer": 24,
+     "width": 190,
+     "height": 56,
+     "effects": [
+      {
+       "type": "glow",
+       "color": "#3B82F6",
+       "radius": 20,
+       "intensity": 0.6
+      }
+     ],
+     "duration": "end",
+     "animations": [
+      {
+       "time": "start",
+       "type": "bounce-in",
+       "duration": 0.5
+      }
+     ],
+     "fill_color": "#2563EB",
+     "border_radius": 10
+    },
+    {
+     "x": 32,
+     "y": 280,
+     "id": "f-btn-t",
+     "text": "Get started",
+     "time": 4.35,
+     "type": "text",
+     "layer": 25,
+     "style": "ui",
+     "width": 190,
+     "height": 56,
+     "duration": "end",
+     "font_size": 20,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "text_align": "center",
+     "vertical_align": "middle"
+    },
+    {
+     "x": {
+      "expr": "24 + i*410"
+     },
+     "y": 454,
+     "id": "f-col-t",
+     "text": "{txt}",
+     "time": 4.2,
+     "type": "text",
+     "layer": 26,
+     "style": "ui",
+     "duration": "end",
+     "font_size": 22,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "repeat_data": [
+      {
+       "txt": "Websites"
+      },
+      {
+       "txt": "Apps"
+      },
+      {
+       "txt": "Dashboards"
+      }
+     ],
+     "repeat_stagger": 0.1
+    },
+    {
+     "y": 360,
+     "id": "sweep",
+     "time": 3.9,
+     "type": "shape",
+     "layer": 40,
+     "width": 220,
+     "height": 1500,
+     "duration": 1.1,
+     "gradient": {
+      "type": "linear",
+      "angle": 90,
+      "stops": [
+       {
+        "color": "rgba(191,219,254,0)",
+        "offset": 0
+       },
+       {
+        "color": "rgba(191,219,254,0.45)",
+        "offset": 0.5
+       },
+       {
+        "color": "rgba(191,219,254,0)",
+        "offset": 1
+       }
+      ]
+     },
+     "rotation": 18,
+     "x_anchor": "50%",
+     "y_anchor": "50%",
+     "blend_mode": "screen",
+     "keyframe_animations": [
+      {
+       "property": "x",
+       "keyframes": [
+        {
+         "time": 0,
+         "value": -250
+        },
+        {
+         "time": 1,
+         "value": 1450,
+         "easing": "ease-in-out-sine"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "x_anchor": "50%",
+   "y_anchor": "50%",
+   "border_radius": 16,
+   "keyframe_animations": [
+    {
+     "property": "opacity",
+     "keyframes": [
+      {
+       "time": 0,
+       "value": 1
+      },
+      {
+       "time": 5.2,
+       "value": 1
+      },
+      {
+       "time": 5.55,
+       "value": 0,
+       "easing": "ease-in-cubic"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "x": 960,
+   "y": 540,
+   "id": "s2",
+   "clip": true,
+   "time": 0,
+   "type": "group",
+   "layer": 11,
+   "width": 1400,
+   "height": 760,
+   "duration": "end",
+   "elements": [
+    {
+     "id": "d-bg",
+     "time": 0,
+     "type": "shape",
+     "layer": 1,
+     "width": 1400,
+     "height": 760,
+     "duration": "end",
+     "fill_color": "#0F172A",
+     "stroke_color": "#1E293B",
+     "stroke_width": 1
+    },
+    {
+     "x": 40,
+     "y": 30,
+     "id": "d-title",
+     "text": "Revenue overview",
+     "time": 5.6,
+     "type": "text",
+     "layer": 2,
+     "style": "ui",
+     "duration": "end",
+     "font_size": 30,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ]
+    },
+    {
+     "x": 1360,
+     "y": 36,
+     "id": "d-period",
+     "text": "Q3 2026 \u00b7 live",
+     "time": 5.6,
+     "type": "text",
+     "layer": 3,
+     "style": "muted",
+     "duration": "end",
+     "x_anchor": "100%",
+     "font_size": 20,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ]
+    },
+    {
+     "x": {
+      "expr": "40 + i*335"
+     },
+     "y": 90,
+     "id": "d-tiles",
+     "time": 5.8,
+     "type": "shape",
+     "layer": 4,
+     "width": 310,
+     "height": 130,
+     "repeat": 4,
+     "effects": [
+      {
+       "type": "glow",
+       "color": "#3B82F6",
+       "radius": 18,
+       "intensity": [
+        {
+         "time": 0,
+         "value": 0
+        },
+        {
+         "time": 0.4,
+         "value": 0.9
+        },
+        {
+         "time": 1.2,
+         "value": 0.2
+        }
+       ]
+      }
+     ],
+     "duration": "end",
+     "animations": [
+      {
+       "time": "start",
+       "type": "slide-up-in",
+       "easing": "ease-out-cubic",
+       "distance": 30,
+       "duration": 0.4
+      },
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "fill_color": "#111C3A",
+     "stroke_color": "#24304F",
+     "stroke_width": 1,
+     "border_radius": 14,
+     "repeat_stagger": 0.12
+    },
+    {
+     "x": {
+      "expr": "60 + i*335"
+     },
+     "y": 108,
+     "id": "d-labels",
+     "text": "{l}",
+     "time": 5.9,
+     "type": "text",
+     "layer": 5,
+     "style": "muted",
+     "duration": "end",
+     "font_size": 18,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "repeat_data": [
+      {
+       "l": "ARR"
+      },
+      {
+       "l": "EBITDA MARGIN"
+      },
+      {
+       "l": "CASH RUNWAY"
+      },
+      {
+       "l": "NET RETENTION"
+      }
+     ],
+     "letter_spacing": 2,
+     "repeat_stagger": 0.12
+    },
+    {
+     "x": 60,
+     "y": 150,
+     "id": "d-v1",
+     "text": "{v}",
+     "time": 6.2,
+     "type": "text",
+     "layer": 6,
+     "style": "ui",
+     "duration": 0.12,
+     "font_size": 44,
+     "fill_color": "#67E8F9",
+     "repeat_data": [
+      {
+       "v": "$0"
+      },
+      {
+       "v": "$31.2M"
+      },
+      {
+       "v": "$58.9M"
+      },
+      {
+       "v": "$74.1M"
+      },
+      {
+       "v": "$81.3M"
+      },
+      {
+       "v": "$84.6M",
+       "duration": "end"
+      }
+     ],
+     "repeat_stagger": 0.12
+    },
+    {
+     "x": 395,
+     "y": 150,
+     "id": "d-v2",
+     "text": "{v}",
+     "time": 6.32,
+     "type": "text",
+     "layer": 7,
+     "style": "ui",
+     "duration": 0.12,
+     "font_size": 44,
+     "fill_color": "#A5B4FC",
+     "repeat_data": [
+      {
+       "v": "0%"
+      },
+      {
+       "v": "9.8%"
+      },
+      {
+       "v": "17.4%"
+      },
+      {
+       "v": "21.9%"
+      },
+      {
+       "v": "23.6%"
+      },
+      {
+       "v": "24.2%",
+       "duration": "end"
+      }
+     ],
+     "repeat_stagger": 0.12
+    },
+    {
+     "x": 730,
+     "y": 150,
+     "id": "d-v3",
+     "text": "{v}",
+     "time": 6.44,
+     "type": "text",
+     "layer": 8,
+     "style": "ui",
+     "duration": 0.12,
+     "font_size": 44,
+     "fill_color": "#C4B5FD",
+     "repeat_data": [
+      {
+       "v": "$0"
+      },
+      {
+       "v": "$16.0M"
+      },
+      {
+       "v": "$29.7M"
+      },
+      {
+       "v": "$37.9M"
+      },
+      {
+       "v": "$41.5M"
+      },
+      {
+       "v": "$42.8M",
+       "duration": "end"
+      }
+     ],
+     "repeat_stagger": 0.12
+    },
+    {
+     "x": 1065,
+     "y": 150,
+     "id": "d-v4",
+     "text": "{v}",
+     "time": 6.56,
+     "type": "text",
+     "layer": 9,
+     "style": "ui",
+     "duration": 0.12,
+     "font_size": 44,
+     "fill_color": "#67E8F9",
+     "repeat_data": [
+      {
+       "v": "0%"
+      },
+      {
+       "v": "46%"
+      },
+      {
+       "v": "84%"
+      },
+      {
+       "v": "105%"
+      },
+      {
+       "v": "114%"
+      },
+      {
+       "v": "118%",
+       "duration": "end"
+      }
+     ],
+     "repeat_stagger": 0.12
+    },
+    {
+     "x": 60,
+     "y": {
+      "expr": "290 + i*84"
+     },
+     "id": "d-tracks",
+     "time": 6.6,
+     "type": "shape",
+     "layer": 10,
+     "width": 760,
+     "height": 24,
+     "repeat": 5,
+     "duration": "end",
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "fill_color": "#1B2542",
+     "border_radius": 12,
+     "repeat_stagger": 0.18
+    },
+    {
+     "x": 60,
+     "y": {
+      "expr": "290 + i*84"
+     },
+     "id": "d-bars",
+     "time": 6.7,
+     "type": "shape",
+     "layer": 11,
+     "width": {
+      "expr": "ease(t,0,0.9,0,w)"
+     },
+     "height": 24,
+     "effects": [
+      {
+       "type": "glow",
+       "color": "{c0}",
+       "radius": 16,
+       "intensity": 0.5
+      }
+     ],
+     "duration": "end",
+     "gradient": {
+      "type": "linear",
+      "angle": 90,
+      "stops": [
+       {
+        "color": "{c0}",
+        "offset": 0
+       },
+       {
+        "color": "{c1}",
+        "offset": 1
+       }
+      ]
+     },
+     "repeat_data": [
+      {
+       "w": 700,
+       "c0": "#22D3EE",
+       "c1": "#6366F1"
+      },
+      {
+       "w": 520,
+       "c0": "#6366F1",
+       "c1": "#A855F7"
+      },
+      {
+       "w": 610,
+       "c0": "#A855F7",
+       "c1": "#EC4899"
+      },
+      {
+       "w": 430,
+       "c0": "#3B82F6",
+       "c1": "#22D3EE"
+      },
+      {
+       "w": 660,
+       "c0": "#7C3AED",
+       "c1": "#3B82F6"
+      }
+     ],
+     "border_radius": 12,
+     "repeat_stagger": 0.18
+    },
+    {
+     "x": 60,
+     "y": {
+      "expr": "262 + i*84"
+     },
+     "id": "d-bar-l",
+     "text": "{l}",
+     "time": 6.6,
+     "type": "text",
+     "layer": 12,
+     "style": "muted",
+     "duration": "end",
+     "font_size": 18,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "repeat_data": [
+      {
+       "l": "ENTERPRISE"
+      },
+      {
+       "l": "MID-MARKET"
+      },
+      {
+       "l": "SMB"
+      },
+      {
+       "l": "PARTNERS"
+      },
+      {
+       "l": "SERVICES"
+      }
+     ],
+     "letter_spacing": 2,
+     "repeat_stagger": 0.18
+    },
+    {
+     "x": {
+      "expr": "920 + i*56"
+     },
+     "y": 720,
+     "id": "d-cols",
+     "time": 6.9,
+     "type": "shape",
+     "layer": 13,
+     "width": 40,
+     "height": {
+      "expr": "ease(t,0,0.8,0,h)"
+     },
+     "effects": [
+      {
+       "type": "glow",
+       "color": "#7C3AED",
+       "radius": 14,
+       "intensity": 0.45
+      }
+     ],
+     "duration": "end",
+     "gradient": {
+      "type": "linear",
+      "angle": 180,
+      "stops": [
+       {
+        "color": "#7C3AED",
+        "offset": 0
+       },
+       {
+        "color": "#3B82F6",
+        "offset": 1
+       }
+      ]
+     },
+     "y_anchor": "100%",
+     "repeat_data": [
+      {
+       "h": 140
+      },
+      {
+       "h": 190
+      },
+      {
+       "h": 170
+      },
+      {
+       "h": 250
+      },
+      {
+       "h": 300
+      },
+      {
+       "h": 280
+      },
+      {
+       "h": 350
+      },
+      {
+       "h": 410
+      }
+     ],
+     "border_radius": 6,
+     "repeat_stagger": 0.08
+    },
+    {
+     "x": 920,
+     "y": 262,
+     "id": "d-chart-t",
+     "text": "MONTHLY REVENUE",
+     "time": 6.9,
+     "type": "text",
+     "layer": 14,
+     "style": "muted",
+     "duration": "end",
+     "font_size": 18,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "letter_spacing": 2
+    },
+    {
+     "x": 1170,
+     "y": 280,
+     "id": "d-pill",
+     "time": 8.6,
+     "type": "shape",
+     "layer": 15,
+     "width": 190,
+     "height": 48,
+     "effects": [
+      {
+       "type": "glow",
+       "color": "#22C55E",
+       "radius": 18,
+       "intensity": 0.7
+      }
+     ],
+     "duration": "end",
+     "animations": [
+      {
+       "time": "start",
+       "type": "bounce-in",
+       "duration": 0.5
+      }
+     ],
+     "fill_color": "#052E1B",
+     "stroke_color": "#22C55E",
+     "stroke_width": 1,
+     "border_radius": 24
+    },
+    {
+     "x": 1170,
+     "y": 280,
+     "id": "d-pill-t",
+     "text": "+31% QoQ",
+     "time": 8.65,
+     "type": "text",
+     "layer": 16,
+     "style": "ui",
+     "width": 190,
+     "height": 48,
+     "duration": "end",
+     "font_size": 20,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "fill_color": "#4ADE80",
+     "text_align": "center",
+     "vertical_align": "middle"
+    }
+   ],
+   "x_anchor": "50%",
+   "y_anchor": "50%",
+   "border_radius": 18,
+   "keyframe_animations": [
+    {
+     "property": "opacity",
+     "keyframes": [
+      {
+       "time": 0,
+       "value": 0
+      },
+      {
+       "time": 5.4,
+       "value": 0
+      },
+      {
+       "time": 5.75,
+       "value": 1,
+       "easing": "ease-out-cubic"
+      },
+      {
+       "time": 10.9,
+       "value": 1
+      },
+      {
+       "time": 11.2,
+       "value": 0,
+       "easing": "ease-in-cubic"
+      }
+     ]
+    },
+    {
+     "property": "scale",
+     "keyframes": [
+      {
+       "time": 5.4,
+       "value": 0.96
+      },
+      {
+       "time": 6.2,
+       "value": 1,
+       "easing": "ease-out-cubic"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "x": 960,
+   "y": 540,
+   "id": "s3",
+   "clip": true,
+   "time": 0,
+   "type": "group",
+   "layer": 12,
+   "width": 1500,
+   "height": 760,
+   "duration": "end",
+   "elements": [
+    {
+     "id": "c-bg",
+     "time": 0,
+     "type": "shape",
+     "layer": 1,
+     "width": 1500,
+     "height": 760,
+     "duration": "end",
+     "fill_color": "#0F172A",
+     "stroke_color": "#1E293B",
+     "stroke_width": 1
+    },
+    {
+     "x": 40,
+     "y": 30,
+     "id": "c-title",
+     "text": "Pipeline",
+     "time": 11.1,
+     "type": "text",
+     "layer": 2,
+     "style": "ui",
+     "duration": "end",
+     "font_size": 30,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ]
+    },
+    {
+     "x": {
+      "expr": "40 + i*490"
+     },
+     "y": 90,
+     "id": "c-cols",
+     "time": 11.1,
+     "type": "shape",
+     "layer": 3,
+     "width": 460,
+     "height": 640,
+     "repeat": 3,
+     "duration": "end",
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "fill_color": "#0C1530",
+     "stroke_color": "#1E293B",
+     "stroke_width": 1,
+     "border_radius": 14,
+     "repeat_stagger": 0.1
+    },
+    {
+     "x": {
+      "expr": "64 + i*490"
+     },
+     "y": 108,
+     "id": "c-col-t",
+     "text": "{txt}",
+     "time": 11.2,
+     "type": "text",
+     "layer": 4,
+     "style": "muted",
+     "duration": "end",
+     "font_size": 18,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "repeat_data": [
+      {
+       "txt": "NEW LEADS"
+      },
+      {
+       "txt": "IN PROGRESS"
+      },
+      {
+       "txt": "WON"
+      }
+     ],
+     "letter_spacing": 2,
+     "repeat_stagger": 0.1
+    },
+    {
+     "x": {
+      "expr": "60 + col*490"
+     },
+     "y": {
+      "expr": "150 + row*130"
+     },
+     "id": "c-cards",
+     "time": 11.4,
+     "type": "shape",
+     "layer": 5,
+     "width": 420,
+     "height": 112,
+     "duration": "end",
+     "animations": [
+      {
+       "time": "start",
+       "type": "slide-left-in",
+       "easing": "ease-out-cubic",
+       "distance": 60,
+       "duration": 0.45
+      },
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "fill_color": "#162038",
+     "repeat_data": [
+      {
+       "col": 0,
+       "row": 0
+      },
+      {
+       "col": 0,
+       "row": 1
+      },
+      {
+       "col": 0,
+       "row": 2
+      },
+      {
+       "col": 1,
+       "row": 0
+      },
+      {
+       "col": 1,
+       "row": 1
+      },
+      {
+       "col": 2,
+       "row": 0
+      },
+      {
+       "col": 2,
+       "row": 1
+      }
+     ],
+     "stroke_color": "#24304F",
+     "stroke_width": 1,
+     "border_radius": 12,
+     "repeat_stagger": 0.09
+    },
+    {
+     "x": {
+      "expr": "84 + col*490"
+     },
+     "y": {
+      "expr": "168 + row*130"
+     },
+     "id": "c-card-t",
+     "text": "{txt}",
+     "time": 11.5,
+     "type": "text",
+     "layer": 6,
+     "style": "ui",
+     "duration": "end",
+     "font_size": 22,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "repeat_data": [
+      {
+       "col": 0,
+       "row": 0,
+       "txt": "Harbor Dental"
+      },
+      {
+       "col": 0,
+       "row": 1,
+       "txt": "Northline Logistics"
+      },
+      {
+       "col": 0,
+       "row": 2,
+       "txt": "Cedar & Co."
+      },
+      {
+       "col": 1,
+       "row": 0,
+       "txt": "Big Boy Subs"
+      },
+      {
+       "col": 1,
+       "row": 1,
+       "txt": "Fog City Roasters"
+      },
+      {
+       "col": 2,
+       "row": 0,
+       "txt": "FinSight"
+      },
+      {
+       "col": 2,
+       "row": 1,
+       "txt": "MODERN_STREET"
+      }
+     ],
+     "repeat_stagger": 0.09
+    },
+    {
+     "x": {
+      "expr": "84 + col*490"
+     },
+     "y": {
+      "expr": "210 + row*130"
+     },
+     "id": "c-card-l",
+     "time": 11.55,
+     "type": "shape",
+     "layer": 7,
+     "width": {
+      "expr": "180 + 40*col"
+     },
+     "height": 10,
+     "opacity": 0.45,
+     "duration": "end",
+     "fill_color": "#3B82F6",
+     "repeat_data": [
+      {
+       "col": 0,
+       "row": 0
+      },
+      {
+       "col": 0,
+       "row": 1
+      },
+      {
+       "col": 0,
+       "row": 2
+      },
+      {
+       "col": 1,
+       "row": 0
+      },
+      {
+       "col": 1,
+       "row": 1
+      },
+      {
+       "col": 2,
+       "row": 0
+      },
+      {
+       "col": 2,
+       "row": 1
+      }
+     ],
+     "border_radius": 5,
+     "repeat_stagger": 0.09
+    },
+    {
+     "id": "c-move",
+     "time": 12.9,
+     "type": "shape",
+     "layer": 8,
+     "width": 420,
+     "height": 112,
+     "effects": [
+      {
+       "type": "glow",
+       "color": "#3B82F6",
+       "radius": 22,
+       "intensity": [
+        {
+         "time": 0,
+         "value": 0.3
+        },
+        {
+         "time": 0.9,
+         "value": 1.3
+        },
+        {
+         "time": 1.4,
+         "value": 0.4
+        }
+       ]
+      }
+     ],
+     "duration": "end",
+     "fill_color": "#1B2A4A",
+     "stroke_color": "#3B82F6",
+     "stroke_width": 1.5,
+     "border_radius": 12,
+     "keyframe_animations": [
+      {
+       "property": "position",
+       "keyframes": [
+        {
+         "time": 0,
+         "value": [
+          550,
+          410
+         ],
+         "easing": "ease-in-out-cubic",
+         "out_tangent": [
+          220,
+          -120
+         ]
+        },
+        {
+         "time": 0.9,
+         "value": [
+          1040,
+          410
+         ],
+         "easing": "ease-in-out-cubic",
+         "in_tangent": [
+          -160,
+          60
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "id": "c-move-t",
+     "text": "Aurora Reserve",
+     "time": 12.9,
+     "type": "text",
+     "layer": 9,
+     "style": "ui",
+     "duration": "end",
+     "font_size": 22,
+     "keyframe_animations": [
+      {
+       "property": "position",
+       "keyframes": [
+        {
+         "time": 0,
+         "value": [
+          574,
+          428
+         ],
+         "easing": "ease-in-out-cubic",
+         "out_tangent": [
+          220,
+          -120
+         ]
+        },
+        {
+         "time": 0.9,
+         "value": [
+          1064,
+          428
+         ],
+         "easing": "ease-in-out-cubic",
+         "in_tangent": [
+          -160,
+          60
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "x": 1160,
+     "y": 100,
+     "id": "c-won",
+     "time": 14,
+     "type": "shape",
+     "layer": 10,
+     "width": 160,
+     "height": 44,
+     "effects": [
+      {
+       "type": "glow",
+       "color": "#22C55E",
+       "radius": 18,
+       "intensity": 0.8
+      }
+     ],
+     "duration": "end",
+     "animations": [
+      {
+       "time": "start",
+       "type": "bounce-in",
+       "duration": 0.5
+      }
+     ],
+     "fill_color": "#052E1B",
+     "stroke_color": "#22C55E",
+     "stroke_width": 1,
+     "border_radius": 22
+    },
+    {
+     "x": 1160,
+     "y": 100,
+     "id": "c-won-t",
+     "text": "Deal won",
+     "time": 14.05,
+     "type": "text",
+     "layer": 11,
+     "style": "ui",
+     "width": 160,
+     "height": 44,
+     "duration": "end",
+     "font_size": 18,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "fill_color": "#4ADE80",
+     "text_align": "center",
+     "vertical_align": "middle"
+    }
+   ],
+   "x_anchor": "50%",
+   "y_anchor": "50%",
+   "border_radius": 18,
+   "keyframe_animations": [
+    {
+     "property": "opacity",
+     "keyframes": [
+      {
+       "time": 0,
+       "value": 0
+      },
+      {
+       "time": 10.9,
+       "value": 0
+      },
+      {
+       "time": 11.25,
+       "value": 1,
+       "easing": "ease-out-cubic"
+      },
+      {
+       "time": 15.9,
+       "value": 1
+      },
+      {
+       "time": 16.2,
+       "value": 0,
+       "easing": "ease-in-cubic"
+      }
+     ]
+    },
+    {
+     "property": "scale",
+     "keyframes": [
+      {
+       "time": 10.9,
+       "value": 0.96
+      },
+      {
+       "time": 11.7,
+       "value": 1,
+       "easing": "ease-out-cubic"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "x": 0,
+   "y": 0,
+   "id": "s4",
+   "time": 0,
+   "type": "group",
+   "layer": 13,
+   "width": 1920,
+   "height": 1080,
+   "duration": "end",
+   "elements": [
+    {
+     "y": {
+      "expr": "250 + i*72"
+     },
+     "id": "code",
+     "text": "{txt}",
+     "time": 16,
+     "type": "text",
+     "layer": 2,
+     "style": "mono",
+     "duration": 2.5,
+     "font_size": 34,
+     "repeat_data": [
+      {
+       "txt": "export const Hero = () => ("
+      },
+      {
+       "txt": "  <section className=\"hero\">"
+      },
+      {
+       "txt": "    <h1>{copy.headline}</h1>"
+      },
+      {
+       "txt": "    <p>{copy.sub}</p>"
+      },
+      {
+       "txt": "    <Button onClick={bookCall}>"
+      },
+      {
+       "txt": "      Book a call"
+      },
+      {
+       "txt": "    </Button>"
+      },
+      {
+       "txt": "  </section>"
+      }
+     ],
+     "repeat_stagger": 0.11,
+     "keyframe_animations": [
+      {
+       "property": "x",
+       "keyframes": [
+        {
+         "time": 0,
+         "value": 2100
+        },
+        {
+         "time": 0.55,
+         "value": 260,
+         "easing": "ease-out-quart"
+        }
+       ]
+      },
+      {
+       "property": "opacity",
+       "keyframes": [
+        {
+         "time": 0,
+         "value": 0
+        },
+        {
+         "time": 0.2,
+         "value": 1
+        },
+        {
+         "time": 2.1,
+         "value": 1
+        },
+        {
+         "time": 2.45,
+         "value": 0,
+         "easing": "ease-in-cubic"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "x": 960,
+     "y": 540,
+     "id": "ui-card",
+     "time": 18.5,
+     "type": "shape",
+     "layer": 5,
+     "width": 760,
+     "height": 440,
+     "effects": [
+      {
+       "type": "glow",
+       "color": "#3B82F6",
+       "radius": 34,
+       "intensity": [
+        {
+         "time": 0,
+         "value": 0
+        },
+        {
+         "time": 0.3,
+         "value": 1.6
+        },
+        {
+         "time": 1.2,
+         "value": 0.5
+        }
+       ]
+      }
+     ],
+     "duration": "end",
+     "gradient": {
+      "type": "linear",
+      "angle": 135,
+      "stops": [
+       {
+        "color": "#152244",
+        "offset": 0
+       },
+       {
+        "color": "#0F172A",
+        "offset": 1
+       }
+      ]
+     },
+     "x_anchor": "50%",
+     "y_anchor": "50%",
+     "animations": [
+      {
+       "time": "start",
+       "type": "scale-in",
+       "easing": "ease-out-back",
+       "duration": 0.45
+      },
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.25
+      }
+     ],
+     "stroke_color": "#3B82F6",
+     "stroke_width": 1.5,
+     "border_radius": 20
+    },
+    {
+     "x": 620,
+     "y": 380,
+     "id": "ui-h1",
+     "text": "Ideas, shipped.",
+     "time": 18.75,
+     "type": "text",
+     "layer": 6,
+     "style": "ui",
+     "duration": "end",
+     "font_size": 52,
+     "animations": [
+      {
+       "time": "start",
+       "type": "text-slide",
+       "split": "word",
+       "easing": "ease-out-cubic",
+       "stagger": 0.1,
+       "duration": 0.5,
+       "direction": "up"
+      }
+     ]
+    },
+    {
+     "x": 620,
+     "y": 456,
+     "id": "ui-sub",
+     "text": "From wireframe to working software, in weeks.",
+     "time": 18.95,
+     "type": "text",
+     "layer": 7,
+     "style": "muted",
+     "duration": "end",
+     "font_size": 24,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.4
+      }
+     ]
+    },
+    {
+     "x": 620,
+     "y": 540,
+     "id": "ui-btn",
+     "time": 19.15,
+     "type": "shape",
+     "layer": 8,
+     "width": 200,
+     "height": 58,
+     "effects": [
+      {
+       "type": "glow",
+       "color": "#3B82F6",
+       "radius": 20,
+       "intensity": 0.7
+      }
+     ],
+     "duration": "end",
+     "animations": [
+      {
+       "time": "start",
+       "type": "bounce-in",
+       "duration": 0.5
+      }
+     ],
+     "fill_color": "#2563EB",
+     "border_radius": 10
+    },
+    {
+     "x": 620,
+     "y": 540,
+     "id": "ui-btn-t",
+     "text": "Book a call",
+     "time": 19.2,
+     "type": "text",
+     "layer": 9,
+     "style": "ui",
+     "width": 200,
+     "height": 58,
+     "duration": "end",
+     "font_size": 20,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "text_align": "center",
+     "vertical_align": "middle"
+    }
+   ],
+   "keyframe_animations": [
+    {
+     "property": "opacity",
+     "keyframes": [
+      {
+       "time": 0,
+       "value": 0
+      },
+      {
+       "time": 15.9,
+       "value": 0
+      },
+      {
+       "time": 16.2,
+       "value": 1
+      },
+      {
+       "time": 19.9,
+       "value": 1
+      },
+      {
+       "time": 20.25,
+       "value": 0,
+       "easing": "ease-in-cubic"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "x": 0,
+   "y": 0,
+   "id": "s5",
+   "time": 0,
+   "type": "group",
+   "layer": 14,
+   "width": 1920,
+   "height": 1080,
+   "duration": "end",
+   "elements": [
+    {
+     "x": 960,
+     "y": 520,
+     "id": "burst",
+     "size": 5,
+     "time": 20.35,
+     "type": "particles",
+     "burst": true,
+     "color": [
+      "#60A5FA",
+      "#A78BFA",
+      "#22D3EE"
+     ],
+     "layer": 2,
+     "spread": 360,
+     "fade_at": 0.45,
+     "gravity": 0,
+     "duration": 2.2,
+     "lifetime": 1.8,
+     "velocity": 420,
+     "burst_count": 140,
+     "particle_shape": "circle",
+     "rotation_speed": 0,
+     "size_variation": 0.6
+    },
+    {
+     "x": 960,
+     "y": 520,
+     "id": "wordmark",
+     "text": "MERIDIAN",
+     "time": 20.4,
+     "type": "text",
+     "layer": 5,
+     "effects": [
+      {
+       "type": "glow",
+       "color": "#60A5FA",
+       "radius": 42,
+       "intensity": [
+        {
+         "time": 0,
+         "value": 0.2
+        },
+        {
+         "time": 1,
+         "value": 1.5
+        },
+        {
+         "time": 1.7,
+         "value": 0.5
+        },
+        {
+         "time": 2.6,
+         "value": 1.1
+        },
+        {
+         "time": 3.4,
+         "value": 0.6
+        }
+       ]
+      }
+     ],
+     "duration": "end",
+     "x_anchor": "50%",
+     "y_anchor": "50%",
+     "font_size": 150,
+     "animations": [
+      {
+       "time": "start",
+       "type": "text-appear",
+       "split": "letter",
+       "stagger": 0.05,
+       "duration": 0.7
+      }
+     ],
+     "fill_color": "#FFFFFF",
+     "font_family": "Inter, sans-serif",
+     "font_weight": 800,
+     "letter_spacing": 30,
+     "keyframe_animations": [
+      {
+       "property": "scale",
+       "keyframes": [
+        {
+         "time": 0.9,
+         "value": 1
+        },
+        {
+         "time": 1.5,
+         "value": 1.03,
+         "easing": "ease-in-out-sine"
+        },
+        {
+         "time": 2.3,
+         "value": 1,
+         "easing": "ease-in-out-sine"
+        },
+        {
+         "time": 3,
+         "value": 1.02,
+         "easing": "ease-in-out-sine"
+        },
+        {
+         "time": 3.6,
+         "value": 1,
+         "easing": "ease-in-out-sine"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "x": 960,
+     "y": 636,
+     "id": "glow-line",
+     "time": 21,
+     "type": "shape",
+     "layer": 4,
+     "width": {
+      "expr": "ease(t,0,0.8,0,980)"
+     },
+     "height": 3,
+     "effects": [
+      {
+       "type": "glow",
+       "color": "#7C3AED",
+       "radius": 16,
+       "intensity": 0.9
+      }
+     ],
+     "duration": "end",
+     "gradient": {
+      "type": "linear",
+      "angle": 90,
+      "stops": [
+       {
+        "color": "rgba(124,58,237,0)",
+        "offset": 0
+       },
+       {
+        "color": "#60A5FA",
+        "offset": 0.5
+       },
+       {
+        "color": "rgba(124,58,237,0)",
+        "offset": 1
+       }
+      ]
+     },
+     "x_anchor": "50%"
+    },
+    {
+     "x": 960,
+     "y": 690,
+     "id": "interface",
+     "text": "INTERFACE",
+     "time": 21,
+     "type": "text",
+     "layer": 6,
+     "duration": "end",
+     "x_anchor": "50%",
+     "y_anchor": "50%",
+     "font_size": 46,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.6
+      }
+     ],
+     "fill_color": "#CBD5E1",
+     "font_family": "Inter, sans-serif",
+     "font_weight": 500,
+     "letter_spacing": 24
+    },
+    {
+     "x": 960,
+     "y": 790,
+     "id": "tagline",
+     "text": "WEBSITES  \u00b7  APPS  \u00b7  DASHBOARDS  \u00b7  CRMS",
+     "time": 21.8,
+     "type": "text",
+     "layer": 7,
+     "style": "muted",
+     "duration": "end",
+     "x_anchor": "50%",
+     "y_anchor": "50%",
+     "font_size": 28,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.6
+      }
+     ],
+     "letter_spacing": 4
+    }
+   ],
+   "keyframe_animations": [
+    {
+     "property": "opacity",
+     "keyframes": [
+      {
+       "time": 0,
+       "value": 0
+      },
+      {
+       "time": 20.1,
+       "value": 0
+      },
+      {
+       "time": 20.4,
+       "value": 1
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "vignette",
+   "time": 0,
+   "type": "shape",
+   "layer": 95,
+   "width": "100%",
+   "height": "100%",
+   "duration": "end",
+   "gradient": {
+    "type": "radial",
+    "stops": [
+     {
+      "color": "rgba(255,255,255,1)",
+      "offset": 0
+     },
+     {
+      "color": "rgba(255,255,255,1)",
+      "offset": 0.65
+     },
+     {
+      "color": "rgba(120,130,160,1)",
+      "offset": 1
+     }
+    ]
+   },
+   "blend_mode": "multiply"
+  },
+  {
+   "id": "music",
+   "loop": true,
+   "time": 0,
+   "type": "audio",
+   "layer": 100,
+   "source": "https://api.clipkit.dev/storage/v1/object/public/assets/anon/c140aa36-47f4-4157-9c8b-c38fea44abab.audio",
+   "volume": 85,
+   "duration": "end",
+   "audio_fade_in": 0.3,
+   "audio_fade_out": 1.6
+  }
+ ],
+ "frame_rate": 30,
+ "clipkit_version": "1.0",
+ "background_color": "#0B1226"
+}
