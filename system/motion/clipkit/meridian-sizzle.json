@@ -1,4 +1,36 @@
 {
+ "fonts": [
+  {
+   "src": "https://fonts.gstatic.com/s/hankengrotesk/v12/ieVq2YZDLWuGJpnzaiwFXS9tYvBRzyFLlZg_f_NcM2Fq5vBM.woff2",
+   "style": "normal",
+   "family": "Hanken Grotesk",
+   "weight": 800
+  },
+  {
+   "src": "https://fonts.gstatic.com/s/hankengrotesk/v12/ieVq2YZDLWuGJpnzaiwFXS9tYvBRzyFLlZg_f_NcbWFq5vBM.woff2",
+   "style": "normal",
+   "family": "Hanken Grotesk",
+   "weight": 600
+  },
+  {
+   "src": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fAZ9hiA.woff2",
+   "style": "normal",
+   "family": "Inter",
+   "weight": 500
+  },
+  {
+   "src": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYAZ9hiA.woff2",
+   "style": "normal",
+   "family": "Inter",
+   "weight": 700
+  },
+  {
+   "src": "https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8-qxTOlOV.woff2",
+   "style": "normal",
+   "family": "JetBrains Mono",
+   "weight": 500
+  }
+ ],
  "width": 1920,
  "camera": {
   "z": [
@@ -7,44 +39,80 @@
     "value": 0
    },
    {
-    "time": 5.3,
-    "value": 90,
+    "time": 4.8,
+    "value": 60,
     "easing": "ease-in-out-sine"
    },
    {
-    "time": 5.6,
+    "time": 5.1,
+    "value": 20
+   },
+   {
+    "time": 11.1,
+    "value": 80,
+    "easing": "ease-in-out-sine"
+   },
+   {
+    "time": 11.4,
+    "value": 25
+   },
+   {
+    "time": 16.7,
+    "value": 85,
+    "easing": "ease-in-out-sine"
+   },
+   {
+    "time": 17,
+    "value": 25
+   },
+   {
+    "time": 22.3,
+    "value": 85,
+    "easing": "ease-in-out-sine"
+   },
+   {
+    "time": 22.6,
+    "value": 25
+   },
+   {
+    "time": 28.1,
+    "value": 85,
+    "easing": "ease-in-out-sine"
+   },
+   {
+    "time": 28.4,
+    "value": 25
+   },
+   {
+    "time": 33.9,
+    "value": 85,
+    "easing": "ease-in-out-sine"
+   },
+   {
+    "time": 34.2,
+    "value": 25
+   },
+   {
+    "time": 39.5,
+    "value": 85,
+    "easing": "ease-in-out-sine"
+   },
+   {
+    "time": 39.8,
     "value": 30
    },
    {
-    "time": 10.9,
-    "value": 110,
+    "time": 43.7,
+    "value": 100,
     "easing": "ease-in-out-sine"
    },
    {
-    "time": 11.2,
+    "time": 44,
     "value": 40
    },
    {
-    "time": 15.9,
-    "value": 120,
-    "easing": "ease-in-out-sine"
-   },
-   {
-    "time": 16.2,
-    "value": 50
-   },
-   {
-    "time": 20,
-    "value": 140,
-    "easing": "ease-in-out-sine"
-   },
-   {
-    "time": 20.3,
-    "value": 60
-   },
-   {
-    "time": 24,
-    "value": 120,
+    "time": 47,
+    "value": 90,
     "easing": "ease-in-out-sine"
    }
   ],
@@ -52,23 +120,55 @@
  },
  "height": 1080,
  "styles": {
-  "ui": {
-   "fill_color": "#E2E8F0",
+  "ink": {
+   "fill_color": "#0F172A",
    "font_family": "Inter, sans-serif",
    "font_weight": 700
+  },
+  "body": {
+   "fill_color": "#475569",
+   "font_family": "Inter, sans-serif",
+   "font_weight": 500
   },
   "mono": {
    "fill_color": "#93C5FD",
    "font_family": "JetBrains Mono, Menlo, monospace",
    "font_weight": 500
   },
-  "muted": {
+  "sage": {
+   "fill_color": "#6C8E82",
+   "font_family": "Inter, sans-serif",
+   "font_weight": 700,
+   "letter_spacing": 2
+  },
+  "green": {
+   "fill_color": "#112F24",
+   "font_family": "Inter, sans-serif",
+   "font_weight": 700
+  },
+  "light": {
    "fill_color": "#94A3B8",
    "font_family": "Inter, sans-serif",
    "font_weight": 500
+  },
+  "kicker": {
+   "fill_color": "#2563EB",
+   "font_family": "Inter, sans-serif",
+   "font_weight": 700,
+   "letter_spacing": 4
+  },
+  "display": {
+   "fill_color": "#FFFFFF",
+   "font_family": "Hanken Grotesk, Inter, sans-serif",
+   "font_weight": 800
+  },
+  "displayink": {
+   "fill_color": "#0F172A",
+   "font_family": "Hanken Grotesk, Inter, sans-serif",
+   "font_weight": 800
   }
  },
- "duration": 24,
+ "duration": 47,
  "elements": [
   {
    "z": -200,
@@ -84,15 +184,11 @@
     "angle": 160,
     "stops": [
      {
-      "color": "#0B1226",
+      "color": "#0F172A",
       "offset": 0
      },
      {
-      "color": "#0F172A",
-      "offset": 0.55
-     },
-     {
-      "color": "#111827",
+      "color": "#0B1226",
       "offset": 1
      }
     ]
@@ -111,9 +207,9 @@
    "width": 1,
    "height": 1080,
    "repeat": 25,
-   "opacity": 0.07,
+   "opacity": 0.05,
    "duration": "end",
-   "fill_color": "#60A5FA"
+   "fill_color": "#93C5FD"
   },
   {
    "x": 0,
@@ -128,35 +224,31 @@
    "width": 1920,
    "height": 1,
    "repeat": 14,
-   "opacity": 0.07,
+   "opacity": 0.05,
    "duration": "end",
-   "fill_color": "#60A5FA"
+   "fill_color": "#93C5FD"
   },
   {
-   "x": 960,
-   "y": 560,
+   "x": 1200,
+   "y": 620,
    "z": -180,
    "id": "glow-blob",
    "time": 0,
    "type": "shape",
    "layer": 4,
    "shape": "ellipse",
-   "width": 1500,
+   "width": 1600,
    "height": 900,
    "duration": "end",
    "gradient": {
     "type": "radial",
     "stops": [
      {
-      "color": "rgba(37,99,235,0.30)",
+      "color": "rgba(37,99,235,0.28)",
       "offset": 0
      },
      {
-      "color": "rgba(124,58,237,0.10)",
-      "offset": 0.6
-     },
-     {
-      "color": "rgba(11,18,38,0)",
+      "color": "rgba(15,23,42,0)",
       "offset": 1
      }
     ]
@@ -167,173 +259,366 @@
     {
      "time": "start",
      "type": "drift",
-     "distance": 60,
-     "duration": 24
+     "distance": 80,
+     "duration": 47
+    }
+   ]
+  },
+  {
+   "x": 0,
+   "y": 0,
+   "id": "g0",
+   "time": 0,
+   "type": "group",
+   "layer": 10,
+   "width": 1920,
+   "height": 1080,
+   "duration": "end",
+   "elements": [
+    {
+     "x": 120,
+     "y": 299,
+     "id": "i-rule",
+     "time": 0.2,
+     "type": "shape",
+     "layer": 2,
+     "width": {
+      "expr": "ease(t,0,0.5,0,40)"
+     },
+     "height": 2,
+     "duration": "end",
+     "fill_color": "#2563EB"
+    },
+    {
+     "x": 180,
+     "y": 288,
+     "id": "i-kicker",
+     "text": "DIGITAL DESIGN & DEVELOPMENT STUDIO",
+     "time": 0.5,
+     "type": "text",
+     "layer": 3,
+     "style": "kicker",
+     "duration": "end",
+     "font_size": 20,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.5
+      }
+     ]
+    },
+    {
+     "x": 120,
+     "y": 340,
+     "id": "i-brand",
+     "text": "MERIDIAN INTERFACE",
+     "time": 0.9,
+     "type": "text",
+     "layer": 4,
+     "style": "light",
+     "duration": "end",
+     "font_size": 22,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.5
+      }
+     ],
+     "letter_spacing": 8
+    },
+    {
+     "x": 120,
+     "y": 400,
+     "id": "i-h1",
+     "text": "Custom websites, apps,",
+     "time": 1.2,
+     "type": "text",
+     "layer": 5,
+     "style": "display",
+     "duration": "end",
+     "font_size": 96,
+     "animations": [
+      {
+       "time": "start",
+       "type": "text-slide",
+       "split": "word",
+       "easing": "ease-out-cubic",
+       "stagger": 0.12,
+       "duration": 0.7,
+       "direction": "up"
+      }
+     ]
+    },
+    {
+     "x": 120,
+     "y": 510,
+     "id": "i-h2",
+     "text": "and dashboards.",
+     "time": 1.7,
+     "type": "text",
+     "layer": 6,
+     "style": "display",
+     "duration": "end",
+     "font_size": 96,
+     "animations": [
+      {
+       "time": "start",
+       "type": "text-slide",
+       "split": "word",
+       "easing": "ease-out-cubic",
+       "stagger": 0.12,
+       "duration": 0.7,
+       "direction": "up"
+      }
+     ]
+    },
+    {
+     "x": 120,
+     "y": 640,
+     "id": "i-h3",
+     "text": "Designed and built",
+     "time": 2.3,
+     "type": "text",
+     "layer": 7,
+     "style": "display",
+     "duration": "end",
+     "font_size": 96,
+     "animations": [
+      {
+       "time": "start",
+       "type": "text-slide",
+       "split": "word",
+       "easing": "ease-out-cubic",
+       "stagger": 0.12,
+       "duration": 0.7,
+       "direction": "up"
+      }
+     ],
+     "fill_color": "#2563EB"
+    },
+    {
+     "x": 120,
+     "y": 750,
+     "id": "i-h4",
+     "text": "end to end.",
+     "time": 2.8,
+     "type": "text",
+     "layer": 8,
+     "style": "display",
+     "duration": "end",
+     "font_size": 96,
+     "animations": [
+      {
+       "time": "start",
+       "type": "text-slide",
+       "split": "word",
+       "easing": "ease-out-cubic",
+       "stagger": 0.12,
+       "duration": 0.7,
+       "direction": "up"
+      }
+     ],
+     "fill_color": "#2563EB"
+    },
+    {
+     "x": "{px}",
+     "y": 900,
+     "id": "i-pills",
+     "text": "{txt}",
+     "time": 3.5,
+     "type": "text",
+     "layer": 9,
+     "style": "light",
+     "duration": "end",
+     "font_size": 15,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.4
+      }
+     ],
+     "repeat_data": [
+      {
+       "px": 120,
+       "txt": "WEB DESIGN"
+      },
+      {
+       "px": 330,
+       "txt": "/   APP INTERFACES"
+      },
+      {
+       "px": 620,
+       "txt": "/   ANALYTICS & CRM DASHBOARDS"
+      },
+      {
+       "px": 1080,
+       "txt": "/   BRAND & LOGO"
+      }
+     ],
+     "letter_spacing": 3,
+     "repeat_stagger": 0.15
+    }
+   ],
+   "keyframe_animations": [
+    {
+     "property": "opacity",
+     "keyframes": [
+      {
+       "time": 0,
+       "value": 1
+      },
+      {
+       "time": 4.6,
+       "value": 1
+      },
+      {
+       "time": 5,
+       "value": 0,
+       "easing": "ease-in-cubic"
+      }
+     ]
     }
    ]
   },
   {
    "x": 960,
    "y": 540,
-   "id": "s1",
+   "id": "g1",
    "clip": true,
    "time": 0,
    "type": "group",
-   "layer": 10,
-   "width": 1200,
-   "height": 720,
+   "layer": 11,
+   "width": 1240,
+   "height": 700,
    "duration": "end",
    "elements": [
+    {
+     "id": "w-card",
+     "time": 0,
+     "type": "shape",
+     "layer": 1,
+     "width": 1240,
+     "height": 700,
+     "duration": "end",
+     "fill_color": "#FFFFFF"
+    },
     {
      "x": 0,
      "y": 0,
      "id": "w-head",
-     "time": 0.2,
+     "time": 5.3,
      "type": "shape",
      "layer": 2,
      "width": {
-      "expr": "ease(t,0,0.6,0,1200)"
+      "expr": "ease(t,0,0.7,0,1240)"
      },
-     "height": 64,
+     "height": 60,
      "duration": "end",
      "fill_color": "rgba(0,0,0,0)",
-     "stroke_color": "#3B82F6",
-     "stroke_width": 2,
-     "border_radius": 8
+     "stroke_color": "#2563EB",
+     "stroke_width": 2
     },
     {
-     "x": 0,
-     "y": 96,
+     "x": 40,
+     "y": 100,
      "id": "w-hero",
-     "time": 0.9,
+     "time": 6,
      "type": "shape",
      "layer": 3,
      "width": {
-      "expr": "ease(t,0,0.7,0,760)"
+      "expr": "ease(t,0,0.8,0,780)"
      },
      "height": 300,
      "duration": "end",
      "fill_color": "rgba(0,0,0,0)",
-     "stroke_color": "#3B82F6",
+     "stroke_color": "#2563EB",
      "stroke_width": 2,
-     "border_radius": 8
+     "border_radius": 10
     },
     {
-     "x": 800,
-     "y": 96,
+     "x": 860,
+     "y": 100,
      "id": "w-aside",
-     "time": 1.4,
+     "time": 6.6,
      "type": "shape",
      "layer": 4,
      "width": {
-      "expr": "ease(t,0,0.6,0,400)"
+      "expr": "ease(t,0,0.7,0,340)"
      },
      "height": 300,
      "duration": "end",
      "fill_color": "rgba(0,0,0,0)",
-     "stroke_color": "#7C3AED",
+     "stroke_color": "#94A3B8",
      "stroke_width": 2,
-     "border_radius": 8
+     "border_radius": 10
     },
     {
      "x": {
-      "expr": "i*410"
+      "expr": "40 + i*400"
      },
-     "y": 430,
+     "y": 440,
      "id": "w-cols",
-     "time": 1.9,
+     "time": 7.1,
      "type": "shape",
      "layer": 5,
      "width": {
-      "expr": "ease(t,0,0.5,0,380)"
+      "expr": "ease(t,0,0.6,0,360)"
      },
-     "height": 240,
+     "height": 220,
      "repeat": 3,
      "duration": "end",
      "fill_color": "rgba(0,0,0,0)",
-     "stroke_color": "#3B82F6",
+     "stroke_color": "#2563EB",
      "stroke_width": 2,
-     "border_radius": 8,
-     "repeat_stagger": 0.2
+     "border_radius": 10,
+     "repeat_stagger": 0.25
     },
     {
-     "x": 32,
+     "x": 72,
      "y": {
-      "expr": "140 + i*38"
+      "expr": "150 + i*40"
      },
      "id": "w-lines",
-     "time": 2.6,
+     "time": 7.7,
      "type": "shape",
      "layer": 6,
      "width": {
-      "expr": "ease(t,0,0.4,0,w)"
+      "expr": "ease(t,0,0.45,0,w)"
      },
      "height": 12,
-     "opacity": 0.5,
+     "opacity": 0.3,
      "duration": "end",
-     "fill_color": "#3B82F6",
+     "fill_color": "#2563EB",
      "repeat_data": [
       {
-       "w": 520
+       "w": 540
       },
       {
-       "w": 460
+       "w": 470
       },
       {
-       "w": 500
+       "w": 510
       },
       {
        "w": 300
       }
      ],
      "border_radius": 6,
-     "repeat_stagger": 0.1
+     "repeat_stagger": 0.12
     },
     {
      "x": 0,
      "y": 0,
      "id": "f-head",
-     "time": 3.6,
+     "time": 8.6,
      "type": "shape",
      "layer": 10,
-     "width": 1200,
-     "height": 64,
-     "effects": [
-      {
-       "type": "glow",
-       "color": "#3B82F6",
-       "radius": 24,
-       "intensity": [
-        {
-         "time": 0,
-         "value": 0
-        },
-        {
-         "time": 0.25,
-         "value": 1.4
-        },
-        {
-         "time": 1,
-         "value": 0.35
-        }
-       ]
-      }
-     ],
+     "width": 1240,
+     "height": 60,
      "duration": "end",
-     "gradient": {
-      "type": "linear",
-      "angle": 90,
-      "stops": [
-       {
-        "color": "#131F3E",
-        "offset": 0
-       },
-       {
-        "color": "#0F172A",
-        "offset": 1
-       }
-      ]
-     },
      "animations": [
       {
        "time": "start",
@@ -341,53 +626,51 @@
        "duration": 0.25
       }
      ],
-     "border_radius": 8
+     "brightness": [
+      {
+       "time": 0,
+       "value": 1.5
+      },
+      {
+       "time": 0.35,
+       "value": 1
+      }
+     ],
+     "fill_color": "#FFFFFF",
+     "stroke_color": "#E2E8F0",
+     "stroke_width": 1
     },
     {
-     "x": 0,
-     "y": 96,
+     "x": 40,
+     "y": 100,
      "id": "f-hero",
-     "time": 3.75,
+     "time": 8.75,
      "type": "shape",
      "layer": 11,
-     "width": 760,
+     "width": 780,
      "height": 300,
      "effects": [
       {
        "type": "glow",
-       "color": "#3B82F6",
-       "radius": 24,
+       "color": "#2563EB",
+       "radius": 26,
        "intensity": [
         {
          "time": 0,
          "value": 0
         },
         {
-         "time": 0.25,
-         "value": 1.4
+         "time": 0.3,
+         "value": 1.2
         },
         {
-         "time": 1,
-         "value": 0.35
+         "time": 1.2,
+         "value": 0.25
         }
        ]
       }
      ],
      "duration": "end",
-     "gradient": {
-      "type": "linear",
-      "angle": 135,
-      "stops": [
-       {
-        "color": "#152244",
-        "offset": 0
-       },
-       {
-        "color": "#0F172A",
-        "offset": 1
-       }
-      ]
-     },
      "animations": [
       {
        "time": "start",
@@ -395,53 +678,29 @@
        "duration": 0.25
       }
      ],
-     "border_radius": 8
+     "brightness": [
+      {
+       "time": 0,
+       "value": 1.8
+      },
+      {
+       "time": 0.4,
+       "value": 1
+      }
+     ],
+     "fill_color": "#0F172A",
+     "border_radius": 10
     },
     {
-     "x": 800,
-     "y": 96,
+     "x": 860,
+     "y": 100,
      "id": "f-aside",
-     "time": 3.9,
+     "time": 8.9,
      "type": "shape",
      "layer": 12,
-     "width": 400,
+     "width": 340,
      "height": 300,
-     "effects": [
-      {
-       "type": "glow",
-       "color": "#7C3AED",
-       "radius": 24,
-       "intensity": [
-        {
-         "time": 0,
-         "value": 0
-        },
-        {
-         "time": 0.25,
-         "value": 1.4
-        },
-        {
-         "time": 1,
-         "value": 0.35
-        }
-       ]
-      }
-     ],
      "duration": "end",
-     "gradient": {
-      "type": "linear",
-      "angle": 135,
-      "stops": [
-       {
-        "color": "#1B1A3F",
-        "offset": 0
-       },
-       {
-        "color": "#0F172A",
-        "offset": 1
-       }
-      ]
-     },
      "animations": [
       {
        "time": "start",
@@ -449,20 +708,42 @@
        "duration": 0.25
       }
      ],
-     "border_radius": 8
+     "brightness": [
+      {
+       "time": 0,
+       "value": 1.4
+      },
+      {
+       "time": 0.35,
+       "value": 1
+      }
+     ],
+     "fill_color": "#F7F9FD",
+     "stroke_color": "#E2E8F0",
+     "stroke_width": 1,
+     "border_radius": 10
     },
     {
      "x": {
-      "expr": "i*410"
+      "expr": "40 + i*400"
      },
-     "y": 430,
+     "y": 440,
      "id": "f-cols",
-     "time": 4,
+     "time": 9,
      "type": "shape",
      "layer": 13,
-     "width": 380,
-     "height": 240,
+     "width": 360,
+     "height": 220,
      "repeat": 3,
+     "effects": [
+      {
+       "blur": 18,
+       "type": "drop_shadow",
+       "color": "#0F172A",
+       "opacity": 0.12,
+       "offset_y": 8
+      }
+     ],
      "duration": "end",
      "animations": [
       {
@@ -474,26 +755,26 @@
        "time": "start",
        "type": "scale-in",
        "easing": "ease-out-back",
-       "duration": 0.3
+       "duration": 0.35
       }
      ],
-     "fill_color": "#121C38",
-     "stroke_color": "#24304F",
+     "fill_color": "#FFFFFF",
+     "stroke_color": "#E2E8F0",
      "stroke_width": 1,
-     "border_radius": 8,
-     "repeat_stagger": 0.1
+     "border_radius": 10,
+     "repeat_stagger": 0.12
     },
     {
-     "x": 24,
-     "y": 14,
+     "x": 28,
+     "y": 19,
      "id": "f-brand",
      "text": "MERIDIAN",
-     "time": 3.7,
+     "time": 8.7,
      "type": "text",
      "layer": 20,
-     "style": "ui",
+     "style": "ink",
      "duration": "end",
-     "font_size": 22,
+     "font_size": 18,
      "animations": [
       {
        "time": "start",
@@ -505,17 +786,17 @@
     },
     {
      "x": {
-      "expr": "760 + i*120"
+      "expr": "760 + i*140"
      },
-     "y": 20,
+     "y": 22,
      "id": "f-nav",
      "text": "{txt}",
-     "time": 3.7,
+     "time": 8.7,
      "type": "text",
      "layer": 21,
-     "style": "muted",
+     "style": "body",
      "duration": "end",
-     "font_size": 18,
+     "font_size": 13,
      "animations": [
       {
        "time": "start",
@@ -525,27 +806,28 @@
      ],
      "repeat_data": [
       {
-       "txt": "Work"
+       "txt": "HOME"
       },
       {
-       "txt": "Services"
+       "txt": "SERVICES"
       },
       {
-       "txt": "Contact"
+       "txt": "PORTFOLIO"
       }
-     ]
+     ],
+     "letter_spacing": 2
     },
     {
-     "x": 32,
-     "y": 130,
+     "x": 72,
+     "y": 136,
      "id": "f-h1",
-     "text": "Built to convert.",
-     "time": 3.9,
+     "text": "Custom websites, apps,",
+     "time": 8.9,
      "type": "text",
      "layer": 22,
-     "style": "ui",
+     "style": "display",
      "duration": "end",
-     "font_size": 52,
+     "font_size": 40,
      "animations": [
       {
        "time": "start",
@@ -559,39 +841,67 @@
      ]
     },
     {
-     "x": 32,
-     "y": 210,
-     "id": "f-sub",
-     "text": "Websites, apps and dashboards for growing companies.",
-     "time": 4.1,
+     "x": 72,
+     "y": 186,
+     "id": "f-h2",
+     "text": "and dashboards.",
+     "time": 9.05,
      "type": "text",
      "layer": 23,
-     "style": "muted",
+     "style": "display",
      "duration": "end",
-     "font_size": 22,
+     "font_size": 40,
      "animations": [
       {
        "time": "start",
-       "type": "fade-in",
-       "duration": 0.4
+       "type": "text-slide",
+       "split": "word",
+       "easing": "ease-out-cubic",
+       "stagger": 0.08,
+       "duration": 0.5,
+       "direction": "up"
       }
      ]
     },
     {
-     "x": 32,
-     "y": 280,
-     "id": "f-btn",
-     "time": 4.3,
-     "type": "shape",
+     "x": 72,
+     "y": 236,
+     "id": "f-h3",
+     "text": "Designed and built end to end.",
+     "time": 9.25,
+     "type": "text",
      "layer": 24,
-     "width": 190,
-     "height": 56,
+     "style": "display",
+     "duration": "end",
+     "font_size": 40,
+     "animations": [
+      {
+       "time": "start",
+       "type": "text-slide",
+       "split": "word",
+       "easing": "ease-out-cubic",
+       "stagger": 0.08,
+       "duration": 0.5,
+       "direction": "up"
+      }
+     ],
+     "fill_color": "#2563EB"
+    },
+    {
+     "x": 72,
+     "y": 314,
+     "id": "f-btn",
+     "time": 9.6,
+     "type": "shape",
+     "layer": 25,
+     "width": 300,
+     "height": 52,
      "effects": [
       {
        "type": "glow",
-       "color": "#3B82F6",
-       "radius": 20,
-       "intensity": 0.6
+       "color": "#2563EB",
+       "radius": 18,
+       "intensity": 0.5
       }
      ],
      "duration": "end",
@@ -603,19 +913,44 @@
       }
      ],
      "fill_color": "#2563EB",
-     "border_radius": 10
+     "border_radius": 8
     },
     {
-     "x": 32,
-     "y": 280,
+     "x": 72,
+     "y": 314,
      "id": "f-btn-t",
-     "text": "Get started",
-     "time": 4.35,
+     "text": "BOOK A DESIGN APPOINTMENT",
+     "time": 9.65,
      "type": "text",
-     "layer": 25,
-     "style": "ui",
-     "width": 190,
-     "height": 56,
+     "layer": 26,
+     "style": "ink",
+     "width": 300,
+     "height": 52,
+     "duration": "end",
+     "font_size": 13,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "fill_color": "#FFFFFF",
+     "text_align": "center",
+     "letter_spacing": 2,
+     "vertical_align": "middle"
+    },
+    {
+     "x": {
+      "expr": "64 + i*400"
+     },
+     "y": 470,
+     "id": "f-col-t",
+     "text": "{txt}",
+     "time": 9.3,
+     "type": "text",
+     "layer": 27,
+     "style": "ink",
      "duration": "end",
      "font_size": 20,
      "animations": [
@@ -625,22 +960,32 @@
        "duration": 0.3
       }
      ],
-     "text_align": "center",
-     "vertical_align": "middle"
+     "repeat_data": [
+      {
+       "txt": "Web design"
+      },
+      {
+       "txt": "App interfaces"
+      },
+      {
+       "txt": "Dashboards & CRM"
+      }
+     ],
+     "repeat_stagger": 0.12
     },
     {
      "x": {
-      "expr": "24 + i*410"
+      "expr": "64 + i*400"
      },
-     "y": 454,
-     "id": "f-col-t",
+     "y": 504,
+     "id": "f-col-s",
      "text": "{txt}",
-     "time": 4.2,
+     "time": 9.4,
      "type": "text",
-     "layer": 26,
-     "style": "ui",
+     "layer": 28,
+     "style": "body",
      "duration": "end",
-     "font_size": 22,
+     "font_size": 15,
      "animations": [
       {
        "time": "start",
@@ -650,40 +995,58 @@
      ],
      "repeat_data": [
       {
-       "txt": "Websites"
+       "txt": "Sites built to convert."
       },
       {
-       "txt": "Apps"
+       "txt": "Apps customers keep."
       },
       {
-       "txt": "Dashboards"
+       "txt": "Numbers you can run on."
       }
      ],
-     "repeat_stagger": 0.1
+     "repeat_stagger": 0.12
     },
     {
-     "y": 360,
+     "x": {
+      "expr": "64 + i*400"
+     },
+     "y": 548,
+     "id": "f-col-rule",
+     "time": 9.5,
+     "type": "shape",
+     "layer": 29,
+     "width": {
+      "expr": "ease(t,0,0.5,0,48)"
+     },
+     "height": 3,
+     "repeat": 3,
+     "duration": "end",
+     "fill_color": "#2563EB",
+     "repeat_stagger": 0.12
+    },
+    {
+     "y": 350,
      "id": "sweep",
-     "time": 3.9,
+     "time": 9,
      "type": "shape",
      "layer": 40,
-     "width": 220,
+     "width": 240,
      "height": 1500,
-     "duration": 1.1,
+     "duration": 1.3,
      "gradient": {
       "type": "linear",
       "angle": 90,
       "stops": [
        {
-        "color": "rgba(191,219,254,0)",
+        "color": "rgba(219,234,254,0)",
         "offset": 0
        },
        {
-        "color": "rgba(191,219,254,0.45)",
+        "color": "rgba(219,234,254,0.5)",
         "offset": 0.5
        },
        {
-        "color": "rgba(191,219,254,0)",
+        "color": "rgba(219,234,254,0)",
         "offset": 1
        }
       ]
@@ -698,11 +1061,11 @@
        "keyframes": [
         {
          "time": 0,
-         "value": -250
+         "value": -260
         },
         {
-         "time": 1,
-         "value": 1450,
+         "time": 1.2,
+         "value": 1500,
          "easing": "ease-in-out-sine"
         }
        ]
@@ -712,21 +1075,585 @@
    ],
    "x_anchor": "50%",
    "y_anchor": "50%",
-   "border_radius": 16,
+   "border_radius": 14,
    "keyframe_animations": [
     {
      "property": "opacity",
      "keyframes": [
       {
        "time": 0,
-       "value": 1
+       "value": 0
+      },
+      {
+       "time": 4.8,
+       "value": 0
       },
       {
        "time": 5.2,
+       "value": 1,
+       "easing": "ease-out-cubic"
+      },
+      {
+       "time": 11,
        "value": 1
       },
       {
-       "time": 5.55,
+       "time": 11.3,
+       "value": 0,
+       "easing": "ease-in-cubic"
+      }
+     ]
+    },
+    {
+     "property": "scale",
+     "keyframes": [
+      {
+       "time": 4.8,
+       "value": 0.96
+      },
+      {
+       "time": 5.9,
+       "value": 1,
+       "easing": "ease-out-cubic"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "x": 0,
+   "y": 0,
+   "id": "g2",
+   "time": 0,
+   "type": "group",
+   "layer": 12,
+   "width": 1920,
+   "height": 1080,
+   "duration": "end",
+   "elements": [
+    {
+     "x": 160,
+     "y": 380,
+     "id": "a-kicker",
+     "text": "APP INTERFACES",
+     "time": 11.4,
+     "type": "text",
+     "layer": 2,
+     "style": "kicker",
+     "duration": "end",
+     "font_size": 20,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.5
+      }
+     ]
+    },
+    {
+     "x": 160,
+     "y": 430,
+     "id": "a-h1",
+     "text": "Mobile apps your",
+     "time": 11.7,
+     "type": "text",
+     "layer": 3,
+     "style": "display",
+     "duration": "end",
+     "font_size": 68,
+     "animations": [
+      {
+       "time": "start",
+       "type": "text-slide",
+       "split": "word",
+       "easing": "ease-out-cubic",
+       "stagger": 0.1,
+       "duration": 0.6,
+       "direction": "up"
+      }
+     ]
+    },
+    {
+     "x": 160,
+     "y": 510,
+     "id": "a-h2",
+     "text": "customers keep.",
+     "time": 12,
+     "type": "text",
+     "layer": 4,
+     "style": "display",
+     "duration": "end",
+     "font_size": 68,
+     "animations": [
+      {
+       "time": "start",
+       "type": "text-slide",
+       "split": "word",
+       "easing": "ease-out-cubic",
+       "stagger": 0.1,
+       "duration": 0.6,
+       "direction": "up"
+      }
+     ],
+     "fill_color": "#2563EB"
+    },
+    {
+     "x": 160,
+     "y": 620,
+     "id": "a-sub",
+     "text": "Banking, ordering, bookings \u2014 designed for the thumb.",
+     "time": 12.5,
+     "type": "text",
+     "layer": 5,
+     "style": "light",
+     "duration": "end",
+     "font_size": 24,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.5
+      }
+     ]
+    },
+    {
+     "x": 1240,
+     "y": 150,
+     "id": "phone",
+     "time": 0,
+     "type": "group",
+     "layer": 6,
+     "width": 380,
+     "height": 780,
+     "duration": "end",
+     "elements": [
+      {
+       "id": "p-body",
+       "time": 0,
+       "type": "shape",
+       "layer": 1,
+       "width": 380,
+       "height": 780,
+       "effects": [
+        {
+         "blur": 40,
+         "type": "drop_shadow",
+         "color": "#000000",
+         "opacity": 0.5,
+         "offset_y": 24
+        }
+       ],
+       "duration": "end",
+       "fill_color": "#0F172A",
+       "stroke_color": "#334155",
+       "stroke_width": 2,
+       "border_radius": 48
+      },
+      {
+       "x": 16,
+       "y": 16,
+       "id": "p-screen",
+       "time": 0,
+       "type": "shape",
+       "layer": 2,
+       "width": 348,
+       "height": 748,
+       "duration": "end",
+       "fill_color": "#F7F9FD",
+       "border_radius": 36
+      },
+      {
+       "x": 130,
+       "y": 30,
+       "id": "p-notch",
+       "time": 0,
+       "type": "shape",
+       "layer": 3,
+       "width": 120,
+       "height": 28,
+       "duration": "end",
+       "fill_color": "#0F172A",
+       "border_radius": 14
+      },
+      {
+       "x": 40,
+       "y": 90,
+       "id": "p-app",
+       "text": "Aurora Reserve",
+       "time": 12.2,
+       "type": "text",
+       "layer": 4,
+       "style": "ink",
+       "duration": "end",
+       "font_size": 20,
+       "animations": [
+        {
+         "time": "start",
+         "type": "fade-in",
+         "duration": 0.3
+        }
+       ]
+      },
+      {
+       "x": 40,
+       "y": 130,
+       "id": "p-bal-l",
+       "text": "AVAILABLE BALANCE",
+       "time": 12.4,
+       "type": "text",
+       "layer": 5,
+       "style": "body",
+       "duration": "end",
+       "font_size": 12,
+       "animations": [
+        {
+         "time": "start",
+         "type": "fade-in",
+         "duration": 0.3
+        }
+       ],
+       "letter_spacing": 2
+      },
+      {
+       "x": 40,
+       "y": 150,
+       "id": "p-bal",
+       "text": "{v}",
+       "time": 12.6,
+       "type": "text",
+       "layer": 6,
+       "style": "displayink",
+       "duration": 0.14,
+       "font_size": 40,
+       "repeat_data": [
+        {
+         "v": "$0"
+        },
+        {
+         "v": "$4,120"
+        },
+        {
+         "v": "$8,960"
+        },
+        {
+         "v": "$11,430"
+        },
+        {
+         "v": "$12,480"
+        },
+        {
+         "v": "$12,480.20",
+         "duration": "end"
+        }
+       ],
+       "repeat_stagger": 0.14
+      },
+      {
+       "x": 40,
+       "y": 220,
+       "id": "p-card",
+       "time": 13.2,
+       "type": "shape",
+       "layer": 7,
+       "width": 300,
+       "height": 150,
+       "effects": [
+        {
+         "blur": 20,
+         "type": "drop_shadow",
+         "color": "#0F172A",
+         "opacity": 0.25,
+         "offset_y": 10
+        }
+       ],
+       "duration": "end",
+       "gradient": {
+        "type": "linear",
+        "angle": 135,
+        "stops": [
+         {
+          "color": "#2563EB",
+          "offset": 0
+         },
+         {
+          "color": "#0F172A",
+          "offset": 1
+         }
+        ]
+       },
+       "animations": [
+        {
+         "time": "start",
+         "type": "scale-in",
+         "easing": "ease-out-back",
+         "duration": 0.45
+        },
+        {
+         "time": "start",
+         "type": "fade-in",
+         "duration": 0.25
+        }
+       ],
+       "border_radius": 18
+      },
+      {
+       "x": 64,
+       "y": 330,
+       "id": "p-card-t",
+       "text": "\u2022\u2022\u2022\u2022  4471",
+       "time": 13.5,
+       "type": "text",
+       "layer": 8,
+       "style": "ink",
+       "duration": "end",
+       "font_size": 16,
+       "animations": [
+        {
+         "time": "start",
+         "type": "fade-in",
+         "duration": 0.3
+        }
+       ],
+       "fill_color": "#FFFFFF",
+       "letter_spacing": 3
+      },
+      {
+       "x": 64,
+       "y": 244,
+       "id": "p-card-n",
+       "text": "RESERVE CARD",
+       "time": 13.5,
+       "type": "text",
+       "layer": 9,
+       "style": "body",
+       "duration": "end",
+       "font_size": 12,
+       "animations": [
+        {
+         "time": "start",
+         "type": "fade-in",
+         "duration": 0.3
+        }
+       ],
+       "fill_color": "#BFDBFE",
+       "letter_spacing": 2
+      },
+      {
+       "x": 40,
+       "y": {
+        "expr": "400 + i*62"
+       },
+       "id": "p-tx",
+       "time": 13.9,
+       "type": "shape",
+       "layer": 10,
+       "width": 300,
+       "height": 50,
+       "repeat": 4,
+       "duration": "end",
+       "animations": [
+        {
+         "time": "start",
+         "type": "slide-up-in",
+         "easing": "ease-out-cubic",
+         "distance": 24,
+         "duration": 0.4
+        },
+        {
+         "time": "start",
+         "type": "fade-in",
+         "duration": 0.3
+        }
+       ],
+       "fill_color": "#FFFFFF",
+       "stroke_color": "#E2E8F0",
+       "stroke_width": 1,
+       "border_radius": 12,
+       "repeat_stagger": 0.16
+      },
+      {
+       "x": 58,
+       "y": {
+        "expr": "416 + i*62"
+       },
+       "id": "p-tx-t",
+       "text": "{txt}",
+       "time": 13.95,
+       "type": "text",
+       "layer": 11,
+       "style": "ink",
+       "duration": "end",
+       "font_size": 14,
+       "animations": [
+        {
+         "time": "start",
+         "type": "fade-in",
+         "duration": 0.3
+        }
+       ],
+       "repeat_data": [
+        {
+         "txt": "Fog City Roasters"
+        },
+        {
+         "txt": "Payroll deposit"
+        },
+        {
+         "txt": "Big Boy Subs"
+        },
+        {
+         "txt": "Transfer to savings"
+        }
+       ],
+       "repeat_stagger": 0.16
+      },
+      {
+       "x": 322,
+       "y": {
+        "expr": "416 + i*62"
+       },
+       "id": "p-tx-a",
+       "text": "{txt}",
+       "time": 13.95,
+       "type": "text",
+       "layer": 12,
+       "style": "ink",
+       "duration": "end",
+       "x_anchor": "100%",
+       "font_size": 14,
+       "animations": [
+        {
+         "time": "start",
+         "type": "fade-in",
+         "duration": 0.3
+        }
+       ],
+       "fill_color": "{c}",
+       "repeat_data": [
+        {
+         "c": "#475569",
+         "txt": "-$6.40"
+        },
+        {
+         "c": "#16A34A",
+         "txt": "+$3,200"
+        },
+        {
+         "c": "#475569",
+         "txt": "-$18.95"
+        },
+        {
+         "c": "#475569",
+         "txt": "-$500"
+        }
+       ],
+       "repeat_stagger": 0.16
+      },
+      {
+       "x": 16,
+       "y": 700,
+       "id": "p-nav",
+       "time": 12.2,
+       "type": "shape",
+       "layer": 13,
+       "width": 348,
+       "height": 64,
+       "duration": "end",
+       "animations": [
+        {
+         "time": "start",
+         "type": "fade-in",
+         "duration": 0.3
+        }
+       ],
+       "fill_color": "#FFFFFF",
+       "stroke_color": "#E2E8F0",
+       "stroke_width": 1
+      },
+      {
+       "x": {
+        "expr": "62 + i*82"
+       },
+       "y": 720,
+       "id": "p-nav-i",
+       "time": 12.3,
+       "type": "shape",
+       "layer": 14,
+       "width": 24,
+       "height": 24,
+       "duration": "end",
+       "animations": [
+        {
+         "time": "start",
+         "type": "fade-in",
+         "duration": 0.3
+        }
+       ],
+       "fill_color": "{c}",
+       "repeat_data": [
+        {
+         "c": "#2563EB"
+        },
+        {
+         "c": "#CBD5E1"
+        },
+        {
+         "c": "#CBD5E1"
+        },
+        {
+         "c": "#CBD5E1"
+        }
+       ],
+       "border_radius": 7
+      }
+     ],
+     "keyframe_animations": [
+      {
+       "property": "position",
+       "keyframes": [
+        {
+         "time": 11.2,
+         "value": [
+          1240,
+          240
+         ]
+        },
+        {
+         "time": 12,
+         "value": [
+          1240,
+          150
+         ],
+         "easing": "ease-out-cubic"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "keyframe_animations": [
+    {
+     "property": "opacity",
+     "keyframes": [
+      {
+       "time": 0,
+       "value": 0
+      },
+      {
+       "time": 11.1,
+       "value": 0
+      },
+      {
+       "time": 11.5,
+       "value": 1,
+       "easing": "ease-out-cubic"
+      },
+      {
+       "time": 16.6,
+       "value": 1
+      },
+      {
+       "time": 16.9,
        "value": 0,
        "easing": "ease-in-cubic"
       }
@@ -737,38 +1664,551 @@
   {
    "x": 960,
    "y": 540,
-   "id": "s2",
+   "id": "g3",
    "clip": true,
    "time": 0,
    "type": "group",
-   "layer": 11,
+   "layer": 13,
+   "width": 1240,
+   "height": 700,
+   "duration": "end",
+   "elements": [
+    {
+     "id": "s-card",
+     "time": 0,
+     "type": "shape",
+     "layer": 1,
+     "width": 1240,
+     "height": 700,
+     "duration": "end",
+     "fill_color": "#FFFFFF"
+    },
+    {
+     "x": 40,
+     "y": 26,
+     "id": "s-brand",
+     "text": "MODERN STREET",
+     "time": 17.2,
+     "type": "text",
+     "layer": 2,
+     "style": "displayink",
+     "duration": "end",
+     "font_size": 24,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "letter_spacing": 5
+    },
+    {
+     "x": {
+      "expr": "860 + i*120"
+     },
+     "y": 30,
+     "id": "s-nav",
+     "text": "{txt}",
+     "time": 17.2,
+     "type": "text",
+     "layer": 3,
+     "style": "body",
+     "duration": "end",
+     "font_size": 13,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "repeat_data": [
+      {
+       "txt": "NEW"
+      },
+      {
+       "txt": "COLLECTIONS"
+      }
+     ],
+     "letter_spacing": 2
+    },
+    {
+     "x": 1200,
+     "y": 30,
+     "id": "s-bag",
+     "text": "BAG (0)",
+     "time": 17.2,
+     "type": "text",
+     "layer": 4,
+     "style": "ink",
+     "duration": 2.9,
+     "x_anchor": "100%",
+     "font_size": 13,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "letter_spacing": 2
+    },
+    {
+     "x": 1200,
+     "y": 30,
+     "id": "s-bag1",
+     "text": "BAG (1)",
+     "time": 20.1,
+     "type": "text",
+     "layer": 5,
+     "style": "ink",
+     "duration": "end",
+     "x_anchor": "100%",
+     "font_size": 13,
+     "animations": [
+      {
+       "time": "start",
+       "type": "bounce-in",
+       "duration": 0.4
+      }
+     ],
+     "fill_color": "#2563EB",
+     "letter_spacing": 2
+    },
+    {
+     "x": {
+      "expr": "40 + mod(i,3)*400"
+     },
+     "y": {
+      "expr": "90 + floor(i/3)*300"
+     },
+     "id": "s-tiles",
+     "time": 17.6,
+     "type": "shape",
+     "layer": 6,
+     "width": 360,
+     "height": 270,
+     "repeat": 6,
+     "duration": "end",
+     "animations": [
+      {
+       "time": "start",
+       "type": "scale-in",
+       "easing": "ease-out-back",
+       "duration": 0.4
+      },
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.25
+      }
+     ],
+     "fill_color": "#F7F9FD",
+     "stroke_color": "#E2E8F0",
+     "stroke_width": 1,
+     "border_radius": 12,
+     "repeat_stagger": 0.14
+    },
+    {
+     "x": {
+      "expr": "130 + mod(i,3)*400"
+     },
+     "y": {
+      "expr": "112 + floor(i/3)*300"
+     },
+     "id": "s-garment",
+     "time": 17.7,
+     "type": "shape",
+     "layer": 7,
+     "width": 180,
+     "height": 150,
+     "duration": "end",
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.35
+      }
+     ],
+     "fill_color": "{c}",
+     "repeat_data": [
+      {
+       "c": "#0F172A"
+      },
+      {
+       "c": "#94A3B8"
+      },
+      {
+       "c": "#334155"
+      },
+      {
+       "c": "#CBD5E1"
+      },
+      {
+       "c": "#1E293B"
+      },
+      {
+       "c": "#64748B"
+      }
+     ],
+     "border_radius": 14,
+     "repeat_stagger": 0.14
+    },
+    {
+     "x": {
+      "expr": "60 + mod(i,3)*400"
+     },
+     "y": {
+      "expr": "282 + floor(i/3)*300"
+     },
+     "id": "s-name",
+     "text": "{txt}",
+     "time": 17.8,
+     "type": "text",
+     "layer": 8,
+     "style": "ink",
+     "duration": "end",
+     "font_size": 16,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "repeat_data": [
+      {
+       "txt": "Oversized Charcoal Hoodie"
+      },
+      {
+       "txt": "Tailored Joggers"
+      },
+      {
+       "txt": "Slate Crewneck"
+      },
+      {
+       "txt": "Cloud Tee"
+      },
+      {
+       "txt": "Night Overshirt"
+      },
+      {
+       "txt": "Ash Cap"
+      }
+     ],
+     "repeat_stagger": 0.14
+    },
+    {
+     "x": {
+      "expr": "60 + mod(i,3)*400"
+     },
+     "y": {
+      "expr": "308 + floor(i/3)*300"
+     },
+     "id": "s-price",
+     "text": "{txt}",
+     "time": 17.8,
+     "type": "text",
+     "layer": 9,
+     "style": "body",
+     "duration": "end",
+     "font_size": 14,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "repeat_data": [
+      {
+       "txt": "$120.00 USD"
+      },
+      {
+       "txt": "$145.00 USD"
+      },
+      {
+       "txt": "$85.00 USD"
+      },
+      {
+       "txt": "$60.00 USD"
+      },
+      {
+       "txt": "$110.00 USD"
+      },
+      {
+       "txt": "$45.00 USD"
+      }
+     ],
+     "repeat_stagger": 0.14
+    },
+    {
+     "x": 240,
+     "y": 296,
+     "id": "s-btn",
+     "time": 19.2,
+     "type": "shape",
+     "layer": 10,
+     "width": 150,
+     "height": 40,
+     "duration": "end",
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "brightness": [
+      {
+       "time": 0.6,
+       "value": 1
+      },
+      {
+       "time": 0.7,
+       "value": 1.9
+      },
+      {
+       "time": 1,
+       "value": 1
+      }
+     ],
+     "fill_color": "#0F172A",
+     "border_radius": 8
+    },
+    {
+     "x": 240,
+     "y": 296,
+     "id": "s-btn-t",
+     "text": "ADD TO BAG",
+     "time": 19.25,
+     "type": "text",
+     "layer": 11,
+     "style": "ink",
+     "width": 150,
+     "height": 40,
+     "duration": "end",
+     "font_size": 12,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "fill_color": "#FFFFFF",
+     "text_align": "center",
+     "letter_spacing": 2,
+     "vertical_align": "middle"
+    },
+    {
+     "id": "s-cursor",
+     "time": 18.9,
+     "type": "shape",
+     "layer": 30,
+     "paths": [
+      {
+       "d": "M5 3 L5 20 L9.5 15.8 L12.6 22.2 L15.1 21 L12 14.8 L18.4 14.8 Z",
+       "fill": "#0F172A",
+       "stroke": "#FFFFFF",
+       "stroke_width": 1.2
+      }
+     ],
+     "width": 30,
+     "height": 30,
+     "duration": "end",
+     "view_box": [
+      0,
+      0,
+      24,
+      24
+     ],
+     "keyframe_animations": [
+      {
+       "property": "position",
+       "keyframes": [
+        {
+         "time": 0,
+         "value": [
+          900,
+          560
+         ],
+         "easing": "ease-in-out-cubic",
+         "out_tangent": [
+          -200,
+          -160
+         ]
+        },
+        {
+         "time": 0.9,
+         "value": [
+          318,
+          318
+         ],
+         "easing": "ease-in-out-cubic",
+         "in_tangent": [
+          -120,
+          60
+         ]
+        }
+       ]
+      },
+      {
+       "property": "scale",
+       "keyframes": [
+        {
+         "time": 0.9,
+         "value": 1
+        },
+        {
+         "time": 1,
+         "value": 0.8,
+         "easing": "ease-out-quad"
+        },
+        {
+         "time": 1.15,
+         "value": 1,
+         "easing": "ease-out-back"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "x": 940,
+     "y": 600,
+     "id": "s-toast",
+     "time": 20.1,
+     "type": "shape",
+     "layer": 31,
+     "width": 240,
+     "height": 48,
+     "effects": [
+      {
+       "blur": 16,
+       "type": "drop_shadow",
+       "color": "#0F172A",
+       "opacity": 0.25,
+       "offset_y": 8
+      }
+     ],
+     "duration": "end",
+     "animations": [
+      {
+       "time": "start",
+       "type": "bounce-in",
+       "duration": 0.5
+      }
+     ],
+     "fill_color": "#0F172A",
+     "border_radius": 24
+    },
+    {
+     "x": 940,
+     "y": 600,
+     "id": "s-toast-t",
+     "text": "Added to bag \u2713",
+     "time": 20.15,
+     "type": "text",
+     "layer": 32,
+     "style": "ink",
+     "width": 240,
+     "height": 48,
+     "duration": "end",
+     "font_size": 14,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "fill_color": "#FFFFFF",
+     "text_align": "center",
+     "vertical_align": "middle"
+    }
+   ],
+   "x_anchor": "50%",
+   "y_anchor": "50%",
+   "border_radius": 14,
+   "keyframe_animations": [
+    {
+     "property": "opacity",
+     "keyframes": [
+      {
+       "time": 0,
+       "value": 0
+      },
+      {
+       "time": 16.7,
+       "value": 0
+      },
+      {
+       "time": 17.1,
+       "value": 1,
+       "easing": "ease-out-cubic"
+      },
+      {
+       "time": 22.2,
+       "value": 1
+      },
+      {
+       "time": 22.5,
+       "value": 0,
+       "easing": "ease-in-cubic"
+      }
+     ]
+    },
+    {
+     "property": "scale",
+     "keyframes": [
+      {
+       "time": 16.7,
+       "value": 0.96
+      },
+      {
+       "time": 17.6,
+       "value": 1,
+       "easing": "ease-out-cubic"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "x": 960,
+   "y": 540,
+   "id": "g4",
+   "clip": true,
+   "time": 0,
+   "type": "group",
+   "layer": 14,
    "width": 1400,
    "height": 760,
    "duration": "end",
    "elements": [
     {
-     "id": "d-bg",
+     "id": "d-card",
      "time": 0,
      "type": "shape",
      "layer": 1,
      "width": 1400,
      "height": 760,
      "duration": "end",
-     "fill_color": "#0F172A",
-     "stroke_color": "#1E293B",
-     "stroke_width": 1
+     "fill_color": "#FFFFFF"
     },
     {
      "x": 40,
-     "y": 30,
+     "y": 28,
      "id": "d-title",
      "text": "Revenue overview",
-     "time": 5.6,
+     "time": 22.6,
      "type": "text",
      "layer": 2,
-     "style": "ui",
+     "style": "ink",
      "duration": "end",
-     "font_size": 30,
+     "font_size": 24,
      "animations": [
       {
        "time": "start",
@@ -779,57 +2219,37 @@
     },
     {
      "x": 1360,
-     "y": 36,
+     "y": 34,
      "id": "d-period",
-     "text": "Q3 2026 \u00b7 live",
-     "time": 5.6,
+     "text": "Q3 2026 \u00b7 LIVE",
+     "time": 22.6,
      "type": "text",
      "layer": 3,
-     "style": "muted",
+     "style": "body",
      "duration": "end",
      "x_anchor": "100%",
-     "font_size": 20,
+     "font_size": 14,
      "animations": [
       {
        "time": "start",
        "type": "fade-in",
        "duration": 0.3
       }
-     ]
+     ],
+     "letter_spacing": 2
     },
     {
      "x": {
       "expr": "40 + i*335"
      },
-     "y": 90,
+     "y": 80,
      "id": "d-tiles",
-     "time": 5.8,
+     "time": 22.9,
      "type": "shape",
      "layer": 4,
      "width": 310,
-     "height": 130,
+     "height": 120,
      "repeat": 4,
-     "effects": [
-      {
-       "type": "glow",
-       "color": "#3B82F6",
-       "radius": 18,
-       "intensity": [
-        {
-         "time": 0,
-         "value": 0
-        },
-        {
-         "time": 0.4,
-         "value": 0.9
-        },
-        {
-         "time": 1.2,
-         "value": 0.2
-        }
-       ]
-      }
-     ],
      "duration": "end",
      "animations": [
       {
@@ -837,7 +2257,7 @@
        "type": "slide-up-in",
        "easing": "ease-out-cubic",
        "distance": 30,
-       "duration": 0.4
+       "duration": 0.45
       },
       {
        "time": "start",
@@ -845,25 +2265,25 @@
        "duration": 0.3
       }
      ],
-     "fill_color": "#111C3A",
-     "stroke_color": "#24304F",
+     "fill_color": "#F7F9FD",
+     "stroke_color": "#E2E8F0",
      "stroke_width": 1,
-     "border_radius": 14,
-     "repeat_stagger": 0.12
+     "border_radius": 12,
+     "repeat_stagger": 0.15
     },
     {
      "x": {
       "expr": "60 + i*335"
      },
-     "y": 108,
+     "y": 100,
      "id": "d-labels",
      "text": "{l}",
-     "time": 5.9,
+     "time": 23,
      "type": "text",
      "layer": 5,
-     "style": "muted",
+     "style": "body",
      "duration": "end",
-     "font_size": 18,
+     "font_size": 12,
      "animations": [
       {
        "time": "start",
@@ -873,7 +2293,7 @@
      ],
      "repeat_data": [
       {
-       "l": "ARR"
+       "l": "ANNUAL RECURRING REVENUE"
       },
       {
        "l": "EBITDA MARGIN"
@@ -886,20 +2306,20 @@
       }
      ],
      "letter_spacing": 2,
-     "repeat_stagger": 0.12
+     "repeat_stagger": 0.15
     },
     {
      "x": 60,
-     "y": 150,
+     "y": 130,
      "id": "d-v1",
      "text": "{v}",
-     "time": 6.2,
+     "time": 23.4,
      "type": "text",
      "layer": 6,
-     "style": "ui",
-     "duration": 0.12,
-     "font_size": 44,
-     "fill_color": "#67E8F9",
+     "style": "displayink",
+     "duration": 0.14,
+     "font_size": 40,
+     "fill_color": "#2563EB",
      "repeat_data": [
       {
        "v": "$0"
@@ -921,20 +2341,19 @@
        "duration": "end"
       }
      ],
-     "repeat_stagger": 0.12
+     "repeat_stagger": 0.14
     },
     {
      "x": 395,
-     "y": 150,
+     "y": 130,
      "id": "d-v2",
      "text": "{v}",
-     "time": 6.32,
+     "time": 23.55,
      "type": "text",
      "layer": 7,
-     "style": "ui",
-     "duration": 0.12,
-     "font_size": 44,
-     "fill_color": "#A5B4FC",
+     "style": "displayink",
+     "duration": 0.14,
+     "font_size": 40,
      "repeat_data": [
       {
        "v": "0%"
@@ -956,20 +2375,19 @@
        "duration": "end"
       }
      ],
-     "repeat_stagger": 0.12
+     "repeat_stagger": 0.14
     },
     {
      "x": 730,
-     "y": 150,
+     "y": 130,
      "id": "d-v3",
      "text": "{v}",
-     "time": 6.44,
+     "time": 23.7,
      "type": "text",
      "layer": 8,
-     "style": "ui",
-     "duration": 0.12,
-     "font_size": 44,
-     "fill_color": "#C4B5FD",
+     "style": "displayink",
+     "duration": 0.14,
+     "font_size": 40,
      "repeat_data": [
       {
        "v": "$0"
@@ -991,20 +2409,20 @@
        "duration": "end"
       }
      ],
-     "repeat_stagger": 0.12
+     "repeat_stagger": 0.14
     },
     {
      "x": 1065,
-     "y": 150,
+     "y": 130,
      "id": "d-v4",
      "text": "{v}",
-     "time": 6.56,
+     "time": 23.85,
      "type": "text",
      "layer": 9,
-     "style": "ui",
-     "duration": 0.12,
-     "font_size": 44,
-     "fill_color": "#67E8F9",
+     "style": "displayink",
+     "duration": 0.14,
+     "font_size": 40,
+     "fill_color": "#16A34A",
      "repeat_data": [
       {
        "v": "0%"
@@ -1026,19 +2444,19 @@
        "duration": "end"
       }
      ],
-     "repeat_stagger": 0.12
+     "repeat_stagger": 0.14
     },
     {
      "x": 60,
      "y": {
-      "expr": "290 + i*84"
+      "expr": "280 + i*82"
      },
      "id": "d-tracks",
-     "time": 6.6,
+     "time": 24,
      "type": "shape",
      "layer": 10,
      "width": 760,
-     "height": 24,
+     "height": 22,
      "repeat": 5,
      "duration": "end",
      "animations": [
@@ -1048,89 +2466,71 @@
        "duration": 0.3
       }
      ],
-     "fill_color": "#1B2542",
-     "border_radius": 12,
-     "repeat_stagger": 0.18
+     "fill_color": "#E2E8F0",
+     "border_radius": 11,
+     "repeat_stagger": 0.2
     },
     {
      "x": 60,
      "y": {
-      "expr": "290 + i*84"
+      "expr": "280 + i*82"
      },
      "id": "d-bars",
-     "time": 6.7,
+     "time": 24.15,
      "type": "shape",
      "layer": 11,
      "width": {
-      "expr": "ease(t,0,0.9,0,w)"
+      "expr": "ease(t,0,1.0,0,w)"
      },
-     "height": 24,
-     "effects": [
-      {
-       "type": "glow",
-       "color": "{c0}",
-       "radius": 16,
-       "intensity": 0.5
-      }
-     ],
+     "height": 22,
      "duration": "end",
      "gradient": {
       "type": "linear",
       "angle": 90,
       "stops": [
        {
-        "color": "{c0}",
+        "color": "#0F172A",
         "offset": 0
        },
        {
-        "color": "{c1}",
+        "color": "#2563EB",
         "offset": 1
        }
       ]
      },
      "repeat_data": [
       {
-       "w": 700,
-       "c0": "#22D3EE",
-       "c1": "#6366F1"
+       "w": 700
       },
       {
-       "w": 520,
-       "c0": "#6366F1",
-       "c1": "#A855F7"
+       "w": 520
       },
       {
-       "w": 610,
-       "c0": "#A855F7",
-       "c1": "#EC4899"
+       "w": 610
       },
       {
-       "w": 430,
-       "c0": "#3B82F6",
-       "c1": "#22D3EE"
+       "w": 430
       },
       {
-       "w": 660,
-       "c0": "#7C3AED",
-       "c1": "#3B82F6"
+       "w": 660
       }
      ],
-     "border_radius": 12,
-     "repeat_stagger": 0.18
+     "border_radius": 11,
+     "repeat_stagger": 0.2
     },
     {
      "x": 60,
      "y": {
-      "expr": "262 + i*84"
+      "expr": "254 + i*82"
      },
      "id": "d-bar-l",
      "text": "{l}",
-     "time": 6.6,
+     "time": 24,
      "type": "text",
      "layer": 12,
-     "style": "muted",
+     "style": "body",
      "duration": "end",
-     "font_size": 18,
+     "font_size": 12,
      "animations": [
       {
        "time": "start",
@@ -1156,40 +2556,32 @@
       }
      ],
      "letter_spacing": 2,
-     "repeat_stagger": 0.18
+     "repeat_stagger": 0.2
     },
     {
      "x": {
       "expr": "920 + i*56"
      },
-     "y": 720,
+     "y": 700,
      "id": "d-cols",
-     "time": 6.9,
+     "time": 24.6,
      "type": "shape",
      "layer": 13,
      "width": 40,
      "height": {
-      "expr": "ease(t,0,0.8,0,h)"
+      "expr": "ease(t,0,0.9,0,h)"
      },
-     "effects": [
-      {
-       "type": "glow",
-       "color": "#7C3AED",
-       "radius": 14,
-       "intensity": 0.45
-      }
-     ],
      "duration": "end",
      "gradient": {
       "type": "linear",
       "angle": 180,
       "stops": [
        {
-        "color": "#7C3AED",
+        "color": "#2563EB",
         "offset": 0
        },
        {
-        "color": "#3B82F6",
+        "color": "#0F172A",
         "offset": 1
        }
       ]
@@ -1197,44 +2589,56 @@
      "y_anchor": "100%",
      "repeat_data": [
       {
-       "h": 140
+       "h": 130
       },
       {
-       "h": 190
+       "h": 180
       },
       {
-       "h": 170
+       "h": 160
       },
       {
-       "h": 250
+       "h": 240
       },
       {
-       "h": 300
+       "h": 290
       },
       {
-       "h": 280
+       "h": 270
       },
       {
-       "h": 350
+       "h": 340
       },
       {
-       "h": 410
+       "h": 400
       }
      ],
      "border_radius": 6,
-     "repeat_stagger": 0.08
+     "repeat_stagger": 0.1
     },
     {
      "x": 920,
-     "y": 262,
+     "y": 700,
+     "id": "d-base",
+     "time": 24.5,
+     "type": "shape",
+     "layer": 14,
+     "width": 440,
+     "height": 1,
+     "duration": "end",
+     "fill_color": "#E2E8F0"
+    },
+    {
+     "x": 920,
+     "y": 254,
      "id": "d-chart-t",
      "text": "MONTHLY REVENUE",
-     "time": 6.9,
+     "time": 24.5,
      "type": "text",
-     "layer": 14,
-     "style": "muted",
+     "layer": 15,
+     "style": "body",
      "duration": "end",
-     "font_size": 18,
+     "font_size": 12,
      "animations": [
       {
        "time": "start",
@@ -1246,21 +2650,13 @@
     },
     {
      "x": 1170,
-     "y": 280,
+     "y": 276,
      "id": "d-pill",
-     "time": 8.6,
+     "time": 26.4,
      "type": "shape",
-     "layer": 15,
+     "layer": 16,
      "width": 190,
-     "height": 48,
-     "effects": [
-      {
-       "type": "glow",
-       "color": "#22C55E",
-       "radius": 18,
-       "intensity": 0.7
-      }
-     ],
+     "height": 44,
      "duration": "end",
      "animations": [
       {
@@ -1269,24 +2665,24 @@
        "duration": 0.5
       }
      ],
-     "fill_color": "#052E1B",
-     "stroke_color": "#22C55E",
+     "fill_color": "#DCFCE7",
+     "stroke_color": "#16A34A",
      "stroke_width": 1,
-     "border_radius": 24
+     "border_radius": 22
     },
     {
      "x": 1170,
-     "y": 280,
+     "y": 276,
      "id": "d-pill-t",
      "text": "+31% QoQ",
-     "time": 8.65,
+     "time": 26.45,
      "type": "text",
-     "layer": 16,
-     "style": "ui",
+     "layer": 17,
+     "style": "ink",
      "width": 190,
-     "height": 48,
+     "height": 44,
      "duration": "end",
-     "font_size": 20,
+     "font_size": 16,
      "animations": [
       {
        "time": "start",
@@ -1294,14 +2690,14 @@
        "duration": 0.3
       }
      ],
-     "fill_color": "#4ADE80",
+     "fill_color": "#15803D",
      "text_align": "center",
      "vertical_align": "middle"
     }
    ],
    "x_anchor": "50%",
    "y_anchor": "50%",
-   "border_radius": 18,
+   "border_radius": 16,
    "keyframe_animations": [
     {
      "property": "opacity",
@@ -1311,20 +2707,20 @@
        "value": 0
       },
       {
-       "time": 5.4,
+       "time": 22.3,
        "value": 0
       },
       {
-       "time": 5.75,
+       "time": 22.7,
        "value": 1,
        "easing": "ease-out-cubic"
       },
       {
-       "time": 10.9,
+       "time": 28,
        "value": 1
       },
       {
-       "time": 11.2,
+       "time": 28.3,
        "value": 0,
        "easing": "ease-in-cubic"
       }
@@ -1334,11 +2730,11 @@
      "property": "scale",
      "keyframes": [
       {
-       "time": 5.4,
+       "time": 22.3,
        "value": 0.96
       },
       {
-       "time": 6.2,
+       "time": 23.2,
        "value": 1,
        "easing": "ease-out-cubic"
       }
@@ -1349,38 +2745,48 @@
   {
    "x": 960,
    "y": 540,
-   "id": "s3",
+   "id": "g5",
    "clip": true,
    "time": 0,
    "type": "group",
-   "layer": 12,
+   "layer": 15,
    "width": 1500,
    "height": 760,
    "duration": "end",
    "elements": [
     {
-     "id": "c-bg",
+     "id": "c-card",
      "time": 0,
      "type": "shape",
      "layer": 1,
      "width": 1500,
      "height": 760,
      "duration": "end",
-     "fill_color": "#0F172A",
-     "stroke_color": "#1E293B",
+     "fill_color": "#F8FAF9"
+    },
+    {
+     "id": "c-side",
+     "time": 0,
+     "type": "shape",
+     "layer": 2,
+     "width": 260,
+     "height": 760,
+     "duration": "end",
+     "fill_color": "#FFFFFF",
+     "stroke_color": "#E2F0EA",
      "stroke_width": 1
     },
     {
-     "x": 40,
-     "y": 30,
-     "id": "c-title",
-     "text": "Pipeline",
-     "time": 11.1,
+     "x": 24,
+     "y": 26,
+     "id": "c-brand",
+     "text": "Meridian Interface",
+     "time": 28.4,
      "type": "text",
-     "layer": 2,
-     "style": "ui",
+     "layer": 3,
+     "style": "green",
      "duration": "end",
-     "font_size": 30,
+     "font_size": 16,
      "animations": [
       {
        "time": "start",
@@ -1390,16 +2796,219 @@
      ]
     },
     {
-     "x": {
-      "expr": "40 + i*490"
-     },
+     "x": 24,
+     "y": 50,
+     "id": "c-ws",
+     "text": "CRM WORKSPACE",
+     "time": 28.4,
+     "type": "text",
+     "layer": 4,
+     "style": "sage",
+     "duration": "end",
+     "font_size": 10,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "fill_color": "#00AC76"
+    },
+    {
+     "x": 24,
      "y": 90,
-     "id": "c-cols",
-     "time": 11.1,
+     "id": "c-qa",
+     "time": 28.7,
      "type": "shape",
-     "layer": 3,
-     "width": 460,
-     "height": 640,
+     "layer": 5,
+     "width": 212,
+     "height": 40,
+     "duration": "end",
+     "animations": [
+      {
+       "time": "start",
+       "type": "bounce-in",
+       "duration": 0.45
+      }
+     ],
+     "fill_color": "#00AC76",
+     "border_radius": 10
+    },
+    {
+     "x": 24,
+     "y": 90,
+     "id": "c-qa-t",
+     "text": "+  Quick Add Record",
+     "time": 28.75,
+     "type": "text",
+     "layer": 6,
+     "style": "ink",
+     "width": 212,
+     "height": 40,
+     "duration": "end",
+     "font_size": 13,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "fill_color": "#FFFFFF",
+     "text_align": "center",
+     "vertical_align": "middle"
+    },
+    {
+     "x": 24,
+     "y": 160,
+     "id": "c-active",
+     "time": 28.9,
+     "type": "shape",
+     "layer": 7,
+     "width": 212,
+     "height": 34,
+     "duration": "end",
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "fill_color": "#E2F0EA",
+     "border_radius": 8
+    },
+    {
+     "x": 44,
+     "y": {
+      "expr": "168 + i*40"
+     },
+     "id": "c-items",
+     "text": "{txt}",
+     "time": 28.9,
+     "type": "text",
+     "layer": 8,
+     "style": "green",
+     "duration": "end",
+     "font_size": 14,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "fill_color": "{c}",
+     "repeat_data": [
+      {
+       "c": "#00AC76",
+       "txt": "Overview"
+      },
+      {
+       "c": "#112F24",
+       "txt": "Leads Funnel"
+      },
+      {
+       "c": "#112F24",
+       "txt": "Operations Projects"
+      },
+      {
+       "c": "#112F24",
+       "txt": "Memos & Reports"
+      },
+      {
+       "c": "#112F24",
+       "txt": "Client Contacts"
+      },
+      {
+       "c": "#112F24",
+       "txt": "Kanban Board"
+      },
+      {
+       "c": "#112F24",
+       "txt": "Manage Invoices"
+      }
+     ],
+     "repeat_stagger": 0.07
+    },
+    {
+     "x": {
+      "expr": "300 + i*400"
+     },
+     "y": 40,
+     "id": "c-kpi",
+     "time": 29.1,
+     "type": "shape",
+     "layer": 9,
+     "width": 380,
+     "height": 150,
+     "repeat": 3,
+     "duration": "end",
+     "animations": [
+      {
+       "time": "start",
+       "type": "slide-up-in",
+       "easing": "ease-out-cubic",
+       "distance": 30,
+       "duration": 0.45
+      },
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "fill_color": "#FFFFFF",
+     "stroke_color": "#E2F0EA",
+     "stroke_width": 1,
+     "border_radius": 12,
+     "repeat_stagger": 0.15
+    },
+    {
+     "x": {
+      "expr": "324 + i*400"
+     },
+     "y": 62,
+     "id": "c-kpi-l",
+     "text": "{txt}",
+     "time": 29.2,
+     "type": "text",
+     "layer": 10,
+     "style": "sage",
+     "duration": "end",
+     "font_size": 12,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "repeat_data": [
+      {
+       "txt": "TOTAL ACTIVE LEADS"
+      },
+      {
+       "txt": "MONTHLY INVOICE VALUE"
+      },
+      {
+       "txt": "PENDING TASKS COUNT"
+      }
+     ],
+     "repeat_stagger": 0.15
+    },
+    {
+     "x": {
+      "expr": "630 + i*400"
+     },
+     "y": 56,
+     "id": "c-kpi-i",
+     "time": 29.2,
+     "type": "shape",
+     "layer": 11,
+     "width": 36,
+     "height": 36,
      "repeat": 3,
      "duration": "end",
      "animations": [
@@ -1409,25 +3018,169 @@
        "duration": 0.3
       }
      ],
-     "fill_color": "#0C1530",
-     "stroke_color": "#1E293B",
+     "fill_color": "#E2F0EA",
+     "border_radius": 10,
+     "repeat_stagger": 0.15
+    },
+    {
+     "x": 324,
+     "y": 96,
+     "id": "c-k1",
+     "text": "{v}",
+     "time": 29.6,
+     "type": "text",
+     "layer": 12,
+     "style": "green",
+     "duration": 0.14,
+     "font_size": 44,
+     "repeat_data": [
+      {
+       "v": "0"
+      },
+      {
+       "v": "1"
+      },
+      {
+       "v": "2"
+      },
+      {
+       "v": "3"
+      },
+      {
+       "v": "4",
+       "duration": "end"
+      }
+     ],
+     "repeat_stagger": 0.14
+    },
+    {
+     "x": 724,
+     "y": 96,
+     "id": "c-k2",
+     "text": "{v}",
+     "time": 29.75,
+     "type": "text",
+     "layer": 13,
+     "style": "green",
+     "duration": 0.14,
+     "font_size": 44,
+     "repeat_data": [
+      {
+       "v": "$0"
+      },
+      {
+       "v": "$8,400"
+      },
+      {
+       "v": "$15,900"
+      },
+      {
+       "v": "$19,700"
+      },
+      {
+       "v": "$21,250.00",
+       "duration": "end"
+      }
+     ],
+     "repeat_stagger": 0.14
+    },
+    {
+     "x": 1124,
+     "y": 96,
+     "id": "c-k3",
+     "text": "{v}",
+     "time": 29.9,
+     "type": "text",
+     "layer": 14,
+     "style": "green",
+     "duration": 0.14,
+     "font_size": 44,
+     "repeat_data": [
+      {
+       "v": "0"
+      },
+      {
+       "v": "1"
+      },
+      {
+       "v": "2",
+       "duration": "end"
+      }
+     ],
+     "repeat_stagger": 0.14
+    },
+    {
+     "x": {
+      "expr": "324 + i*400"
+     },
+     "y": 156,
+     "id": "c-k-s",
+     "text": "{txt}",
+     "time": 30.3,
+     "type": "text",
+     "layer": 15,
+     "style": "body",
+     "duration": "end",
+     "font_size": 12,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "fill_color": "#6C8E82",
+     "repeat_data": [
+      {
+       "txt": "\u25cf Active prospects in pipeline"
+      },
+      {
+       "txt": "Invoiced in current month"
+      },
+      {
+       "txt": "Active assignments on board"
+      }
+     ]
+    },
+    {
+     "x": {
+      "expr": "300 + i*400"
+     },
+     "y": 220,
+     "id": "c-cols",
+     "time": 30,
+     "type": "shape",
+     "layer": 16,
+     "width": 380,
+     "height": 510,
+     "repeat": 3,
+     "duration": "end",
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "fill_color": "#FFFFFF",
+     "stroke_color": "#E2F0EA",
      "stroke_width": 1,
-     "border_radius": 14,
+     "border_radius": 12,
      "repeat_stagger": 0.1
     },
     {
      "x": {
-      "expr": "64 + i*490"
+      "expr": "324 + i*400"
      },
-     "y": 108,
+     "y": 240,
      "id": "c-col-t",
      "text": "{txt}",
-     "time": 11.2,
+     "time": 30.1,
      "type": "text",
-     "layer": 4,
-     "style": "muted",
+     "layer": 17,
+     "style": "sage",
      "duration": "end",
-     "font_size": 18,
+     "font_size": 12,
      "animations": [
       {
        "time": "start",
@@ -1446,29 +3199,28 @@
        "txt": "WON"
       }
      ],
-     "letter_spacing": 2,
      "repeat_stagger": 0.1
     },
     {
      "x": {
-      "expr": "60 + col*490"
+      "expr": "316 + col*400"
      },
      "y": {
-      "expr": "150 + row*130"
+      "expr": "276 + row*96"
      },
      "id": "c-cards",
-     "time": 11.4,
+     "time": 30.5,
      "type": "shape",
-     "layer": 5,
-     "width": 420,
-     "height": 112,
+     "layer": 18,
+     "width": 348,
+     "height": 80,
      "duration": "end",
      "animations": [
       {
        "time": "start",
        "type": "slide-left-in",
        "easing": "ease-out-cubic",
-       "distance": 60,
+       "distance": 50,
        "duration": 0.45
       },
       {
@@ -1477,7 +3229,7 @@
        "duration": 0.3
       }
      ],
-     "fill_color": "#162038",
+     "fill_color": "#F8FAF9",
      "repeat_data": [
       {
        "col": 0,
@@ -1508,26 +3260,74 @@
        "row": 1
       }
      ],
-     "stroke_color": "#24304F",
+     "stroke_color": "#E2F0EA",
      "stroke_width": 1,
-     "border_radius": 12,
-     "repeat_stagger": 0.09
+     "border_radius": 10,
+     "repeat_stagger": 0.1
     },
     {
      "x": {
-      "expr": "84 + col*490"
+      "expr": "316 + col*400"
      },
      "y": {
-      "expr": "168 + row*130"
+      "expr": "276 + row*96"
+     },
+     "id": "c-card-bar",
+     "time": 30.55,
+     "type": "shape",
+     "layer": 19,
+     "width": 4,
+     "height": 80,
+     "duration": "end",
+     "fill_color": "#00AC76",
+     "repeat_data": [
+      {
+       "col": 0,
+       "row": 0
+      },
+      {
+       "col": 0,
+       "row": 1
+      },
+      {
+       "col": 0,
+       "row": 2
+      },
+      {
+       "col": 1,
+       "row": 0
+      },
+      {
+       "col": 1,
+       "row": 1
+      },
+      {
+       "col": 2,
+       "row": 0
+      },
+      {
+       "col": 2,
+       "row": 1
+      }
+     ],
+     "border_radius": 2,
+     "repeat_stagger": 0.1
+    },
+    {
+     "x": {
+      "expr": "336 + col*400"
+     },
+     "y": {
+      "expr": "292 + row*96"
      },
      "id": "c-card-t",
      "text": "{txt}",
-     "time": 11.5,
+     "time": 30.6,
      "type": "text",
-     "layer": 6,
-     "style": "ui",
+     "layer": 20,
+     "style": "green",
      "duration": "end",
-     "font_size": 22,
+     "font_size": 15,
      "animations": [
       {
        "time": "start",
@@ -1572,92 +3372,104 @@
        "txt": "MODERN_STREET"
       }
      ],
-     "repeat_stagger": 0.09
+     "repeat_stagger": 0.1
     },
     {
      "x": {
-      "expr": "84 + col*490"
+      "expr": "336 + col*400"
      },
      "y": {
-      "expr": "210 + row*130"
+      "expr": "318 + row*96"
      },
-     "id": "c-card-l",
-     "time": 11.55,
-     "type": "shape",
-     "layer": 7,
-     "width": {
-      "expr": "180 + 40*col"
-     },
-     "height": 10,
-     "opacity": 0.45,
+     "id": "c-card-s",
+     "text": "{txt}",
+     "time": 30.6,
+     "type": "text",
+     "layer": 21,
+     "style": "body",
      "duration": "end",
-     "fill_color": "#3B82F6",
+     "font_size": 12,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "fill_color": "#6C8E82",
      "repeat_data": [
       {
        "col": 0,
-       "row": 0
+       "row": 0,
+       "txt": "Website \u00b7 $6,500"
       },
       {
        "col": 0,
-       "row": 1
+       "row": 1,
+       "txt": "Dashboard \u00b7 $12,000"
       },
       {
        "col": 0,
-       "row": 2
+       "row": 2,
+       "txt": "Brand & logo \u00b7 $2,400"
       },
       {
        "col": 1,
-       "row": 0
+       "row": 0,
+       "txt": "Ordering app \u00b7 $9,800"
       },
       {
        "col": 1,
-       "row": 1
+       "row": 1,
+       "txt": "Brand identity \u00b7 $4,200"
       },
       {
        "col": 2,
-       "row": 0
+       "row": 0,
+       "txt": "BI dashboard \u00b7 $18,000"
       },
       {
        "col": 2,
-       "row": 1
+       "row": 1,
+       "txt": "Storefront \u00b7 $7,500"
       }
      ],
-     "border_radius": 5,
-     "repeat_stagger": 0.09
+     "repeat_stagger": 0.1
     },
     {
      "id": "c-move",
-     "time": 12.9,
+     "time": 31.8,
      "type": "shape",
-     "layer": 8,
-     "width": 420,
-     "height": 112,
+     "layer": 22,
+     "width": 348,
+     "height": 80,
      "effects": [
       {
-       "type": "glow",
-       "color": "#3B82F6",
-       "radius": 22,
-       "intensity": [
+       "blur": 20,
+       "type": "drop_shadow",
+       "color": "#112F24",
+       "opacity": [
         {
          "time": 0,
+         "value": 0.1
+        },
+        {
+         "time": 0.5,
          "value": 0.3
         },
         {
-         "time": 0.9,
-         "value": 1.3
-        },
-        {
-         "time": 1.4,
-         "value": 0.4
+         "time": 1.1,
+         "value": 0.1
         }
-       ]
+       ],
+       "offset_y": 10
       }
      ],
      "duration": "end",
-     "fill_color": "#1B2A4A",
-     "stroke_color": "#3B82F6",
+     "fill_color": "#FFFFFF",
+     "stroke_color": "#00AC76",
      "stroke_width": 1.5,
-     "border_radius": 12,
+     "border_radius": 10,
      "keyframe_animations": [
       {
        "property": "position",
@@ -1665,8 +3477,8 @@
         {
          "time": 0,
          "value": [
-          550,
-          410
+          716,
+          468
          ],
          "easing": "ease-in-out-cubic",
          "out_tangent": [
@@ -1675,10 +3487,10 @@
          ]
         },
         {
-         "time": 0.9,
+         "time": 1,
          "value": [
-          1040,
-          410
+          1116,
+          468
          ],
          "easing": "ease-in-out-cubic",
          "in_tangent": [
@@ -1693,12 +3505,12 @@
     {
      "id": "c-move-t",
      "text": "Aurora Reserve",
-     "time": 12.9,
+     "time": 31.8,
      "type": "text",
-     "layer": 9,
-     "style": "ui",
+     "layer": 23,
+     "style": "green",
      "duration": "end",
-     "font_size": 22,
+     "font_size": 15,
      "keyframe_animations": [
       {
        "property": "position",
@@ -1706,8 +3518,8 @@
         {
          "time": 0,
          "value": [
-          574,
-          428
+          736,
+          484
          ],
          "easing": "ease-in-out-cubic",
          "out_tangent": [
@@ -1716,10 +3528,10 @@
          ]
         },
         {
-         "time": 0.9,
+         "time": 1,
          "value": [
-          1064,
-          428
+          1136,
+          484
          ],
          "easing": "ease-in-out-cubic",
          "in_tangent": [
@@ -1732,22 +3544,56 @@
      ]
     },
     {
-     "x": 1160,
-     "y": 100,
-     "id": "c-won",
-     "time": 14,
-     "type": "shape",
-     "layer": 10,
-     "width": 160,
-     "height": 44,
-     "effects": [
+     "id": "c-move-s",
+     "text": "Banking app \u00b7 $24,000",
+     "time": 31.8,
+     "type": "text",
+     "layer": 24,
+     "style": "body",
+     "duration": "end",
+     "font_size": 12,
+     "fill_color": "#6C8E82",
+     "keyframe_animations": [
       {
-       "type": "glow",
-       "color": "#22C55E",
-       "radius": 18,
-       "intensity": 0.8
+       "property": "position",
+       "keyframes": [
+        {
+         "time": 0,
+         "value": [
+          736,
+          510
+         ],
+         "easing": "ease-in-out-cubic",
+         "out_tangent": [
+          220,
+          -120
+         ]
+        },
+        {
+         "time": 1,
+         "value": [
+          1136,
+          510
+         ],
+         "easing": "ease-in-out-cubic",
+         "in_tangent": [
+          -160,
+          60
+         ]
+        }
+       ]
       }
-     ],
+     ]
+    },
+    {
+     "x": 1300,
+     "y": 232,
+     "id": "c-won",
+     "time": 33,
+     "type": "shape",
+     "layer": 25,
+     "width": 160,
+     "height": 40,
      "duration": "end",
      "animations": [
       {
@@ -1756,24 +3602,24 @@
        "duration": 0.5
       }
      ],
-     "fill_color": "#052E1B",
-     "stroke_color": "#22C55E",
+     "fill_color": "#E2FAF0",
+     "stroke_color": "#00AC76",
      "stroke_width": 1,
-     "border_radius": 22
+     "border_radius": 20
     },
     {
-     "x": 1160,
-     "y": 100,
+     "x": 1300,
+     "y": 232,
      "id": "c-won-t",
      "text": "Deal won",
-     "time": 14.05,
+     "time": 33.05,
      "type": "text",
-     "layer": 11,
-     "style": "ui",
+     "layer": 26,
+     "style": "ink",
      "width": 160,
-     "height": 44,
+     "height": 40,
      "duration": "end",
-     "font_size": 18,
+     "font_size": 14,
      "animations": [
       {
        "time": "start",
@@ -1781,14 +3627,14 @@
        "duration": 0.3
       }
      ],
-     "fill_color": "#4ADE80",
+     "fill_color": "#008A5E",
      "text_align": "center",
      "vertical_align": "middle"
     }
    ],
    "x_anchor": "50%",
    "y_anchor": "50%",
-   "border_radius": 18,
+   "border_radius": 16,
    "keyframe_animations": [
     {
      "property": "opacity",
@@ -1798,20 +3644,20 @@
        "value": 0
       },
       {
-       "time": 10.9,
+       "time": 28.1,
        "value": 0
       },
       {
-       "time": 11.25,
+       "time": 28.5,
        "value": 1,
        "easing": "ease-out-cubic"
       },
       {
-       "time": 15.9,
+       "time": 33.8,
        "value": 1
       },
       {
-       "time": 16.2,
+       "time": 34.1,
        "value": 0,
        "easing": "ease-in-cubic"
       }
@@ -1821,11 +3667,11 @@
      "property": "scale",
      "keyframes": [
       {
-       "time": 10.9,
+       "time": 28.1,
        "value": 0.96
       },
       {
-       "time": 11.7,
+       "time": 29,
        "value": 1,
        "easing": "ease-out-cubic"
       }
@@ -1836,10 +3682,431 @@
   {
    "x": 0,
    "y": 0,
-   "id": "s4",
+   "id": "g6",
    "time": 0,
    "type": "group",
-   "layer": 13,
+   "layer": 16,
+   "width": 1920,
+   "height": 1080,
+   "duration": "end",
+   "elements": [
+    {
+     "x": 160,
+     "y": 330,
+     "id": "t-kicker",
+     "text": "AI TECH STACK",
+     "time": 34.2,
+     "type": "text",
+     "layer": 2,
+     "style": "kicker",
+     "duration": "end",
+     "font_size": 20,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.5
+      }
+     ]
+    },
+    {
+     "x": 160,
+     "y": 380,
+     "id": "t-h1",
+     "text": "Five layers,",
+     "time": 34.5,
+     "type": "text",
+     "layer": 3,
+     "style": "display",
+     "duration": "end",
+     "font_size": 64,
+     "animations": [
+      {
+       "time": "start",
+       "type": "text-slide",
+       "split": "word",
+       "easing": "ease-out-cubic",
+       "stagger": 0.1,
+       "duration": 0.6,
+       "direction": "up"
+      }
+     ]
+    },
+    {
+     "x": 160,
+     "y": 456,
+     "id": "t-h2",
+     "text": "planned before",
+     "time": 34.8,
+     "type": "text",
+     "layer": 4,
+     "style": "display",
+     "duration": "end",
+     "font_size": 64,
+     "animations": [
+      {
+       "time": "start",
+       "type": "text-slide",
+       "split": "word",
+       "easing": "ease-out-cubic",
+       "stagger": 0.1,
+       "duration": 0.6,
+       "direction": "up"
+      }
+     ],
+     "fill_color": "#2563EB"
+    },
+    {
+     "x": 160,
+     "y": 532,
+     "id": "t-h3",
+     "text": "it's built.",
+     "time": 35.1,
+     "type": "text",
+     "layer": 5,
+     "style": "display",
+     "duration": "end",
+     "font_size": 64,
+     "animations": [
+      {
+       "time": "start",
+       "type": "text-slide",
+       "split": "word",
+       "easing": "ease-out-cubic",
+       "stagger": 0.1,
+       "duration": 0.6,
+       "direction": "up"
+      }
+     ],
+     "fill_color": "#2563EB"
+    },
+    {
+     "x": 160,
+     "y": 640,
+     "id": "t-sub",
+     "text": "Agents, tools, memory and guardrails \u2014 sized for your company.",
+     "time": 35.6,
+     "type": "text",
+     "layer": 6,
+     "style": "light",
+     "duration": "end",
+     "font_size": 22,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.5
+      }
+     ]
+    },
+    {
+     "x": 1000,
+     "y": {
+      "expr": "760 - i*100"
+     },
+     "id": "t-rows",
+     "time": 35.2,
+     "type": "shape",
+     "layer": 7,
+     "width": 760,
+     "height": 84,
+     "repeat": 5,
+     "effects": [
+      {
+       "blur": 22,
+       "type": "drop_shadow",
+       "color": "#000000",
+       "opacity": 0.35,
+       "offset_y": 10
+      }
+     ],
+     "duration": "end",
+     "animations": [
+      {
+       "time": "start",
+       "type": "slide-up-in",
+       "easing": "ease-out-cubic",
+       "distance": 60,
+       "duration": 0.5
+      },
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "fill_color": "#FFFFFF",
+     "stroke_color": "#E2E8F0",
+     "stroke_width": 1,
+     "border_radius": 12,
+     "repeat_stagger": 0.32
+    },
+    {
+     "x": 1018,
+     "y": {
+      "expr": "776 - i*100"
+     },
+     "id": "t-bar",
+     "time": 35.25,
+     "type": "shape",
+     "layer": 8,
+     "width": 6,
+     "height": 52,
+     "duration": "end",
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "fill_color": "{c}",
+     "repeat_data": [
+      {
+       "c": "#0F172A"
+      },
+      {
+       "c": "#2563EB"
+      },
+      {
+       "c": "#2563EB"
+      },
+      {
+       "c": "#2563EB"
+      },
+      {
+       "c": "#16A34A"
+      }
+     ],
+     "border_radius": 3,
+     "repeat_stagger": 0.32
+    },
+    {
+     "x": 1048,
+     "y": {
+      "expr": "778 - i*100"
+     },
+     "id": "t-label",
+     "text": "{txt}",
+     "time": 35.3,
+     "type": "text",
+     "layer": 9,
+     "style": "ink",
+     "duration": "end",
+     "font_size": 18,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "repeat_data": [
+      {
+       "txt": "Layer 01 \u00b7 Foundation models"
+      },
+      {
+       "txt": "Layer 02 \u00b7 Agent framework & orchestrator"
+      },
+      {
+       "txt": "Layer 03 \u00b7 Memory & context fabric"
+      },
+      {
+       "txt": "Layer 04 \u00b7 Tool execution & MCP connectors"
+      },
+      {
+       "txt": "Layer 05 \u00b7 Governance, evals & guardrails"
+      }
+     ],
+     "repeat_stagger": 0.32
+    },
+    {
+     "x": 1048,
+     "y": {
+      "expr": "806 - i*100"
+     },
+     "id": "t-sub2",
+     "text": "{txt}",
+     "time": 35.35,
+     "type": "text",
+     "layer": 10,
+     "style": "body",
+     "duration": "end",
+     "font_size": 13,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "repeat_data": [
+      {
+       "txt": "Claude for everyday work, a reasoning tier for judgement calls"
+      },
+      {
+       "txt": "State machine, routing, durable workflows"
+      },
+      {
+       "txt": "Vector store, relational ledger, session cache"
+      },
+      {
+       "txt": "MCP gateway, API wrappers, sandboxed execution"
+      },
+      {
+       "txt": "Human-in-the-loop gates, observability, PII redaction"
+      }
+     ],
+     "repeat_stagger": 0.32
+    },
+    {
+     "id": "t-pulse",
+     "time": 37.4,
+     "type": "shape",
+     "layer": 11,
+     "shape": "ellipse",
+     "width": 18,
+     "height": 18,
+     "effects": [
+      {
+       "type": "glow",
+       "color": "#2563EB",
+       "radius": 22,
+       "intensity": 1.4
+      }
+     ],
+     "duration": 1.6,
+     "x_anchor": "50%",
+     "y_anchor": "50%",
+     "fill_color": "#2563EB",
+     "keyframe_animations": [
+      {
+       "property": "position",
+       "keyframes": [
+        {
+         "time": 0,
+         "value": [
+          985,
+          802
+         ]
+        },
+        {
+         "time": 1.2,
+         "value": [
+          985,
+          402
+         ],
+         "easing": "ease-in-out-cubic"
+        }
+       ]
+      },
+      {
+       "property": "opacity",
+       "keyframes": [
+        {
+         "time": 0,
+         "value": 0
+        },
+        {
+         "time": 0.15,
+         "value": 1
+        },
+        {
+         "time": 1.3,
+         "value": 1
+        },
+        {
+         "time": 1.6,
+         "value": 0
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "x": 1560,
+     "y": 372,
+     "id": "t-ok",
+     "time": 38.7,
+     "type": "shape",
+     "layer": 12,
+     "width": 180,
+     "height": 40,
+     "duration": "end",
+     "animations": [
+      {
+       "time": "start",
+       "type": "bounce-in",
+       "duration": 0.5
+      }
+     ],
+     "fill_color": "#DCFCE7",
+     "stroke_color": "#16A34A",
+     "stroke_width": 1,
+     "border_radius": 20
+    },
+    {
+     "x": 1560,
+     "y": 372,
+     "id": "t-ok-t",
+     "text": "Guardrails passed",
+     "time": 38.75,
+     "type": "text",
+     "layer": 13,
+     "style": "ink",
+     "width": 180,
+     "height": 40,
+     "duration": "end",
+     "font_size": 13,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.3
+      }
+     ],
+     "fill_color": "#15803D",
+     "text_align": "center",
+     "vertical_align": "middle"
+    }
+   ],
+   "keyframe_animations": [
+    {
+     "property": "opacity",
+     "keyframes": [
+      {
+       "time": 0,
+       "value": 0
+      },
+      {
+       "time": 33.9,
+       "value": 0
+      },
+      {
+       "time": 34.3,
+       "value": 1,
+       "easing": "ease-out-cubic"
+      },
+      {
+       "time": 39.4,
+       "value": 1
+      },
+      {
+       "time": 39.7,
+       "value": 0,
+       "easing": "ease-in-cubic"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "x": 0,
+   "y": 0,
+   "id": "g7",
+   "time": 0,
+   "type": "group",
+   "layer": 17,
    "width": 1920,
    "height": 1080,
    "duration": "end",
@@ -1850,12 +4117,12 @@
      },
      "id": "code",
      "text": "{txt}",
-     "time": 16,
+     "time": 39.6,
      "type": "text",
      "layer": 2,
      "style": "mono",
-     "duration": 2.5,
-     "font_size": 34,
+     "duration": 2.7,
+     "font_size": 32,
      "repeat_data": [
       {
        "txt": "export const Hero = () => ("
@@ -1873,7 +4140,7 @@
        "txt": "    <Button onClick={bookCall}>"
       },
       {
-       "txt": "      Book a call"
+       "txt": "      Book a design appointment"
       },
       {
        "txt": "    </Button>"
@@ -1882,7 +4149,7 @@
        "txt": "  </section>"
       }
      ],
-     "repeat_stagger": 0.11,
+     "repeat_stagger": 0.12,
      "keyframe_animations": [
       {
        "property": "x",
@@ -1892,7 +4159,7 @@
          "value": 2100
         },
         {
-         "time": 0.55,
+         "time": 0.6,
          "value": 260,
          "easing": "ease-out-quart"
         }
@@ -1910,11 +4177,11 @@
          "value": 1
         },
         {
-         "time": 2.1,
+         "time": 2.3,
          "value": 1
         },
         {
-         "time": 2.45,
+         "time": 2.65,
          "value": 0,
          "easing": "ease-in-cubic"
         }
@@ -1926,15 +4193,22 @@
      "x": 960,
      "y": 540,
      "id": "ui-card",
-     "time": 18.5,
+     "time": 42.2,
      "type": "shape",
      "layer": 5,
-     "width": 760,
+     "width": 800,
      "height": 440,
      "effects": [
       {
+       "blur": 48,
+       "type": "drop_shadow",
+       "color": "#000000",
+       "opacity": 0.45,
+       "offset_y": 24
+      },
+      {
        "type": "glow",
-       "color": "#3B82F6",
+       "color": "#2563EB",
        "radius": 34,
        "intensity": [
         {
@@ -1943,30 +4217,16 @@
         },
         {
          "time": 0.3,
-         "value": 1.6
+         "value": 1.1
         },
         {
          "time": 1.2,
-         "value": 0.5
+         "value": 0.2
         }
        ]
       }
      ],
      "duration": "end",
-     "gradient": {
-      "type": "linear",
-      "angle": 135,
-      "stops": [
-       {
-        "color": "#152244",
-        "offset": 0
-       },
-       {
-        "color": "#0F172A",
-        "offset": 1
-       }
-      ]
-     },
      "x_anchor": "50%",
      "y_anchor": "50%",
      "animations": [
@@ -1974,7 +4234,7 @@
        "time": "start",
        "type": "scale-in",
        "easing": "ease-out-back",
-       "duration": 0.45
+       "duration": 0.5
       },
       {
        "time": "start",
@@ -1982,19 +4242,51 @@
        "duration": 0.25
       }
      ],
-     "stroke_color": "#3B82F6",
-     "stroke_width": 1.5,
+     "fill_color": "#FFFFFF",
      "border_radius": 20
     },
     {
-     "x": 620,
-     "y": 380,
+     "x": 600,
+     "y": 379,
+     "id": "ui-rule",
+     "time": 42.4,
+     "type": "shape",
+     "layer": 6,
+     "width": {
+      "expr": "ease(t,0,0.4,0,32)"
+     },
+     "height": 2,
+     "duration": "end",
+     "fill_color": "#2563EB"
+    },
+    {
+     "x": 644,
+     "y": 368,
+     "id": "ui-kicker",
+     "text": "FROM WIREFRAME TO WORKING SOFTWARE",
+     "time": 42.5,
+     "type": "text",
+     "layer": 7,
+     "style": "kicker",
+     "duration": "end",
+     "font_size": 14,
+     "animations": [
+      {
+       "time": "start",
+       "type": "fade-in",
+       "duration": 0.4
+      }
+     ]
+    },
+    {
+     "x": 600,
+     "y": 410,
      "id": "ui-h1",
      "text": "Ideas, shipped.",
-     "time": 18.75,
+     "time": 42.6,
      "type": "text",
-     "layer": 6,
-     "style": "ui",
+     "layer": 8,
+     "style": "displayink",
      "duration": "end",
      "font_size": 52,
      "animations": [
@@ -2010,16 +4302,16 @@
      ]
     },
     {
-     "x": 620,
-     "y": 456,
+     "x": 600,
+     "y": 490,
      "id": "ui-sub",
-     "text": "From wireframe to working software, in weeks.",
-     "time": 18.95,
+     "text": "Designed and built end to end, in weeks not months.",
+     "time": 42.8,
      "type": "text",
-     "layer": 7,
-     "style": "muted",
+     "layer": 9,
+     "style": "body",
      "duration": "end",
-     "font_size": 24,
+     "font_size": 22,
      "animations": [
       {
        "time": "start",
@@ -2029,22 +4321,14 @@
      ]
     },
     {
-     "x": 620,
-     "y": 540,
+     "x": 600,
+     "y": 570,
      "id": "ui-btn",
-     "time": 19.15,
+     "time": 43,
      "type": "shape",
-     "layer": 8,
-     "width": 200,
-     "height": 58,
-     "effects": [
-      {
-       "type": "glow",
-       "color": "#3B82F6",
-       "radius": 20,
-       "intensity": 0.7
-      }
-     ],
+     "layer": 10,
+     "width": 320,
+     "height": 56,
      "duration": "end",
      "animations": [
       {
@@ -2054,21 +4338,21 @@
       }
      ],
      "fill_color": "#2563EB",
-     "border_radius": 10
+     "border_radius": 8
     },
     {
-     "x": 620,
-     "y": 540,
+     "x": 600,
+     "y": 570,
      "id": "ui-btn-t",
-     "text": "Book a call",
-     "time": 19.2,
+     "text": "BOOK A DESIGN APPOINTMENT",
+     "time": 43.05,
      "type": "text",
-     "layer": 9,
-     "style": "ui",
-     "width": 200,
-     "height": 58,
+     "layer": 11,
+     "style": "ink",
+     "width": 320,
+     "height": 56,
      "duration": "end",
-     "font_size": 20,
+     "font_size": 13,
      "animations": [
       {
        "time": "start",
@@ -2076,7 +4360,9 @@
        "duration": 0.3
       }
      ],
+     "fill_color": "#FFFFFF",
      "text_align": "center",
+     "letter_spacing": 2,
      "vertical_align": "middle"
     }
    ],
@@ -2089,19 +4375,19 @@
        "value": 0
       },
       {
-       "time": 15.9,
+       "time": 39.5,
        "value": 0
       },
       {
-       "time": 16.2,
+       "time": 39.8,
        "value": 1
       },
       {
-       "time": 19.9,
+       "time": 43.6,
        "value": 1
       },
       {
-       "time": 20.25,
+       "time": 43.9,
        "value": 0,
        "easing": "ease-in-cubic"
       }
@@ -2112,10 +4398,10 @@
   {
    "x": 0,
    "y": 0,
-   "id": "s5",
+   "id": "g8",
    "time": 0,
    "type": "group",
-   "layer": 14,
+   "layer": 18,
    "width": 1920,
    "height": 1080,
    "duration": "end",
@@ -2125,22 +4411,22 @@
      "y": 520,
      "id": "burst",
      "size": 5,
-     "time": 20.35,
+     "time": 43.9,
      "type": "particles",
      "burst": true,
      "color": [
       "#60A5FA",
-      "#A78BFA",
-      "#22D3EE"
+      "#FFFFFF",
+      "#2563EB"
      ],
      "layer": 2,
      "spread": 360,
      "fade_at": 0.45,
      "gravity": 0,
-     "duration": 2.2,
-     "lifetime": 1.8,
-     "velocity": 420,
-     "burst_count": 140,
+     "duration": 2.4,
+     "lifetime": 2,
+     "velocity": 380,
+     "burst_count": 120,
      "particle_shape": "circle",
      "rotation_speed": 0,
      "size_variation": 0.6
@@ -2150,13 +4436,13 @@
      "y": 520,
      "id": "wordmark",
      "text": "MERIDIAN",
-     "time": 20.4,
+     "time": 44,
      "type": "text",
      "layer": 5,
      "effects": [
       {
        "type": "glow",
-       "color": "#60A5FA",
+       "color": "#2563EB",
        "radius": 42,
        "intensity": [
         {
@@ -2168,7 +4454,7 @@
          "value": 1.5
         },
         {
-         "time": 1.7,
+         "time": 1.8,
          "value": 0.5
         },
         {
@@ -2176,7 +4462,7 @@
          "value": 1.1
         },
         {
-         "time": 3.4,
+         "time": 3,
          "value": 0.6
         }
        ]
@@ -2191,12 +4477,12 @@
        "time": "start",
        "type": "text-appear",
        "split": "letter",
-       "stagger": 0.05,
-       "duration": 0.7
+       "stagger": 0.06,
+       "duration": 0.8
       }
      ],
      "fill_color": "#FFFFFF",
-     "font_family": "Inter, sans-serif",
+     "font_family": "Hanken Grotesk, Inter, sans-serif",
      "font_weight": 800,
      "letter_spacing": 30,
      "keyframe_animations": [
@@ -2204,27 +4490,22 @@
        "property": "scale",
        "keyframes": [
         {
-         "time": 0.9,
+         "time": 1,
          "value": 1
         },
         {
-         "time": 1.5,
+         "time": 1.6,
          "value": 1.03,
          "easing": "ease-in-out-sine"
         },
         {
-         "time": 2.3,
+         "time": 2.4,
          "value": 1,
          "easing": "ease-in-out-sine"
         },
         {
          "time": 3,
          "value": 1.02,
-         "easing": "ease-in-out-sine"
-        },
-        {
-         "time": 3.6,
-         "value": 1,
          "easing": "ease-in-out-sine"
         }
        ]
@@ -2235,7 +4516,7 @@
      "x": 960,
      "y": 636,
      "id": "glow-line",
-     "time": 21,
+     "time": 44.6,
      "type": "shape",
      "layer": 4,
      "width": {
@@ -2245,7 +4526,7 @@
      "effects": [
       {
        "type": "glow",
-       "color": "#7C3AED",
+       "color": "#2563EB",
        "radius": 16,
        "intensity": 0.9
       }
@@ -2256,7 +4537,7 @@
       "angle": 90,
       "stops": [
        {
-        "color": "rgba(124,58,237,0)",
+        "color": "rgba(37,99,235,0)",
         "offset": 0
        },
        {
@@ -2264,7 +4545,7 @@
         "offset": 0.5
        },
        {
-        "color": "rgba(124,58,237,0)",
+        "color": "rgba(37,99,235,0)",
         "offset": 1
        }
       ]
@@ -2276,7 +4557,7 @@
      "y": 690,
      "id": "interface",
      "text": "INTERFACE",
-     "time": 21,
+     "time": 44.6,
      "type": "text",
      "layer": 6,
      "duration": "end",
@@ -2299,23 +4580,22 @@
      "x": 960,
      "y": 790,
      "id": "tagline",
-     "text": "WEBSITES  \u00b7  APPS  \u00b7  DASHBOARDS  \u00b7  CRMS",
-     "time": 21.8,
+     "text": "DIGITAL DESIGN & DEVELOPMENT STUDIO  \u00b7  HOUSTON, TEXAS",
+     "time": 45.4,
      "type": "text",
      "layer": 7,
-     "style": "muted",
+     "style": "kicker",
      "duration": "end",
      "x_anchor": "50%",
      "y_anchor": "50%",
-     "font_size": 28,
+     "font_size": 18,
      "animations": [
       {
        "time": "start",
        "type": "fade-in",
        "duration": 0.6
       }
-     ],
-     "letter_spacing": 4
+     ]
     }
    ],
    "keyframe_animations": [
@@ -2327,11 +4607,11 @@
        "value": 0
       },
       {
-       "time": 20.1,
+       "time": 43.7,
        "value": 0
       },
       {
-       "time": 20.4,
+       "time": 44,
        "value": 1
       }
      ]
@@ -2358,7 +4638,7 @@
       "offset": 0.65
      },
      {
-      "color": "rgba(120,130,160,1)",
+      "color": "rgba(140,150,175,1)",
       "offset": 1
      }
     ]
@@ -2375,10 +4655,10 @@
    "volume": 85,
    "duration": "end",
    "audio_fade_in": 0.3,
-   "audio_fade_out": 1.6
+   "audio_fade_out": 1.8
   }
  ],
  "frame_rate": 30,
  "clipkit_version": "1.0",
- "background_color": "#0B1226"
+ "background_color": "#0F172A"
 }

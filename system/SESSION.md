@@ -74,6 +74,14 @@ second licensed track (Adobe Stock 449240428 "In Your Blood"). Outputs
 `big-boy-subs-drive.mp4` and `modern-street-drive.mp4`, sent in chat,
 unpublished.
 
+**Clipkit sizzle (from Otis's own video prompt).** A 47 s, nine-scene
+composition in Clipkit (project `1dbefc73-fa7a-462c-89fb-0c371af00d44`,
+editor link in system/motion/README.md), recoloured to the site's palette at
+his request and slowed; JSON versioned at `system/motion/clipkit/`. Sound
+design built locally (`sound-design.py` → `reel-sound-design.wav`) because
+Clipkit cannot be fed a local file from here; finish = he exports the MP4 from
+the editor, I mux. He liked v1.
+
 **Still pending from before:** Shotstack key (`settings.channels` is `{}`),
 Photo Control overrides on p7/p10 still beat committed screenshots, the
 production URL vs the frozen branch preview, old-key cleanup, spend cap,

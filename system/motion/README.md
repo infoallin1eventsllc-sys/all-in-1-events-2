@@ -145,3 +145,12 @@ Clipkit rules that bit: row keys `t`, `c`, `r` are reserved (time and
 expression names) — use `txt`, `col`, `row`; children of a group with
 `time: 0` take absolute times; keep every scene as a group whose opacity
 track fades it in/out; blur on ≤3 elements, one particle emitter.
+
+**v2 (Sep 6, evening).** Otis: match the website and CRM, add more products,
+slow it down. Now 47 s, nine scenes: hero intro in the site's own words →
+wireframe→website → phone app → storefront → dashboard → CRM (in the CRM's
+own mint/emerald) → five-layer tech stack → code→UI → wordmark. Palette is
+the site's: ink `#0F172A` stage, white product cards with `#E2E8F0`
+hairlines, accent `#2563EB`, tracked-caps kickers with the short rule, Hanken
+Grotesk 800 for display (loaded from Google Fonts via `fonts[]`). No violet.
+`sound-design.py` carries 126 cues against these times.
