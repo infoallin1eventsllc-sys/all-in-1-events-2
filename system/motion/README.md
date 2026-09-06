@@ -49,3 +49,27 @@ Rendering is not verification — look at frames. Sample the caption strip at it
 left/right margins (`x=100` / `x=990`), never mid-strip: the caption text is
 white, so a centre sample reads as white and looks like a missing overlay. The
 strip's alpha bbox from the PNG gives the exact band.
+
+## Dynamic cut (`compose-dynamic.py`)
+
+The second-generation cut. `make-layers.py` renders the title and end card as
+separate RGBA layers; `compose-dynamic.py` animates each one with ffmpeg
+overlay expressions (slide, rise, a rule that draws itself, a slow push-in),
+joins the segments with real `xfade` transitions (swipe in, fade-to-black
+out), and mixes an optional voice-over over music that ducks under it via
+`sidechaincompress`, then loudness-normalises.
+
+```bash
+python3 make-layers.py
+python3 compose-dynamic.py raw-bbs assets/bbs bbs big-boy-subs-dynamic.mp4 \
+    audio/building-the-future.wav audio/vo-brian-bbs.mp3
+```
+
+Two more traps it carries:
+- **Playwright starts recording before the script's clock**, so the webm is
+  longer than `beats.total` and its first ~2 s are the page loading un-zoomed.
+  The script measures that lead-in from the file and skips it.
+- **In a filtergraph, `[v]` is a stream specifier, not a label**, and one pad
+  cannot feed two filters — name labels distinctly and `asplit`. The ducker
+  ends when its shorter sidechain ends, so `apad` the voice-over to full length
+  or the clip is silently truncated.
