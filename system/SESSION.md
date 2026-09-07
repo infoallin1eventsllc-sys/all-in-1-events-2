@@ -311,6 +311,71 @@ Two lessons worth keeping: a money scan must read `repeat_data`, not just
 `text`; and **Postgres regexes use `\y` for a word boundary, not `\b`** (`\b`
 is backspace) - a caption check silently passed because of it.
 
+**Pre-launch audit and the client journey (Sep 7, night).** Otis is about to
+point a domain at the site, so the whole client path was walked on the live
+system rather than read. Two things were broken and are now fixed; two need
+credentials only he can create.
+
+**`pay` was never deployed.** The source had been in the repo for weeks and the
+portal called it, but a real request returned "Requested function was not
+found". The create-payment-link button was a 404, no client could be sent a
+Stripe link, and `pay-webhook` (which *was* deployed) sat waiting for events
+that could not happen. Now deployed as v1, `verify_jwt=false` per its own
+header. Verified live: status answers; an unauthenticated `list` is refused; a
+forged bearer token on `create_link` is refused. It reports
+`configured: false` - Stripe's keys are Otis's step.
+
+**Nothing acknowledged a booking.** `intake` stored the lead and queued an
+approval-gated follow-up, so someone booking at 11pm got silence. `intake` v21
+now sends an immediate acknowledgement: a fixed template (not model output, so
+no approval needed - it promises nothing and states only what is true), which
+never fails the booking, is deduped (two submits -> one confirmation, verified),
+and is recorded honestly - `sent` only when a provider accepted it, otherwise a
+draft carrying the exact reason. The email call is a new `_shared/email.ts`
+rather than an import of `channels.ts`: intake is public and on the hot path,
+and pulling the social adapters into it would cost cold-start for nothing.
+`channels.ts` keeps its identical `sendEmail`, noted in both files.
+
+**Proven working end to end** (test data created and then deleted): booking ->
+contact + deal (`quoted`, amount parsed from the budget range, event date) ->
+activity logged -> follow-up task -> real Claude-written reply draft. All four
+backend endpoints are hardcoded fallbacks in the built bundle, so bookings reach
+the CRM even with no Vercel env vars set.
+
+**Still blocked on Otis, and nothing reaches a client until they exist:**
+- `SENDGRID_API_KEY` + `SENDGRID_FROM_EMAIL`. **No email has ever left this
+  system** - 6 drafts, 7 old failures, zero delivered. Highest-value single step.
+- `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET`, webhook pointed at
+  `pay-webhook`. Watch `mode`: a real client sent to a test checkout pays fake
+  money and it looks identical.
+
+**Security audit (full report in chat, Sep 7).** Two Critical, unfixed:
+1. `dashboard` gates the entire CRM (contacts, deals, messages) behind a
+   12-character passcode **in the URL query string**, with no rate limiting and
+   a non-constant-time compare. Retire it - the portal supersedes it - or move
+   it behind the owner token.
+2. A live Anthropic API key sits in plaintext in `settings.anthropic.api_key`
+   (108 chars). Move to an edge secret, delete the row, **rotate the key**.
+High: `owner`'s `selfcheck` action is above the token gate and returns the
+passcode's length, first and last character to anyone; the website repo ships
+**no security headers at all** (no `vercel.json`, so no CSP/HSTS/X-Frame-Options).
+Sound already: RLS enabled with zero policies on all 21 tables, payments never
+trust client amounts, Stripe signatures verified with replay tolerance, no
+secrets in git, 0 npm vulnerabilities.
+
+**Social readiness (read, not yet fixed).** `PULL_FROM_URL` in the TikTok
+adapter requires TikTok to have verified the video URL's domain - ours is
+`*.supabase.co`, which Otis can never verify, so the first real TikTok post will
+fail with `url_ownership_unverified`. Switch that adapter to `FILE_UPLOAD`.
+Meta and LinkedIn tokens expire (~60 days) with no refresh - only TikTok
+refreshes. Aspect ratio is a preference, not a constraint, so a landscape reel
+can be picked for Reels. The generic webhook adapter needs no platform approval
+and is the fastest way to post today.
+
+**Next session, in order:** the two Criticals; the TikTok FILE_UPLOAD switch and
+token-expiry alerting; deploy the runner (still v37) to activate the committed
+`sceneSetProblem` guard.
+
 **Still pending from before:** Shotstack key (`settings.channels` is `{}`),
 Photo Control overrides on p7/p10 still beat committed screenshots, the
 production URL vs the frozen branch preview, old-key cleanup, spend cap,
