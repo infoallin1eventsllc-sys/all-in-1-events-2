@@ -298,11 +298,14 @@ async function generateVideo(sb: SupabaseClient, task: Task) {
 
   // Renderer order: Clipkit (the engine behind the approved sizzle, in the
   // website's own palette) before Shotstack (the older ivory type cards).
+  // A placeholder script (no working Anthropic key, or a transient API
+  // error) is never sent to a paid renderer: the item is filed as a render
+  // request instead, so credits are not spent on "[mock]" text.
   let handle: RenderHandle | ClipkitHandle | null = null;
   let renderError: string | null = null;
   const useClipkit = await clipkitConfigured(sb);
   const configured = useClipkit || await videoConfigured(sb);
-  if (configured) {
+  if (configured && !out.mocked) {
     try {
       handle = useClipkit
         ? await submitClipkit(sb, script, preferredAspect(channel) as "9:16" | "16:9")
@@ -319,6 +322,8 @@ async function generateVideo(sb: SupabaseClient, task: Task) {
   // so the owner can see what is waiting on a render, and why.
   const video = handle
     ? { state: "rendering", provider: handle.provider, render_id: handle.render_id, env: "env" in handle ? handle.env : undefined, key }
+    : out.mocked
+      ? { state: "needs_render", template: "drive", brief: script, note: "placeholder script (no real model output) — not sent to the renderer; re-run this task once the model answers" }
     : configured
       ? { state: "failed", error: renderError }
       : {
