@@ -202,10 +202,32 @@ around that rule and deployed (runner v37, orchestrator v33).
   wrote "See what each price includes" into a call to action. `noMoney()` now
   filters the two lines that reach the screen (hook, CTA) and replaces a line
   about money or cost with a neutral one. The caption may still name a price.
-- **Proven end to end.** A LinkedIn video task ran on the live key: real copy,
-  no price line, Clipkit accepted the composition and rendered it
-  (`58e28047-...`). Both aspects pass Clipkit's validator; stills checked at
-  the hook, website, storefront, CRM, stack and wordmark.
+- **Proven end to end, except Clipkit's own cloud render.** A LinkedIn video
+  task ran on the live key: real copy, no price line, the whole reel built,
+  Clipkit accepted the composition (render `58e28047-2a4a-4adc-904a-58218e1711fe`).
+  Both aspects pass Clipkit's validator and every one of the nine scenes was
+  checked as a still (hook, website, app, storefront, dashboard, CRM, stack,
+  code-to-UI, wordmark). The cloud render then **stopped at 96% and stayed
+  there for over twenty minutes** — the same shape as the Sep 7 stalls, but
+  neither known cause applies: the animation types are protocol-valid, the
+  soundtrack is served from our own bucket, and the protocol documents no
+  duration limit and defines audio looping cleanly. What is new here is the
+  weight: 46.9 s at 1080p with seven product scenes, glow and drop-shadow
+  effects, a 3D camera track and six photographs, against the ~20 s type-only
+  compositions that rendered fine on Sep 7. Stills at the very end of the
+  timeline render, so it is not the frames. Treat a long render sitting at
+  0.96 as this, not as progress. The runner handles it honestly on its own:
+  `collect_video` retries with backoff and, after eight attempts, marks the
+  item failed with the reason.
+- **Two editor links, so the reel can be rendered in the browser instead**
+  (free, no credits, and the way Clipkit expects a person to finish a piece):
+  landscape https://www.clipkit.dev/public-editor?id=2a439163-a677-4f14-99d2-b558a07ed9e6
+  and portrait https://www.clipkit.dev/public-editor?id=a5fe57e2-1c69-4055-a12f-682254636857
+- **Open question for Otis:** in the code-to-UI scene the button label reads
+  "BOOK A DESIGN APPOIN..." — the text is wider than the 320 px button in
+  Clipkit's cloud font metrics. It is his approved composition, so it was left
+  alone rather than edited; widening the button or shortening the label is a
+  one-line change if he wants it.
 
 **Still pending from before:** Shotstack key (`settings.channels` is `{}`),
 Photo Control overrides on p7/p10 still beat committed screenshots, the

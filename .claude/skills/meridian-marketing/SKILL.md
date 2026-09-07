@@ -57,6 +57,16 @@ file is the fast path.
   through the Clipkit MCP (`set_project` → `validate_project` →
   `preview_still` at several times, both aspects) before deploying; the
   schema validator alone is lenient and cannot see placement.
+  **A cloud render that sits at 96% is stuck, not slow** (Sep 7: over twenty
+  minutes on a 46.9 s 1080p reel, no error, stills at the end of the timeline
+  render fine). The two known causes — a non-protocol animation type, and a
+  soundtrack from Clipkit's asset store — do not apply to it, so the weight of
+  a long effect-heavy composition is the remaining suspect and is unproven.
+  The runner already fails such an item honestly after eight collect attempts.
+  Do not re-submit to diagnose: credits are spent per render. Hand Otis the
+  editor link instead (`open_in_editor` — free) and let him render in the
+  browser: landscape `2a439163-a677-4f14-99d2-b558a07ed9e6`, portrait
+  `a5fe57e2-1c69-4055-a12f-682254636857`.
 - Full detail and the day-by-day log: `system/SESSION.md`.
 
 ## The mental model
