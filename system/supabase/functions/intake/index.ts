@@ -10,6 +10,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { serviceClient } from "../_shared/supabase.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
+import { sendEmail } from "../_shared/email.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -101,6 +102,89 @@ Deno.serve(async (req) => {
       },
     }).select("id").single();
     dealId = deal?.id;
+  }
+
+  // Tell them we got it, now.
+  //
+  // The follow-up below is written by the agent and waits for the owner to
+  // approve it, which is right for a considered reply and wrong for an
+  // acknowledgement: someone who books at 11pm should not sit in silence until
+  // morning wondering whether the form worked. This is a fixed template, not
+  // model output — it needs no approval because it promises nothing and says
+  // only what is already true.
+  //
+  // It never fails the booking. The lead is already saved by this point, and a
+  // mail provider being down is not a reason to tell a client their booking
+  // did not go through.
+  if (email) {
+    try {
+      const recent = new Date(Date.now() - 10 * 60_000).toISOString();
+      const { count: alreadySent } = await sb
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .eq("contact_id", contactId)
+        .eq("meta->>reason", "booking_confirmation")
+        .gte("created_at", recent);
+
+      // A double-submitted form should not send two confirmations.
+      if (!alreadySent) {
+        const profile = await sb.from("settings").select("value").eq("key", "business_profile").maybeSingle();
+        const studio = String((profile.data?.value as { name?: string } | null)?.name ?? "Meridian Interface");
+        const website = String((profile.data?.value as { website?: string } | null)?.website ?? "");
+
+        const first = String(fullName ?? "").trim().split(/\s+/)[0] || "there";
+        const when = isAppointment && p.preferredDate
+          ? `${p.preferredDate}${p.preferredTimeSlot ? ` at ${p.preferredTimeSlot}` : ""}`
+          : "";
+
+        const subject = isAppointment
+          ? `We have your booking request${when ? ` for ${when}` : ""}`
+          : "We have your message";
+
+        const body = [
+          `Hi ${first},`,
+          "",
+          isAppointment
+            ? `Thanks for booking with ${studio}. We have your request${when ? ` for ${when}` : ""} and it is in front of us now.`
+            : `Thanks for getting in touch with ${studio}. Your message is in front of us now.`,
+          "",
+          isAppointment
+            ? "This is an automatic acknowledgement so you know the form worked. A person will confirm the time with you and answer anything you asked \u2014 that reply comes from a human, not this message."
+            : "This is an automatic acknowledgement so you know the form worked. A person will read it and reply.",
+          "",
+          website ? `In the meantime, everything we do and what it costs is published at ${website}.` : "",
+          "",
+          studio,
+        ].filter((line) => line !== null).join("\n");
+
+        const res = await sendEmail({ to: email, subject, body });
+
+        // Recorded either way, and honestly: `sent` only when a provider took
+        // it. With no provider configured this is a draft that says why.
+        await sb.from("messages").insert({
+          contact_id: contactId,
+          channel: "email",
+          direction: "outbound",
+          to_addr: email,
+          subject,
+          body,
+          status: res.ok && !res.mocked ? "sent" : "draft",
+          sent_at: res.ok && !res.mocked ? new Date().toISOString() : null,
+          meta: {
+            reason: "booking_confirmation",
+            mocked: res.mocked,
+            automatic: true,
+            ...(res.mocked
+              ? { not_connected: "no email provider connected \u2014 set SENDGRID_API_KEY and SENDGRID_FROM_EMAIL" }
+              : {}),
+            ...(res.error ? { error: res.error } : {}),
+          },
+        });
+      }
+    } catch (err) {
+      // Logged, never raised: the booking is already safe.
+      console.error("booking confirmation failed:", err instanceof Error ? err.message : String(err));
+    }
   }
 
   // Queue a follow-up (deduped so repeat submissions don't stack).
