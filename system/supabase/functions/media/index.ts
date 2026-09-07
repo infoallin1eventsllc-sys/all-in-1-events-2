@@ -106,6 +106,30 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Does Clipkit accept the saved key? Same probe the Clipkit CLI's login
+  // uses: a GET on a render id that cannot exist. 404 means the key is good
+  // and the id is not; 401 means the key is rejected. Reports the key's
+  // shape (length, prefix, whitespace) — never the key.
+  if (action === "clipkit_check") {
+    const raw = Deno.env.get("CLIPKIT_API_KEY") ?? "";
+    const key = raw.trim();
+    if (!key) return json({ ok: true, configured: false });
+    const res = await fetch("https://clipkit.dev/api/v1/renders/00000000-0000-0000-0000-000000000000", {
+      headers: { authorization: `Bearer ${key}` },
+    });
+    const text = await res.text().catch(() => "");
+    return json({
+      ok: true,
+      configured: true,
+      key_length: key.length,
+      key_prefix: key.slice(0, 8),
+      had_whitespace: raw !== key || /\s/.test(key),
+      clipkit_status: res.status,
+      verdict: res.status === 404 ? "key accepted" : res.status === 401 ? "key rejected" : `unexpected ${res.status}`,
+      body: text.slice(0, 200),
+    });
+  }
+
   if (action !== "ingest") return json({ ok: false, error: `unknown action ${action}` }, 400);
 
   const url = String(body.url ?? "").trim();
