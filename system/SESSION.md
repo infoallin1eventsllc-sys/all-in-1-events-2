@@ -273,6 +273,44 @@ trigger is live and covers the failure that actually happened. To ship the code
 half: `supabase functions deploy runner` from the repo, or ask for it in a
 session that has the files in hand.
 
+**Money off the screen, and the reel on the website (Sep 7, evening).** Otis
+watched the reel on the site: quality good, needs sound, and "take anything out
+that says money paying for anything - just give them information about what
+Meridian Interface can do and build."
+
+The money was not one line. It was **45 strings across four scenes**, all of
+them in `repeat_data` (what the `{v}` / `{txt}` templates actually draw), which
+is why an earlier check that read only `text` fields reported one hit. The cut
+then on the site counted a balance to $12,480, priced six garments, animated ARR
+to $84.6M and moved a $24,000 deal across the pipeline.
+
+Rewritten in `meridian-sizzle.json` so each product still demonstrates itself:
+the app counts activity (1,284) instead of a balance and its transactions read
+Complete / Confirmed / Scheduled; the storefront shows size runs; the dashboard
+became a performance dashboard (active users, task completion, orders
+processed, customer retention); the CRM tracks projects in build and its cards
+carry a stage, with a Manage Documents sidebar. Digit shapes were preserved
+($31.2M -> 31.2K) so every count-up keeps its timing and column width. Scene
+descriptions changed too - they never appear on screen but the model reads them
+when writing the hook.
+
+Applied to `settings.video_scenes` as an exact 48-entry string mapping derived
+from the diff and checked for ambiguity first, rather than retyping 50 KB of
+JSON through the model. Verified live: **0 money strings in 448**, seven scenes
+and 108 elements unchanged.
+
+**On the website** (`meridian-interface-website`, merged to main): the reel
+plays on the services page under "What We Build", and on the Portfolio's
+Agentic Tech Stack entry in place of its screenshot. One implementation -
+`components/ReelPlayer.tsx` + `lib/reel.ts`; `PortfolioItem` gained an optional
+`video`. Click-to-play, so the page carries no video weight until asked;
+the frame is reserved so nothing shifts. Verified across all nine portfolio
+panels: exactly one player, eight untouched stills.
+
+Two lessons worth keeping: a money scan must read `repeat_data`, not just
+`text`; and **Postgres regexes use `\y` for a word boundary, not `\b`** (`\b`
+is backspace) - a caption check silently passed because of it.
+
 **Still pending from before:** Shotstack key (`settings.channels` is `{}`),
 Photo Control overrides on p7/p10 still beat committed screenshots, the
 production URL vs the frozen branch preview, old-key cleanup, spend cap,
