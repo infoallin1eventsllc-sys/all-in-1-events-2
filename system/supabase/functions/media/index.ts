@@ -114,6 +114,16 @@ Deno.serve(async (req) => {
     const raw = Deno.env.get("CLIPKIT_API_KEY") ?? "";
     const key = raw.trim();
     if (!key) return json({ ok: true, configured: false });
+    // With a render_id: Clipkit's own view of that render (status, progress,
+    // error) — what the runner's "still rendering" cannot show.
+    const renderId = String(body.render_id ?? "").trim();
+    if (renderId) {
+      const r = await fetch(`https://clipkit.dev/api/v1/renders/${encodeURIComponent(renderId)}`, {
+        headers: { authorization: `Bearer ${key}` },
+      });
+      const t = await r.text().catch(() => "");
+      return json({ ok: true, render_id: renderId, clipkit_status: r.status, body: t.slice(0, 1500) });
+    }
     const res = await fetch("https://clipkit.dev/api/v1/renders/00000000-0000-0000-0000-000000000000", {
       headers: { authorization: `Bearer ${key}` },
     });
