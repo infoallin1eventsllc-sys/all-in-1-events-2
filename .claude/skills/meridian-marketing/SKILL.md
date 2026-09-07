@@ -67,6 +67,16 @@ file is the fast path.
   editor link instead (`open_in_editor` — free) and let him render in the
   browser: landscape `2a439163-a677-4f14-99d2-b558a07ed9e6`, portrait
   `a5fe57e2-1c69-4055-a12f-682254636857`.
+- **The reel cannot be written broken (Sep 7).** `settings.video_scenes` was
+  overwritten once by a bad export. `sceneSetProblem()` in `_shared/clipkit.ts`
+  now refuses to build a video without fonts and, per scene, an id, a time
+  window and a group with elements; the runner files such a task as
+  `needs_render` rather than paying to render an empty frame. **Migration 0022**
+  enforces the same on write, so the bad row cannot exist. NOTE: the migration
+  is live; the code guard is committed but the runner is still v37 — deploy it
+  with `supabase functions deploy runner` (redeploying from a web session means
+  re-sending 122 KB of source through the model, which is how a silent
+  transcription error would reach production).
 - Full detail and the day-by-day log: `system/SESSION.md`.
 
 ## The mental model

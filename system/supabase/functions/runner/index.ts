@@ -13,7 +13,7 @@ import { submitRender, collectRender, parseScript, videoKey, videoConfigured, ty
 import { json, corsHeaders } from "../_shared/cors.ts";
 import { authorizedRun } from "../_shared/runauth.ts";
 import { loadLibrary, renderLibraryBlock, pickAsset, preferredAspect, type LibraryAsset } from "../_shared/library.ts";
-import { submitClipkit, collectClipkit, clipkitConfigured, loadScenes, renderSceneBlock, type ClipkitHandle } from "../_shared/clipkit.ts";
+import { submitClipkit, collectClipkit, clipkitConfigured, loadScenes, renderSceneBlock, sceneSetProblem, type ClipkitHandle } from "../_shared/clipkit.ts";
 
 type Task = {
   id: string;
@@ -270,6 +270,11 @@ async function generateVideo(sb: SupabaseClient, task: Task) {
   // picture, all of them, in the approved order; the model writes only the
   // words around them (owner rule, Sep 7).
   const scenes = await loadScenes(sb);
+  // Clipkit renders the approved reel and nothing else, so an unusable scene
+  // set means there is no reel to render. Say so here rather than paying to
+  // render an empty frame, and keep the script as a brief for the motion
+  // pipeline below.
+  const sceneProblem = sceneSetProblem(scenes);
   const out = await callClaude({
     system: `You write short videos for ${profile.name}. The picture is fixed: it is the studio's approved product reel, ` +
       `every product scene in its approved order, and you do not choose or reorder scenes. You write the words around it: ` +
@@ -310,7 +315,7 @@ async function generateVideo(sb: SupabaseClient, task: Task) {
   // request instead, so credits are not spent on "[mock]" text.
   let handle: RenderHandle | ClipkitHandle | null = null;
   let renderError: string | null = null;
-  const useClipkit = await clipkitConfigured(sb);
+  const useClipkit = !sceneProblem && await clipkitConfigured(sb);
   const configured = useClipkit || await videoConfigured(sb);
   if (configured && !out.mocked) {
     try {
@@ -337,7 +342,9 @@ async function generateVideo(sb: SupabaseClient, task: Task) {
         state: "needs_render",
         template: channel === "tiktok" || channel === "instagram" ? "drive" : "reel",
         brief: script,
-        note: "no approved library clip fit and no renderer is configured — render with system/motion and attach with attach.mjs",
+        note: sceneProblem
+          ? `the approved product reel is not loadable (${sceneProblem}) — re-run system/motion/clipkit/export-scenes.mjs and apply video-scenes.sql, then re-run this task; or render with system/motion and attach with attach.mjs`
+          : "no approved library clip fit and no renderer is configured — render with system/motion and attach with attach.mjs",
       };
 
   const { data } = await sb.from("content_items").insert({

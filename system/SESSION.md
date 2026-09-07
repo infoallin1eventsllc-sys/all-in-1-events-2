@@ -240,6 +240,39 @@ around that rule and deployed (runner v37, orchestrator v33).
   alone rather than edited; widening the button or shortening the label is a
   one-line change if he wants it.
 
+**The reel cannot be written broken (Sep 7, afternoon).** Mid-session the
+`settings.video_scenes` row was overwritten by a bad export and restored from
+the committed file. Nothing had caught it: `buildComposition` checked that the
+scene list was not empty but not that the scenes had anything *in* them, and
+the next step after that check is a POST that spends Clipkit credits on a frame
+with nothing drawn in it. Two layers now:
+- `sceneSetProblem()` in `_shared/clipkit.ts` checks what the builder actually
+  relies on — fonts, and per scene an id, a usable time window, and a group
+  with elements — and `buildComposition` refuses to build without them. The
+  runner checks the same thing before it writes the script: an unusable reel
+  files the item as `needs_render` with the reason and keeps the script as a
+  brief, instead of paying to render nothing.
+- **Migration 0022** puts the same check in the database, where the damage was
+  done: a write to `settings.video_scenes` that would leave the agents with no
+  reel is refused outright, so the bad row never exists to be read. Structure
+  only — it says nothing about *which* scenes the reel holds, so approving a
+  new reel stays a one-statement job. `search_path` pinned empty; not SECURITY
+  DEFINER. Verified live: nine broken shapes each rejected with their reason,
+  the real reel and unrelated settings rows unaffected, advisors clean.
+
+Proven before shipping: the composition the builder produces is **byte-identical**
+to the deployed one in all four combinations (landscape/portrait ×
+music/no music), so the picture is still the reel already validated through
+Clipkit and rendered — the guard only refuses bad input.
+
+**The code guard is committed but NOT deployed.** The runner is still v37, and
+the guard lives in the runner's bundle. Deploying from this sandbox means
+re-sending all 122 KB of the runner's source through the model, which risks a
+silent transcription error in production code, so it was not done. The database
+trigger is live and covers the failure that actually happened. To ship the code
+half: `supabase functions deploy runner` from the repo, or ask for it in a
+session that has the files in hand.
+
 **Still pending from before:** Shotstack key (`settings.channels` is `{}`),
 Photo Control overrides on p7/p10 still beat committed screenshots, the
 production URL vs the frozen branch preview, old-key cleanup, spend cap,

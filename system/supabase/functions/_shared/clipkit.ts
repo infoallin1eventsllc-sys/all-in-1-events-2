@@ -148,6 +148,32 @@ export function renderSceneBlock(set: SceneSet): string {
     ...set.scenes.map((s) => `- ${s.id}: ${s.description} (${s.length}s)`)].join("\n");
 }
 
+/** What is wrong with the scene set, or null when it is fit to render.
+    settings.video_scenes is data, and data can be overwritten - it was, once,
+    mid-session. The empty-list check that used to stand here would pass a set
+    whose scenes carried no elements, and the next thing downstream is a POST
+    that spends render credits on a frame with nothing in it. So everything
+    the builder actually relies on is checked: the fonts the styles name, and
+    per scene an id, a usable time window, and a group with elements in it. */
+export function sceneSetProblem(set: SceneSet): string | null {
+  if (!set.scenes.length) return "settings.video_scenes has no scenes";
+  if (!set.fonts.length) return "settings.video_scenes has no fonts";
+  for (let i = 0; i < set.scenes.length; i++) {
+    const s = set.scenes[i];
+    const where = s?.id ? `scene "${s.id}"` : `scene ${i + 1}`;
+    if (!s?.id) return `${where} has no id`;
+    if (!Number.isFinite(s.start) || !Number.isFinite(s.length) || s.length <= 0) {
+      return `${where} has no usable time window`;
+    }
+    const g = s.group as { type?: unknown; elements?: unknown } | undefined;
+    if (!g || g.type !== "group") return `${where} has no group`;
+    if (!Array.isArray(g.elements) || !g.elements.length) {
+      return `${where} has an empty group - nothing would be drawn`;
+    }
+  }
+  return null;
+}
+
 const CROSS = 0.3; // scenes overlap by this much, as in the sizzle
 const r = (n: number) => Number(n.toFixed(3));
 const SIZZLE_W = 1920, SIZZLE_H = 1080;
@@ -243,7 +269,8 @@ function typeScene(id: string, layer: number, t0: number, t1: number, s: Scene, 
  * where the product scenes play as a band across the middle of the frame.
  */
 export function buildComposition(set: SceneSet, script: VideoScript, aspect: "9:16" | "16:9", music?: string) {
-  if (!set.scenes.length) throw new Error("no approved product scenes loaded (settings.video_scenes is empty)");
+  const problem = sceneSetProblem(set);
+  if (problem) throw new Error(`no approved product reel to build from: ${problem}`);
   const portrait = aspect === "9:16";
   const W = portrait ? 1080 : 1920;
   const H = portrait ? 1920 : 1080;
