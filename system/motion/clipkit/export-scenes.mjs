@@ -23,9 +23,9 @@ const sql = path.join(here, "video-scenes.sql");
 // What each scene shows, for the model choosing between them.
 const SCENES = {
   g1: { id: "website", label: "Website", description: "a wireframe assembling line by line, then snapping into the finished Meridian site: hero, three service cards, call to action" },
-  g2: { id: "app", label: "Mobile app", description: "a phone with a banking-style app: balance, card, transactions - 'Mobile apps your customers keep'" },
-  g3: { id: "storefront", label: "Storefront", description: "the Modern Street online store: six real product photos with prices, add-to-bag click, toast" },
-  g4: { id: "dashboard", label: "Dashboard", description: "a revenue dashboard: KPI tiles counting up, bars and a chart animating" },
+  g2: { id: "app", label: "Mobile app", description: "a phone with a banking-style app: activity, card, transactions - 'Mobile apps your customers keep'" },
+  g3: { id: "storefront", label: "Storefront", description: "the Modern Street online store: six real product photos, add-to-bag click, toast" },
+  g4: { id: "dashboard", label: "Dashboard", description: "a performance dashboard: KPI tiles counting up, bars and a chart animating" },
   g5: { id: "crm", label: "CRM", description: "the CRM: pipeline columns, lead cards sliding in, in the CRM's own mint and emerald" },
   g6: { id: "stack", label: "AI tech stack", description: "five stacked layers of an AI stack: foundation models, agent framework, memory, tools, governance - 'Five layers, planned before it's built'" },
   g7: { id: "code", label: "Code to UI", description: "React code typing in, resolving into the live website's hero and button" },
