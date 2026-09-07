@@ -1,5 +1,9 @@
 # Pre-launch fix list
 
+> **Superseded for launch decisions.** See `LAUNCH-READINESS.md` (7 Sep 2026)
+> for the current, verified list of what blocks going public. This file is
+> kept for its history and its still-useful detail.
+
 > **Status Aug 20 (evening):** the website is now **deployed to Vercel
 > production** (PR #1 merged, deploy green). These items are therefore live-site
 > items, not pre-deploy ones. Item 3 (RUN_SECRET) is still the one that turns

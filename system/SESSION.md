@@ -376,6 +376,26 @@ and is the fastest way to post today.
 token-expiry alerting; deploy the runner (still v37) to activate the committed
 `sceneSetProblem` guard.
 
+**Launch readiness written down (Sep 7, end of session).** Otis asked
+straight out whether the site is ready for the public. Answer: not yet, and the
+reasons are now in **`LAUNCH-READINESS.md`** at the repo root - the single
+authority for that question, superseding the generic `PRE-LAUNCH-CHECKLIST.md`
+and the August `system/PRELAUNCH.md`.
+
+Two findings that were new and are recorded there:
+- **Design and mobile are fine.** Verified at 390px and 768px: no horizontal
+  overflow, no page errors. Design is not what blocks launch.
+- **The legal perimeter is missing entirely.** No privacy policy, no terms, no
+  legal links in the footer (verified absent), and **zero occurrences of
+  "unsubscribe" anywhere in the sending path** - which matters because the
+  agent-written follow-ups are marketing email. This must be closed *before*
+  SendGrid is switched on. Consent itself is properly enforced before any
+  automatic send (`runner/index.ts:453`).
+
+Also recorded there: what could not be verified from this sandbox (the domain,
+video playback, Safari/Firefox, and - importantly - **backups: no restore plan
+exists in the repo and the Supabase plan is not visible**).
+
 **Still pending from before:** Shotstack key (`settings.channels` is `{}`),
 Photo Control overrides on p7/p10 still beat committed screenshots, the
 production URL vs the frozen branch preview, old-key cleanup, spend cap,

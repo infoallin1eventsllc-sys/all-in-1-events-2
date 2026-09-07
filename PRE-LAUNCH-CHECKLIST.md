@@ -1,5 +1,9 @@
 # Pre-Launch Checklist
 
+> **Superseded for launch decisions.** See `LAUNCH-READINESS.md` (7 Sep 2026)
+> for the current, verified list of what blocks going public. This file is
+> kept for its history and its still-useful detail.
+
 Use this checklist before launching to a director, client, or production.
 
 ---
