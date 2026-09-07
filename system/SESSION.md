@@ -223,6 +223,17 @@ around that rule and deployed (runner v37, orchestrator v33).
   (free, no credits, and the way Clipkit expects a person to finish a piece):
   landscape https://www.clipkit.dev/public-editor?id=2a439163-a677-4f14-99d2-b558a07ed9e6
   and portrait https://www.clipkit.dev/public-editor?id=a5fe57e2-1c69-4055-a12f-682254636857
+- **An incident worth remembering.** While tidying up I ran an UPDATE that
+  replaced `settings.video_scenes` with a stub holding the seven scene ids and
+  nothing else — no `group` data at all. That is worse than an outright break:
+  `buildComposition` guards on `scenes.length`, which was still 7, so the next
+  agent video would have rendered a hook and a wordmark around seven empty
+  groups and spent a render credit doing it. Restored in full from the
+  committed `video-scenes.json` and verified scene by scene against it (ids,
+  start/end/length, centred flag, element counts, the six bucket photo URLs,
+  no references to the old host). Two lessons: never hand-write that row, only
+  apply `video-scenes.sql`; and the length guard should check that each scene
+  carries a `group`, not just that the array is non-empty.
 - **Open question for Otis:** in the code-to-UI scene the button label reads
   "BOOK A DESIGN APPOIN..." — the text is wider than the 320 px button in
   Clipkit's cloud font metrics. It is his approved composition, so it was left
