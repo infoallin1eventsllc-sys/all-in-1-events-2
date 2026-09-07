@@ -60,7 +60,9 @@ const STYLES = {
 
 /** Greedy wrap to a character budget — Clipkit sets text on explicit lines. */
 function wrap(text: string, perLine: number): string {
-  const words = text.trim().split(/\s+/);
+  // The runtime's font atlas is ASCII-only: dashes, curly quotes and the
+  // like are dropped silently, so they are normalised here first.
+  const words = ascii(text).trim().split(/\s+/);
   const lines: string[] = [];
   let cur = "";
   for (const w of words) {
@@ -69,6 +71,11 @@ function wrap(text: string, perLine: number): string {
   }
   if (cur) lines.push(cur);
   return lines.join("\n");
+}
+
+function ascii(t: string): string {
+  return t.replace(/[\u2013\u2014]/g, "-").replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"')
+    .replace(/\u2026/g, "...").replace(/\u00B7/g, "-").replace(/[^\x20-\x7E\n]/g, "");
 }
 
 type Scene = { kicker: string; headline: string; sub?: string; accent?: boolean };
@@ -123,11 +130,11 @@ export function buildComposition(script: VideoScript, aspect: "9:16" | "16:9", m
         { id: `s${i}-rule`, type: "shape", layer: 1, time: t0 + 0.1, duration: "end", x: M, y: top - 4, width: 28, height: 2, fill_color: ACCENT,
           animations: [{ type: "fade-in", time: "start", duration: 0.3 }] },
         { id: `s${i}-kicker`, type: "text", layer: 2, time: t0 + 0.1, duration: "end", x: M + 40, y: top - 14, width: W - 2 * M - 40, height: 24,
-          text: s.kicker.toUpperCase(), style: "kicker", font_size: portrait ? 20 : 18,
-          animations: [{ type: "fade-in", time: "start", duration: 0.3 }, { type: "slide-in", direction: "up", distance: 18, time: "start", duration: 0.45, easing: "ease-out-cubic" }] },
+          text: ascii(s.kicker).toUpperCase(), style: "kicker", font_size: portrait ? 20 : 18,
+          animations: [{ type: "fade-in", time: "start", duration: 0.3 }, { type: "slide-up-in", distance: 18, time: "start", duration: 0.45, easing: "ease-out-cubic" }] },
         { id: `s${i}-head`, type: "text", layer: 3, time: t0 + 0.3, duration: "end", x: M, y: top + 30, width: W - 2 * M, height: lines.length * size * 1.1 + 10,
           text: lines.join("\n"), style: s.accent ? "accent" : "display", font_size: size, line_height: 1.08,
-          animations: [{ type: "fade-in", time: "start", duration: 0.4 }, { type: "slide-in", direction: "up", distance: 28, time: "start", duration: 0.6, easing: "ease-out-cubic" }] },
+          animations: [{ type: "fade-in", time: "start", duration: 0.4 }, { type: "slide-up-in", distance: 28, time: "start", duration: 0.6, easing: "ease-out-cubic" }] },
         { id: `s${i}-bar`, type: "shape", layer: 4, time: t0 + 0.8, duration: "end", x: M, y: top + 30 + lines.length * size * 1.1 + 34, width: 120, height: 4, fill_color: ACCENT, border_radius: 2,
           keyframe_animations: [{ property: "scale_x", keyframes: [{ time: t0 + 0.8, value: 0 }, { time: t0 + 1.3, value: 1, easing: "ease-out-cubic" }] }] },
       ],
@@ -145,7 +152,7 @@ export function buildComposition(script: VideoScript, aspect: "9:16" | "16:9", m
         keyframe_animations: [{ property: "scale", keyframes: [{ time: tw, value: 0.96 }, { time: tw + 1.2, value: 1, easing: "ease-out-cubic" }, { time: tw + 2.4, value: 1.02, easing: "ease-in-out-sine" }, { time: total, value: 1, easing: "ease-in-out-sine" }] }] },
       { id: "wm-2", type: "text", layer: 2, time: tw + 0.3, duration: "end", x: 0, y: H * 0.44 + (portrait ? 92 : 108), width: W, height: 40, text: "INTERFACE", style: "tracked",
         font_size: portrait ? 26 : 30, letter_spacing: portrait ? 10 : 12, text_align: "center", animations: [{ type: "fade-in", time: "start", duration: 0.5 }] },
-      { id: "wm-3", type: "text", layer: 3, time: tw + 0.8, duration: "end", x: 0, y: H * 0.44 + (portrait ? 160 : 176), width: W, height: 30, text: "DIGITAL DESIGN & DEVELOPMENT STUDIO  ·  HOUSTON, TEXAS", style: "kicker",
+      { id: "wm-3", type: "text", layer: 3, time: tw + 0.8, duration: "end", x: 0, y: H * 0.44 + (portrait ? 160 : 176), width: W, height: 30, text: "DIGITAL DESIGN & DEVELOPMENT STUDIO  -  HOUSTON, TEXAS", style: "kicker",
         font_size: portrait ? 14 : 15, text_align: "center", animations: [{ type: "fade-in", time: "start", duration: 0.5 }] },
     ],
   });
