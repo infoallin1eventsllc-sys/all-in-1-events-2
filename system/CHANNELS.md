@@ -191,9 +191,20 @@ select public.set_channel('clipkit_api_key', 'PASTE_KEY_HERE');
 select public.set_channel('clipkit_music_url', 'https://…/track.mp3');   -- optional soundtrack
 ```
 
-The music URL must be reachable by Clipkit's renderer: the Adobe Stock loop
-already hosted in the sizzle project works
-(`https://api.clipkit.dev/storage/v1/object/public/assets/anon/c140aa36-47f4-4157-9c8b-c38fea44abab.audio`).
+**The music must be served from our own bucket.** Verified Sep 7: with the
+track served from Clipkit's anonymous asset store, every cloud render sat
+at 99% forever; without music, or with the same WAV served from
+`social-videos/library/`, a 28-second clip finished in about three minutes.
+The licensed loop is already there:
+
+```
+https://glzodwhyavexpuusbqjy.supabase.co/storage/v1/object/public/social-videos/library/music-modern-electronic-loop.wav
+```
+
+(that is the value saved in `clipkit_music_url`). To use another track,
+ingest it first — `media` action `ingest` with `kind: "audio"` — and point
+the setting at the bucket URL it returns. The bucket accepts audio/wav,
+audio/mpeg and audio/mp4.
 
 ### Turning on Shotstack (fallback)
 

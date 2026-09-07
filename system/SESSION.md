@@ -144,6 +144,29 @@ Clipkit?
 - Also fixed: the Modern Street "no images in the boxes" (repeat-image
   preload bug in Clipkit) — same fix in the hosted project.
 
+**Clipkit connected and proven end to end (Sep 7, after midnight).** Otis
+added `CLIPKIT_API_KEY` as an edge secret (the first key he made was
+rejected by Clipkit; a fresh one was accepted). Five test renders taught
+three things, all fixed and deployed:
+1. Clipkit's cloud API accepts an animation type its protocol does not
+   define (`slide-in`) and then sits at 99% forever. Builder now uses
+   `slide-up-in`, ASCII-only text, and was checked through Clipkit's own
+   validator and preview (project `da0c4c86…`).
+2. A soundtrack served from Clipkit's anonymous asset store also stalls
+   the render at 99%. The same WAV served from our bucket renders fine.
+   `media` now ingests audio (kind `audio`, migration 0021, bucket MIME
+   list widened); `clipkit_music_url` points at
+   `social-videos/library/music-modern-electronic-loop.wav`.
+3. A placeholder script (Anthropic 529 overloaded) was sent to the paid
+   renderer once; the runner now files those as `needs_render` instead.
+`media` gained `status` (which secrets the runtime sees) and
+`clipkit_check` (key accepted/rejected; a render's status and progress).
+Two real Clipkit-rendered videos are in the approval queue, pending:
+"You formed the LLC. Now look like it." (no music) and "The sign shop
+asked for a vector file." (with music). Four test items are marked failed
+with their reasons. Three stuck renders remain in his Clipkit dashboard;
+they will never finish and can be cancelled there.
+
 **Still pending from before:** Shotstack key (`settings.channels` is `{}`),
 Photo Control overrides on p7/p10 still beat committed screenshots, the
 production URL vs the frozen branch preview, old-key cleanup, spend cap,
