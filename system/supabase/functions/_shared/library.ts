@@ -28,7 +28,8 @@ export async function loadLibrary(sb: SupabaseClient, kind?: "image" | "video"):
     .select("id, kind, url, poster_url, title, description, tags, meta")
     .eq("approved_by", "owner")
     .order("created_at", { ascending: false });
-  if (kind) q = q.eq("kind", kind);
+  // Audio rows are soundtracks for the renderer, never content pieces.
+  q = kind ? q.eq("kind", kind) : q.in("kind", ["image", "video"]);
   const { data } = await q;
   return ((data ?? []) as LibraryAsset[]).filter((a) => a.url?.startsWith("http"));
 }

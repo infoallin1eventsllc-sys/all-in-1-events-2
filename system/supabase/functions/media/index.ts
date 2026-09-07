@@ -34,6 +34,11 @@ const EXT: Record<string, string> = {
   "image/png": "png",
   "image/jpeg": "jpg",
   "image/webp": "webp",
+  "audio/wav": "wav",
+  "audio/x-wav": "wav",
+  "audio/wave": "wav",
+  "audio/mpeg": "mp3",
+  "audio/mp4": "m4a",
 };
 
 async function sha256(bytes: Uint8Array): Promise<string> {
@@ -144,7 +149,7 @@ Deno.serve(async (req) => {
 
   const url = String(body.url ?? "").trim();
   const slug = String(body.slug ?? "").trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-|-$/g, "");
-  const kind = body.kind === "video" ? "video" : "image";
+  const kind = body.kind === "video" ? "video" : body.kind === "audio" ? "audio" : "image";
   const title = String(body.title ?? slug).slice(0, 200);
   const description = String(body.description ?? "").slice(0, 2000);
   const tags = Array.isArray(body.tags) ? body.tags.map(String).slice(0, 30) : [];
