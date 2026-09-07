@@ -13,7 +13,7 @@ import { submitRender, collectRender, parseScript, videoKey, videoConfigured, ty
 import { json, corsHeaders } from "../_shared/cors.ts";
 import { authorizedRun } from "../_shared/runauth.ts";
 import { loadLibrary, renderLibraryBlock, pickAsset, preferredAspect, type LibraryAsset } from "../_shared/library.ts";
-import { submitClipkit, collectClipkit, clipkitConfigured, type ClipkitHandle } from "../_shared/clipkit.ts";
+import { submitClipkit, collectClipkit, clipkitConfigured, loadScenes, renderSceneBlock, type ClipkitHandle } from "../_shared/clipkit.ts";
 
 type Task = {
   id: string;
@@ -208,9 +208,10 @@ async function generateContent(sb: SupabaseClient, task: Task) {
 }
 
 /**
- * A short video: the AI writes a five-scene script, the renderer is asked for
- * the clip, and a follow-up task collects it when it is done. The item sits at
- * `draft` — out of the approval queue — until there is something to watch.
+ * A short video: the AI writes the words, the renderer puts them around the
+ * approved product reel, and a follow-up task collects the clip when it is
+ * done. The item sits at `draft` — out of the approval queue — until there is
+ * something to watch.
  *
  * Without a renderer configured the script is still written and the item goes
  * straight to the queue marked not rendered, so the owner can read what the
@@ -226,8 +227,7 @@ async function generateVideo(sb: SupabaseClient, task: Task) {
   // Library first. The clips that came out of the motion pipeline and that
   // Otis approved are the videos; the model chooses one and writes the
   // caption. Only when no approved clip fits does it fall through to the
-  // older path (a Shotstack type-card render, if a key exists) or, failing
-  // that, to a render request the motion pipeline picks up.
+  // reel builder below.
   const clips = await loadLibrary(sb, "video");
   if (clips.length) {
     const pick = await callClaude({
@@ -266,13 +266,21 @@ async function generateVideo(sb: SupabaseClient, task: Task) {
     }
   }
 
+  // The product scenes of the approved reel, from the database. They ARE the
+  // picture, all of them, in the approved order; the model writes only the
+  // words around them (owner rule, Sep 7).
+  const scenes = await loadScenes(sb);
   const out = await callClaude({
-    system: `You write short vertical videos for ${profile.name} — 20 seconds of large on-screen text, no voiceover.\n\n${business}\n\n` +
+    system: `You write short videos for ${profile.name}. The picture is fixed: it is the studio's approved product reel, ` +
+      `every product scene in its approved order, and you do not choose or reorder scenes. You write the words around it: ` +
+      `an opening card with the hook, and the closing wordmark with the call to action. No voiceover. The video NEVER ` +
+      `shows a price or a cost - not on screen, not in the hook, not in the call to action.\n\n${business}\n\n${renderSceneBlock(scenes)}\n\n` +
       `Follow the writing rules above exactly. Ground the piece in ONE customer profile's pains or buying triggers ` +
-      `and use only the listed proof points as evidence. Every line is read on a phone in a second or two, so: ` +
-      `hook under 50 characters; each beat under 70; the price line names a real price and what it buys; the CTA ` +
-      `sends people to the website, not to the comments. Return ONLY JSON: ` +
-      `{"hook":"...","beats":["...","...","..."],"price_line":"...","cta":"...","caption":"...","hashtags":["#..."]}`,
+      `and use only the listed proof points as evidence. The hook should make sense of the whole reel (a studio that builds ` +
+      `websites, apps, storefronts, dashboards, CRMs and AI systems), not of one product. ` +
+      `Every line is read on a phone in a second or two, so: hook under 50 characters; each beat under 70 (beats are for the ` +
+      `caption, not the screen); the CTA sends people to the website, under 60 characters, and mentions no price. Return ONLY JSON: ` +
+      `{"hook":"...","beats":["...","...","..."],"cta":"...","caption":"...","hashtags":["#..."]}`,
     prompt: `Write the video for the "${channel}" channel about: ${topic}.`,
     model: String(agent.model || DEFAULT_MODEL),
     maxTokens: 1500,
@@ -284,7 +292,6 @@ async function generateVideo(sb: SupabaseClient, task: Task) {
     script = {
       hook: `[mock] ${topic}`.slice(0, 50),
       beats: ["[mock] What goes wrong without it", "[mock] What a real one includes", "[mock] What it does not include"],
-      price_line: "[mock] Custom 3–7 Page Business Site — $8,500",
       cta: "meridianinterface.com",
       caption: `[mock draft] ${topic} (placeholder — add an Anthropic key for real copy)`,
       hashtags: ["#webdesign", "#houston"],
@@ -292,7 +299,7 @@ async function generateVideo(sb: SupabaseClient, task: Task) {
   }
   if (!script) throw new Error(`video script was not valid JSON (${out.text.length} chars)`);
 
-  const key = await videoKey(`${channel}|${script.hook}|${script.price_line}`);
+  const key = await videoKey(`${channel}|${script.hook}|${script.cta}`);
   const poster = cardDataUri({ title: script.hook, kicker: "SHORT VIDEO" });
   const body = [script.caption, script.hashtags.join(" ")].filter(Boolean).join("\n\n");
 

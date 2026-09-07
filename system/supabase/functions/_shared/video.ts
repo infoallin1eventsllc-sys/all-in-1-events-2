@@ -22,10 +22,14 @@ import { loadChannelConfig } from "./channels.ts";
 export type VideoScript = {
   hook: string; // one line, under ~50 characters, stops the scroll
   beats: string[]; // three lines that make the case
-  price_line: string; // the real price and what it buys
+  /** Optional. Shotstack only; Clipkit videos never show a price (owner rule). */
+  price_line?: string;
   cta: string; // where to go
   caption: string; // the post text under the video
   hashtags: string[];
+  /** Kept for older items in the queue; ignored by the renderer. Every
+      Clipkit video plays the whole approved reel (owner rule, Sep 7). */
+  scenes?: string[];
 };
 
 export type RenderHandle = { provider: "shotstack"; render_id: string; env: string };
@@ -96,7 +100,7 @@ function buildTimeline(script: VideoScript, music?: string) {
   const scenes = [
     scene("", script.hook, { accent: true }),
     ...script.beats.slice(0, 3).map((b, i) => scene(`${i + 1} of 3`, b)),
-    scene("What it costs", script.price_line, { accent: true }),
+    ...(script.price_line ? [scene("What it costs", script.price_line, { accent: true })] : []),
     scene("Next step", script.cta),
   ];
   const clips = scenes.map((s, i) => ({
@@ -219,14 +223,15 @@ export function parseScript(text: string): VideoScript | null {
   try {
     const j = JSON.parse(text.replace(/```(?:json)?|```/g, "").trim());
     const beats = Array.isArray(j.beats) ? j.beats.map(String).filter(Boolean).slice(0, 3) : [];
-    if (!j.hook || beats.length < 3 || !j.price_line || !j.cta) return null;
+    if (!j.hook || beats.length < 3 || !j.cta) return null;
     return {
       hook: String(j.hook).trim(),
       beats,
-      price_line: String(j.price_line).trim(),
+      ...(j.price_line ? { price_line: String(j.price_line).trim() } : {}),
       cta: String(j.cta).trim(),
       caption: String(j.caption ?? "").trim(),
       hashtags: Array.isArray(j.hashtags) ? j.hashtags.map(String).slice(0, 8) : [],
+      scenes: Array.isArray(j.scenes) ? j.scenes.map((x: unknown) => String(x).toLowerCase().trim()).slice(0, 5) : undefined,
     };
   } catch {
     return null;

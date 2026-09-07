@@ -29,6 +29,34 @@ file is the fast path.
 - **Video**: `kind: "video"` → script → Shotstack render → `social-videos` bucket → queue, with a browser `ScriptPlayer` on the card until a clip exists. No Shotstack key yet. Adapters for TikTok / Reels / Facebook video / LinkedIn video exist with a `pending` state; no platform credentials yet.
 - **Credentials go in through `select public.set_channel(name, value)`** (migration 0015), which refuses the shapes past mistakes took. `CHANNELS.md` has the per-platform steps and TikTok form answers.
 - **Health check watches output** (0014): `placeholder_output` fires within 15 min if drafts are filler.
+- **Content is built on the approved motion work (Sep 6–7).** Otis approved the
+  Clipkit sizzle (the product reel) and rejected the text-card drafts. His rule
+  (Sep 7): "the content I approved is what I want on the video" — so every
+  video the agents make IS the approved reel, whole: a hook card, then ALL
+  seven product scenes in the approved order (website, mobile app, storefront,
+  dashboard, CRM, AI tech stack, code-to-UI), then the wordmark with a call to
+  action. The model writes only the words (hook, CTA, caption); it never
+  chooses, drops or reorders scenes. **No price or cost on any video** (owner
+  rule, Sep 7): the price card is gone and the video prompt forbids it; the
+  caption may still name a price. `_shared/clipkit.ts` loads the scenes from
+  `settings.video_scenes` at run time; `system/motion/clipkit/export-scenes.mjs`
+  writes them from `meridian-sizzle.json` as `video-scenes.json` + `video-scenes.sql`
+  (apply the SQL; no redeploy). Posts carry a library piece (`media_assets`,
+  `approved_by='owner'`) when one fits. Never go back to type-only clips or
+  typographic cards as the primary visual. Clipkit rules, all learned the hard
+  way: only protocol animation types (`slide-up-in`, not `slide-in`); ASCII
+  text (the builder normalises every scene string — em dashes, middle dots,
+  bullets, the check mark — because the cloud font atlas drops them); the
+  soundtrack must be served from our own bucket (`clipkit_music_url`), never
+  from Clipkit's asset store — that stalls renders at 99%; the storefront
+  photos must also come from our bucket (`social-videos/library/modern-street-*.jpg`)
+  because Clipkit's renderer cannot fetch meridianinterface.com; in portrait
+  every scene group is anchored `50%/50%` at the canvas centre — Clipkit
+  scales a group about its anchor, and an unanchored full-frame scene scaled
+  from x=0 pushed the phone off the right edge. Validate a changed builder
+  through the Clipkit MCP (`set_project` → `validate_project` →
+  `preview_still` at several times, both aspects) before deploying; the
+  schema validator alone is lenient and cannot see placement.
 - Full detail and the day-by-day log: `system/SESSION.md`.
 
 ## The mental model

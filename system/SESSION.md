@@ -167,6 +167,46 @@ asked for a vector file." (with music). Four test items are marked failed
 with their reasons. Three stuck renders remain in his Clipkit dashboard;
 they will never finish and can be cancelled there.
 
+**The agents' video IS the approved reel now (Sep 7, afternoon).** Otis
+watched a queued clip and said it was not what we made: "I want the video that
+we created showing all the products that Meridian Interface produces... the
+content I approved is what I want on the video." The builder was rewritten
+around that rule and deployed (runner v37, orchestrator v33).
+
+- **The whole reel, never a subset.** `_shared/clipkit.ts` puts a hook card in
+  front of ALL SEVEN approved product scenes, in the approved order (website,
+  app, storefront, dashboard, CRM, AI stack, code-to-UI), then the wordmark
+  with the call to action. 46.9 s in both aspects. The model writes only the
+  hook, the CTA and the caption; the `scenes` field it used to pick with is
+  ignored on purpose, and the prompt tells it the picture is fixed.
+- **The scenes live in the database.** `settings.video_scenes` holds them,
+  written by `system/motion/clipkit/export-scenes.mjs` from
+  `meridian-sizzle.json` (`video-scenes.json` + `video-scenes.sql`, both
+  committed). A newly approved reel is one SQL statement, no redeploy.
+- **meridianinterface.com is a "Coming Soon" parking page again.** Every
+  request to it returns Squarespace HTML, which is why the storefront tiles
+  rendered blank in Clipkit and why an ingest attempt failed with
+  "unsupported content type text/html". The six product photographs now come
+  from the website repo on GitHub (public, commit `ab2fe47`) through the
+  `media` function into our own bucket
+  (`social-videos/library/modern-street-*.jpg`), and `export-scenes.mjs`
+  re-points the scene JSON at those copies. Verified in a Clipkit preview:
+  the six garments render.
+- **Two rendering traps fixed by code, not by hope.** Scene text is
+  ASCII-normalised at build time (the reel was authored with em dashes,
+  middle dots and a check mark, which the cloud font atlas drops silently);
+  and in portrait every scene group is anchored `50%/50%` at the canvas
+  centre, because Clipkit scales a group about its anchor and the phone was
+  sitting off the right edge.
+- **No price on screen, enforced.** The prompt forbade it and the model still
+  wrote "See what each price includes" into a call to action. `noMoney()` now
+  filters the two lines that reach the screen (hook, CTA) and replaces a line
+  about money or cost with a neutral one. The caption may still name a price.
+- **Proven end to end.** A LinkedIn video task ran on the live key: real copy,
+  no price line, Clipkit accepted the composition and rendered it
+  (`58e28047-...`). Both aspects pass Clipkit's validator; stills checked at
+  the hook, website, storefront, CRM, stack and wordmark.
+
 **Still pending from before:** Shotstack key (`settings.channels` is `{}`),
 Photo Control overrides on p7/p10 still beat committed screenshots, the
 production URL vs the frozen branch preview, old-key cleanup, spend cap,

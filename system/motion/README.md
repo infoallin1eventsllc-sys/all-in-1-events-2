@@ -213,9 +213,28 @@ marketing system instead of the text cards it was drafting. Three pieces:
   to `ready`. The three approved sizzle items (LinkedIn, Facebook, Instagram)
   are waiting on exactly this command.
 - **Clipkit is the agents' renderer** (`_shared/clipkit.ts`) once
-  `clipkit_api_key` is set — the composition grammar of the sizzle (ink
-  stage, grid, kicker + rule, Hanken Grotesk display, accent bar, wordmark
-  close) generated from a script. Portrait for TikTok/Reels, landscape for
-  LinkedIn/Facebook. The `media` edge function ingests any fetchable URL
-  into the library server-side, for a future host that this sandbox can
-  reach.
+  `clipkit_api_key` is set — and what it renders IS this sizzle. Every agent
+  video is the approved reel, whole: a hook card in the sizzle's hero
+  grammar, then all seven product scene groups in the approved order
+  (website, app, storefront, dashboard, CRM, AI stack, code-to-UI), then
+  the wordmark close with the call to action. The model writes the words
+  and never chooses scenes (owner rule, Sep 7: "the content I approved is
+  what I want on the video"). Nothing about cost (owner rule, Sep 7).
+  Portrait for TikTok/Reels (each scene anchored 50%/50% at the canvas
+  centre, as a band mid-frame), landscape for LinkedIn/Facebook.
+  Scene text is ASCII-normalised at build time, and the six storefront
+  photographs are re-pointed by `export-scenes.mjs` at copies in our bucket
+  (`social-videos/library/modern-street-*.jpg`, put there through the
+  `media` function) because Clipkit's renderer cannot fetch
+  meridianinterface.com — the tiles rendered blank until then.
+  `clipkit/export-scenes.mjs` cuts the scene groups out of
+  `meridian-sizzle.json` with their time windows and writes
+  `clipkit/video-scenes.json` and `clipkit/video-scenes.sql`; the SQL upserts
+  `settings.video_scenes`, which the runner loads at run time. Re-run it after
+  editing the sizzle, apply the SQL, commit both files - no redeploy. When a
+  scene is re-timed, only element start times and the keyframes of elements
+  that start at 0 move; keyframes on later elements are relative to their own
+  start and stay put (getting that wrong collapsed the storefront cursor and
+  the CRM card move to time 0 once).
+  The `media` edge function ingests any fetchable URL into the library
+  server-side, for a future host that this sandbox can reach.

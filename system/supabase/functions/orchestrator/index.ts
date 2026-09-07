@@ -86,8 +86,10 @@ Deno.serve(async (req) => {
       `instructions about THIS cycle, not background reading. ` +
       `Only use these task types: generate_content, send_email, send_sms, publish_content, follow_up_lead. ` +
       `generate_content payload: channel (tiktok, instagram, facebook, linkedin), kind ("post" for a caption with a ` +
-      `branded image card, or "video" for a 20-second vertical clip of large on-brand type — hook, three beats, ` +
-      `the price, a call to action — that works on TikTok, Reels, Facebook and LinkedIn alike), topic, icp. ` +
+      `library piece or branded card, or "video": the studio's approved product reel, whole — an opening hook card, ` +
+      `then every product scene in the approved order (website, mobile app, storefront, dashboard, CRM, AI tech stack, ` +
+      `code-to-UI), then the wordmark with a call to action; only the words change per post; a video never shows a price — ` +
+      `portrait for TikTok and Instagram, landscape for LinkedIn and Facebook), topic, icp. ` +
       `TikTok takes video only, so a tiktok task must be kind "video". ` +
       `Content is built on the media library above: videos are chosen from its approved clips and posts carry one of its ` +
       `pieces whenever a piece shows what the post is about — the studio's own work, not a typographic card. When the ` +

@@ -152,11 +152,15 @@ Then it publishes through the webhook adapter with no code change at all.
 
 TikTok takes only video, and Reels is where Instagram's reach is, so a caption
 is not a post there. The planner can ask for `kind: "video"`; the runner has
-Claude write a five-scene script (a hook, three beats, the price, a call to
-action), Shotstack renders 20 seconds of large on-brand type at 1080×1920, and
-the MP4 and a poster frame are copied into the public `social-videos` bucket.
-The item then joins the approval queue with the clip attached. One clip serves
-all four platforms.
+Claude write the words (a hook, a call to action, the caption), the renderer
+puts the whole approved product reel between the hook card and the wordmark,
+and the MP4 is copied into the public `social-videos` bucket. The item
+then joins the approval queue with the clip attached. One clip serves all
+four platforms.
+
+**Owner rule (Sep 7): a video never shows a price or a cost.** Not on screen,
+not in the hook, not in the call to action. The caption may name a price when
+the writing rules call for it; the picture may not.
 
 ### Where the videos come from (Sep 6)
 
@@ -169,10 +173,19 @@ Three sources, in this order:
    Pieces get in with `node system/motion/attach.mjs <file> --slug … --approved`
    (see system/motion/README.md); only `--approved` pieces are offered.
 2. **Clipkit**, when no approved clip fits. Clipkit rendered the sizzle; with
-   a key the runner authors a composition in the website's own palette from
-   the script (hook, three beats, price, call to action), submits it to
-   Clipkit's cloud renderer and collects the MP4 into `social-videos`.
-   Portrait for TikTok and Instagram, landscape for LinkedIn and Facebook.
+   a key the runner rebuilds the approved reel around the script: a hook card,
+   then every one of the reel's seven product scenes in the approved order
+   (website, mobile app, storefront, dashboard, CRM, AI stack, code-to-UI),
+   then the wordmark with the call to action. The model never picks or
+   reorders scenes — the owner's rule is that the approved reel is the video.
+   No price card. It submits that to Clipkit's cloud renderer and collects
+   the MP4 into `social-videos`. Portrait for TikTok and Instagram (the
+   scenes play as a band across the middle of the frame), landscape for
+   LinkedIn and Facebook. About 47 seconds either way.
+   The scenes themselves live in the database, `settings.video_scenes`,
+   written from the approved sizzle by `system/motion/clipkit/export-scenes.mjs`
+   (`video-scenes.json` + `video-scenes.sql`). A newly approved reel is one
+   SQL statement; the edge functions do not change.
 3. **Shotstack**, the older ivory type-card renderer, only when Clipkit is
    not connected.
 
