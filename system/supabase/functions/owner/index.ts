@@ -199,23 +199,18 @@ Deno.serve(async (req) => {
     return json({ ok: true, configured: !!secret });
   }
 
-  // A deliberately non-revealing self-check: confirms the stored secret's shape
-  // without disclosing it, so a login that can never succeed is diagnosable
-  // without anyone reading the passcode aloud. It reports length, whether stray
-  // whitespace was saved around it, and its first and last character — enough
-  // to spot a paste mishap, far too little to reconstruct the value.
-  if (action === "selfcheck") {
-    const raw = Deno.env.get("OWNER_PASSCODE") ?? "";
-    return json({
-      ok: true,
-      configured: raw.trim().length > 0,
-      length: raw.trim().length,
-      hadSurroundingWhitespace: raw !== raw.trim(),
-      hasInnerWhitespace: /\s/.test(raw.trim()),
-      firstChar: raw.trim().slice(0, 1),
-      lastChar: raw.trim().slice(-1),
-    });
-  }
+  // `selfcheck` was removed on 8 Sep 2026. It sat here, ABOVE the token gate,
+  // and returned the passcode's length, whether whitespace was saved around it,
+  // and its first and last character — to anyone who asked. It was written to
+  // diagnose a paste mishap without reading the secret aloud, and the reasoning
+  // was that this is "far too little to reconstruct the value". That is true on
+  // its own and beside the point: it narrows a brute-force search for free, and
+  // the throttle it would run against counts failures per IP hash, which
+  // rotating addresses defeats. A shape oracle on an unauthenticated endpoint
+  // is not worth a debugging convenience.
+  //
+  // To diagnose a login that cannot succeed, use `status` (configured or not),
+  // and if that is not enough, re-set the secret. Do not reintroduce this.
 
   // Everything past this point needs a valid session.
   const token = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "") ||
