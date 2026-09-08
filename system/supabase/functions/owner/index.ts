@@ -16,6 +16,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { serviceClient } from "../_shared/supabase.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
+import { unsubToken } from "../_shared/unsub.ts";
 
 const SESSION_TTL_SECONDS = 60 * 60 * 8; // one working day
 const MAX_FAILURES = 8;
@@ -496,16 +497,86 @@ Deno.serve(async (req) => {
     case "message_send": {
       const id = String(body.id ?? "");
       if (!id) return json({ ok: false, error: "id required" }, 400);
-      const { data: msg } = await sb.from("messages").select("id, status, channel, to_addr").eq("id", id).maybeSingle();
+      const { data: msg } = await sb.from("messages")
+        .select("id, status, channel, to_addr, body, contact_id, meta").eq("id", id).maybeSingle();
       if (!msg) return json({ ok: false, error: "not found" }, 404);
       if (!["draft", "failed"].includes(msg.status)) return json({ ok: false, error: `cannot send a message that is ${msg.status}` }, 409);
       if (!msg.to_addr) return json({ ok: false, error: "this contact has no address to send to" }, 409);
-      const { data: full } = await sb.from("messages").select("meta").eq("id", id).maybeSingle();
-      await sb.from("messages").update({
+
+      /* -------------------------------------------------- marketing rules --
+         Everything the agent writes is marketing under US CAN-SPAM: it exists
+         to win work. Only messages about something already in motion are
+         transactional and exempt. Getting that backwards is the expensive
+         mistake, so the exemption is a short allow-list and everything else is
+         treated as marketing.
+
+         Two things must be true before a marketing email may be queued, and
+         neither is a warning: they are refusals. A send that cannot carry a
+         working opt-out, or that goes to somebody who already opted out, is
+         the violation itself - and the moment to stop it is here, not after
+         SendGrid has delivered it. */
+      const meta = (msg.meta ?? {}) as Record<string, unknown>;
+      const TRANSACTIONAL = ["booking_confirmation", "invoice", "payment_receipt"];
+      const isMarketing = msg.channel === "email" &&
+        !TRANSACTIONAL.includes(String(meta.reason ?? ""));
+
+      let bodyToSend = String(msg.body ?? "");
+
+      if (isMarketing) {
+        const { data: prof } = await sb.from("settings").select("value").eq("key", "business_profile").maybeSingle();
+        const profile = (prof?.value ?? {}) as Record<string, string | undefined>;
+        const postal = String(profile.postal_address ?? "").trim();
+
+        if (!postal) {
+          return json({
+            ok: false,
+            error: "no_postal_address",
+            message:
+              "Marketing email has to carry a real postal address, and none is set. Add one to settings.business_profile as \"postal_address\" and send again. (A booking confirmation or an invoice is transactional and is not held by this.)",
+          }, 409);
+        }
+
+        if (msg.contact_id) {
+          const { data: contact } = await sb.from("contacts")
+            .select("consent_email").eq("id", msg.contact_id).maybeSingle();
+          if (contact && contact.consent_email === false) {
+            return json({
+              ok: false,
+              error: "unsubscribed",
+              message: "This contact has opted out of marketing email. Transactional messages are still allowed.",
+            }, 409);
+          }
+        }
+
+        // The link is signed for this contact, so it cannot be edited into
+        // someone else's unsubscribe, and it never expires.
+        if (msg.contact_id && !/unsubscribe/i.test(bodyToSend)) {
+          const token = await unsubToken(String(msg.contact_id));
+          const site = String(profile.website ?? "meridianinterface.com").replace(/^https?:\/\//, "").replace(/\/$/, "");
+          const link = `https://${site}/unsubscribe?t=${token}`;
+          bodyToSend = `${bodyToSend}\n\n\n---\n${String(profile.name ?? "Meridian Interface")}\n${postal}\n\nDon't want these? Unsubscribe: ${link}\nThis is a marketing email. Messages about work in progress are sent separately.`;
+        }
+      }
+
+      // The result of this update was previously discarded. The database has
+      // triggers that refuse to queue a message - the owner-approval stamp,
+      // and now the compliance rules below it - and a refusal arrives here as
+      // an error on the update, not an exception. Ignoring it reported "queued"
+      // for a row still sitting in draft, and then queued a task to send it.
+      // Check it, and stop before the task is created.
+      const { error: queueErr } = await sb.from("messages").update({
         status: "queued", error: null,
+        // What is recorded is what gets sent, footer included.
+        body: bodyToSend,
         // The owner's stamp. The database refuses to queue or send without it.
-        meta: { ...((full?.meta ?? {}) as Record<string, unknown>), approved_by: "owner", approved_at: new Date().toISOString() },
+        meta: {
+          ...meta,
+          approved_by: "owner",
+          approved_at: new Date().toISOString(),
+          ...(isMarketing ? { compliance_footer: true } : { transactional: true }),
+        },
       }).eq("id", id);
+      if (queueErr) return json({ ok: false, error: "not_queued", message: queueErr.message }, 409);
       await sb.from("tasks").insert({
         type: msg.channel === "sms" ? "send_sms" : "send_email",
         payload: { message_id: id },
