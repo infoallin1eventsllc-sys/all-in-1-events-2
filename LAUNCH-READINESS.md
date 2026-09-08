@@ -140,6 +140,31 @@ expensive later. **Not legal advice — have someone qualified confirm.**
       edge secrets. **No email has ever left this system** — 6 drafts, 7 old
       failures, zero delivered. Until this exists a client books and hears
       nothing, which is worse than having no form. Highest-value single step.
+      *Prepared 8 Sep so the credential is the only thing left:*
+      *`SENDGRID-SETUP.md` walks the SendGrid side, including sender
+      verification — the step that is easy to miss and that makes a perfectly
+      good key fail with a 403 on every message.*
+      *A `mailcheck` function reports whether the key authenticates, whether it
+      carries Mail Send, and whether the From address is actually usable, and
+      will send one real test email on request. It never prints the key.*
+      *`_shared/email.ts` gained a 10s timeout (it runs on the booking hot path,
+      where a hanging SendGrid meant a spinning form), handles network failure
+      as a failed send rather than an exception, and translates 401/403/429 into
+      words rather than storing a bare status code.*
+      *Migration 0024 fixed a bug that would have surfaced on the day the key
+      was pasted in and not one day earlier: `intake` records the booking
+      acknowledgement as `sent` once a provider accepts it, and 0016 refused any
+      outbound message reaching `sent` without an owner stamp — which an
+      automatic acknowledgement does not have and should not have. The refusal
+      was swallowed by the try/catch that keeps a mail outage from failing a
+      booking, so the client would have received the email with no record of it
+      kept. The duplicate guard reads that same record, so a double-submitted
+      form would have sent two. Verified against the live schema before and
+      after, including that the approval rule still refuses everything else.*
+      *The booking path was re-run end to end through the deployed function on
+      8 Sep: contact, deal (budget parsed), activity, follow-up task and an
+      acknowledgement recorded honestly as a draft that says why it was not
+      sent.*
 - [ ] **8. Stripe.** `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET`, with the
       webhook pointed at the `pay-webhook` URL. `pay` is now deployed and
       reports `configured: false` until these exist. Check the `mode` badge: a

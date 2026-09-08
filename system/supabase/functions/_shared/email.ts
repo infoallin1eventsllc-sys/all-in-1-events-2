@@ -6,10 +6,13 @@
 // one confirmation would cost cold-start time and widen its surface for no
 // benefit. So the email call lives here on its own.
 //
-// NOTE: channels.ts still carries a byte-identical sendEmail. That duplication
-// should end by having channels.ts import this module — it is left for now only
-// because redeploying the runner is a 122 KB round trip through a model, which
-// is its own risk. If you change the contract here, change it there too.
+// NOTE: channels.ts carries a second copy of sendEmail, used by the runner.
+// The duplication should end by having channels.ts import this module; it has
+// not, because redeploying the runner is a 122 KB round trip through a model
+// and that is its own risk. As of 8 Sep the two have diverged: this one has a
+// request timeout, a bounded error string and plain-language status hints, and
+// the runner's does not. The RETURN CONTRACT is still identical, which is what
+// callers depend on — but if you change that, change it in both.
 //
 // The contract that matters: with no key configured this reports `mocked` and
 // does NOT claim delivery. Callers must treat mocked as "nothing was sent",
@@ -35,16 +38,30 @@ export async function sendEmail(args: {
   const from = args.fromEmail || Deno.env.get("SENDGRID_FROM_EMAIL") || "";
   if (!key || !from) return { ok: true, mocked: true, provider: "sendgrid" };
 
-  const resp = await fetch("https://api.sendgrid.com/v3/mail/send", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      personalizations: [{ to: [{ email: args.to }] }],
-      from: { email: from, name: args.fromName || Deno.env.get("SENDGRID_FROM_NAME") || undefined },
-      subject: args.subject,
-      content: [{ type: "text/plain", value: args.body }],
-    }),
-  });
+  let resp: Response;
+  try {
+    resp = await fetch("https://api.sendgrid.com/v3/mail/send", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      // This runs inside `intake`, on the hot path of a booking. Without a
+      // timeout a slow or hanging SendGrid holds the whole request open and the
+      // person who just filled in the form watches a spinner. Ten seconds is
+      // long enough for a normal send and short enough that a bad day for
+      // SendGrid is not also a bad day for the booking form.
+      signal: AbortSignal.timeout(10_000),
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: args.to }] }],
+        from: { email: from, name: args.fromName || Deno.env.get("SENDGRID_FROM_NAME") || undefined },
+        subject: args.subject,
+        content: [{ type: "text/plain", value: args.body }],
+      }),
+    });
+  } catch (e) {
+    // A timeout or a network failure is a failure to send, not an exception for
+    // the caller to handle. Returning it keeps the booking itself intact.
+    return { ok: false, mocked: false, provider: "sendgrid", error: `sendgrid unreachable: ${String(e).slice(0, 200)}` };
+  }
+
   if (resp.status >= 200 && resp.status < 300) {
     return {
       ok: true,
@@ -53,5 +70,18 @@ export async function sendEmail(args: {
       providerId: resp.headers.get("x-message-id") || undefined,
     };
   }
-  return { ok: false, mocked: false, provider: "sendgrid", error: `${resp.status}: ${await resp.text()}` };
+
+  // What comes back gets stored in messages.error and read by a human later, so
+  // it is worth saying what the status actually means. 403 is the one that
+  // matters: the key is fine and the From address was never verified, which is
+  // not something anyone guesses from "403 Forbidden".
+  const detail = (await resp.text().catch(() => "")).slice(0, 500);
+  const hint = resp.status === 401
+    ? " — SendGrid rejected the API key"
+    : resp.status === 403
+    ? " — the From address is not a verified sender on this SendGrid account"
+    : resp.status === 429
+    ? " — rate limited by SendGrid"
+    : "";
+  return { ok: false, mocked: false, provider: "sendgrid", error: `${resp.status}${hint}: ${detail}` };
 }
