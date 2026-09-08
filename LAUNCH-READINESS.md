@@ -16,7 +16,7 @@ supply them**:
 
 | Still open | Who | Effect until done |
 |---|---|---|
-| Revoke and re-set the Anthropic keys (#2) | Otis | A live key sits in the database and four more are pasted as secret *names* |
+| Revoke the four old Anthropic keys (#2) | Otis | The new key is in and the database copy is gone; the four old strings still work until revoked in the console |
 | Rotate the owner passcode (#4) | Otis | Its shape was readable by anyone while `selfcheck` existed |
 | A real postal address (#6) | Otis | **All marketing email is blocked.** Bookings and invoices still send |
 | SendGrid (#7) | Otis | No email has ever left this system — a client books and hears nothing |
@@ -62,18 +62,23 @@ Two of these are live risks **today**, not only at launch.
       limiting and a non-constant-time compare. URLs leak via history, server
       logs and referrer headers. The owner portal replaced it.
       *Fix: delete the function, or gate it behind the owner session token.*
-- [ ] **2. Get the Anthropic key out of the database.** STILL OPEN — only Otis
-      can close it. A live key sits in plaintext in `settings.anthropic.api_key`
-      (108 chars), readable by anything with service-role and present in every
-      backup. It is also the *only working key*: the `ANTHROPIC_API_KEY` edge
-      secret is a 16-character label, not a key, so deleting the settings row
-      first would stop generation dead.
-      Worse, found on 8 Sep: **four live keys pasted as Supabase secret
-      *names*** (108 chars each, all answering 200), plus junk entries.
-      *Fix, in this order: revoke all four keys and the settings one → create
-      one new key → set it as the **value** of `ANTHROPIC_API_KEY` → delete the
-      four name-shaped secrets and the junk → then say so, and the
-      `settings.anthropic` row gets deleted.*
+- [x] **2. Get the Anthropic key out of the database.** DONE 8 Sep, by Otis and
+      verified live. The `ANTHROPIC_API_KEY` secret now holds a real key
+      (ends `kwAA`, authenticates against Anthropic); the plaintext copy in
+      `settings.anthropic` has been deleted; and the four live keys that were
+      pasted as Supabase secret *names*, plus the junk entries
+      (`otis williams`, `otiswilliams`, `MERIDIAN INTERFACE`), are gone. The
+      Secrets page now holds exactly three entries, all of them real.
+      *What the code reads, for whoever comes next: `ANTHROPIC_API_KEY` first
+      and only if the value looks like a key, then `settings.anthropic.api_key`
+      as a fallback. Nothing scans other secret names — that is why four live
+      keys could sit there powering nothing.*
+      *One step left and only Otis can see it: **revoke the four old keys**
+      (ending `3wAA`, `RQAA`, `ywAA`, `NgAA`) in the Anthropic console. Deleting
+      them from Supabase removed our copies; it did not kill the strings. My
+      visibility ended with the deletion — I can no longer test whether they are
+      revoked, so that one is confirmed in the console, not from here.*
+
 - [x] **3. Add security headers.** DONE 8 Sep. `vercel.json` now carries a CSP
       (`script-src 'self'` — no inline or eval, verified against index.html and
       all nine demos), HSTS, `X-Frame-Options: DENY`, nosniff, Referrer-Policy
