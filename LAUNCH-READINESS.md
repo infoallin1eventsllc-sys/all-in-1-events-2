@@ -16,7 +16,6 @@ supply them**:
 
 | Still open | Who | Effect until done |
 |---|---|---|
-| Revoke the four old Anthropic keys (#2) | Otis | The new key is in and the database copy is gone; the four old strings still work until revoked in the console |
 | Rotate the owner passcode (#4) | Otis | Its shape was readable by anyone while `selfcheck` existed |
 | A real postal address (#6) | Otis | **All marketing email is blocked.** Bookings and invoices still send |
 | SendGrid (#7) | Otis | No email has ever left this system — a client books and hears nothing |
@@ -73,11 +72,18 @@ Two of these are live risks **today**, not only at launch.
       and only if the value looks like a key, then `settings.anthropic.api_key`
       as a fallback. Nothing scans other secret names — that is why four live
       keys could sit there powering nothing.*
-      *One step left and only Otis can see it: **revoke the four old keys**
-      (ending `3wAA`, `RQAA`, `ywAA`, `NgAA`) in the Anthropic console. Deleting
-      them from Supabase removed our copies; it did not kill the strings. My
-      visibility ended with the deletion — I can no longer test whether they are
-      revoked, so that one is confirmed in the console, not from here.*
+      *The console turned out to hold far more than the four: **seventeen live
+      keys**, fifteen of them named "Otis Williams API key" — one per attempt at
+      fixing a setup that was never going to work, none ever cleaned up. That,
+      not the four, was the real exposure. Otis deleted fourteen on 8 Sep, and
+      the key in use (`kwAA`) was re-verified live immediately afterwards: it
+      authenticates and returns real model output. Three keys remain — `kwAA`
+      (in use), "Anthropic API key" and "Anthropic courses", both left pending a
+      check of what still depends on them.*
+      *Worth keeping in mind: deleting a key from Supabase removes our copy, it
+      does not revoke the string. Only the Anthropic console does that, and once
+      a key is out of Supabase I can no longer test it — so revocation is
+      confirmed in the console, not from here.*
 
 - [x] **3. Add security headers.** DONE 8 Sep. `vercel.json` now carries a CSP
       (`script-src 'self'` — no inline or eval, verified against index.html and
