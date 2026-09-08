@@ -1,16 +1,30 @@
 # Launch readiness — Meridian Interface
 
-**Dated 7 Sep 2026. This is the current authority for "can this go public".**
-It supersedes `PRE-LAUNCH-CHECKLIST.md` (a generic template) and
-`system/PRELAUNCH.md` (an August fix list) for launch decisions.
+**Written 7 Sep 2026, updated 8 Sep. This is the current authority for "can
+this go public".** It supersedes `PRE-LAUNCH-CHECKLIST.md` (a generic template)
+and `system/PRELAUNCH.md` (an August fix list) for launch decisions.
 
 Everything below was **verified against the live system**, not read from code,
 unless it says otherwise. Where something could not be verified, it says so
 rather than assuming.
 
-**Verdict: not ready for a public domain yet.** The software is in better shape
-than most sites at launch. What is missing is perimeter work — security,
-legal, and two credentials — and it is roughly a day.
+**Verdict, 8 Sep: still not ready, but the list is shorter and the shape of it
+has changed.** Everything that was mine to fix is fixed — the four security
+blockers, the privacy policy, the terms, and the opt-out machinery. What is
+left is almost entirely **credentials and one address, and only Otis can
+supply them**:
+
+| Still open | Who | Effect until done |
+|---|---|---|
+| Revoke and re-set the Anthropic keys (#2) | Otis | A live key sits in the database and four more are pasted as secret *names* |
+| Rotate the owner passcode (#4) | Otis | Its shape was readable by anyone while `selfcheck` existed |
+| A real postal address (#6) | Otis | **All marketing email is blocked.** Bookings and invoices still send |
+| SendGrid (#7) | Otis | No email has ever left this system — a client books and hears nothing |
+| Stripe (#8) | Otis | No invoice can be paid |
+
+The deploy itself is also still pending: the security headers and the
+`/unsubscribe` page are committed but only take effect on the next Vercel
+build.
 
 ---
 
@@ -39,25 +53,37 @@ legal, and two credentials — and it is roughly a day.
 
 Two of these are live risks **today**, not only at launch.
 
-- [ ] **1. Retire the `dashboard` endpoint.** It serves the entire CRM —
+- [x] **1. Retire the `dashboard` endpoint.** DONE 8 Sep. Replaced with a 410
+      stub holding no database client and no credentials, and
+      `settings.dashboard.passcode` deleted so older copies fail closed.
+      *Was:* It serves the entire CRM —
       every contact's name, email and phone — to anyone holding a
       12-character passcode passed **in the URL query string**, with no rate
       limiting and a non-constant-time compare. URLs leak via history, server
       logs and referrer headers. The owner portal replaced it.
       *Fix: delete the function, or gate it behind the owner session token.*
-- [ ] **2. Get the Anthropic key out of the database.** A live key sits in
-      plaintext in `settings.anthropic.api_key` (108 chars) — readable by
-      anything with service-role, and present in every backup.
-      *Fix: set `ANTHROPIC_API_KEY` as an edge secret →
-      `delete from settings where key='anthropic'` → **rotate the key**.*
-- [ ] **3. Add security headers.** The website repo has no `vercel.json`, no
-      `_headers`, nothing: no CSP, no HSTS, no `X-Frame-Options`. The invoice
-      portal can be framed by another site (clickjacking).
-      *Fix: one new `vercel.json` in `meridian-interface-website`.*
-- [ ] **4. Remove the `selfcheck` passcode oracle.** `owner/index.ts:198-217`
-      sits **above** the token gate and returns the passcode's length, first
-      character, last character and whitespace shape to any caller.
-      *Fix: move it below the gate or delete it, then rotate the passcode.*
+- [ ] **2. Get the Anthropic key out of the database.** STILL OPEN — only Otis
+      can close it. A live key sits in plaintext in `settings.anthropic.api_key`
+      (108 chars), readable by anything with service-role and present in every
+      backup. It is also the *only working key*: the `ANTHROPIC_API_KEY` edge
+      secret is a 16-character label, not a key, so deleting the settings row
+      first would stop generation dead.
+      Worse, found on 8 Sep: **four live keys pasted as Supabase secret
+      *names*** (108 chars each, all answering 200), plus junk entries.
+      *Fix, in this order: revoke all four keys and the settings one → create
+      one new key → set it as the **value** of `ANTHROPIC_API_KEY` → delete the
+      four name-shaped secrets and the junk → then say so, and the
+      `settings.anthropic` row gets deleted.*
+- [x] **3. Add security headers.** DONE 8 Sep. `vercel.json` now carries a CSP
+      (`script-src 'self'` — no inline or eval, verified against index.html and
+      all nine demos), HSTS, `X-Frame-Options: DENY`, nosniff, Referrer-Policy
+      and Permissions-Policy. `frame-ancestors 'none'` closes the clickjacking
+      route into the invoice portal. Takes effect on the next Vercel deploy.
+- [x] **4. Remove the `selfcheck` passcode oracle.** DONE 8 Sep. Deleted, with
+      a comment in its place saying why it must not come back. `status`
+      (configured or not) is what remains.
+      *Otis still owes one step: **rotate the owner passcode**, since its shape
+      was reachable by anyone for as long as that action existed.*
 
 ---
 
@@ -66,17 +92,34 @@ Two of these are live risks **today**, not only at launch.
 Not optional decoration. This is the cheapest thing to fix now and the most
 expensive later. **Not legal advice — have someone qualified confirm.**
 
-- [ ] **5. Publish a privacy policy and terms, linked in the footer.**
-      Verified absent: nothing in `src/`, no legal links in `Footer.tsx`. You
-      collect names, emails and phone numbers into a CRM and process them with
-      AI. Stripe, SendGrid and every ad platform expect a published policy, and
-      it is the first thing a client's lawyer looks for.
-- [ ] **6. Add an unsubscribe link and a physical mailing address** to every
-      non-transactional email. Verified absent: zero occurrences of
-      "unsubscribe" anywhere in the sending path. The agent-written follow-ups
-      are marketing under US CAN-SPAM rules; the booking acknowledgement is
-      transactional and is broadly exempt. **Do this before SendGrid is turned
-      on** — it is the step that risks a fine rather than embarrassment.
+- [x] **5. Publish a privacy policy and terms, linked in the footer.** DONE
+      8 Sep (`917ef40`). One page, both documents, Privacy and Terms links in
+      the footer. Written from what the system actually does and checked against
+      the code — the intake path, the AI drafting with a human approving every
+      message, and the fact that card numbers never touch this site because
+      Stripe hosts the checkout. It says plainly that it is not legal advice;
+      have someone qualified read it before it does real work.
+- [x] **6. Add an unsubscribe link and a physical mailing address** to every
+      non-transactional email. BUILT 8 Sep, and it now **refuses to send**
+      rather than sending non-compliant mail.
+      A signed opt-out link (HMAC over the contact id, no expiry), an
+      `unsubscribe` endpoint that is safe for mail scanners to prefetch and
+      never answers someone with an error, an `/unsubscribe` page on the site
+      that does the work on arrival, and a footer appended on approval.
+      Enforced twice: in `owner.message_send`, and in the database
+      (migration 0023) so the runner is covered too if autonomy is ever
+      flipped to `auto`. Nine cases verified against the live schema.
+      **One thing is still missing and it is Otis's:** there is no postal
+      address on file, only "Houston, Texas". Until
+      `settings.business_profile.postal_address` holds a real mailing address,
+      **every marketing email is blocked** — which is the intended state.
+      Booking confirmations and invoices are transactional and still go out.
+      *Fix: `update settings set value = value || '{"postal_address":"<the real
+      address>"}'::jsonb where key='business_profile';`*
+      *Not yet proven end to end: a real token from a real email flipping the
+      flag. The signing key is the service-role key, which is not reachable
+      from a tooling session, so the link's positive path needs one real click
+      once SendGrid is on. Both halves either side of it are tested.*
 
 ---
 
