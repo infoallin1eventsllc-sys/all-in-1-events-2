@@ -1,4 +1,14 @@
+# Scratch renders stay out of git: this directory fills with intermediate
+# segments, raw screen recordings and test cuts on every run.
 *.wav
 *.mp4
 *.webm
 *.mp3
+
+# ...but renders/ is the exception. Those are the FINISHED masters, and they
+# are irreplaceable: they were made in a sandbox whose disk does not survive a
+# restart, and the raw recordings behind them are already gone. Losing them
+# means re-shooting and re-cutting from nothing. See renders/README.md.
+!renders/
+!renders/*.mp4
+!renders/*.png
