@@ -1,0 +1,23 @@
+-- 0026_revoke_check_planner_spend_from_public.sql
+--
+-- 0025 revoked check_planner_spend() from anon and authenticated. That read as
+-- sufficient and was not: a newly created function carries a default EXECUTE
+-- grant to PUBLIC, and both those roles inherit from PUBLIC, so the inherited
+-- grant survived and the function stayed callable over the REST API by anyone.
+--
+-- Found by the Supabase security linter, which had not been run against this
+-- project before. The tell is visible in pg_proc.proacl: this function had a
+-- bare "=X/postgres" entry and every other SECURITY DEFINER function in the
+-- schema did not. That empty grantee is PUBLIC.
+--
+-- Nothing was exposed beyond nuisance — the function only recomputes alert
+-- state from real counts and is idempotent, so calling it repeatedly achieves
+-- nothing. Worth fixing anyway: a SECURITY DEFINER function reachable without
+-- signing in is the wrong shape whatever today's body does, and the risk
+-- arrives with whoever edits that body next without re-checking who can call
+-- it.
+--
+-- cron runs as postgres and keeps its own grant, so the fifteen-minute check is
+-- unaffected.
+revoke all on function public.check_planner_spend() from public;
+revoke all on function public.check_planner_spend() from anon, authenticated;
