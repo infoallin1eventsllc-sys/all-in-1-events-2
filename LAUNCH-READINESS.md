@@ -134,6 +134,40 @@ expensive later. **Not legal advice — have someone qualified confirm.**
 
 ---
 
+## Closed since — the Stack Planner's spend ceiling
+
+The planner is a public sales tool: its front end is downloadable by anyone and
+its endpoint accepts any origin, both on purpose. The per-address hourly
+allowance bounded what one visitor could cost but not the total, so a copy of
+that front end pointed back at the endpoint could have spent Meridian's Anthropic
+credit without limit — the per-address cap only asks an abuser to rotate
+addresses.
+
+A ceiling on model calls in any rolling 24 hours now sits in front of that,
+default 60 (roughly $6 a day at the very top, and only reachable under abuse).
+Rolling rather than calendar-day so there is no midnight anyone can straddle to
+spend it twice. The number is `settings.planner_budget`, changeable with one
+UPDATE and no redeploy.
+
+Two details that make it behave properly, both verified against the live
+endpoint rather than reasoned about:
+
+* **Sending a plan is never blocked.** It calls no model, and turning away the
+  most qualified lead the studio gets in order to save six cents is the wrong
+  trade. Tested at a ceiling of zero: the advisor refused, the send succeeded.
+* **A refusal is not recorded.** The ceiling is checked *before* the per-address
+  check, which records the call it permits — the other order would have let
+  refusals count against the budget and drain it on their own. Confirmed: after
+  a refused call, `planner_requests` held no row for it.
+
+When the ceiling is reached the planner reports itself the same way it does with
+no key at all, so the page already renders it correctly with no client change.
+
+Usage to date: 8 real calls, all from testing on 4 Sep. This is a precaution,
+not a response to abuse.
+
+---
+
 ## BLOCKER — credentials (only Otis can do these)
 
 - [ ] **7. SendGrid.** `SENDGRID_API_KEY` + `SENDGRID_FROM_EMAIL` as Supabase

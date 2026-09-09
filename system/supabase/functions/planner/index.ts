@@ -17,6 +17,51 @@ const PLAN_MAX = 20_000; // a plan the client exported, not free-form input
 // so its allowance is counted separately from the model calls (migration 0018).
 const LIMITS: Record<string, number> = { advisor: 12, simulate: 12, send_plan: 5 };
 
+/* -------------------------------------------------------- the spend ceiling --
+   The per-address allowance above bounds what one visitor can cost. It does not
+   bound the total, and this endpoint is deliberately open to any origin: the
+   planner is a public sales tool and the front end that calls it is downloadable
+   by anyone. So a copy of that front end, pointed back at this endpoint, would
+   spend Meridian's Anthropic credit with no upper limit — the per-address cap
+   only asks the abuser to rotate addresses.
+
+   This is that upper limit. Every allowed model call is already recorded in
+   planner_requests, so the ceiling is a count over the last 24 hours rather than
+   a new table to keep.
+
+   Rolling 24 hours, not a calendar day, for two reasons: no timezone or
+   daylight-saving arithmetic to get wrong, and a midnight reset would let
+   someone burn the budget twice in ten minutes by straddling it.
+
+   The number lives in settings so it can be changed with one UPDATE and no
+   redeploy, the same way the run secret is handled:
+
+     update settings set value = '{"model_calls_per_day": 120}'::jsonb
+      where key = 'planner_budget';
+
+   Worst case per call is roughly ten cents — 5,000 output tokens on Sonnet 5 at
+   $10 per million, plus input and thinking — so 60 is about $6 a day at the
+   ceiling, and the ceiling is only reached under abuse. */
+const MODEL_ACTIONS = ["advisor", "simulate"];
+const DEFAULT_DAILY_MODEL_CALLS = 60;
+
+async function modelCallsLeft(sb: ReturnType<typeof serviceClient>): Promise<number> {
+  const { data } = await sb.from("settings").select("value").eq("key", "planner_budget").maybeSingle();
+  const cap = Number((data?.value as { model_calls_per_day?: number } | null)?.model_calls_per_day);
+  const limit = Number.isFinite(cap) && cap >= 0 ? cap : DEFAULT_DAILY_MODEL_CALLS;
+
+  const since = new Date(Date.now() - 24 * 3600_000).toISOString();
+  const { count, error } = await sb
+    .from("planner_requests")
+    .select("ip_hash", { count: "exact", head: true })
+    .in("action", MODEL_ACTIONS)
+    .gte("created_at", since);
+
+  // If the count cannot be read, do not treat that as permission to spend.
+  if (error) return 0;
+  return Math.max(0, limit - (count ?? 0));
+}
+
 const CORS = {
   "access-control-allow-origin": "*",
   "access-control-allow-headers": "content-type",
@@ -66,11 +111,27 @@ Deno.serve(async (req) => {
   const action = clean(body.action);
 
   if (action === "status") {
-    return json({ ok: true, ai: await keyAvailable(), model: MODEL });
+    // `ai` is what the front end reads to decide whether to offer the advisor.
+    // A spent budget is reported the same way an absent key is, so the page it
+    // already renders for "offline" covers this with no change at the client.
+    const sb = serviceClient();
+    const ready = (await keyAvailable()) && (await modelCallsLeft(sb)) > 0;
+    return json({ ok: true, ai: ready, model: MODEL });
   }
   if (!(action in LIMITS)) return json({ ok: false, error: "unknown action" }, 400);
 
   const sb = serviceClient();
+
+  /* Checked before planner_allow, which RECORDS the call it permits. Checking
+     after would let refused calls count against the ceiling and drain it. */
+  if (MODEL_ACTIONS.includes(action) && (await modelCallsLeft(sb)) <= 0) {
+    return json({
+      ok: false,
+      error:
+        "The AI advisor has reached its limit for today. Everything else on this page still works, and Meridian can run this with you on a call — the Send button below files your plan either way.",
+    }, 503);
+  }
+
   const { data: allowed, error: rlErr } = await sb.rpc("planner_allow", {
     p_ip_hash: await ipHash(req), p_action: action, p_limit: LIMITS[action], p_window: "1 hour",
   });
