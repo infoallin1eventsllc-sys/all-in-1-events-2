@@ -163,8 +163,32 @@ endpoint rather than reasoned about:
 When the ceiling is reached the planner reports itself the same way it does with
 no key at all, so the page already renders it correctly with no client change.
 
-Usage to date: 8 real calls, all from testing on 4 Sep. This is a precaution,
-not a response to abuse.
+Two more since, completing the set:
+
+**An origin allow-list.** A browser will not let a page forge its Origin header,
+so this genuinely stops someone hosting a copy of the planner's front end and
+having their visitors' browsers spend Meridian's credit. It stops nothing else —
+a script simply omits the header, and requests with no Origin are allowed through
+on purpose so monitoring and the studio's own tooling keep working. The ceiling
+is what bounds a determined copier; this closes the lazy path. The list is
+`settings.planner_origins`, and it defaults to the live domain, every Vercel
+preview build and localhost, so pointing a domain at the site cannot lock Otis
+out of his own planner. Seven cases checked against the live endpoint: no Origin,
+the Vercel site, the apex domain, www, the dev server on a port, an unrelated
+copy, and the lookalike `meridianinterface.com.evil.net` — the first five allowed,
+the last two refused.
+
+**The ceiling now reports itself** (migration 0025). System Health raises `info`
+past 60% of the allowance and `warning` when it is gone, each clearing the other
+and both clearing when usage drops back. The warning carries the exact statement
+that raises the ceiling. It is a separate function from `check_system_health()`
+deliberately — that one is ninety lines of working code and rewriting all of it
+to append twenty would have risked the ninety for the twenty; the existing
+fifteen-minute cron entry runs both. Verified at three ceilings: spent, busy, and
+all clear.
+
+Usage to date: 8 real calls, all from testing on 4 Sep. All of this is a
+precaution, not a response to abuse.
 
 ---
 

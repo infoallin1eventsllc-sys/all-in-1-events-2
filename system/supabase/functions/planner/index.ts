@@ -62,14 +62,91 @@ async function modelCallsLeft(sb: ReturnType<typeof serviceClient>): Promise<num
   return Math.max(0, limit - (count ?? 0));
 }
 
-const CORS = {
-  "access-control-allow-origin": "*",
+/* ------------------------------------------------------- the origin check --
+   Who is allowed to call this from a web page.
+
+   Be clear about what this does and does not buy, because it is easy to
+   overrate. A browser sends an Origin header it will not let a page forge, so
+   this genuinely stops someone hosting a copy of the planner's front end and
+   having their visitors' browsers spend Meridian's credit.
+
+   It stops nothing else. A script, a server, or curl simply omits the header,
+   and requests with no Origin are allowed through here on purpose - the
+   planner is called that way by monitoring and by the studio's own tooling, and
+   refusing them would break those while stopping no serious copier for more
+   than a minute. The 24-hour ceiling above is what actually bounds a determined
+   one; this closes the lazy path.
+
+   The list lives in settings so a new domain does not need a redeploy:
+
+     update settings set value = '{"allow": ["https://example.com"]}'::jsonb
+      where key = 'planner_origins';
+
+   Entries may be exact ("https://meridianinterface.com") or a suffix wildcard
+   ("*.vercel.app"). The defaults cover the live domain, every Vercel preview
+   build, and localhost, so this cannot lock Otis out of his own site the day a
+   domain is pointed at it. */
+const DEFAULT_ORIGINS = [
+  "https://meridianinterface.com",
+  "*.meridianinterface.com",
+  "*.vercel.app",
+  "http://localhost",
+  "*.localhost",
+];
+
+function originAllowed(origin: string, allow: string[]): boolean {
+  if (!origin) return true; // not a browser - see the note above
+
+  // hostname, not host: the port is not part of who someone is, and comparing
+  // it would reject the dev server on localhost:5173 against a rule that says
+  // localhost - a baffling failure to debug for no security gained.
+  let name: string;
+  try {
+    name = new URL(origin).hostname.toLowerCase();
+  } catch {
+    return false; // a browser never sends a malformed Origin
+  }
+
+  return allow.some((rule) => {
+    const r = rule.trim().toLowerCase();
+    if (!r) return false;
+    if (r.startsWith("*.")) {
+      // "*.vercel.app" covers any sub-domain but not the bare domain itself.
+      return name.endsWith(r.slice(1));
+    }
+    try {
+      return new URL(r).hostname.toLowerCase() === name;
+    } catch {
+      return r === name; // a bare hostname in the list still works
+    }
+  });
+}
+
+async function allowedOrigins(sb: ReturnType<typeof serviceClient>): Promise<string[]> {
+  const { data } = await sb.from("settings").select("value").eq("key", "planner_origins").maybeSingle();
+  const list = (data?.value as { allow?: unknown } | null)?.allow;
+  return Array.isArray(list) && list.length ? list.map(String) : DEFAULT_ORIGINS;
+}
+
+/* Echo the caller's origin when it is allowed rather than answering "*", so the
+   browser enforces this too and a disallowed page cannot read the reply even if
+   it somehow got one. */
+const corsFor = (origin: string) => ({
+  "access-control-allow-origin": origin || "*",
   "access-control-allow-headers": "content-type",
   "access-control-allow-methods": "POST, OPTIONS",
-};
+  "vary": "Origin",
+});
 
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { ...CORS, "content-type": "application/json" } });
+/* Every reply below is built through this, bound to the caller's origin once
+   the gate has approved it. There is deliberately no wildcard shortcut left in
+   the file: one would be the obvious thing to reach for later and would quietly
+   undo the check above. */
+const jsonFor = (origin: string) => (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsFor(origin), "content-type": "application/json" },
+  });
 
 async function ipHash(req: Request): Promise<string> {
   const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() ||
@@ -103,29 +180,39 @@ const SIMULATE_SHAPE = `{ "steps": [ {
 } ] }`;
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
-  if (req.method !== "POST") return json({ ok: false, error: "POST only" }, 405);
+  const origin = req.headers.get("origin") ?? "";
+  const reply = jsonFor(origin);
+  const sb = serviceClient();
+
+  // Checked on the preflight too, so a disallowed page is turned away before it
+  // ever sends the real request.
+  if (!originAllowed(origin, await allowedOrigins(sb))) {
+    return new Response(
+      JSON.stringify({ ok: false, error: "This planner is not available from that address." }),
+      { status: 403, headers: { ...corsFor(""), "content-type": "application/json" } },
+    );
+  }
+
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsFor(origin) });
+  if (req.method !== "POST") return reply({ ok: false, error: "POST only" }, 405);
 
   let body: Record<string, unknown>;
-  try { body = await req.json(); } catch { return json({ ok: false, error: "bad JSON" }, 400); }
+  try { body = await req.json(); } catch { return reply({ ok: false, error: "bad JSON" }, 400); }
   const action = clean(body.action);
 
   if (action === "status") {
     // `ai` is what the front end reads to decide whether to offer the advisor.
     // A spent budget is reported the same way an absent key is, so the page it
     // already renders for "offline" covers this with no change at the client.
-    const sb = serviceClient();
     const ready = (await keyAvailable()) && (await modelCallsLeft(sb)) > 0;
-    return json({ ok: true, ai: ready, model: MODEL });
+    return reply({ ok: true, ai: ready, model: MODEL });
   }
-  if (!(action in LIMITS)) return json({ ok: false, error: "unknown action" }, 400);
-
-  const sb = serviceClient();
+  if (!(action in LIMITS)) return reply({ ok: false, error: "unknown action" }, 400);
 
   /* Checked before planner_allow, which RECORDS the call it permits. Checking
      after would let refused calls count against the ceiling and drain it. */
   if (MODEL_ACTIONS.includes(action) && (await modelCallsLeft(sb)) <= 0) {
-    return json({
+    return reply({
       ok: false,
       error:
         "The AI advisor has reached its limit for today. Everything else on this page still works, and Meridian can run this with you on a call — the Send button below files your plan either way.",
@@ -135,14 +222,14 @@ Deno.serve(async (req) => {
   const { data: allowed, error: rlErr } = await sb.rpc("planner_allow", {
     p_ip_hash: await ipHash(req), p_action: action, p_limit: LIMITS[action], p_window: "1 hour",
   });
-  if (rlErr) return json({ ok: false, error: "planner unavailable" }, 503);
-  if (!allowed) return json({ ok: false, error: "hourly allowance used" }, 429);
+  if (rlErr) return reply({ ok: false, error: "planner unavailable" }, 503);
+  if (!allowed) return reply({ ok: false, error: "hourly allowance used" }, 429);
 
   // Sending a plan needs no model, so it works even with the advisor offline.
-  if (action === "send_plan") return await sendPlan(body);
+  if (action === "send_plan") return await sendPlan(body, reply);
 
   if (!(await keyAvailable())) {
-    return json({ ok: false, error: "The AI advisor is offline right now. Everything else on this page still works, and Meridian can run this with you on a call." }, 503);
+    return reply({ ok: false, error: "The AI advisor is offline right now. Everything else on this page still works, and Meridian can run this with you on a call." }, 503);
   }
 
   if (action === "advisor") {
@@ -151,7 +238,7 @@ Deno.serve(async (req) => {
       teamSize: clean(body.teamSize), monthlyBudget: clean(body.monthlyBudget), currentTools: clean(body.currentTools),
       painPoints: clean(body.painPoints), targetAutonomyGoal: clean(body.targetAutonomyGoal),
     };
-    if (!p.companyName && !p.painPoints) return json({ ok: false, error: "Tell us at least the company and what slows it down." }, 400);
+    if (!p.companyName && !p.painPoints) return reply({ ok: false, error: "Tell us at least the company and what slows it down." }, 400);
 
     const r = await callClaude({
       model: MODEL, thinking: true, maxTokens: 5000, system: VOICE,
@@ -169,16 +256,16 @@ How far they want automation to go: ${p.targetAutonomyGoal || "(not given)"}
 Give exactly five stackLayers, one per layer in order, and three phases. Keep the whole plan inside the stated budget where one is given, and say if it cannot be. Return JSON in this shape:
 ${ADVISOR_SHAPE}`,
     });
-    if (r.mocked) return json({ ok: false, error: r.error ? `The AI advisor could not answer: ${r.error}` : "The AI advisor is offline right now." }, 503);
+    if (r.mocked) return reply({ ok: false, error: r.error ? `The AI advisor could not answer: ${r.error}` : "The AI advisor is offline right now." }, 503);
     const blueprint = extractJson<Record<string, unknown>>(r.text);
-    if (!blueprint || !Array.isArray(blueprint.stackLayers)) return json({ ok: false, error: "The advisor gave an answer this page could not read. Try again." }, 502);
-    return json({ ok: true, blueprint, model: MODEL, usage: r.usage });
+    if (!blueprint || !Array.isArray(blueprint.stackLayers)) return reply({ ok: false, error: "The advisor gave an answer this page could not read. Try again." }, 502);
+    return reply({ ok: true, blueprint, model: MODEL, usage: r.usage });
   }
 
   // simulate
   const goal = clean(body.goal);
   const ctx = clean(body.companyContext) || "a growing business that wants automation with a person approving anything that matters";
-  if (goal.length < 8) return json({ ok: false, error: "Describe the goal in a sentence." }, 400);
+  if (goal.length < 8) return reply({ ok: false, error: "Describe the goal in a sentence." }, 400);
   const r = await callClaude({
     model: MODEL, thinking: false, maxTokens: 4000, system: VOICE,
     prompt: `Trace how a small team of agents would carry out this goal, step by step, for ${ctx}.
@@ -188,11 +275,11 @@ Goal: ${goal}
 Write 4 to 6 steps. Each step is one agent doing one thing with one tool. At least one step must stop for a person (requiresHumanApproval true, with a humanPrompt) before money moves, a customer is contacted, or a record is changed. Tool servers are MCP servers named after the system, e.g. mcp-hubspot, mcp-quickbooks, mcp-gmail. Return JSON in this shape:
 ${SIMULATE_SHAPE}`,
   });
-  if (r.mocked) return json({ ok: false, error: "The AI simulator is offline right now." }, 503);
+  if (r.mocked) return reply({ ok: false, error: "The AI simulator is offline right now." }, 503);
   const parsed = extractJson<{ steps?: unknown[] }>(r.text);
   const steps = Array.isArray(parsed?.steps) ? parsed!.steps : null;
-  if (!steps || steps.length === 0) return json({ ok: false, error: "The simulator gave an answer this page could not read. Try again." }, 502);
-  return json({ ok: true, steps, model: MODEL, usage: r.usage });
+  if (!steps || steps.length === 0) return reply({ ok: false, error: "The simulator gave an answer this page could not read. Try again." }, 502);
+  return reply({ ok: true, steps, model: MODEL, usage: r.usage });
 });
 
 /**
@@ -208,16 +295,19 @@ ${SIMULATE_SHAPE}`,
  * The webhook secret stays server-side, which is the reason this hop exists at
  * all rather than the browser calling intake directly.
  */
-async function sendPlan(body: Record<string, unknown>): Promise<Response> {
+async function sendPlan(
+  body: Record<string, unknown>,
+  reply: (b: unknown, status?: number) => Response,
+): Promise<Response> {
   const email = clean(body.email).toLowerCase();
   const phone = clean(body.phone);
-  if (!email && !phone) return json({ ok: false, error: "Add an email address or a phone number so we can reply." }, 400);
+  if (!email && !phone) return reply({ ok: false, error: "Add an email address or a phone number so we can reply." }, 400);
   if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-    return json({ ok: false, error: "That email address does not look right." }, 400);
+    return reply({ ok: false, error: "That email address does not look right." }, 400);
   }
 
   const plan = String(body.plan ?? "").trim().slice(0, PLAN_MAX);
-  if (plan.length < 40) return json({ ok: false, error: "Build a plan first, then send it." }, 400);
+  if (plan.length < 40) return reply({ ok: false, error: "Build a plan first, then send it." }, 400);
 
   const name = clean(body.name);
   const company = clean(body.company);
@@ -254,10 +344,10 @@ async function sendPlan(body: Record<string, unknown>): Promise<Response> {
     });
     const out = await res.json().catch(() => ({}));
     if (!res.ok || out?.ok === false) {
-      return json({ ok: false, error: "We could not file that just now. Email it to otis@meridianinterface.com and it will not be lost." }, 502);
+      return reply({ ok: false, error: "We could not file that just now. Email it to otis@meridianinterface.com and it will not be lost." }, 502);
     }
-    return json({ ok: true });
+    return reply({ ok: true });
   } catch {
-    return json({ ok: false, error: "We could not reach the studio's system. Email the plan to otis@meridianinterface.com and it will not be lost." }, 502);
+    return reply({ ok: false, error: "We could not reach the studio's system. Email the plan to otis@meridianinterface.com and it will not be lost." }, 502);
   }
 }
