@@ -4,6 +4,62 @@
 and hears nothing. Everything below is built and tested — it is waiting on two
 secrets that only Otis can set.
 
+---
+
+## Where this stopped — 10 Sep 2026
+
+Otis created the SendGrid account and got as far as the **Install DNS** step of
+onboarding. He chose Domain Authentication (the right path — see step 2) with
+link branding on. SendGrid issued the six records below. **None of them have been
+added yet**, and nothing after that step has been done.
+
+### Facts established by querying live DNS, so nobody has to look them up again
+
+| | |
+|---|---|
+| Nameservers | `nsc1`–`nsc4.squarespacedns.com` — **DNS is managed at Squarespace**, not Vercel, not the registrar |
+| Mail | MX → `smtp.google.com`. **Google Workspace is already on this domain**, so `otis@meridianinterface.com` is a real mailbox and client replies land somewhere |
+| SPF | `v=spf1 include:_spf.google.com ~all` already present |
+| DMARC | none — so SendGrid's `_dmarc` record is safe to add, no conflict |
+| Website | A records are Squarespace's. The domain still serves the **old Squarespace site**; the new site is only on its Vercel URL. Unrelated to email — these records won't disturb either |
+
+### The six records, with the Host column already converted
+
+Squarespace **auto-appends the domain** to the Host field. Typing the full name
+SendGrid displays produces `em8387.meridianinterface.com.meridianinterface.com`,
+which resolves to nothing and fails Verify with no useful error. Enter only this:
+
+| Type | Host | Value |
+|---|---|---|
+| CNAME | `url1845` | `sendgrid.net` |
+| CNAME | `114533649` | `sendgrid.net` |
+| CNAME | `em8387` | `u114533649.wl150.sendgrid.net` |
+| CNAME | `s1._domainkey` | `s1.domainkey.u114533649.wl150.sendgrid.net` |
+| CNAME | `s2._domainkey` | `s2.domainkey.u114533649.wl150.sendgrid.net` |
+| TXT | `_dmarc` | `v=DMARC1; p=none;` |
+
+**Do not add `include:sendgrid.net` to the root SPF record.** Plenty of guides say
+to. This setup routes bounces through `em8387.meridianinterface.com`, which carries
+its own SPF, and editing the root record risks breaking Google Workspace mail for
+no gain.
+
+### Two things still unverified
+
+- **The plan.** The onboarding screen said "trial". Nobody has checked what it
+  converts to or what the sending limit is. Worth knowing before client bookings
+  depend on it.
+- **DNS propagation.** Once the records are in, they can be checked from a session
+  without shell DNS tools using Node's resolver against 8.8.8.8 — `dig` and
+  `nslookup` are not installed in the sandbox, but `require('dns').Resolver` works
+  and reaches the public internet. Check all six resolve *before* clicking Verify.
+
+### Also open, unrelated to DNS
+
+Steps 3 and 4 below (create the API key, set `SENDGRID_API_KEY` and
+`SENDGRID_FROM_EMAIL` in Supabase) are untouched. Use
+`otis@meridianinterface.com` as the From address — the Google Workspace MX record
+above confirms it can receive replies.
+
 There is a checker for this. When you have done the steps, one call tells you
 whether it worked, and if not, which of the three things is wrong. Skip to
 **Check it** at the bottom.
