@@ -2,3 +2,6 @@
 *.html
 !*.dc.html
 !mark-sheet.html
+film/film/
+film/probe/
+film/node_modules/
