@@ -103,6 +103,64 @@ No budget fixes these, and a better generator makes several worse.
 | Typeface pairing for a premium ramp | **Adobe** — `font_recommend`, `font_preview` |
 | See how real premium products solve a surface | **Mobbin** |
 
+## The Apple tier, and how it is actually made
+
+Otis names Apple as the bar. Worth being precise about what Apple does,
+because the obvious reading of "generated to perfection" points the wrong way.
+
+**Apple's product imagery is rendered, not prompted.** It comes out of the
+CAD files the product was designed in — the same geometry the factory builds
+from. That is why it is perfect: exact edges, exact materials, any angle, any
+lighting, repeatable to the pixel, and ready months before a physical unit
+exists. It is generated the way an architect's rendering is generated, from a
+model, not the way a prompt generator is. Those two things share a word and
+nothing else. Prompt generation is non-deterministic and uncontrollable, which
+is the opposite of the property that makes Apple's imagery look the way it
+does.
+
+**This route is open to Otis, with tools already connected.** His products are
+rooms and interfaces, and both can be modelled:
+
+| Apple does | Otis's equivalent |
+|---|---|
+| Renders the phone from CAD | Model the lounge set, truss, booth, uplighting — **Trimble SketchUp** (`build_model`), or **Three.js 3D Viewer** via the `img2threejs` skill |
+| Studio-lights the render | Light the scene in the model: key, fill, rim, at real-world scale |
+| Exports frames at every angle | Render a turntable or a dolly move as a numbered frame sequence |
+| Retouches and grades | **Adobe for creativity** |
+
+For All in 1 Events this is stronger than it sounds: a modelled set can be
+shown before it is built, which is a sales tool, not just a graphic.
+
+**The signature scroll move.** Apple's product pages scrub a pre-rendered
+image sequence as you scroll — typically 60–150 frames drawn to a `<canvas>`,
+with scroll progress selecting the frame index and the section pinned while it
+plays. It looks like video but obeys the scroll wheel, which is why it feels
+authored rather than played. It is fully reproducible: render the frames from
+the 3D model above, then scrub them.
+
+The discipline that makes it work, and the reason most copies feel broken:
+- Small frames. Size them to their displayed box, not to 4K.
+- Preload on idle with `Promise.all`, and never draw a frame that has not
+  finished decoding.
+- Cap the device pixel ratio so retina stays crisp without exploding memory.
+- Provide a static poster and skip the sequence entirely under
+  `prefers-reduced-motion` or Save-Data.
+- Count the total payload against the budget above. A careless sequence is
+  several megabytes and undoes everything.
+
+**The half that is not imagery, and is most of the effect.** Type-led layout at
+display sizes with tight tracking. Near-monochrome, so the only colour in
+frame comes from the subject. One idea per full-viewport section. Enormous
+whitespace. Sticky sections where the copy changes and the image holds.
+
+That half costs nothing, needs no renders, and is where a page most often
+fails to reach the bar. Copy it first.
+
+**Honest limit.** Apple runs a large team on an unlimited budget with the
+actual CAD files. The techniques copy exactly; the volume does not. Aim for
+one page with one rendered sequence done properly, rather than a whole site of
+half-rendered ones.
+
 ## The check before calling it premium
 
 Run `awesome-design`'s four questions — squint, grayscale, phone, stranger —
