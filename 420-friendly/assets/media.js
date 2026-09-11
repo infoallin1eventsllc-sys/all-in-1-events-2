@@ -100,7 +100,8 @@ function initMediaManager(mountId) {
     '<span class="material-symbols-outlined text-tertiary text-[44px]">upload</span>' +
     '<p class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter mt-3">Add music or video</p>' +
     '<p class="font-body-md text-body-md text-on-surface-variant mt-2 max-w-md mx-auto">' +
-    "Drag files here, or choose them below. They go straight onto the front page." +
+    "Drag files here, or choose them below. Video goes onto the front page. Music also becomes " +
+    "the store soundtrack — it plays along the bottom of every page while customers shop." +
     "</p>" +
     '<label class="inline-flex items-center gap-2 mt-6 rounded-full bg-primary text-on-primary py-4 px-8 ' +
     'font-label-caps text-label-caps hover:bg-inverse-surface transition-all duration-300 cursor-pointer">' +

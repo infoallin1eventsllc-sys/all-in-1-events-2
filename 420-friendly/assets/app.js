@@ -405,4 +405,8 @@ function renderChrome(activeLabel) {
   }
 
   updateCartBadges();
+
+  // The in-store soundtrack. Defined in soundtrack.js, which not every page
+  // loads, so it is called only if it is actually there.
+  if (typeof mountSoundtrack === "function") mountSoundtrack();
 }

@@ -269,3 +269,129 @@ body > * { position: relative; z-index: 1; }
 }
 .player-facade--dark .material-symbols-outlined { color: #9dc4a8; }
 
+
+/* ── In-store soundtrack bar ───────────────────────────────────────────────
+ * Plain CSS rather than Tailwind utilities on purpose: this markup is built
+ * by string concatenation in soundtrack.js, which the Tailwind scanner cannot
+ * see. Utility classes here would silently never be compiled.
+ *
+ * Colours are the same tokens the rest of the site uses, written literally
+ * because this file is not processed by Tailwind. Keep them in step with
+ * tailwind.config.js if the theme ever changes.
+ */
+.soundbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 80px;                 /* clears the mobile bottom nav (h-20) */
+  z-index: 40;                  /* under the nav's z-50, over page content */
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: rgba(29, 35, 32, 0.94);   /* --primary #1d2320 */
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f7f7f4;                        /* --on-primary */
+}
+@media (min-width: 768px) {
+  .soundbar { bottom: 0; padding: 10px 24px; }
+}
+body.has-soundbar { padding-bottom: 168px; }
+@media (min-width: 768px) {
+  body.has-soundbar { padding-bottom: 72px; }
+}
+
+.soundbar button { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace; }
+
+.sb-play {
+  flex: none;
+  width: 40px; height: 40px;
+  border: 0; border-radius: 999px;
+  background: #f7f7f4; color: #1d2320;
+  display: grid; place-items: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.sb-play:hover { background: #9dc4a8; }          /* --primary-fixed-dim */
+.soundbar.needs-tap .sb-play { animation: sb-pulse 2s ease-in-out infinite; }
+@keyframes sb-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(157, 196, 168, 0.7); }
+  50%      { box-shadow: 0 0 0 9px rgba(157, 196, 168, 0); }
+}
+
+/* Triangle and bars drawn in CSS — no icon font, so the bar is correct on the
+ * very first paint instead of reflowing when a webfont arrives. */
+.sb-ico { display: block; }
+.sb-ico.is-play {
+  width: 0; height: 0;
+  margin-left: 3px;
+  border-left: 11px solid currentColor;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+}
+.sb-ico.is-pause {
+  width: 11px; height: 13px;
+  border-left: 4px solid currentColor;
+  border-right: 4px solid currentColor;
+}
+
+.sb-mid { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.sb-top { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.sb-eyebrow {
+  flex: none;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px; letter-spacing: 0.12em;
+  color: #9dc4a8;
+}
+.soundbar:not(.is-playing) .sb-eyebrow { color: rgba(247, 247, 244, 0.45); }
+.sb-title {
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sb-scrub { display: flex; align-items: center; gap: 10px; }
+.sb-time {
+  flex: none;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(247, 247, 244, 0.6);
+}
+
+/* Range input restyled to a hairline. Track fill uses --progress, set from JS
+ * on timeupdate, so the played portion reads at a glance. */
+.sb-seek {
+  flex: 1 1 0; min-width: 0;
+  -webkit-appearance: none; appearance: none;
+  height: 3px; border-radius: 2px; cursor: pointer;
+  background: linear-gradient(to right,
+    #9dc4a8 0%, #9dc4a8 var(--progress, 0%),
+    rgba(247, 247, 244, 0.22) var(--progress, 0%), rgba(247, 247, 244, 0.22) 100%);
+}
+.sb-seek::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 12px; height: 12px; border-radius: 999px;
+  background: #f7f7f4; border: 0; cursor: pointer;
+}
+.sb-seek::-moz-range-thumb {
+  width: 12px; height: 12px; border-radius: 999px;
+  background: #f7f7f4; border: 0; cursor: pointer;
+}
+
+.sb-skip, .sb-close {
+  flex: none;
+  background: none; border: 0; cursor: pointer;
+  color: rgba(247, 247, 244, 0.7);
+  transition: color 0.2s ease;
+}
+.sb-skip { font-size: 11px; letter-spacing: 0.1em; padding: 8px; }
+.sb-close { font-size: 20px; line-height: 1; padding: 4px 8px; }
+.sb-skip:hover, .sb-close:hover { color: #f7f7f4; }
+@media (max-width: 420px) { .sb-skip { display: none; } }
+
+.soundbar :focus-visible { outline: 2px solid #9dc4a8; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .soundbar.needs-tap .sb-play { animation: none; }
+  .soundbar * { transition: none !important; }
+}
