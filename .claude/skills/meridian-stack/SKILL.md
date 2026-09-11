@@ -49,6 +49,7 @@ Match the job, not the brand name. Everything below is on this account.
 | Review a Supabase function or migration against the auth rules | the `edge-function-reviewer` agent |
 | Start a client site the house way | `/client-site-scaffold <name>` |
 | Which host serves the site, platform env vars, release order | the `meridian-deploy` skill |
+| Stop a build from growing past the problem it solves | the `restraint` skill — five rungs before writing code, plus the over-builds this stack repeats |
 | A decision worth arguing over — client, price, direction, hire | `/council <question>` — five seats, blind review, chairman. Seven subagents; user-invoked only |
 | Poke holes in one plan without the full council | **Devil's Advocate** connector — `run_premortem`, `challenge_assumptions` *(connected; authorize per session)* |
 
@@ -92,6 +93,35 @@ Confirmed absent as of this snapshot. Say so plainly rather than searching:
 
 When a genuinely new tool is asked about, check `SearchMcpRegistry` once and
 report the result. Do not promise to install anything — see the next section.
+
+## Real, but not installable from a browser session
+
+These exist and are not vapor — they are simply outside the claude.ai plugin
+catalog and outside Anthropic's official marketplace, so they install only
+from a terminal on Otis's own machine. He works in the browser. Answer with
+what the tool does and what it would cost him, not with an install promise.
+
+- **Ponytail** (`DietrichGebert/ponytail`) — a "lazy senior developer" ruleset
+  injected by two Node lifecycle hooks, plus `/ponytail-review` and
+  `/ponytail-audit`. Its ruleset is what has value, and that is now the
+  `restraint` skill in this toolkit, which we own and can audit. Do not wire
+  its hooks into `.claude/settings.json` — they run on every session.
+- **Graphify** (`Graphify-Labs/graphify`, pip package `graphifyy`) — a local
+  Python CLI that turns a codebase into a queryable knowledge graph, with a
+  PreToolUse hook that consults the graph before file searches. Its payoff
+  starts around 500 files. This repo has 96 tracked files, 33 of them code —
+  Glob and Grep already cover it. Revisit only for a genuinely large client
+  codebase, and only on a local machine (needs Python 3.10+ and `uv`).
+- **OmniRoute** (`diegosouzapw/OmniRoute`) — a local gateway on port 20128
+  that fronts 352 model providers with quota-aware fallback. It works by
+  routing prompts out to third-party and free-tier providers. Client work and
+  anything under an NDA must not leave Anthropic that way, and a browser
+  session cannot reach `localhost` regardless. The answer here is no.
+- **"Agent Skills"** — not a plugin. It is the open standard Anthropic
+  published for `SKILL.md` (agentskills.io), now used by Cursor, goose,
+  OpenCode and others. Every skill in `.claude/skills/` and in
+  `plugin/meridian-toolkit/` already conforms to it, so they are portable to
+  those tools as-is. Nothing to install.
 
 ## Three facts that repeatedly cost time
 

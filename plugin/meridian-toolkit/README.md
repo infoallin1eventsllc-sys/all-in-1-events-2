@@ -13,6 +13,7 @@ plugin so they load in **every** project instead of only in this repo.
 | `img2threejs` | Image or floor plan to an interactive 3D scene |
 | `client-site-scaffold` | `/client-site-scaffold <name>` — a new client site the house way, in one pass |
 | `council` | `/council <question>` — five seats argue independently, blind peer review, chairman synthesis |
+| `restraint` | Five rungs before writing code, the over-builds this stack repeats, and the shortcut ledger |
 
 ## Install
 
