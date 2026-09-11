@@ -82,7 +82,10 @@ Install, for reference — pinned per house rules, never `@latest`:
 
 Confirmed absent as of this snapshot. Say so plainly rather than searching:
 
-- **No Higgsfield MCP.** Not in the connector directory.
+*(Higgsfield was on this list and has been removed — it shipped an official
+hosted MCP server on 30 Apr 2026. See the section below. Re-verify an entry
+before repeating it; a "confirmed absent" goes stale.)*
+
 - **No Google Stitch MCP.** Stitch is real, but ships no MCP server. Its Figma
   export is the bridge — Stitch → Figma → read with `get_design_context`.
 - **No "Nano Banana" connector.** That's a nickname for a Gemini image model,
@@ -94,6 +97,28 @@ Confirmed absent as of this snapshot. Say so plainly rather than searching:
 
 When a genuinely new tool is asked about, check `SearchMcpRegistry` once and
 report the result. Do not promise to install anything — see the next section.
+
+## Higgsfield — connectable, as a custom connector
+
+Higgsfield AI runs an official hosted MCP server at `https://mcp.higgsfield.ai/mcp`
+(HTTP transport, OAuth, no API key to provision). It exposes 30+ image and video
+models — Veo, Sora, Kling, Seedance, plus Higgsfield's own Soul and Cinema Studio.
+
+It is **not** in Anthropic's connector directory, so `SearchMcpRegistry` returns
+nothing for it and it cannot be added from the directory list. Otis adds it at
+claude.ai → Settings → Connectors → **Add custom connector**, pasting that URL,
+then authorizes with his Higgsfield account. That path works in the browser; no
+terminal needed.
+
+Two things to say when it comes up:
+- A custom connector is one Otis vouches for himself, not one Anthropic reviewed.
+- Generation spends Higgsfield credits, so it needs a paid plan to be useful.
+
+Overlap to weigh before adding it: `vidIQ` (`vidiq_generate_video`,
+`vidiq_generate_broll`), `Clipkit`, `HyperFrames` and `Descript` are already
+connected and already cover scripted, branded and edited video. Higgsfield's
+distinct value is cinematic camera control on a single generated shot. Worth it
+for hero footage; not a replacement for the four already loaded.
 
 ## Real, but not installable from a browser session
 
