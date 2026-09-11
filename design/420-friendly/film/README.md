@@ -62,3 +62,28 @@ The mark is type and vector, lit with CSS. It is not a 3D render and there is
 no garment in frame. A spot showing the actual hoodie needs either real
 photography or a modelled garment, which is a longer job — see the
 `cinematic-web` skill for that ranking.
+
+---
+
+## merchfilm.mjs — product reel from stills
+
+The tool for the actual job: turn product photographs into a spot. Handles any
+number of stills and any duration; every beat is a fraction of the total, so
+7 seconds and 20 seconds are the same film at different lengths.
+
+```
+node merchfilm.mjs "red-hoodie.png,black-hoodie.png,sweatpants.png,green-hoodie.png" \
+  merch-reel-4k.mp4 "Everybody's invited." 20
+```
+
+Per shot: a slow push with a little drift, one specular pass across the middle
+of its own segment, cross-dissolve into the next. The last shot recedes to 12%
+and lifts so the headline owns the frame. Pure black ground, vignette, 4.5%
+grain. Output 3840x2160 at 30 fps.
+
+Verified end to end on stand-in stills: 4 shots, 600 frames, 20.0 s, 4.4 MB.
+
+**It needs the photographs as files on disk.** Images pasted into a chat do not
+reach the filesystem here — only file attachments do, which is why the supplied
+hoodie shots could not be used. Put them in this folder, or attach them, then
+run the command above.
