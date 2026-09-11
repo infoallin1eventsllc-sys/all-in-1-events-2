@@ -1,0 +1,171 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;background:#0c0e12;overflow:hidden}canvas{display:block}
+</style>
+<script type="importmap">{"imports":{
+"three":"./node_modules/three/build/three.module.js",
+"three/addons/":"./node_modules/three/examples/jsm/"}}</script>
+</head><body>
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass }     from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass }from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass }     from 'three/addons/postprocessing/OutputPass.js';
+
+// 1 unit = 1 metre. All in 1 Events tokens: ground #111317, orchid #ecb2ff, cyan #00eefc.
+const W = 1600, H = 1200;
+const ORCHID = 0xecb2ff, CYAN = 0x00eefc, PINK = 0xffb1c3;
+
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setSize(W,H); renderer.setPixelRatio(1);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x0c0e12, 0.010);
+const camera = new THREE.PerspectiveCamera(34, W/H, 0.1, 200);
+
+// ---- floor: polished dark, venue-sized
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(60,60),
+  new THREE.MeshStandardMaterial({ color:0x14161b, roughness:0.28, metalness:0.55 }));
+floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; scene.add(floor);
+
+// ---- backdrop drape, 9m wide x 4.2m high, pleated
+const drapeGrp = new THREE.Group();
+for (let i=0;i<30;i++){
+  const w = 0.3, d = 0.06 + 0.05*Math.abs(Math.sin(i*1.7));
+  const p = new THREE.Mesh(new THREE.BoxGeometry(w,4.2,d),
+    new THREE.MeshStandardMaterial({ color:0x1a1c20, roughness:0.95, metalness:0.0 }));
+  p.position.set(-4.5 + i*0.31, 2.1, -3.4); p.castShadow = true; p.receiveShadow = true;
+  drapeGrp.add(p);
+}
+scene.add(drapeGrp);
+
+// ---- riser platform 7m x 4.6m, 0.2m high
+const riser = new THREE.Mesh(new THREE.BoxGeometry(7,0.2,4.6),
+  new THREE.MeshStandardMaterial({ color:0x16181d, roughness:0.5, metalness:0.3 }));
+riser.position.set(0,0.1,0.2); riser.castShadow = riser.receiveShadow = true; scene.add(riser);
+
+// ---- sofa(): 2.2m x 0.9m, seat 0.42m, back 0.78m
+function sofa(x,z,rot){
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color:0x2b2e35, roughness:0.84 });
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(2.2,0.42,0.9), mat);
+  seat.position.y = 0.21;
+  const back = new THREE.Mesh(new THREE.BoxGeometry(2.2,0.36,0.16), mat);
+  back.position.set(0,0.60,-0.37);
+  for (const m of [seat,back]) { m.castShadow = true; m.receiveShadow = true; g.add(m); }
+  for (const sx of [-1.03,1.03]) {
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.14,0.24,0.9), mat);
+    arm.position.set(sx,0.54,0); arm.castShadow = true; g.add(arm);
+  }
+  g.position.set(x,0.2,z); g.rotation.y = rot; return g;
+}
+scene.add(sofa(-1.9,1.15,0), sofa(2.15,-0.15,-Math.PI/2));
+
+// ---- ledTable(): 0.9m dia, 0.45m high, emissive top
+function ledTable(x,z,color){
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.45,0.42,0.45,40),
+    new THREE.MeshStandardMaterial({ color:0x101217, roughness:0.4,
+      emissive:color, emissiveIntensity:0.40 }));
+  body.position.y = 0.225; body.castShadow = true; g.add(body);
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(0.47,0.47,0.03,40),
+    new THREE.MeshStandardMaterial({ color:0x2a2d33, roughness:0.15, metalness:0.8 }));
+  top.position.y = 0.46; g.add(top);
+  const pl = new THREE.PointLight(color, 2.6, 6, 2); pl.position.set(0,0.5,0); g.add(pl);
+  g.position.set(x,0.2,z); return g;
+}
+scene.add(ledTable(-0.1,0.25,ORCHID), ledTable(1.0,1.5,CYAN));
+
+// ---- cocktail(): tall table 0.6m dia, 1.1m
+function cocktail(x,z){
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color:0x1c1e24, roughness:0.5, metalness:0.4 });
+  const col = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.10,1.1,24), mat);
+  col.position.y = 0.55; col.castShadow = true; g.add(col);
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(0.32,0.32,0.04,32), mat);
+  top.position.y = 1.12; top.castShadow = true; g.add(top);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.30,0.30,0.03,32), mat);
+  base.position.y = 0.015; g.add(base);
+  g.position.set(x,0.2,z); return g;
+}
+scene.add(cocktail(-3.0,-0.9), cocktail(3.2,1.7));
+
+// ---- truss: two 4.4m towers + a 7.4m span, thin boxes
+function trussSeg(len,horiz){
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color:0x8a8f98, roughness:0.35, metalness:0.9 });
+  for (const [ox,oy] of [[-0.14,-0.14],[0.14,-0.14],[-0.14,0.14],[0.14,0.14]]) {
+    const c = new THREE.Mesh(new THREE.BoxGeometry(0.05,len,0.05), mat);
+    if (horiz) { c.rotation.z = Math.PI/2; c.position.set(0,oy,ox); }
+    else c.position.set(ox,0,oy);
+    c.castShadow = true; g.add(c);
+  }
+  const n = Math.floor(len/0.5);
+  for (let i=0;i<=n;i++){
+    const t = -len/2 + i*(len/n);
+    const r = new THREE.Mesh(new THREE.BoxGeometry(0.30,0.035,0.035), mat);
+    if (horiz) r.position.set(t,0,0); else { r.position.set(0,t,0); r.rotation.z = 0; }
+    g.add(r);
+  }
+  return g;
+}
+for (const tx of [-3.7,3.7]) { const t = trussSeg(4.4,false); t.position.set(tx,2.2,-2.9); scene.add(t); }
+const span = trussSeg(7.4,true); span.position.set(0,4.4,-2.9); scene.add(span);
+
+// ---- uplights: SpotLight cones from floor at the drape line, alternating brand colours
+const upColors = [ORCHID,CYAN,ORCHID,PINK,CYAN,ORCHID];
+upColors.forEach((c,i)=>{
+  const x = -4.4 + i*1.76;
+  const s = new THREE.SpotLight(c, 16, 13, Math.PI/12, 0.6, 1.5);
+  s.position.set(x,0.06,-3.05); s.target.position.set(x,4.4,-3.5);
+  scene.add(s, s.target);
+  const fix = new THREE.Mesh(new THREE.CylinderGeometry(0.10,0.12,0.16,16),
+    new THREE.MeshStandardMaterial({ color:0x0e1014, emissive:c, emissiveIntensity:0.9 }));
+  fix.position.set(x,0.08,-3.05); scene.add(fix);
+});
+
+// ---- moving heads on the span, aimed at the set
+[[-2.4,ORCHID],[0,CYAN],[2.4,ORCHID]].forEach(([x,c])=>{
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.22,0.26,0.22),
+    new THREE.MeshStandardMaterial({ color:0x15171c, roughness:0.4, metalness:0.7,
+      emissive:c, emissiveIntensity:0.35 }));
+  body.position.set(x,4.2,-2.9); scene.add(body);
+  const s = new THREE.SpotLight(c, 11, 16, Math.PI/15, 0.7, 1.7);
+  s.position.set(x,4.1,-2.9); s.target.position.set(x*0.35,0.2,0.6);
+  s.castShadow = true; scene.add(s, s.target);
+});
+
+// ---- ambient + key, dark-venue levels
+scene.add(new THREE.AmbientLight(0x737a88, 1.45));
+const key = new THREE.DirectionalLight(0xcfdcf0, 1.55);
+key.position.set(6,9,7); key.castShadow = true;
+key.shadow.mapSize.set(2048,2048); key.shadow.camera.left = -12; key.shadow.camera.right = 12;
+key.shadow.camera.top = 12; key.shadow.camera.bottom = -12; key.shadow.bias = -0.0008;
+scene.add(key);
+// front fill: without it the set is a silhouette from camera side
+const fill = new THREE.DirectionalLight(0xa8bcd6, 0.95);
+fill.position.set(-4,5,11); scene.add(fill);
+
+// ---- bloom: glow is the product in event lighting
+const composer = new EffectComposer(renderer);
+composer.setSize(W,H);
+composer.addPass(new RenderPass(scene,camera));
+composer.addPass(new UnrealBloomPass(new THREE.Vector2(W,H), 0.20, 0.45, 0.80));
+composer.addPass(new OutputPass());
+
+// ---- camera path: a 118-degree reveal, not a spin. Rises and closes in.
+const TARGET = new THREE.Vector3(0, 1.05, 0.1);
+window.renderFrame = (t) => {
+  const a = THREE.MathUtils.degToRad(-46 + 80*t);
+  const rad = 9.9 - 1.5*t;
+  const hgt = 2.5 + 1.7*Math.pow(t,0.85);
+  camera.position.set(Math.sin(a)*rad, hgt, Math.cos(a)*rad);
+  camera.lookAt(TARGET);
+  composer.render();
+};
+window.renderFrame(0);
+window.__ready = true;
+</script></body></html>

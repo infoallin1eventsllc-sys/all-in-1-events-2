@@ -9,3 +9,8 @@ node_modules/
 # OS / editor
 .DS_Store
 *.swp
+
+# Rendered frames regenerate from scene.html
+design/lounge-set-04/frames/
+design/lounge-set-04/web/
+design/lounge-set-04/node_modules/
