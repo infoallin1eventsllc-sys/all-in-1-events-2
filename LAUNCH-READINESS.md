@@ -18,7 +18,6 @@ supply them**:
 |---|---|---|
 | Rotate the owner passcode (#4) | Otis | Its shape was readable by anyone while `selfcheck` existed |
 | A real postal address (#6) | Otis | **All marketing email is blocked.** Bookings and invoices still send |
-| SendGrid (#7) | Otis | No email has ever left this system — a client books and hears nothing |
 | Stripe (#8) | Otis | No invoice can be paid |
 
 The deploy itself is also still pending: the security headers and the
@@ -194,10 +193,20 @@ precaution, not a response to abuse.
 
 ## BLOCKER — credentials (only Otis can do these)
 
-- [ ] **7. SendGrid.** `SENDGRID_API_KEY` + `SENDGRID_FROM_EMAIL` as Supabase
-      edge secrets. **No email has ever left this system** — 6 drafts, 7 old
-      failures, zero delivered. Until this exists a client books and hears
-      nothing, which is worse than having no form. Highest-value single step.
+- [x] **7. SendGrid. DONE 11 Sep — email is on and proven end to end.**
+      Domain authentication on `meridianinterface.com` (not single-sender), six
+      DNS records at Squarespace, `SENDGRID_API_KEY` + `SENDGRID_FROM_EMAIL`
+      (`otis@meridianinterface.com`) set as edge secrets. `mailcheck` reports
+      `key_valid`, `can_send`, and the From address usable via the authenticated
+      domain; a real test message was accepted (202) and **arrived in the
+      inbox**. Before today, zero email had ever left this system.
+      *Two things bit us and are worth knowing if this is ever redone: the
+      Squarespace NAME field auto-appends the domain, so records take the short
+      form (`em8387`, not `em8387.meridianinterface.com`); and a secret whose
+      Name is a description rather than the exact variable name is invisible to
+      the function, which reads as "not set" with no other clue.*
+      *Account is on a trial ending 7 Nov 2026; the plan allows 100 emails a
+      day, which is ample for booking confirmations and invoices.*
       *Prepared 8 Sep so the credential is the only thing left:*
       *`SENDGRID-SETUP.md` walks the SendGrid side, including sender
       verification — the step that is easy to miss and that makes a perfectly

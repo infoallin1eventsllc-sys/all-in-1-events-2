@@ -1,17 +1,33 @@
 # Turning on email
 
-**Status: not connected.** No email has ever left this system. A client books
-and hears nothing. Everything below is built and tested — it is waiting on two
-secrets that only Otis can set.
+**Status: LIVE as of 11 Sep 2026.** Domain authenticated, both secrets set, and
+a real test message accepted by SendGrid and delivered to the inbox. Booking
+acknowledgements, follow-ups and invoices can now actually reach people.
+
+Everything below is kept as the record of how it was set up, and as the
+instructions if it ever has to be done again.
 
 ---
 
-## Where this stopped — 10 Sep 2026
+## How it was finished — 11 Sep 2026
 
-Otis created the SendGrid account and got as far as the **Install DNS** step of
-onboarding. He chose Domain Authentication (the right path — see step 2) with
-link branding on. SendGrid issued the six records below. **None of them have been
-added yet**, and nothing after that step has been done.
+All six records went in at Squarespace and verified first time. Both the Domain
+Authentication and the Link Branding entries were verified (they are two
+separate Verify buttons, reached by clicking the domain name on
+Settings -> Sender Authentication, not the "Authenticate Your Domain" button,
+which starts a fresh setup and issues a different set of records).
+
+Two things cost a round each, and would cost them again:
+
+- **The Squarespace NAME field auto-appends the domain.** Records take the short
+  form — `em8387`, not `em8387.meridianinterface.com`.
+- **A secret whose Name is a description is invisible.** The API key was first
+  saved under a human-readable label; `mailcheck` reported it simply as not
+  present, with nothing to distinguish that from never having been added. The
+  Name must be the exact variable name.
+
+The DNS facts below were established by direct lookup and are kept because they
+are not guessable from the repo.
 
 ### Facts established by querying live DNS, so nobody has to look them up again
 
