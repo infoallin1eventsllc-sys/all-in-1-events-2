@@ -16,7 +16,6 @@ supply them**:
 
 | Still open | Who | Effect until done |
 |---|---|---|
-| Rotate the owner passcode (#4) | Otis | Its shape was readable by anyone while `selfcheck` existed |
 | A real postal address (#6) | Otis | **All marketing email is blocked.** Bookings and invoices still send |
 | Stripe (#8) | Otis | No invoice can be paid |
 
@@ -60,6 +59,23 @@ Two of these are live risks **today**, not only at launch.
       limiting and a non-constant-time compare. URLs leak via history, server
       logs and referrer headers. The owner portal replaced it.
       *Fix: delete the function, or gate it behind the owner session token.*
+- [x] **2b. Revoke the last two Anthropic keys. DONE 11 Sep.** `Anthropic API key`
+      and `Anthropic courses` deleted. The live key was proven working before and
+      after by running `report`, which makes a real Claude call — `mocked: false`
+      both times, so the right key survived.
+      *This took a detour worth recording. The keys were not in the account Otis
+      was signed into. Anthropic accounts are per-email, and signing in with
+      `otis@meridianinterface.com` had silently created a second, empty
+      organisation — its workspace was timestamped 10:27 AM the same morning.
+      The real account, and every key, is on the Gmail address. Both the
+      workspace key list and the org-level key list showed zero in the new
+      account, which is what finally made it obvious.*
+      *Two things this surfaced, neither on the original list:*
+      *— the Claude account is on "Evaluation access" with $0.00 credits, which
+      is what the Stack Planner and the weekly report currently run on;*
+      *— there is now an empty second Anthropic org on the business email, worth
+      deleting or consolidating before it confuses someone in six months.*
+
 - [x] **2. Get the Anthropic key out of the database.** DONE 8 Sep, by Otis and
       verified live. The `ANTHROPIC_API_KEY` secret now holds a real key
       (ends `kwAA`, authenticates against Anthropic); the plaintext copy in
@@ -89,6 +105,16 @@ Two of these are live risks **today**, not only at launch.
       all nine demos), HSTS, `X-Frame-Options: DENY`, nosniff, Referrer-Policy
       and Permissions-Policy. `frame-ancestors 'none'` closes the clickjacking
       route into the invoice portal. Takes effect on the next Vercel deploy.
+- [x] **4b. Rotate the owner passcode. DONE 11 Sep.** Replaced with a 24-character
+      random value generated on Otis's own machine, straight into a password
+      manager — never displayed, never pasted anywhere it could be read back.
+      Verified two ways: `{"action":"status"}` reports `configured: true`, and
+      Otis signed into the portal with the new value.
+      *Worth knowing for next time: rotating the passcode does NOT end sessions
+      already signed in. Tokens are signed with `OWNER_SESSION_SECRET`, not the
+      passcode, and last 8 hours. Rotation closes the front door; it does not
+      evict anyone already inside.*
+
 - [x] **4. Remove the `selfcheck` passcode oracle.** DONE 8 Sep. Deleted, with
       a comment in its place saying why it must not come back. `status`
       (configured or not) is what remains.
