@@ -36,6 +36,7 @@ Match the job, not the brand name. Everything below is on this account.
 | Schedule/publish social across 28+ platforms | The `postiz` plugin |
 | Marketing system, CRM, approval queue in this repo | The `meridian-marketing` skill — read it before touching `system/` |
 | Letter asking a client for credentials or a next step | The `meridian-client-letter` skill |
+| See who visits a deployed site | **Vercel Web Analytics** — same-origin, cookieless, passes a `script-src 'self'` CSP where GA and Plausible do not |
 | Ad/analytics data pull | **Supermetrics** — 150+ sources |
 | Leads, deals, event projects | **monday.com** + the `monday-crm` plugin |
 | Database, auth, edge functions | **Supabase** |
