@@ -217,6 +217,76 @@ precaution, not a response to abuse.
 
 ---
 
+## NEXT — point the domain (agreed 11 Sep, starting 12 Sep)
+
+**`meridianinterface.com` still serves the old Squarespace site.** The real site
+exists only at `meridian-interface-website.vercel.app`. Everything built here —
+the hero, the booking flow, the email that started working today — sits behind a
+door nobody can find. This is the largest gap on the list and it was not on the
+list until today.
+
+### The trap, and it would break what was finished today
+
+**Do NOT move the nameservers to Vercel.** DNS is currently served by
+`nsc1`–`nsc4.squarespacedns.com`, and that zone now holds things that took real
+work to get right:
+
+- the six SendGrid records — email stops working without them
+- `MX -> smtp.google.com` — the Google Workspace mailbox for
+  `otis@meridianinterface.com`, which is the From address AND where client
+  replies land
+- `v=spf1 include:_spf.google.com ~all`
+
+Switching nameservers hands the zone to a provider that knows none of that, and
+all of it disappears at once. Email would break the day after it started working.
+
+### The safe path
+
+Keep DNS at Squarespace. Change only the records that point the *website*:
+Vercel's dashboard names the A record (apex) and CNAME (`www`) it wants. Add or
+replace those, leave every other record untouched.
+
+Verify before and after with a DNS lookup — `dig` and `nslookup` are not
+installed in the sandbox, but Node's `require('dns').Resolver` against 8.8.8.8
+reaches the public internet and is how every check so far was done. Confirm the
+six SendGrid CNAMEs and the Google MX still resolve *after* the switch, not just
+that the website loads.
+
+### Also still pending on the deploy
+
+The security headers in `vercel.json` and the `/unsubscribe` page are committed
+but only take effect on a Vercel deploy — worth confirming both once the domain
+is live, since `/unsubscribe` is what makes the CAN-SPAM footer honest.
+
+---
+
+## DEFERRED — analytics (decided 11 Sep)
+
+Not installed, deliberately, and third in line behind the domain and Stripe.
+
+**The reasoning:** analytics measures traffic and there is no traffic yet.
+Installing now means watching an empty dashboard. **But it has a deadline** — it
+must be in before the site is announced, because the first weeks after launch are
+the most informative data available and cannot be backfilled.
+
+**What was found while deciding:** the site has **no URL routing**. No router
+library, no `pushState`; Home, Services, Portfolio and Portal are React state on
+a single URL. Every visitor registers as one pageview of `/`. So any analytics
+tool needs custom events wired to tab changes before it reports anything useful.
+
+That is not only an analytics problem: nobody can link to the Services page, and
+search engines see one page instead of five. For a studio that sells websites
+that is a real gap. **Adding routing solves the analytics problem for free**, so
+routing comes first and analytics second.
+
+**Leaning toward PostHog's free tier** — not for the dashboards but for session
+replay. At launch volumes, watching how thirty visitors actually use the site is
+worth more than any bounce rate. Plausible (~$9/mo) is the simpler alternative if
+PostHog's surface area is a distraction. Vercel Analytics was ruled out: custom
+events are the one thing needed here and the thing it is weakest at.
+
+---
+
 ## BLOCKER — credentials (only Otis can do these)
 
 - [x] **7. SendGrid. DONE 11 Sep — email is on and proven end to end.**
