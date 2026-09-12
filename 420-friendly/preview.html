@@ -71,46 +71,8 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
   margin-right:8px;vertical-align:middle;animation:breathe 3.2s ease-in-out infinite}
 @keyframes breathe{0%,100%{opacity:1}50%{opacity:.45}}
 @media(prefers-reduced-motion:reduce){.dot-live{animation:none}}
-
-/* old hero */
-/* hero — copied verbatim from assets/styles.css so this matches the real
-   homepage rather than approximating it */
-.hero{position:relative;overflow:hidden;min-height:520px;height:78vh;
-  display:flex;align-items:flex-end;padding:0;border-bottom:1px solid var(--line)}
-.hero-art{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  background:
-    radial-gradient(120% 90% at 18% 15%, rgba(255,251,238,.95), transparent 62%),
-    radial-gradient(100% 80% at 88% 25%, rgba(205,234,207,.7), transparent 58%),
-    linear-gradient(160deg,#fbfaf6 0%,#eeece5 55%,#e4e6df 100%)}
-.hero-word{font-family:var(--display);font-weight:900;font-size:clamp(72px,16vw,260px);
-  line-height:.82;letter-spacing:-.05em;text-transform:uppercase;text-align:center;
-  color:#12752f;opacity:.14;transform:rotate(-6deg);user-select:none}
-.hero-wash{position:absolute;inset:0;
-  background:linear-gradient(to top right,var(--bg),rgba(244,243,239,.35) 45%,transparent)}
-.hero-emblem-wrap{position:absolute;right:3%;top:6%;pointer-events:none;user-select:none}
-@media(min-width:768px){.hero-emblem-wrap{right:7%;top:50%;transform:translateY(-50%)}}
-.hero-emblem{height:32vh;width:auto;max-width:42vw;display:block;
-  filter:drop-shadow(0 26px 34px rgba(22,26,23,.3));
-  animation:hero-float 7s ease-in-out infinite}
-@media(min-width:768px){.hero-emblem{height:58vh}}
-@keyframes hero-float{
-  0%,100%{transform:translateY(0) rotate(-1.5deg)}
-  50%{transform:translateY(-14px) rotate(-1.5deg)}}
-@media(prefers-reduced-motion:reduce){.hero-emblem{animation:none}}
-.hero-copy{position:relative;padding:20px}
-@media(min-width:900px){.hero-copy{padding:64px}}
-.hero-copy h1{font-weight:900;font-size:clamp(40px,9vw,80px);line-height:.98;
-  letter-spacing:-.04em;text-transform:uppercase}
-.hero-sub{font-family:var(--display);font-weight:800;color:var(--green);
-  font-size:clamp(20px,3.4vw,34px);letter-spacing:-.03em;text-transform:uppercase;margin:6px 0 0}
-.dot-live{display:inline-block;width:6px;height:6px;border-radius:99px;background:var(--green);
-  margin-right:8px;vertical-align:middle;animation:breathe 3.2s ease-in-out infinite}
-@keyframes breathe{0%,100%{opacity:1}50%{opacity:.45}}
-@media(prefers-reduced-motion:reduce){.dot-live{animation:none}}
 .eyebrow{color:var(--green);margin-bottom:14px}
-.hero h1{font-weight:900;font-size:clamp(40px,10vw,80px);line-height:.98;
   letter-spacing:-.04em;text-transform:uppercase}
-.hero p{max-width:56ch;color:var(--ink-2);font-size:18px;line-height:1.6;margin:18px 0 0}
 .facts{display:flex;flex-wrap:wrap;gap:8px;margin-top:26px}
 .fact{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;
   border:1px solid var(--line);border-radius:999px;padding:7px 13px;color:var(--ink-2)}
