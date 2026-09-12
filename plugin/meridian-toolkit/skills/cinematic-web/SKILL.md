@@ -148,6 +148,37 @@ The discipline that makes it work, and the reason most copies feel broken:
 - Count the total payload against the budget above. A careless sequence is
   several megabytes and undoes everything.
 
+**Measured, from the clip Otis supplied as the bar.** He sent an AirPods Pro
+reference. Probed, it is a *screen recording of Apple's product page*, not the
+product film:
+
+| | Value |
+|---|---|
+| Resolution | 2850 x 1598 |
+| Frame rate | 30 fps |
+| Duration | 7.70 s |
+| Bitrate | 700 kbps |
+| File size | 0.65 MB |
+
+**It is not 4K, and it is not high bitrate.** Whenever he asks what resolution
+to shoot for, this table is the answer: the quality is not coming from pixels.
+Master high and deliver light.
+
+**What that footage actually does** — four corrections against a first cut that
+looked "cinematic" but not like Apple:
+
+| Instinct | What the reference does |
+|---|---|
+| Coloured light pool behind the subject | Pure `#000`. Nothing behind it at all |
+| Fill light so the object reads | Rim highlights only; the form is read off its edges |
+| Keep the hero visible throughout | Lets it dissolve to almost nothing, then type takes over |
+| Letterbox bars and visible grain for "film" | Neither. Full frame, no bars, effectively no grain |
+
+The shorthand: a green pool, a floor wash, 2.39:1 bars and 20% grain is
+*music-video* language. Apple's is *product* language — darker, cleaner, and
+braver about letting the subject go. When a spot looks busy next to the
+reference, take things away rather than adding a grade.
+
 **The half that is not imagery, and is most of the effect.** Type-led layout at
 display sizes with tight tracking. Near-monochrome, so the only colour in
 frame comes from the subject. One idea per full-viewport section. Enormous

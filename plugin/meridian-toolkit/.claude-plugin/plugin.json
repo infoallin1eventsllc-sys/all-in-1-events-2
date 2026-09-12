@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "meridian-toolkit",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Otis's cross-project toolkit: stack map and brand tokens, engineering ground rules, back-end-only auth architecture, aesthetic defaults, design craft principles, image-to-3D scene building, a client-site scaffold, a decision council with blind peer review, and a restraint gate that keeps a build from outgrowing its problem.",
   "author": {
     "name": "Otis Williams",
