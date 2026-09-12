@@ -59,15 +59,16 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
   line-height:.95;letter-spacing:-.03em;text-align:center;text-transform:uppercase;
   word-break:break-word}
 .badge{position:absolute;top:12px;left:12px;font-family:var(--mono);font-size:10px;
-  letter-spacing:.12em;text-transform:uppercase;background:rgba(255,255,255,.14);
-  border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:999px;padding:5px 9px;
-  backdrop-filter:blur(4px)}
+  letter-spacing:.12em;text-transform:uppercase;background:rgba(250,249,246,.92);
+  color:#4c5350;border:0;border-radius:999px;padding:5px 9px;backdrop-filter:blur(6px)}
+.badge.live{color:#0d5a24}
 .card:hover .tile{transform:translateY(-3px)}
 .tile{transition:transform .25s ease}
-.meta{display:flex;justify-content:space-between;gap:12px;margin-top:14px;align-items:baseline}
-.meta h3{font-weight:700;font-size:16px;letter-spacing:-.01em}
-.price{font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums;white-space:nowrap}
-.sub{color:var(--ink-2);font-size:14px;margin-top:3px}
+.meta{margin-top:16px}
+.meta h3{font-weight:500;font-size:16px;line-height:1.35;letter-spacing:-.01em}
+.price{font-family:var(--mono);font-size:13px;letter-spacing:.02em;margin-top:10px;
+  font-variant-numeric:tabular-nums;display:block}
+.sub{color:var(--ink-2);font-size:13.5px;line-height:1.45;margin-top:3px}
 
 /* detail panel */
 .panel{position:fixed;inset:0;z-index:40;display:none}
@@ -459,12 +460,15 @@ function wordHTML(art) {
 $("grid").innerHTML = CATALOG.map((p, i) =>
   '<button class="card" data-i="' + i + '">' +
     '<div class="tile" style="' + tileStyle(p.art) + '">' +
-      (p.badge ? '<span class="badge">' + esc(p.badge) + "</span>" : "") +
+      (p.badge
+        ? '<span class="badge' +
+          (/LIMITED|DROPPED/.test(p.badge) ? " live" : "") + '">' + esc(p.badge) + "</span>"
+        : "") +
       '<div class="word" style="color:' + p.art.tint + '">' + wordHTML(p.art) + "</div>" +
     "</div>" +
     '<div class="meta"><h3>' + esc(p.name) + "</h3>" +
+      '<p class="sub">' + esc(p.subtitle) + "</p>" +
       '<span class="price">' + money(p.price) + "</span></div>" +
-    '<p class="sub">' + esc(p.subtitle) + "</p>" +
   "</button>"
 ).join("");
 
