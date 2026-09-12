@@ -15,7 +15,7 @@
 <div id="site-header"></div>
 
 <main class="pt-20 md:pt-[116px] max-w-5xl mx-auto px-margin-mobile md:px-margin-desktop pb-16">
-  <section class="pt-12 pb-8">
+  <section class="reveal pt-12 pb-8">
     <h1 class="font-headline-xl-mobile text-headline-xl-mobile md:font-headline-xl md:text-headline-xl text-on-surface uppercase tracking-tighter">Checkout</h1>
   </section>
   <div id="checkout-root"></div>
@@ -57,7 +57,7 @@
     root.innerHTML =
       '<div class="text-center py-16 border border-tertiary/40 rounded-2xl bg-tertiary-container/40">' +
       '<span class="material-symbols-outlined text-tertiary text-[48px]">check_circle</span>' +
-      '<h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter mt-4">Payment received</h2>' +
+      '<h2 class="h-section text-on-surface mt-4">Payment received</h2>' +
       '<p class="font-body-md text-body-md text-on-surface-variant mt-3 max-w-md mx-auto">' +
       "Thank you — a receipt is on its way to your email. Your order will appear in the owner portal." +
       "</p>" +
@@ -110,7 +110,7 @@
           "The setup steps are in PAYMENTS-SETUP.md — it needs your own Stripe and PayPal accounts." +
           "</p></div>") +
 
-      '<h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter mb-4">How would you like to pay?</h2>' +
+      '<h2 class="h-section text-on-surface mb-4">How would you like to pay?</h2>' +
 
       '<div class="panel">' +
       '<p class="font-label-caps text-label-caps text-on-surface-variant mb-3">CARD &amp; WALLETS</p>' +
@@ -142,7 +142,7 @@
       // Summary
       '<aside class="lg:col-span-5">' +
       '<div class="lg:sticky lg:top-[132px] ambient-glow rounded-2xl bg-surface-container-low/80 panel panel--quiet">' +
-      '<h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter mb-4">Order</h2>' +
+      '<h2 class="h-section text-on-surface mb-4">Order</h2>' +
       s.rows +
       '<div class="border-t border-outline-variant/50 my-4"></div>' +
       '<div class="flex justify-between font-label-caps text-label-caps text-on-surface-variant"><span>SUBTOTAL</span><span class="tabular-nums">' + esc(money(s.subtotal)) + "</span></div>" +

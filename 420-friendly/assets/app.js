@@ -146,21 +146,20 @@ function toast(message) {
 function productArtHTML(product, sizeClass) {
   // An owner-assigned photo from the photo portal outranks the catalog image,
   // which outranks the typographic stand-in.
+  //
+  // The stand-in is always painted, and a photo lays on top of it. That is what
+  // makes a broken image harmless: the catalog's one real photo is hotlinked
+  // from a temporary Google URL that will expire, and before this the tile went
+  // blank when it failed — conspicuously so, next to seven tiles that render
+  // their own artwork. Now the artwork is already underneath.
   const local = typeof photoOverrideFor === "function" ? photoOverrideFor(product.id) : null;
-  if (local) {
-    return (
-      '<img alt="' + esc(product.name) + '" ' +
-      'class="w-full h-full object-cover object-center absolute inset-0" ' +
-      'src="' + local + '"/>'
-    );
-  }
-  if (product.image) {
-    return (
-      '<img alt="' + esc(product.name) + '" loading="lazy" ' +
-      'class="w-full h-full object-cover object-center absolute inset-0" ' +
-      'src="' + esc(product.image) + '"/>'
-    );
-  }
+  const photo = local || product.image;
+  const overlay = photo
+    ? '<img alt="' + esc(product.name) + '" ' + (local ? "" : 'loading="lazy" ') +
+      'class="product-photo w-full h-full object-cover object-center absolute inset-0" ' +
+      'src="' + (local ? local : esc(product.image)) + '"/>'
+    : "";
+
   const art = product.art;
   const fontSize = sizeClass === "lg" ? "clamp(48px, 8vw, 110px)" : "clamp(28px, 4vw, 54px)";
   return (
@@ -169,9 +168,25 @@ function productArtHTML(product, sizeClass) {
     '<span class="art-word" aria-hidden="true" style="color:' + esc(art.tint) + ";font-size:" + fontSize + '">' +
     esc(art.word) + "</span>" +
     '<span class="art-mark" aria-hidden="true" style="color:' + esc(art.tint) + '">420 FRIENDLY</span>' +
-    "</div>"
+    "</div>" + overlay
   );
 }
+
+/* A photo that fails to load is hidden so the artwork beneath shows through.
+ * Registered once, in the capture phase: `error` does not bubble from an <img>,
+ * so a delegated listener only sees it on the way down. Doing it here rather
+ * than with an inline onerror keeps every handler out of the markup and off
+ * the CSP's 'unsafe-inline' allowance. */
+document.addEventListener(
+  "error",
+  (e) => {
+    const el = e.target;
+    if (el && el.tagName === "IMG" && el.classList.contains("product-photo")) {
+      el.style.display = "none";
+    }
+  },
+  true
+);
 
 /* ===== Favorites ===== */
 
@@ -208,24 +223,37 @@ function toggleFav(productId) {
 /* ===== Product cards (Nike-pattern anatomy: tile, status, name, category, colors, price) ===== */
 
 function badgeTone(badge) {
-  return badge === "PRE-ORDER" ? "text-secondary" : "text-tertiary";
+  // Only a badge a shopper must act on gets colour. The rest are informational
+  // and read in the neutral ink — otherwise every tile shouts and none lands.
+  if (badge === "PRE-ORDER") return "card-badge--warn";
+  if (badge === "LIMITED DROP" || badge === "JUST DROPPED") return "card-badge--live";
+  return "card-badge--calm";
 }
 
 function productCardHTML(product) {
   const colorCount = product.colors.length === 1
     ? product.colors[0]
     : product.colors.length + " Colorways";
+
+  // Five lines at one size read as a spreadsheet: a shopper scanning a grid
+  // cannot tell which line is the product and which is a footnote. The badge
+  // moves onto the image where a status marker belongs, the subtitle and
+  // colourway merge into the single quiet line they always were, and name and
+  // price are the only two things that carry weight.
   return (
     '<a href="product.html?id=' + esc(product.id) + '" class="group block">' +
-    '<div class="relative aspect-[4/5] overflow-hidden bg-surface-container-low">' +
+    '<div class="relative aspect-[4/5] overflow-hidden rounded-xl bg-surface-container-low">' +
     productArtHTML(product, "sm") +
+    (product.badge
+      ? '<span class="card-badge ' + badgeTone(product.badge) + '">' + esc(product.badge) + "</span>"
+      : "") +
     "</div>" +
-    '<div class="mt-3 space-y-1">' +
-    '<p class="font-label-caps text-label-caps ' + badgeTone(product.badge) + '">' + esc(product.badge) + "</p>" +
-    '<h3 class="font-body-md text-body-md text-on-surface group-hover:text-secondary transition-colors">' + esc(product.name) + "</h3>" +
-    '<p class="font-body-md text-body-md text-on-surface-variant">' + esc(product.subtitle) + "</p>" +
-    '<p class="font-body-md text-body-md text-on-surface-variant">' + esc(colorCount) + "</p>" +
-    '<p class="font-body-md text-body-md text-on-surface pt-1">' + esc(money(product.price)) + "</p>" +
+    '<div class="mt-4">' +
+    '<h3 class="card-name text-on-surface group-hover:text-tertiary transition-colors">' +
+      esc(product.name) + "</h3>" +
+    '<p class="card-meta text-on-surface-variant">' +
+      esc(product.subtitle) + " &middot; " + esc(colorCount) + "</p>" +
+    '<p class="card-price text-on-surface">' + esc(money(product.price)) + "</p>" +
     "</div></a>"
   );
 }
@@ -415,4 +443,61 @@ function renderChrome(activeLabel) {
   // The in-store soundtrack. Defined in soundtrack.js, which not every page
   // loads, so it is called only if it is actually there.
   if (typeof mountSoundtrack === "function") mountSoundtrack();
+  initReveal();
+}
+
+/* Scroll reveal.
+ *
+ * The class that hides things is added here, at runtime, rather than sitting in
+ * the markup — so if this script fails to load or an observer is unavailable,
+ * the page renders fully visible instead of blank. Elements opted in with
+ * class="reveal"; anything already on screen at load is shown immediately
+ * rather than animating, so the first frame is the finished page.
+ */
+function initReveal() {
+  const nodes = document.querySelectorAll(".reveal");
+  if (!nodes.length) return;
+
+  const reduce = window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduce || !("IntersectionObserver" in window)) return;  // leave them visible
+
+  document.documentElement.classList.add("reveal-on");
+
+  // threshold 0 and no negative rootMargin, deliberately. A shrunken trigger
+  // zone left a section that sat in the bottom band never firing at all — it
+  // stayed invisible even scrolled to the foot of the page. A reveal that can
+  // strand content is a worse bug than a reveal that fires slightly early.
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      if (e.isIntersecting) {
+        e.target.classList.add("is-in");
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0 });
+
+  nodes.forEach((n) => {
+    // Not rendered yet (a section a page un-hides later): never hide it, or it
+    // reappears invisible — an observer never fires for display:none.
+    if (n.offsetParent === null && getComputedStyle(n).position !== "fixed") {
+      n.classList.add("is-in");
+      return;
+    }
+    // Already in view at load: show it now. Animating what the visitor is
+    // already looking at reads as a glitch, not a flourish.
+    if (n.getBoundingClientRect().top < window.innerHeight * 0.92) {
+      n.classList.add("is-in");
+      return;
+    }
+    io.observe(n);
+  });
+
+  // Last resort. If anything is still hidden once the visitor has reached the
+  // bottom, show it: no effect is worth content a customer cannot read.
+  window.addEventListener("scroll", function sweep() {
+    if (window.scrollY + window.innerHeight < document.body.scrollHeight - 80) return;
+    nodes.forEach((n) => n.classList.add("is-in"));
+    window.removeEventListener("scroll", sweep);
+  }, { passive: true });
 }
