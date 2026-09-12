@@ -91,13 +91,47 @@ before repeating it; a "confirmed absent" goes stale.)*
   export is the bridge — Stitch → Figma → read with `get_design_context`.
 - **No "Nano Banana" connector.** That's a nickname for a Gemini image model,
   not a product with an MCP endpoint.
-- **No `motion.dev` skill and no `frontend-design` skill.** For animation use
-  the Figma motion skills above. For product-surface design use `impeccable`.
+- **No `motion.dev` skill.** For animation use the Figma motion skills above.
+  (`frontend-design` was on this list and is wrong: it exists in
+  `anthropics/skills`. It is not enabled on this account, which is a
+  different fact from not existing.)
 - **No 21st.dev connector.** Its density idiom can be reproduced by hand;
   Mobbin is the better reference source.
 
 When a genuinely new tool is asked about, check `SearchMcpRegistry` once and
 report the result. Do not promise to install anything — see the next section.
+
+## Apple design skills — community, not Anthropic
+
+Verified 12 Sep 2026, after Otis sent a TikTok demonstrating one. The honest
+position, because the first answer given was too strong:
+
+- **Not in `anthropics/skills`.** That repo's skill list is academy-guide,
+  algorithmic-art, brand-guidelines, canvas-design, claude-api,
+  discernment-nudge, doc-coauthoring, docx, frontend-design, internal-comms,
+  mcp-builder, pdf, pptx, skill-creator, slack-gif-creator, theme-factory,
+  web-artifacts-builder, webapp-testing, xlsx. No apple-design.
+- **Not in his plugin catalog and not in his enabled skills.** Both searched,
+  both empty.
+- **Several community repos do exist**, and saying otherwise was wrong. The one
+  in the video is `s1gmamale1/apple-design-skills` (18 stars), whose path
+  `skills/apple-design` matches the breadcrumb in its final frame. Others:
+  `schhaohao/apple-design`, `dickwu/apple-design-skill`,
+  `chaos-xxl/apple-design-skill`, `rshankras/claude-code-apple-skills`.
+
+**What it actually contains**, having read the SKILL.md: a routing hub over
+nine child skills, the three HIG principles (clarity, deference, depth), a
+restraint-by-surface framework, the 2025 Liquid Glass language, and confidence
+labels on claims. It carries **no hex values, no type scale, no spacing units
+and no component specs** — philosophy and decision logic, not measurements.
+
+**Why it is probably not what Otis wants.** It is about *interface* design for
+Apple platforms. What he keeps asking for is Apple's *marketing film* craft,
+which `cinematic-web` already holds with real measurements taken from the
+reference he supplied. Two different subjects that share a brand name.
+
+He also cannot install it: the installer is a shell script symlinking into
+`~/.claude/skills`, which needs a terminal, and he works in the browser.
 
 ## Higgsfield — connectable, as a custom connector
 
