@@ -395,3 +395,79 @@ body.has-soundbar { padding-bottom: 168px; }
   .soundbar.needs-tap .sb-play { animation: none; }
   .soundbar * { transition: none !important; }
 }
+
+/* ── Surfaces ──────────────────────────────────────────────────────────────
+ * There used to be six near-identical card recipes here, differing only in
+ * border opacity (/30, /40, /50, /60) and padding — the signature of a system
+ * that accumulated rather than got designed. A reader cannot tell those apart,
+ * so they were not carrying information; they were just noise with a hairline
+ * around it.
+ *
+ * Two treatments now, and the default is neither: most groups of content are
+ * separated by space alone. Draw a box only when something genuinely sits
+ * apart from the page — a warning, a summary, an aside. That restraint is the
+ * single biggest difference between this and a page that reads as considered.
+ */
+.panel {
+  border: 1px solid var(--line, #d3d5cf);
+  border-radius: 16px;
+  padding: 24px;
+  background: #faf9f6;                       /* --surface-container-low */
+}
+.panel--quiet {                              /* an aside, not an object */
+  border: 0;
+  background: #f0eee9;                       /* --surface-container */
+}
+.panel--plain {                              /* grouped by space, not by a box */
+  border: 0;
+  background: none;
+  padding: 0;
+}
+
+/* One hairline, used where a real boundary exists — never as decoration. */
+.hairline { height: 1px; background: var(--line, #d3d5cf); border: 0; margin: 0; }
+
+/* ── Vertical rhythm ───────────────────────────────────────────────────────
+ * Eight different section paddings were in use (py-10, py-12, py-16, py-24,
+ * pt-10, pt-12, pt-20…). Nothing chose between them, so the page had no pulse.
+ * Three steps, and a section picks the one that matches its weight.
+ */
+.section      { padding-block: 56px; }
+.section--lg  { padding-block: 88px; }
+.section--sm  { padding-block: 32px; }
+@media (min-width: 768px) {
+  .section     { padding-block: 88px; }
+  .section--lg { padding-block: 136px; }
+  .section--sm { padding-block: 48px; }
+}
+
+/* ── Type ──────────────────────────────────────────────────────────────────
+ * The 80px display size was used exactly once in twenty pages, so the top of
+ * the scale was dead and everything crowded into the middle. A headline that
+ * opens a page uses it; nothing else does.
+ *
+ * Optical sizing: large type at 900 weight needs negative tracking to stop it
+ * looking loose, and body text needs the opposite of what looks right at
+ * heading size. These pair the two so a page does not have to restate it.
+ */
+.display {
+  font-family: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  font-weight: 900;
+  font-size: clamp(40px, 9vw, 80px);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+.lede {                                       /* the one paragraph under a hero */
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(17px, 2.2vw, 21px);
+  line-height: 1.55;
+  max-width: 46ch;                            /* measure, not container width */
+}
+
+/* A status light, not a spinner. The old 1s Tailwind pulse read as "loading";
+ * this is slow and shallow enough to say "on". */
+.status-live { animation: status-breathe 3.2s ease-in-out infinite; }
+@keyframes status-breathe { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .status-live { animation: none; } }

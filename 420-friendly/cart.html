@@ -39,7 +39,7 @@
     const cart = getCart();
     if (cart.length === 0) {
       root.innerHTML =
-        '<div class="text-center py-16 border border-outline-variant/30 rounded-2xl bg-surface-container-low/50">' +
+        '<div class="text-center py-16 panel">' +
         '<span class="material-symbols-outlined text-outline text-[48px]">shopping_bag</span>' +
         '<p class="font-label-caps text-label-caps text-on-surface-variant mt-4 mb-8">YOUR BAG IS EMPTY</p>' +
         '<a href="shop.html" class="inline-block rounded-full bg-primary text-on-primary py-4 px-8 font-label-caps text-label-caps hover:bg-inverse-surface transition-all duration-300">SHOP THE DROP</a>' +
@@ -82,7 +82,7 @@
       '<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">' +
       '<div class="lg:col-span-8 divide-y divide-outline-variant/50 border-y border-outline-variant/50">' + rows + "</div>" +
       '<aside class="lg:col-span-4">' +
-      '<div class="lg:sticky lg:top-[132px] ambient-glow rounded-2xl bg-surface-container-low/80 border border-outline-variant/30 p-6">' +
+      '<div class="lg:sticky lg:top-[132px] ambient-glow rounded-2xl bg-surface-container-low/80 panel panel--quiet">' +
       '<h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter mb-6">Summary</h2>' +
       '<div class="flex justify-between font-label-caps text-label-caps text-on-surface-variant"><span>SUBTOTAL</span><span class="text-on-surface">' + esc(money(subtotal)) + "</span></div>" +
       '<div class="flex justify-between font-label-caps text-label-caps text-on-surface-variant mt-3"><span>SHIPPING</span><span>' + (subtotal >= FREE_SHIP_AT ? "FREE" : "AT CHECKOUT") + "</span></div>" +

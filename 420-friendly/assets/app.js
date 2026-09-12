@@ -384,8 +384,14 @@ function renderChrome(activeLabel) {
       ]) +
       // Full width on mobile: the lockup is a nowrap word beside an emblem and
       // does not fit a half column, which pushed the footer off-screen.
-      '<div class="col-span-2 md:col-span-1"><div class="flex items-center gap-3">' +
-      brandLockupHTML("h-20", "text-[26px]") +
+      // The footer is a five-column grid — roughly 198px per column at 1280 —
+      // and the lockup laid out horizontally needs about 250px, because the
+      // brand word is nowrap by design and will not shrink. Side by side it
+      // pushed the whole document 11px wider than the viewport: a real sideways
+      // scroll on every page, not a measurement artifact. Stacked, the mark sits
+      // above the word and the column holds it comfortably.
+      '<div class="col-span-2 md:col-span-1 min-w-0"><div class="flex flex-col items-start gap-3 min-w-0">' +
+      brandLockupHTML("h-14", "text-[20px]") +
       "</div>" +
       '<p class="font-body-md text-body-md text-on-surface-variant mt-3">Embrace the love. 420 Friendly is an apparel brand — every product is clothing, nothing more.</p></div>' +
       "</div>" +

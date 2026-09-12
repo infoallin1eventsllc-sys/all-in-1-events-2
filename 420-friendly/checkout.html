@@ -84,7 +84,7 @@
     const s = orderSummary();
     if (!s.count) {
       root.innerHTML =
-        '<div class="text-center py-16 border border-outline-variant/30 rounded-2xl bg-surface-container-low/50">' +
+        '<div class="text-center py-16 panel">' +
         '<span class="material-symbols-outlined text-outline text-[48px]">shopping_bag</span>' +
         '<p class="font-label-caps text-label-caps text-on-surface-variant mt-4 mb-8">YOUR BAG IS EMPTY</p>' +
         '<a href="shop.html" class="inline-block rounded-full bg-primary text-on-primary py-4 px-8 font-label-caps text-label-caps hover:bg-inverse-surface transition-all duration-300">SHOP THE DROP</a>' +
@@ -112,7 +112,7 @@
 
       '<h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter mb-4">How would you like to pay?</h2>' +
 
-      '<div class="border border-outline-variant/50 rounded-xl bg-surface-container-low/60 p-5">' +
+      '<div class="panel">' +
       '<p class="font-label-caps text-label-caps text-on-surface-variant mb-3">CARD &amp; WALLETS</p>' +
       methodRow("credit_card", "Credit or debit card", "Visa, Mastercard, Amex, Discover", stripeLive) +
       methodRow("wallet", "Apple Pay",
@@ -125,7 +125,7 @@
       '<span class="material-symbols-outlined text-[18px]">lock</span></button>' +
       "</div>" +
 
-      '<div class="border border-outline-variant/50 rounded-xl bg-surface-container-low/60 p-5 mt-4">' +
+      '<div class="panel mt-4">' +
       '<p class="font-label-caps text-label-caps text-on-surface-variant mb-3">PAYPAL &amp; VENMO</p>' +
       methodRow("account_balance_wallet", "PayPal", "Pay with a PayPal balance or linked account", paypalLive) +
       methodRow("account_balance_wallet", "Venmo", "US buyers, in the PayPal checkout", paypalLive) +
@@ -141,7 +141,7 @@
 
       // Summary
       '<aside class="lg:col-span-5">' +
-      '<div class="lg:sticky lg:top-[132px] ambient-glow rounded-2xl bg-surface-container-low/80 border border-outline-variant/30 p-6">' +
+      '<div class="lg:sticky lg:top-[132px] ambient-glow rounded-2xl bg-surface-container-low/80 panel panel--quiet">' +
       '<h2 class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter mb-4">Order</h2>' +
       s.rows +
       '<div class="border-t border-outline-variant/50 my-4"></div>' +

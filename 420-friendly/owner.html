@@ -137,7 +137,7 @@
 
   function tile(label, value, note, tone) {
     return (
-      '<div class="border border-outline-variant/50 rounded-xl bg-surface-container-low/60 p-5">' +
+      '<div class="panel">' +
       '<p class="font-label-caps text-label-caps text-on-surface-variant">' + esc(label) + "</p>" +
       '<p class="font-headline-md text-headline-md ' + (tone || "text-on-surface") + ' mt-2 tabular-nums">' + esc(value) + "</p>" +
       (note ? '<p class="font-body-md text-[13px] text-on-surface-variant mt-1">' + esc(note) + "</p>" : "") +
