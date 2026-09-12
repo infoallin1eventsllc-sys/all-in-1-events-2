@@ -50,6 +50,7 @@ Match the job, not the brand name. Everything below is on this account.
 | Review a Supabase function or migration against the auth rules | the `edge-function-reviewer` agent |
 | Start a client site the house way | `/client-site-scaffold <name>` |
 | Which host serves the site, platform env vars, release order | the `meridian-deploy` skill |
+| Build a screen someone operates — portal, booking flow, dashboard, form | the `apple-interface` skill — four states, navigation models, glass rules, spring motion |
 | Make a hero or landing page read premium / Fortune-500 | the `cinematic-web` skill — hero media ranked, the weight budget, and the four techniques that cost nothing |
 | Stop a build from growing past the problem it solves | the `restraint` skill — five rungs before writing code, plus the over-builds this stack repeats |
 | A decision worth arguing over — client, price, direction, hire | `/council <question>` — five seats, blind review, chairman. Seven subagents; user-invoked only |

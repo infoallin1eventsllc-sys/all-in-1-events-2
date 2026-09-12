@@ -15,6 +15,7 @@ plugin so they load in **every** project instead of only in this repo.
 | `council` | `/council <question>` — five seats argue independently, blind peer review, chairman synthesis |
 | `restraint` | Five rungs before writing code, the over-builds this stack repeats, and the shortcut ledger |
 | `cinematic-web` | What makes a landing page look expensive: hero media ranked, weight budget, the cheap techniques |
+| `apple-interface` | The four states, navigation models, glass rules, spring motion — app-like surfaces |
 
 ## Install
 

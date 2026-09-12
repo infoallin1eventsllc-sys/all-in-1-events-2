@@ -192,6 +192,63 @@ actual CAD files. The techniques copy exactly; the volume does not. Aim for
 one page with one rendered sequence done properly, rather than a whole site of
 half-rendered ones.
 
+## Page craft, from the Apple design skills
+
+Folded in from the `apple-design-skills` community repo (s1gmamale1) on
+12 Sep 2026. The techniques below are independently true of the web platform,
+whatever the source's provenance.
+
+**The page shape Apple actually ships.** Sticky translucent nav at 44–48 px,
+colour-adapting per chapter. Centred product hero: name, one tagline, one CTA.
+Then full-bleed alternating feature sections, one idea each. Then a bento
+grid, then specs, then a multi-column footer.
+
+**Light-first.** `#f5f5f7` and white dominate. A dark hero is permitted as an
+exception for **at most one purposeful moment**, not as the page's default
+mood. Worth noting against instinct: the reference AirPods sequence is a dark
+*section* inside an otherwise light page.
+
+**The line worth arguing with.** From the source, verbatim: *"On a
+flagship/marketing/product surface, a page with only static one-shot fades is
+a dead template, not Apple-grade."* Correct, and it is the counterweight to
+this skill's own restraint bias. Restraint means one orchestrated move, not
+zero.
+
+### Scroll technique, concretely
+
+Six mechanisms, in rough order of how often they earn their place:
+
+1. **Canvas image sequence.** Preload frames, draw on rAF. The refinement over
+   naive preloading: `createImageBitmap` with a **sliding decode window**, and
+   call `.close()` on bitmaps as they leave it. A long sequence otherwise pins
+   every decoded frame in memory and dies on a phone.
+2. **Video scrub.** `preload="none"`, attach the `src` lazily on scroll
+   approach, ship a static JPEG poster, and fall back to that single frame
+   under `prefers-reduced-motion`.
+3. **Damped scroll progress.** Lerp a shadow value toward true scroll rather
+   than binding transforms to the raw number. Raw binding is what makes
+   scroll-driven pages feel twitchy.
+4. **Sticky-stack pinning.** Pure CSS: `position: sticky` with staggered `top`
+   values and ascending `z-index`. No library.
+5. **CSS scroll-driven animation.** `animation-timeline: view()` or `scroll()`,
+   behind `@supports`, with an IntersectionObserver fallback.
+6. **Cross-section theme morph.** IntersectionObserver with a discrete snap by
+   default; lerp only where the transition itself is the point.
+
+**Never scroll-jack** — no `preventDefault` on wheel, no fake scroll, no forced
+snap. And scroll-driven motion belongs on marketing surfaces; on a dashboard or
+a form it is friction.
+
+### Marketing tells this adds to the cheap list
+
+- Fake scarcity, and hidden pricing.
+- Competing CTAs in one section.
+- Busy hero photography that the headline has to fight.
+- Feature-dumping, and hype with no evidence behind it.
+
+On pricing specifically: lead with the premium tier and anchor to a monthly
+figure. That is a presentation order, not a claim — never invent the numbers.
+
 ## The check before calling it premium
 
 Run `awesome-design`'s four questions — squint, grayscale, phone, stranger —
