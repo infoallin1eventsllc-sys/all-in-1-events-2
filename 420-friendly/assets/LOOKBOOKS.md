@@ -45,6 +45,45 @@ individually and as sets is a real pricing decision, not a merge: two $138-ish
 pieces bought separately come to roughly $253, while the set is $380. Those
 numbers have to be reconciled before either goes live, and that is Otis's call.
 
+## Lookbook 3 — "Archive Showcase" expanded, 10 sets + 4 separates
+
+Pasted 2026-09-13, straight after lookbook 2. Supersedes it: the same six sets
+plus four more, and it adds **per-item prices inside the set** — $195 hoodie,
+$185 sweatpants, $380 the pair.
+
+| Set | | Set | |
+|---|---|---|---|
+| 01 | Crimson Red / Collegiate 420 | 06 | Deep Navy / Sativa Suite |
+| 02 | Heather Grey / Botanical Hybrid | 07 | Matte Black / Refined 420 Monogram |
+| 03 | Matte Black / Emerald Triangle Map | 08 | Collegiate Grey / Athletic 420 |
+| 04 | Matte Black / Indica Arm & Outseam | 09 | **Believe In Cannabis / Tactical** |
+| 05 | Crisp White / Hybrid Emblem | 10 | Emerald Triangle / Red Edition |
+
+Plus four separates sold individually at the same $195 / $185.
+
+**Set 09 is worth noting:** the hoodie reads *Believe in Cannabis* and the
+sweatpants *In Cannabis We Trust* — the two lines already on the homepage hero.
+The garment and the website say the same thing, which nothing else in the range
+does.
+
+Sixteen more images saved (`S1b v2`…`SEP4`). Four of them arrived on a different
+Stitch host, `aida-public/AB6AXu…`, and came back **512×279 rather than square** —
+they are wider crops of the same garments, so the square originals are the ones
+to use.
+
+### The arithmetic now has three answers
+
+| Route | Hoodie + pant |
+|---|---|
+| Storefront today (lookbook 1) | $148 + $118 = **$266** |
+| Lookbook 3, bought separately | $195 + $185 = **$380** |
+| Lookbook 3, bought as a set | **$380** |
+
+The set is priced identically to buying both pieces, so it is not a bundle
+discount — and both are well above what the site currently charges for the same
+garments. The storefront has not been changed to match, deliberately: which of
+these is real is Otis's decision, not a merge conflict to resolve.
+
 ---
 
 ## Full-size versions
