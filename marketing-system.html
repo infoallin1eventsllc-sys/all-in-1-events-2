@@ -16,6 +16,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700;800&display=swap" rel="stylesheet"/>
 
   <script id="tailwind-config">
+    // Guard: if the Tailwind CDN is blocked or down, the page degrades
+    // unstyled instead of throwing before any other script runs.
+    window.tailwind = window.tailwind || {};
     tailwind.config = {
       theme: {
         extend: {

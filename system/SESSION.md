@@ -135,7 +135,237 @@ Compact record of what was built and the current state, so work can resume later
   instead of a summary, because the report prompt matches the mock's content
   branch. Disappears with a real key; metrics in the same report are correct.
 
+## Website → CRM bridge (2026-08-25)
+
+The 420 Friendly Portal signup now feeds the CRM. Previously it only wrote to
+localStorage, so a real visitor never became a lead.
+
+- `netlify/functions/lead.js` proxies form posts to `intake`. It is a proxy
+  rather than a direct browser call for three reasons: `intake` supports an
+  `x-webhook-secret` a browser cannot hold; same-origin avoids a CSP change and
+  a CORS round trip; and it gives one place to drop obvious spam.
+- `420-friendly/assets/crm.js` posts and reports honestly — `delivered` is true
+  only when the CRM accepted the lead. On any failure the address is kept in
+  localStorage, the message says so, and the field is NOT cleared so the visitor
+  can retry.
+- Honeypot field (`company_website`) is off-screen rather than `display:none`,
+  which more bots skip. A filled honeypot returns 200 so the bot does not retry
+  with a variation.
+- Needs `MERIDIAN_INTAKE_URL` in Netlify env (optionally
+  `MERIDIAN_WEBHOOK_SECRET`, matching Supabase's `WEBHOOK_SECRET`). Until set,
+  the function returns a specific `not_configured` 503 and the form says the
+  lead was kept locally.
+- **Verified live against the real intake function** with the exact payload the
+  bridge sends: contact created (source `420-friendly:portal`, stage `lead`),
+  1 activity, 1 follow-up task queued. Test data then removed — counts back to
+  4 contacts / 9 activities / 21 tasks.
+
+## Brand Brain + departments (2026-09-01)
+
+Prompted by a video Otis sent ("62 AI agents run an entire social media team",
+Structure Webworks) proposing an 8-department, ~35-tool stack. The structural
+half of that architecture — signals → orchestrator → departments → approval →
+engage → results — is what Meridian already is. The other half is roughly
+$800–1,500/month of SaaS, which is the wrong order for a business that has not
+taken its first order. Otis chose the free foundation plus one paid tool later.
+
+### What changed
+
+**Brand Brain.** The entire brand guidance in every prompt used to be one
+interpolated string: `Voice: ${profile.voice}` → "warm, professional, upscale".
+That is why drafts read like anyone's marketing. Now four documents per brand
+(`positioning`, `voice-guide`, `messaging-bank`, `tone-rules`) are loaded from
+`public.brand_brain` and composed into the system prompt by
+`_shared/brand.ts`.
+
+- Order is deliberate: positioning → voice → approved lines → **hard rules
+  last**, because a model weights the end of a system prompt most. Reordering
+  weakens the rules.
+- `tone-rules` carries the compliance load. For 420 Friendly that is the
+  never-imply-we-sell-cannabis rule — an apparel brand stays legal by staying an
+  apparel brand in every sentence. For events it is never confirm a date, never
+  quote a firm price, never say a booking is confirmed.
+- Degrades rather than breaks: a missing table, missing brand, or empty
+  documents fall back to the old one-line voice hint. 13 unit tests cover the
+  composition and every degrade path.
+
+**Authoring lives in the repo, the live copy lives in the database.** Markdown
+in `system/brand-brain/<brand>/`, pushed with `node cli.mjs brand-sync`. The
+edge functions cannot read the repo, so **editing Markdown changes nothing
+until the sync runs** — the single most confusing thing about the setup.
+
+**Departments.** `public.departments` (8 rows) plus `channels.department` and
+`channels.cost_note`. Turns the flat channel list into an honest inventory:
+`node cli.mjs departments` shows live/total per department and what a gap would
+cost. Currently **1 of 18 channels live** (Content Studio). Eight free channels
+were seeded — GSC, GA4, GBP insights, IG insights, review requests, review
+replies, Calendly — plus Metricool (~$20/mo) as the recommended first paid tool,
+chosen over an SEO suite because the customers are on Instagram and TikTok.
+
+### State
+
+- Migration `0003` applied. Advisors: only the usual INFO
+  `rls_enabled_no_policy`, matching every other table (deny-by-default,
+  service-role only). Nothing new introduced.
+- Both brands seeded in `brand_brain` (8 rows). Active brand is
+  `all-in-1-events` via `settings.business_profile.brand`; switch with a
+  `jsonb_set` on that key.
+- `orchestrator` (v15) and `runner` (v19) redeployed with `brand.ts` bundled.
+- Verified end to end: a queued `generate_content` task completed with no
+  error through the new runner.
+
+**What is NOT yet proven:** that the Brand Brain improves the writing. Without
+`ANTHROPIC_API_KEY` everything is mock, and the mock text is hardcoded — it
+ignores the system prompt entirely. The wiring is proven not to break; the
+payoff arrives with the key.
+
+### Facebook + Snapchat added (2026-09-01)
+
+Migration `0004`. Facebook Pages was a real gap — `meta_ads` (paid) existed but
+the free side, posting to a Page, did not. Worth knowing: **Instagram business
+accounts authenticate through a linked Facebook Page**, so one Meta OAuth grant
+covers both. Those two rows go live together or not at all.
+
+Snapchat is the honest one. Its public API is a **Marketing (ads) API** —
+there is no general endpoint for posting organic content to a profile or Story
+the way Meta and TikTok provide; Snap keeps organic posting inside its own app.
+So `snapchat` is seeded with status **`manual`**, a new status value added for
+exactly this: `not_configured` means "connect it and it works", `manual` means
+"no amount of configuration will automate this". A false promise on a dashboard
+costs more than an absent row. The system's useful role on Snapchat is drafting
+the caption, not publishing it.
+
+`snapchat_ads` is listed separately because that one *does* have an API — but
+it is ad spend, not organic reach, and should not be confused with the free
+channels around it.
+
+### Diagnostic + regression fix (2026-09-01)
+
+Full sweep: TypeScript compilation, imports, schema integrity, live function
+invocation, cron health, data integrity. Four findings, all fixed.
+
+**1. A regression I caused.** `_shared/runauth.ts` — the gate that stops the
+public anon key triggering a run — existed **only in the deployed `report`
+function and had never been committed**. Redeploying `runner` and
+`orchestrator` from repo source therefore silently stripped it from both;
+`runner` was answering 200 to a bare anon key. Recovered the file into the
+repo, re-wired both functions, redeployed (runner v20, orchestrator v16), and
+verified: **anon key alone → 401, run secret → 200.**
+
+The lesson is structural, not incidental: **deployed code that is not in the
+repo is invisible to every future change.** Any redeploy silently reverts it.
+
+**2. Deployed functions with no source anywhere.** Nine functions are deployed;
+the repo has five. `owner`, `analyze`, `cardspike` and `pay-webhook` have no
+source in this repo — and `analyze` is on a cron schedule, so it is actively
+running code nobody can fix or review. **Still outstanding.** Recovering them
+is a `mcp__Supabase__get_edge_function` per function, then commit.
+
+**3. Two orphaned channels.** `linkedin` and `webhook` had no department, so
+they were invisible in the inventory. Migration 0003 mapped an explicit key
+list, which drops anything added in between. Fixed, and `check_system_health`
+now raises `channels_orphaned` so it cannot recur silently.
+
+**4. Stale alert titles.** `raise_alert` refreshed severity, detail and meta on
+a repeat but not `title` — the field shown in a list. The backlog alert read
+"6 drafts waiting" over detail describing a larger backlog. Fixed; it now
+reads 14, matching reality.
+
+Also added a `brand_brain_empty` health check: if the active brand has no
+documents, drafts silently revert to the one-line voice hint the Brand Brain
+was built to replace, and nothing would have said so.
+
+Also recovered into the repo from the deployed `report`: a `claude.ts`
+mock-ordering fix (the report prompt matched the caption branch, so weekly
+summaries read like Instagram posts) and `x-run-secret` in the CORS allowlist.
+
+Verified clean after: 5 cron jobs healthy, 0 failed tasks, 0 errored runs, 0
+orphans, intake/runner/orchestrator/report/dashboard all responding correctly.
+One open alert — 14 drafts awaiting approval — which is a real state, not a
+fault.
+
+### Three businesses, corrected (2026-09-01)
+
+Otis clarified what each business actually is. **One correction matters: All in
+1 Events is a PHOTO BOOTH business**, not full-service event production. The
+brief written earlier claimed "lighting, photo booth and DJ — one team", which
+was invented — a positioning document that sells services he does not offer is
+worse than none, because it produces bookings he has to refuse.
+
+| Brand | Business | Brand brain |
+|---|---|---|
+| `all-in-1-events` | Photo booths | Corrected + live |
+| `420-friendly` | Cannabis-themed streetwear | Live |
+| `meridian-interface` | Websites, apps, marketing systems | **New** — live |
+
+`meridian-interface` had no brief at all, despite being the brand every queued
+draft was actually about. It now has one, built on the two things that are
+genuinely differentiating: **the price is published**, and **the site is wired
+to something**. Its hard rules ban ranking/traffic/revenue guarantees and any
+price not on the website — the second is what makes the first credible.
+
+Its tone-rules also ban implying ads or SEO retainers, since claiming work he
+does not do wins a lead and then loses a client.
+
+**Gaps deliberately left, marked `NEEDS OTIS` in the positioning files.** The
+agent writes around these rather than inventing them:
+- **All in 1 Events**: booth types, what a package includes, price range,
+  service area, what he refuses.
+- **Meridian Interface**: the "$3,800 landing page / $8,500 for 3–7 pages"
+  figures came out of a *placeholder draft*, so they are **unverified** and
+  flagged as such in three places. Confirm or replace before anything using
+  them is published.
+
+Filling those in is the highest-value edit in `system/brand-brain/`.
+
+### pay-webhook + stripe.ts recovered (2026-09-01)
+
+Two of the four uncommitted deployed functions are now in the repo:
+`supabase/functions/pay-webhook/index.ts` and `_shared/stripe.ts` (~450 lines).
+Both compile clean; all five Stripe event handlers present.
+
+This is careful code and it existed in exactly one place. What it does:
+
+- **The signature IS the authentication.** The endpoint must be public (Stripe
+  cannot present a Supabase JWT), so an HMAC over the *raw* bytes plus a
+  300-second timestamp tolerance is the whole gate. Parsing and re-serialising
+  the body first would break every signature — the comment says so, keep it.
+- **Constant-time comparison**, and every candidate signature is compared with
+  the result folded in rather than returned early, so response time does not
+  reveal which secret matched during a rotation.
+- **Idempotency by claiming the event id first.** Stripe retries until it gets
+  a 2xx and says an event may arrive twice; inserting into `payment_events`
+  before doing anything means a retry conflicts and stops.
+- **The bank-debit trap is handled.** `checkout.session.completed` arrives with
+  `payment_status: "unpaid"` for `us_bank_account`, settling days later via
+  `async_payment_succeeded`. Treating the first event as payment would mark
+  bank transfers paid before the money moved.
+- **A payment with no matching local row is still written down**, flagged with
+  an error note. Money that arrived unmatched must not vanish quietly.
+- **`charge.refunded` puts the invoice back to "Issued"**, so a refund does not
+  quietly overstate income.
+- **The browser is never trusted.** `success_url` is just a string anyone can
+  type; if visiting it marked an invoice paid, every invoice could be cleared
+  by visiting a link.
+
+**This path is invoice-shaped, not order-shaped.** `payments.invoice_id` points
+at `owner_invoices` (client_name, client_company, line_items) — it bills
+Meridian web clients. 420 Friendly retail checkout is a *separate*
+implementation at `netlify/functions/create-checkout-session.js`. Two payment
+paths, different shapes, do not confuse them.
+
+Still uncommitted and deployed: `owner`, `analyze`, `cardspike`. `analyze` is
+on a cron schedule.
+
 ## Open next steps (not done)
+- Set `MERIDIAN_INTAKE_URL` in Netlify so the bridge goes live (Otis's step).
+- ~~All in 1 Events index.html was dead.~~ **Fixed 2026-08-25.** `css/styles.css`,
+  `js/api.js`, `js/app.js` and `netlify/functions/chat.js` were referenced by
+  `index.html` but had never been committed — the page has been broken since its
+  first commit. Rebuilt, and the inquiry form now posts to the same `/lead`
+  bridge (source `allin1events:concierge`). Concierge chat needs
+  `ANTHROPIC_API_KEY` in Netlify; without it the page answers from scripted FAQ
+  copy and says so rather than pretending.
 - Wire dashboard into the deployed website so real photos render + it's live.
 - Phase 2 channels: Meta/Google Business Profile/Google Ads/WordPress publishing (OAuth per platform).
 - Optional hardening: `RUN_SECRET` header on orchestrator/runner/report (currently callable by anyone with the public anon key; only burns idempotent work / would spend tokens once a real key is set).

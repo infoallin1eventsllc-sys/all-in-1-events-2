@@ -5,7 +5,9 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { serviceClient, getSetting } from "../_shared/supabase.ts";
 import { callClaude, extractJson, DEFAULT_MODEL } from "../_shared/claude.ts";
+import { loadBrandBrain, withBrand } from "../_shared/brand.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
+import { authorizedRun } from "../_shared/runauth.ts";
 
 type PlannedTask = { type: string; payload?: Record<string, unknown>; priority?: number };
 type Plan = { summary: string; tasks: PlannedTask[] };
@@ -21,6 +23,11 @@ const ALLOWED_TASK_TYPES = new Set([
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const sb = serviceClient();
+
+  // The anon key alone must not trigger a run — see _shared/runauth.ts.
+  if (!(await authorizedRun(req, sb))) {
+    return json({ ok: false, error: "unauthorized" }, 401);
+  }
 
   // Open a run record for observability.
   const { data: run } = await sb
@@ -62,13 +69,21 @@ Deno.serve(async (req) => {
       memory: (recentMemory.data ?? []).map((m) => m.content),
     };
 
-    const system =
+    // The planner picks topics, so it needs to know what the business actually
+    // sells and who for — otherwise it proposes generic "engagement" content.
+    // It gets the same brief the writer does; nothing downstream is improved by
+    // planning in ignorance of the brand and then correcting for it later.
+    const brand = await loadBrandBrain(sb, String((profile as Record<string, unknown>).brand ?? ""));
+
+    const system = withBrand(
+      brand,
       `You are the marketing operations agent for ${(profile as Record<string, unknown>).name}. ` +
-      `Voice: ${(profile as Record<string, unknown>).voice}. ` +
       `You plan a small batch of concrete marketing tasks each run. Be practical and non-repetitive. ` +
       `Only use these task types: generate_content, send_email, send_sms, publish_content, follow_up_lead. ` +
       `Respect autonomy="${(agent as Record<string, unknown>).autonomy}": in "draft" mode, prefer generate_content and follow_up_lead ` +
-      `(a human approves before anything is sent/published). Never invent contact details.`;
+      `(a human approves before anything is sent/published). Never invent contact details.`,
+      String((profile as Record<string, unknown>).voice ?? ""),
+    );
 
     const prompt =
       `Here is the current context as JSON:\n\n${JSON.stringify(context, null, 2)}\n\n` +

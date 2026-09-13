@@ -5,9 +5,11 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { serviceClient, getSetting } from "../_shared/supabase.ts";
 import { callClaude, DEFAULT_MODEL } from "../_shared/claude.ts";
+import { loadBrandBrain, withBrand } from "../_shared/brand.ts";
 import { sendEmail, sendSms, publishContent } from "../_shared/channels.ts";
 import { cardDataUri, kickerFor } from "../_shared/card.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
+import { authorizedRun } from "../_shared/runauth.ts";
 
 type Task = {
   id: string;
@@ -20,6 +22,11 @@ type Task = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const sb = serviceClient();
+
+  // The anon key alone must not trigger a run — see _shared/runauth.ts.
+  if (!(await authorizedRun(req, sb))) {
+    return json({ ok: false, error: "unauthorized" }, 401);
+  }
 
   const { data: claimed, error } = await sb.rpc("claim_tasks", { p_limit: 10, p_worker: "runner" });
   if (error) return json({ ok: false, error: error.message }, 500);
@@ -88,19 +95,26 @@ async function agentCfg(sb: SupabaseClient) {
     getSetting(sb, "business_profile", { name: "Your Business", voice: "warm, professional" }),
     getSetting(sb, "agent", { model: DEFAULT_MODEL, autonomy: "draft" }),
   ]);
-  return { profile: profile as Record<string, unknown>, agent: agent as Record<string, unknown> };
+  const p = profile as Record<string, unknown>;
+  // Loaded here so every draft path gets it without each one remembering to.
+  const brand = await loadBrandBrain(sb, String(p.brand ?? ""));
+  return { profile: p, agent: agent as Record<string, unknown>, brand };
 }
 
 // Draft a piece of content into the approval queue (never auto-published in draft mode).
 async function generateContent(sb: SupabaseClient, task: Task) {
-  const { profile, agent } = await agentCfg(sb);
+  const { profile, agent, brand } = await agentCfg(sb);
   const channel = String(task.payload.channel ?? "content");
   const kind = String(task.payload.kind ?? "post");
   const topic = String(task.payload.topic ?? "an update for our audience");
 
   const out = await callClaude({
-    system: `You write ${kind} content for ${profile.name}. Voice: ${profile.voice}. ` +
-      `Return a short JSON object {"title": "...", "body": "..."} only.`,
+    system: withBrand(
+      brand,
+      `You write ${kind} content for ${profile.name}. ` +
+        `Return a short JSON object {"title": "...", "body": "..."} only.`,
+      String(profile.voice ?? ""),
+    ),
     prompt: `Write a ${kind} for the "${channel}" channel about: ${topic}. Keep it on-brand and ready to post.`,
     model: String(agent.model || DEFAULT_MODEL),
     maxTokens: 1200,
@@ -133,11 +147,15 @@ async function followUpLead(sb: SupabaseClient, task: Task) {
   const contactId = String(task.payload.contact_id ?? "");
   const { data: contact } = await sb.from("contacts").select("*").eq("id", contactId).maybeSingle();
   if (!contact) throw new Error(`contact ${contactId} not found`);
-  const { profile, agent } = await agentCfg(sb);
+  const { profile, agent, brand } = await agentCfg(sb);
 
   const out = await callClaude({
-    system: `You write brief, warm first-touch outreach for ${profile.name}. Voice: ${profile.voice}. ` +
-      `Return JSON {"subject": "...", "body": "..."} only. Keep body under 120 words, no placeholders.`,
+    system: withBrand(
+      brand,
+      `You write brief first-touch outreach for ${profile.name}. ` +
+        `Return JSON {"subject": "...", "body": "..."} only. Keep body under 120 words, no placeholders.`,
+      String(profile.voice ?? ""),
+    ),
     prompt: `New lead: ${contact.full_name ?? "there"} (source: ${contact.source ?? "website"}). ` +
       `Message they left: ${contact.meta?.message ?? "n/a"}. Write a friendly follow-up that invites a reply.`,
     model: String(agent.model || DEFAULT_MODEL),

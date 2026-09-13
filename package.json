@@ -4,9 +4,12 @@
   "description": "Luxury event production website with AI concierge chatbot",
   "main": "index.html",
   "scripts": {
-    "dev": "python -m http.server 8000",
+    "dev": "python3 -m http.server 8000",
     "start": "netlify dev",
-    "lint": "echo 'Install ESLint to lint JS files'"
+    "lint": "echo 'Install ESLint to lint JS files'",
+    "build:420": "npx -y tailwindcss@3.4.17 -c 420-friendly/tailwind.config.js -i 420-friendly/assets/tailwind.src.css -o 420-friendly/assets/tailwind.css --minify",
+    "dev:note": "echo 'npm run dev is static only - the Portal, uploads and checkout need: npm start'",
+    "build:events": "npx -y tailwindcss@3.4.17 -c tailwind.events.config.js -i css/tailwind.src.css -o css/tailwind.css --minify"
   },
   "keywords": [
     "events",
@@ -22,9 +25,16 @@
     "url": "https://github.com/infoallin1eventsllc-sys/all-in-1-events-2"
   },
   "devDependencies": {
+    "@tailwindcss/container-queries": "^0.1.1",
+    "@tailwindcss/forms": "^0.5.11",
     "netlify-cli": "^17.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.0",
+    "@netlify/blobs": "^11.0.2",
+    "stripe": "^19.1.0"
   }
 }
