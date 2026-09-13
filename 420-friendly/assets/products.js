@@ -103,18 +103,23 @@ const CATALOG = [
     name: "Haze Snapback",
     category: "HEADWEAR",
     subtitle: "Six-Panel Snapback",
-    colors: ["Blackout / Green Brim"],
+    // Colourway corrected against the photograph: the cap is heather grey, not
+    // blackout. A shopper who orders "Blackout" and receives grey returns it.
+    colors: ["Heather Grey / Green Brim"],
     price: 40,
     badge: "JUST DROPPED",
     blurb:
-      "Six-panel snapback in blackout twill with a raised 3D-embroidered 420 mark and an under-brim in electric green. One size fits most heads and all moods.",
+      "Six-panel snapback in heather grey with a raised 3D-embroidered 420 HAZE mark and an under-brim in deep green. One size fits most heads and all moods.",
     features: [
-      "Blackout Cotton Twill",
+      "Heather Grey Cotton Twill",
       "3D Raised Embroidery",
       "Green Under-Brim"
     ],
     sizes: ["ONE SIZE"],
-    image: null,
+    // First product photograph in the catalogue, and committed to the repo
+    // rather than hotlinked — the hoodie's image points at a temporary Google
+    // URL that will expire and leave a hole on a live storefront.
+    image: "assets/products/haze-snapback.webp",
     art: { from: "#131313", to: "#003005", word: "HAZE", tint: "#00e639" }
   },
   {
