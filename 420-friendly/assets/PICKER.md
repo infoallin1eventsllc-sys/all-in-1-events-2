@@ -59,8 +59,10 @@ final render.**
 | C5 | Crimson bucket hat — 420 HAZE leaf |
 | C6 | Grey cuffed beanie — 420 HAZE |
 
-## Open question carried over
+## Emerald Triangle — resolved
 
-H1, H3, H4 (and their matching pants) carry **EMERALD TRIANGLE**, not
-420 FRIENDLY. Confirm whether that is the same brand before putting them
-in a 420 Friendly launch video.
+H1, H3 and H4 (and their matching pants) carry **EMERALD TRIANGLE** rather
+than 420 FRIENDLY. Otis confirmed on 2026-09-13 that Emerald Triangle is
+part of the 420 Friendly brand — a sub-line still in development. The pieces
+belong in the line; they are simply not finished yet, so keep them out of
+launch material until Otis says otherwise.

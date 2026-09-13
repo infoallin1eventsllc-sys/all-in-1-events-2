@@ -42,5 +42,7 @@ bloom 0.6/0.75, vignette 0.55, film grain 0.03, depth of field f/4
 
 - One code in Otis's pick list read as **"hp"** and could not be matched.
   Eleven of twelve resolved; this one is still unplaced.
+- Emerald Triangle is confirmed part of the 420 Friendly brand (a sub-line
+  in development), not a separate label.
 - The three temporary PICK boards have been deleted from the timeline.
   `PICKER.md` retains the code map if another round of picking is needed.
