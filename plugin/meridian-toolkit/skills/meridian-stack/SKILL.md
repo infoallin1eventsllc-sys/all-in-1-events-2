@@ -134,6 +134,47 @@ reference he supplied. Two different subjects that share a brand name.
 He also cannot install it: the installer is a shell script symlinking into
 `~/.claude/skills`, which needs a terminal, and he works in the browser.
 
+## Raylight — motion design, connectable as a custom connector
+
+Checked 13 Sep 2026. Otis said "Rayleight"; the product is **Raylight**
+(raylight.app). Browser-based motion design: screenshots, shapes and footage
+into cinematic product videos, with a motion-design agent you direct in plain
+English. No After Effects, no install.
+
+**It exposes a hosted MCP server**, so Claude can read shots, apply edits and
+review rendered frames on his canvas:
+
+```
+https://api.raylight.app/mcp
+```
+
+Not in Anthropic's connector directory — `SearchMcpRegistry` returns nothing
+for it. He adds it at claude.ai → Settings → Connectors → **Add custom
+connector** and signs in with his Raylight account. Browser path, no terminal.
+
+**The cost catch, which matters more than the connector:**
+
+| Plan | What it gives |
+|---|---|
+| Free | Unlimited projects and length, 1080p60 export, "Made in Raylight" badge |
+| Hobby, $15/mo | 4K60, badge removed, 300 AI credits |
+| Pro | 1,000 credits, **5,000 MCP tool calls a week** |
+| Max | Unlimited MCP calls |
+
+MCP volume is gated behind Pro. The free tier is fine for using the editor by
+hand; driving it from Claude is a paid feature.
+
+**Why this is the right fit, unlike most things he has asked to install.** It
+is built for exactly the job he has been stuck on: product videos from stills.
+That is the merch-reel problem, and Raylight does it in a browser with a
+proper timeline, camera moves, focus and bloom — rather than requiring the
+photographs to be on a filesystem this session can reach.
+
+Caveat when relaying: `raylight.app` is blocked by this sandbox's egress
+proxy, so the endpoint and pricing above came from search results, not the
+vendor's own page. He should confirm the URL on their site before pasting it —
+an MCP URL grants access to whoever runs it.
+
 ## Higgsfield — connectable, as a custom connector
 
 Higgsfield AI runs an official hosted MCP server at `https://mcp.higgsfield.ai/mcp`
