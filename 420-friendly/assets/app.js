@@ -330,7 +330,7 @@ function renderChrome(activeLabel) {
       utilityBar +
       '<header class="flex justify-between items-center px-margin-mobile md:px-margin-desktop h-20 gap-4">' +
       '<a href="index.html" data-brand aria-label="420 Friendly home" class="flex items-center gap-2.5 shrink-0 hover:opacity-85 transition-opacity">' +
-      brandLockupHTML("h-12 md:h-16", "text-[19px] md:text-[23px]") +
+      brandLockupHTML("h-16 md:h-20", "text-[23px] md:text-[28px]") +
       "</a>" +
       '<nav class="hidden md:flex items-center gap-7" aria-label="Primary">' + primaryLinks + "</nav>" +
       '<div class="flex items-center gap-1 shrink-0">' +
@@ -419,7 +419,7 @@ function renderChrome(activeLabel) {
       // scroll on every page, not a measurement artifact. Stacked, the mark sits
       // above the word and the column holds it comfortably.
       '<div class="col-span-2 md:col-span-1 min-w-0"><div class="flex flex-col items-start gap-3 min-w-0">' +
-      brandLockupHTML("h-14", "text-[20px]") +
+      brandLockupHTML("h-20", "text-[26px]") +
       "</div>" +
       '<p class="font-body-md text-body-md text-on-surface-variant mt-3">Embrace the love. 420 Friendly is an apparel brand — every product is clothing, nothing more.</p></div>' +
       "</div>" +

@@ -24,11 +24,13 @@ h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
 /* header */
 .hdr{position:sticky;top:0;z-index:20;background:rgba(244,243,239,.94);
   backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-.hdr-in{display:flex;align-items:center;gap:16px;height:64px}
+.hdr-in{display:flex;align-items:center;gap:14px;min-height:92px;padding-block:10px}
 .lockup{display:flex;align-items:center;gap:10px;margin-right:auto;min-width:0}
-.lockup img{width:34px;height:34px;border-radius:6px;display:block}
-.lockup b{font-family:var(--display);font-weight:900;font-size:15px;
-  letter-spacing:-.02em;white-space:nowrap}
+.lockup img{height:64px;width:auto;display:block;
+  filter:drop-shadow(0 6px 10px rgba(22,26,23,.28))}
+@media(min-width:768px){.lockup img{height:72px}}
+.lockup b{font-family:var(--display);font-weight:900;font-size:22px;
+  letter-spacing:-.035em;white-space:nowrap}
 .navlinks{display:none;gap:22px}
 @media(min-width:760px){.navlinks{display:flex}}
 .navlinks span{font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--ink-2)}
