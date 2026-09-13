@@ -27,14 +27,15 @@
     
     # Content Security Policy
     # - default-src: restrict to same-origin
-    # - img-src: allow images from Google's CDN and data URIs
+    # - img-src: Google's CDN (legacy Stitch links), Raylight asset storage
+    #   (where the Archive product photography is hosted), and data URIs
     # - style-src: allow inline styles (Tailwind), Google Fonts
     # - script-src: allow inline + Tailwind CDN
     # - connect-src: allow Anthropic API
     # img-src must include blob: — the photo portal renders IndexedDB images
     # through object URLs, which are blob: and would otherwise be blocked.
     # frame-src covers PayPal's button iframes; Stripe Checkout is a redirect.
-    Content-Security-Policy = "default-src 'self'; img-src 'self' https://lh3.googleusercontent.com data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://identity.netlify.com https://www.paypal.com https://js.stripe.com; frame-src https://www.paypal.com https://js.stripe.com https://open.spotify.com https://embed.music.apple.com https://www.youtube-nocookie.com; connect-src 'self' https://api.anthropic.com https://identity.netlify.com https://api.stripe.com https://www.paypal.com; form-action 'self' https://checkout.stripe.com"
+    Content-Security-Policy = "default-src 'self'; img-src 'self' https://lh3.googleusercontent.com https://jkfgfwhjinktxvvmhpiy.supabase.co data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://identity.netlify.com https://www.paypal.com https://js.stripe.com; frame-src https://www.paypal.com https://js.stripe.com https://open.spotify.com https://embed.music.apple.com https://www.youtube-nocookie.com; connect-src 'self' https://api.anthropic.com https://identity.netlify.com https://api.stripe.com https://www.paypal.com; form-action 'self' https://checkout.stripe.com"
     
     # Permissions policy (formerly Feature Policy)
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"

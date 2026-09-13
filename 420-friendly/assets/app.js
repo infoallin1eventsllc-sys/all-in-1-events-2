@@ -15,7 +15,8 @@ const NAV = [
 // Desktop primary nav (Nike pattern: category-led, centered)
 const PRIMARY_NAV = [
   { href: "shop.html", label: "Shop All" },
-  { href: "shop.html?cat=HOODIES%20%26%20CREWS", label: "Hoodies" },
+  { href: "shop.html?cat=HOODIES", label: "Hoodies" },
+  { href: "shop.html?cat=BOTTOMS", label: "Bottoms" },
   { href: "shop.html?cat=TEES", label: "Tees" },
   { href: "shop.html?cat=HEADWEAR", label: "Headwear" },
   { href: "drops.html", label: "Drops" },
@@ -387,7 +388,7 @@ function renderChrome(activeLabel) {
       '<div class="max-w-container-max mx-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-10">' +
       column("SHOP", [
         { href: "shop.html", label: "All Products" },
-        { href: "shop.html?cat=HOODIES%20%26%20CREWS", label: "Hoodies & Crews" },
+        { href: "shop.html?cat=HOODIES", label: "Hoodies" },
         { href: "shop.html?cat=TEES", label: "Tees" },
         { href: "shop.html?cat=BOTTOMS", label: "Bottoms" }
       ]) +
