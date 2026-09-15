@@ -1,0 +1,536 @@
+/* 420 FRIENDLY — shared styles */
+
+/* ===== Generated page background =====
+ * A pearl field built from layered radial gradients plus a fine grain overlay,
+ * echoing the soft studio light the brand emblem is rendered in: warm cream on
+ * one side, cool mint-grey on the other. It is drawn entirely in CSS (the grain
+ * is an inline SVG turbulence, a few hundred bytes) so it stays crisp at any
+ * viewport instead of shipping a large raster.
+ */
+body { background-color: #f4f3ef; }
+
+/* The wash and the grain each ride on their own fixed layer. Painting them here
+   rather than via `background-attachment: fixed` on <body> avoids that
+   property's well-known repaint cost on mobile Safari while giving the same
+   viewport-locked result. */
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+body::before {
+  background-image:
+    radial-gradient(1200px 800px at 12% -5%, rgba(255, 250, 236, 0.95), rgba(255, 250, 236, 0) 60%),
+    radial-gradient(1000px 700px at 92% 8%, rgba(226, 238, 228, 0.85), rgba(226, 238, 228, 0) 62%),
+    radial-gradient(900px 900px at 78% 96%, rgba(240, 236, 226, 0.75), rgba(240, 236, 226, 0) 60%);
+}
+body::after {
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)' opacity='0.35'/%3E%3C/svg%3E");
+}
+body > * { position: relative; z-index: 1; }
+
+/* The rule above lifts content over the background layers, but it also gives
+   #site-header its own stacking context — which trapped the header's inner
+   z-50 inside it. <main> is a later sibling at the same z-index, so it painted
+   over the header and swallowed every click on the nav. These two put the
+   chrome back on top. Do not remove without re-testing that header links are
+   actually clickable, not merely visible. */
+#site-header { z-index: 50; }
+#site-bottom-nav { z-index: 50; }
+
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+  /* Hold the glyph box before the icon font arrives. These render as
+     ligatures, so until the font loads the browser lays out the literal
+     words — "shopping_cart", "queue_music" — at full width, which pushed the
+     header and the bottom bar sideways off a phone screen on every page. A
+     Material Symbol is drawn 1em square, so pinning the box to that is exact:
+     the layout is identical before and after the font loads. */
+  width: 1em;
+  overflow: hidden;
+}
+
+/* Glassmorphism utility (brand signature, carried from the seed page) */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.62);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(22, 26, 23, 0.08);
+}
+
+/* Glow utility */
+.ambient-glow {
+  box-shadow: 0 18px 50px -24px rgba(22, 26, 23, 0.28);
+}
+
+/* Typographic product-art tiles (placeholders until real photography lands) */
+/* Positioned by the caller (absolute inset-0) — no position here, or it
+   overrides Tailwind's .absolute and the tile collapses. */
+.art-tile {
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.art-tile .art-word {
+  font-family: Montserrat, ui-sans-serif, system-ui, sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 0.85;
+  text-transform: uppercase;
+  opacity: 0.22;
+  transform: rotate(-8deg) scale(1.4);
+  user-select: none;
+  white-space: pre-line;
+  text-align: center;
+}
+.art-tile .art-mark {
+  position: absolute;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  bottom: 12px;
+  left: 14px;
+  opacity: 0.7;
+}
+
+/* Brand lockup — the emblem is a 3D render, so it gets a matching cast shadow
+   to lift it off the pearl page rather than sitting flat on it. */
+.brand-emblem {
+  filter: drop-shadow(0 6px 10px rgba(22, 26, 23, 0.28));
+}
+.brand-word {
+  font-family: Montserrat, ui-sans-serif, system-ui, sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: #161a17;
+  white-space: nowrap;
+}
+
+/* Hero emblem — the brand mark at a size where its own lettering actually
+   reads, floated over the wash with a soft ground shadow.
+   NOTE: this animation owns `transform`, so never put a Tailwind translate on
+   the same element — the keyframes overwrite it. Position the wrapper instead. */
+.hero-emblem {
+  filter: drop-shadow(0 26px 34px rgba(22, 26, 23, 0.3));
+  animation: hero-float 7s ease-in-out infinite;
+}
+@keyframes hero-float {
+  0%, 100% { transform: translateY(0) rotate(-1.5deg); }
+  50%      { transform: translateY(-14px) rotate(-1.5deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-emblem { animation: none; }
+}
+
+/* Full-bleed homepage hero — typographic stand-in for campaign photography.
+   Swap the whole .hero-art block for an <img> when the shoot lands. */
+.hero-art {
+  background:
+    radial-gradient(120% 90% at 18% 15%, rgba(255, 251, 238, 0.95), transparent 62%),
+    radial-gradient(100% 80% at 88% 25%, rgba(205, 234, 207, 0.7), transparent 58%),
+    linear-gradient(160deg, #fbfaf6 0%, #eeece5 55%, #e4e6df 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hero-art .hero-word {
+  font-family: Montserrat, ui-sans-serif, system-ui, sans-serif;
+  font-weight: 900;
+  font-size: clamp(72px, 16vw, 260px);
+  line-height: 0.82;
+  letter-spacing: -0.05em;
+  text-transform: uppercase;
+  text-align: center;
+  color: #12752f;
+  opacity: 0.14;
+  transform: rotate(-6deg);
+  user-select: none;
+}
+
+/* Hero ticker */
+.ticker {
+  overflow: hidden;
+  white-space: nowrap;
+}
+.ticker-track {
+  display: inline-block;
+  animation: ticker 24s linear infinite;
+}
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  background: rgba(22, 26, 23, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f4f3ef;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  padding: 12px 20px;
+  border-radius: 9999px;
+  backdrop-filter: blur(12px);
+  animation: toast-in 0.25s ease-out;
+  max-width: min(90vw, 480px);
+  text-align: center;
+}
+.toast.toast-out { animation: toast-out 0.25s ease-in forwards; }
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+@keyframes toast-out {
+  from { opacity: 1; transform: translate(-50%, 0); }
+  to { opacity: 0; transform: translate(-50%, 12px); }
+}
+
+@media (min-width: 768px) {
+  .toast { bottom: 40px; }
+}
+
+/* Cart badge */
+[data-cart-count] {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  background: #12752f;
+  color: #ffffff;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+[data-cart-count][data-empty="true"] { display: none; }
+
+/* Reduced motion: respect the visitor */
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track { animation: none; }
+  .animate-pulse { animation: none; }
+}
+
+/* ===== Playlist page — player facades =====
+ * A facade is our own card standing in where a third-party player will go; the
+ * real iframe is not created until it is clicked (see assets/playlist.js for
+ * why). It has to look like a finished player, not a loading state. */
+.player-facade {
+  background:
+    radial-gradient(120% 90% at 20% 10%, rgba(255, 251, 238, 0.95), transparent 60%),
+    linear-gradient(160deg, #fbfaf6 0%, #eeece5 60%, #e4e6df 100%);
+}
+
+/* Reel tiles are laid over dark artwork or a poster still, so the brand's
+   default dark-on-light text has to invert — and a still photo needs a scrim
+   under the text or the contrast depends on whatever was in the shot. */
+.player-facade--dark { position: relative; }
+.player-facade--dark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(to top, rgba(10, 14, 11, 0.72), rgba(10, 14, 11, 0.25));
+}
+.player-facade--dark > * {
+  position: relative;
+  color: #f4f3ef;
+}
+.player-facade--dark .material-symbols-outlined { color: #9dc4a8; }
+
+
+/* ── In-store soundtrack bar ───────────────────────────────────────────────
+ * Plain CSS rather than Tailwind utilities on purpose: this markup is built
+ * by string concatenation in soundtrack.js, which the Tailwind scanner cannot
+ * see. Utility classes here would silently never be compiled.
+ *
+ * Colours are the same tokens the rest of the site uses, written literally
+ * because this file is not processed by Tailwind. Keep them in step with
+ * tailwind.config.js if the theme ever changes.
+ */
+.soundbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 80px;                 /* clears the mobile bottom nav (h-20) */
+  z-index: 40;                  /* under the nav's z-50, over page content */
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: rgba(29, 35, 32, 0.94);   /* --primary #1d2320 */
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f7f7f4;                        /* --on-primary */
+}
+@media (min-width: 768px) {
+  .soundbar { bottom: 0; padding: 10px 24px; }
+}
+body.has-soundbar { padding-bottom: 168px; }
+@media (min-width: 768px) {
+  body.has-soundbar { padding-bottom: 72px; }
+}
+
+.soundbar button { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace; }
+
+.sb-play {
+  flex: none;
+  width: 40px; height: 40px;
+  border: 0; border-radius: 999px;
+  background: #f7f7f4; color: #1d2320;
+  display: grid; place-items: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.sb-play:hover { background: #9dc4a8; }          /* --primary-fixed-dim */
+.soundbar.needs-tap .sb-play { animation: sb-pulse 2s ease-in-out infinite; }
+@keyframes sb-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(157, 196, 168, 0.7); }
+  50%      { box-shadow: 0 0 0 9px rgba(157, 196, 168, 0); }
+}
+
+/* Triangle and bars drawn in CSS — no icon font, so the bar is correct on the
+ * very first paint instead of reflowing when a webfont arrives. */
+.sb-ico { display: block; }
+.sb-ico.is-play {
+  width: 0; height: 0;
+  margin-left: 3px;
+  border-left: 11px solid currentColor;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+}
+.sb-ico.is-pause {
+  width: 11px; height: 13px;
+  border-left: 4px solid currentColor;
+  border-right: 4px solid currentColor;
+}
+
+.sb-mid { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.sb-top { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.sb-eyebrow {
+  flex: none;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px; letter-spacing: 0.12em;
+  color: #9dc4a8;
+}
+.soundbar:not(.is-playing) .sb-eyebrow { color: rgba(247, 247, 244, 0.45); }
+.sb-title {
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sb-scrub { display: flex; align-items: center; gap: 10px; }
+.sb-time {
+  flex: none;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(247, 247, 244, 0.6);
+}
+
+/* Range input restyled to a hairline. Track fill uses --progress, set from JS
+ * on timeupdate, so the played portion reads at a glance. */
+.sb-seek {
+  flex: 1 1 0; min-width: 0;
+  -webkit-appearance: none; appearance: none;
+  height: 3px; border-radius: 2px; cursor: pointer;
+  background: linear-gradient(to right,
+    #9dc4a8 0%, #9dc4a8 var(--progress, 0%),
+    rgba(247, 247, 244, 0.22) var(--progress, 0%), rgba(247, 247, 244, 0.22) 100%);
+}
+.sb-seek::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 12px; height: 12px; border-radius: 999px;
+  background: #f7f7f4; border: 0; cursor: pointer;
+}
+.sb-seek::-moz-range-thumb {
+  width: 12px; height: 12px; border-radius: 999px;
+  background: #f7f7f4; border: 0; cursor: pointer;
+}
+
+.sb-skip, .sb-close {
+  flex: none;
+  background: none; border: 0; cursor: pointer;
+  color: rgba(247, 247, 244, 0.7);
+  transition: color 0.2s ease;
+}
+.sb-skip { font-size: 11px; letter-spacing: 0.1em; padding: 8px; }
+.sb-close { font-size: 20px; line-height: 1; padding: 4px 8px; }
+.sb-skip:hover, .sb-close:hover { color: #f7f7f4; }
+@media (max-width: 420px) { .sb-skip { display: none; } }
+
+.soundbar :focus-visible { outline: 2px solid #9dc4a8; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .soundbar.needs-tap .sb-play { animation: none; }
+  .soundbar * { transition: none !important; }
+}
+
+/* ── Surfaces ──────────────────────────────────────────────────────────────
+ * There used to be six near-identical card recipes here, differing only in
+ * border opacity (/30, /40, /50, /60) and padding — the signature of a system
+ * that accumulated rather than got designed. A reader cannot tell those apart,
+ * so they were not carrying information; they were just noise with a hairline
+ * around it.
+ *
+ * Two treatments now, and the default is neither: most groups of content are
+ * separated by space alone. Draw a box only when something genuinely sits
+ * apart from the page — a warning, a summary, an aside. That restraint is the
+ * single biggest difference between this and a page that reads as considered.
+ */
+.panel {
+  border: 1px solid var(--line, #d3d5cf);
+  border-radius: 16px;
+  padding: 24px;
+  background: #faf9f6;                       /* --surface-container-low */
+}
+.panel--quiet {                              /* an aside, not an object */
+  border: 0;
+  background: #f0eee9;                       /* --surface-container */
+}
+.panel--plain {                              /* grouped by space, not by a box */
+  border: 0;
+  background: none;
+  padding: 0;
+}
+
+/* One hairline, used where a real boundary exists — never as decoration. */
+.hairline { height: 1px; background: var(--line, #d3d5cf); border: 0; margin: 0; }
+
+/* ── Vertical rhythm ───────────────────────────────────────────────────────
+ * Eight different section paddings were in use (py-10, py-12, py-16, py-24,
+ * pt-10, pt-12, pt-20…). Nothing chose between them, so the page had no pulse.
+ * Three steps, and a section picks the one that matches its weight.
+ */
+.section      { padding-block: 56px; }
+.section--lg  { padding-block: 88px; }
+.section--sm  { padding-block: 32px; }
+@media (min-width: 768px) {
+  .section     { padding-block: 88px; }
+  .section--lg { padding-block: 136px; }
+  .section--sm { padding-block: 48px; }
+}
+
+/* ── Type ──────────────────────────────────────────────────────────────────
+ * The 80px display size was used exactly once in twenty pages, so the top of
+ * the scale was dead and everything crowded into the middle. A headline that
+ * opens a page uses it; nothing else does.
+ *
+ * Optical sizing: large type at 900 weight needs negative tracking to stop it
+ * looking loose, and body text needs the opposite of what looks right at
+ * heading size. These pair the two so a page does not have to restate it.
+ */
+.display {
+  font-family: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  font-weight: 900;
+  font-size: clamp(40px, 9vw, 80px);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+.lede {                                       /* the one paragraph under a hero */
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  font-size: clamp(17px, 2.2vw, 21px);
+  line-height: 1.55;
+  max-width: 46ch;                            /* measure, not container width */
+}
+
+/* A status light, not a spinner. The old 1s Tailwind pulse read as "loading";
+ * this is slow and shallow enough to say "on". */
+.status-live { animation: status-breathe 3.2s ease-in-out infinite; }
+@keyframes status-breathe { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .status-live { animation: none; } }
+
+/* ── Product tile ──────────────────────────────────────────────────────────
+ * Hierarchy by size and weight rather than five lines of the same 16px. The
+ * name is the only thing at full ink; everything else steps back so a grid of
+ * eight scans in one pass instead of eight.
+ */
+.card-name {
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  font-size: 16px; font-weight: 500; line-height: 1.35; letter-spacing: -0.01em;
+}
+.card-meta {
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  font-size: 13.5px; line-height: 1.45; margin-top: 3px;
+}
+.card-price {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  font-size: 13px; letter-spacing: 0.02em; margin-top: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A status marker belongs on the thing whose status it describes. */
+.card-badge {
+  position: absolute; top: 12px; left: 12px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 5px 9px; border-radius: 999px;
+  background: rgba(250, 249, 246, 0.92);
+  backdrop-filter: blur(6px);
+}
+.card-badge--live { color: #0d5a24; }     /* acting now matters */
+.card-badge--warn { color: #5c4600; }     /* pre-order: a caveat */
+.card-badge--calm { color: #4c5350; }     /* informational only */
+
+/* ── Section headings ──────────────────────────────────────────────────────
+ * Every section heading was 24px while the hero was 80px, so the whole middle
+ * of the page sat flat. This is the middle step that was missing.
+ */
+.h-section {
+  font-family: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(26px, 4.2vw, 44px);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+/* ── Scroll reveal ─────────────────────────────────────────────────────────
+ * Content is visible by default and stays visible if JavaScript never runs —
+ * the hiding only happens once the script has confirmed it can also unhide.
+ * A reveal that leaves the page blank on a failed script is worse than no
+ * reveal at all, and it is the usual way this effect ships broken.
+ */
+html.reveal-on .reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1);
+  will-change: opacity, transform;
+}
+html.reveal-on .reveal.is-in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html.reveal-on .reveal { opacity: 1; transform: none; transition: none; }
+}

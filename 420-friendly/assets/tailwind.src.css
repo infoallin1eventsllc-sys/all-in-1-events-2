@@ -1,0 +1,4 @@
+/* Source for the compiled Tailwind stylesheet — see ../tailwind.config.js */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

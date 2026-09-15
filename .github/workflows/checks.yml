@@ -1,0 +1,25 @@
+name: checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # The reference check needs nothing installed and finishes in under a
+      # second, so run it before spending time on npm or a browser download.
+      - name: References
+        run: node scripts/check-refs.mjs
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Smoke
+        run: node scripts/smoke.mjs
