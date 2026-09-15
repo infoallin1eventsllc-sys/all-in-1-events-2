@@ -170,8 +170,45 @@ for (const file of JS) {
   }
 }
 
+/* ---------- is the compiled Tailwind current? ----------
+   Tailwind is compiled here, not CDN. Add a class, skip the rebuild, and it
+   does nothing — silently, with no error anywhere. This rebuilds to a temp
+   file and compares, which is the only way to know. */
+import { execFileSync } from "node:child_process";
+import os from "node:os";
+
+const BUILDS = [
+  { name: "420 Friendly", config: "420-friendly/tailwind.config.js",
+    input: "420-friendly/assets/tailwind.src.css", output: "420-friendly/assets/tailwind.css" },
+  { name: "All in 1 Events", config: "tailwind.events.config.js",
+    input: "css/tailwind.src.css", output: "css/tailwind.css" },
+];
+
+if (!process.env.SKIP_TAILWIND_CHECK) {
+  for (const b of BUILDS) {
+    const built = path.join(ROOT, b.output);
+    if (![b.config, b.input, b.output].every((f) => fs.existsSync(path.join(ROOT, f)))) continue;
+    const tmp = path.join(os.tmpdir(), `tw-${path.basename(b.output)}-${process.pid}.css`);
+    try {
+      execFileSync("npx", ["-y", "tailwindcss@3.4.17", "-c", b.config,
+        "-i", b.input, "-o", tmp, "--minify"], { cwd: ROOT, stdio: "pipe" });
+      if (fs.readFileSync(tmp, "utf8") !== fs.readFileSync(built, "utf8")) {
+        problems.push({
+          file: b.output, kind: "tailwind",
+          detail: `rebuilding changes this file — classes added since the last build do nothing. Run: npm run ${b.name.startsWith("420") ? "build:420" : "build:events"}`,
+        });
+      }
+    } catch (err) {
+      console.error(`  ! could not verify ${b.name} Tailwind build: ${String(err.message).split("\n")[0]}`);
+    } finally {
+      fs.rmSync(tmp, { force: true });
+    }
+  }
+}
+
 /* ---------- report ---------- */
 const LABEL = {
+  tailwind: "Stale Tailwind build — new classes silently do nothing",
   missing: "Broken reference — the file is not there",
   product: "Dead product id — nothing in the catalogue matches",
   csp: "Blocked by CSP — the browser will drop this silently",
@@ -184,7 +221,7 @@ if (!problems.length) {
   console.log("  no broken references\n");
   process.exit(0);
 }
-for (const kind of ["missing", "product", "csp"]) {
+for (const kind of ["tailwind", "missing", "product", "csp"]) {
   const group = problems.filter((p) => p.kind === kind);
   if (!group.length) continue;
   console.log(`  ${LABEL[kind]}  (${group.length})`);

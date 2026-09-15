@@ -52,6 +52,20 @@ const PAGES = [
   "/420-friendly/returns.html",
   "/420-friendly/privacy.html",
   "/420-friendly/terms.html",
+  // Money and owner surfaces. These matter most and were the last to be
+  // covered — a blank checkout is a different order of problem from a blank
+  // FAQ. The owner pages render their gate rather than their content without
+  // a passcode, which is exactly what should happen.
+  "/420-friendly/checkout.html",
+  "/420-friendly/owner.html",
+  "/420-friendly/portal.html",
+  "/420-friendly/members.html",
+  "/420-friendly/media.html",
+  "/420-friendly/photos.html",
+  "/420-friendly-hoodie.html",
+  "/marketing-system.html",
+  // preview.html is deliberately absent: it is a stale snapshot of the old
+  // eight-product catalogue, already flagged for regeneration or deletion.
 ].filter(Boolean);
 
 const VIEWPORTS = [
@@ -111,7 +125,11 @@ for (const vp of VIEWPORTS) {
     // 404s here by design — the site is built to degrade when it does. Only
     // `netlify dev` can answer these, and failing on them would make this
     // script permanently red, which is the same as having no net at all.
-    const expected = (url) => url.includes("/.netlify/functions/");
+    // Mirrors the KNOWN list in check-refs.mjs — if one script treats a gap as
+    // deliberate the other has to agree, or the suite contradicts itself.
+    const expected = (url) =>
+      url.includes("/.netlify/functions/") ||
+      url.includes("assets/meridian-logo.png");   // placeholder, has an onerror SVG fallback
 
     page.on("console", (m) => {
       // Resource-load failures are reported properly, with a URL, by the
