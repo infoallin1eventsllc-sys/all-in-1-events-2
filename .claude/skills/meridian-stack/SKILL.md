@@ -80,59 +80,53 @@ automate a browser. Never run `playwright install` in those environments.
 Install, for reference — pinned per house rules, never `@latest`:
 `claude mcp add playwright -s user -- npx @playwright/mcp@0.0.80`
 
-## Do not go looking for these
+## Tools once recorded as absent — RE-VERIFY, DO NOT REPEAT
 
-Confirmed absent as of this snapshot. Say so plainly rather than searching:
+**This section has been wrong three times in three days.** Of its five original
+entries, Higgsfield, `frontend-design` and Nano Banana all turned out to exist,
+and each wrong answer sent Otis away from something real. Treat every line here
+as a dated observation, never as a standing fact. **Before repeating any of it,
+re-check `ListConnectors`, `SearchMcpRegistry` and the open web.** A tool that
+did not exist in August frequently exists now.
 
-*(Higgsfield was on this list and has been removed — it shipped an official
-hosted MCP server on 30 Apr 2026. See the section below. Re-verify an entry
-before repeating it; a "confirmed absent" goes stale.)*
+| Entry | Status |
+|---|---|
+| **Higgsfield** | **WAS WRONG.** Shipped a hosted MCP 30 Apr 2026. See its own section below |
+| **`frontend-design` skill** | **WAS WRONG.** Exists in `anthropics/skills`. Not enabled here is a different fact from not existing |
+| **Nano Banana** | **WAS WRONG.** Google ships no MCP, but community servers wrap it — see below |
+| **Google Stitch MCP** | Checked Aug 2026: Stitch is real, shipped no MCP server. Its Figma export is the bridge. **Re-verify before repeating** |
+| **`motion.dev` skill** | Checked Aug 2026: none found. For animation use the Figma motion skills. **Re-verify before repeating** |
+| **21st.dev connector** | Checked Aug 2026: none found. Its density idiom reproduces by hand; Mobbin is the better reference. **Re-verify before repeating** |
 
-- **No Google Stitch MCP.** Stitch is real, but ships no MCP server. Its Figma
-  export is the bridge — Stitch → Figma → read with `get_design_context`.
-- **No "Nano Banana" connector.** That's a nickname for a Gemini image model,
-  not a product with an MCP endpoint.
-- **No `motion.dev` skill.** For animation use the Figma motion skills above.
-  (`frontend-design` was on this list and is wrong: it exists in
-  `anthropics/skills`. It is not enabled on this account, which is a
-  different fact from not existing.)
-- **No 21st.dev connector.** Its density idiom can be reproduced by hand;
-  Mobbin is the better reference source.
+## Nano Banana — community MCP servers, not connected
 
-When a genuinely new tool is asked about, check `SearchMcpRegistry` once and
-report the result. Do not promise to install anything — see the next section.
+Re-checked 15 Sep 2026, correcting an earlier flat "no".
 
-## Apple design skills — community, not Anthropic
+Nano Banana is Google's nickname for a family of Gemini image models: Nano
+Banana (Gemini 2.5 Flash Image), Nano Banana Pro (Gemini 3 Pro Image), and NB2
+Lite (Gemini 3.1 Flash-Lite Image). **Google publishes no MCP server** — that
+half of the old entry was right. What was wrong is the conclusion, because
+third parties have wrapped it: `nanana-app/mcp-server-nano-banana` and
+`ConechoAI/Nano-Banana-MCP` among others, exposing `generate_image`,
+`edit_image` and `compose_images` up to 4K.
 
-Verified 12 Sep 2026, after Otis sent a TikTok demonstrating one. The honest
-position, because the first answer given was too strong:
+Not in Otis's connector list (verified). Three things to say if it comes up:
 
-- **Not in `anthropics/skills`.** That repo's skill list is academy-guide,
-  algorithmic-art, brand-guidelines, canvas-design, claude-api,
-  discernment-nudge, doc-coauthoring, docx, frontend-design, internal-comms,
-  mcp-builder, pdf, pptx, skill-creator, slack-gif-creator, theme-factory,
-  web-artifacts-builder, webapp-testing, xlsx. No apple-design.
-- **Not in his plugin catalog and not in his enabled skills.** Both searched,
-  both empty.
-- **Several community repos do exist**, and saying otherwise was wrong. The one
-  in the video is `s1gmamale1/apple-design-skills` (18 stars), whose path
-  `skills/apple-design` matches the breadcrumb in its final frame. Others:
-  `schhaohao/apple-design`, `dickwu/apple-design-skill`,
-  `chaos-xxl/apple-design-skill`, `rshankras/claude-code-apple-skills`.
+- **They are community wrappers, not Google.** Different trust posture from a
+  directory connector.
+- **Most are local stdio servers** run with npx or node. Otis works in the
+  browser, so the deciding question is whether a given one offers a hosted
+  HTTPS endpoint the way Raylight and Higgsfield do. If it does not, he cannot
+  use it.
+- **It bills per image** against his own Gemini key — roughly $0.04–0.05 at
+  standard resolution, ~$0.15 at 4K, and Pro about $0.13 at 2K and $0.24 at 4K.
 
-**What it actually contains**, having read the SKILL.md: a routing hub over
-nine child skills, the three HIG principles (clarity, deference, depth), a
-restraint-by-surface framework, the 2025 Liquid Glass language, and confidence
-labels on claims. It carries **no hex values, no type scale, no spacing units
-and no component specs** — philosophy and decision logic, not measurements.
-
-**Why it is probably not what Otis wants.** It is about *interface* design for
-Apple platforms. What he keeps asking for is Apple's *marketing film* craft,
-which `cinematic-web` already holds with real measurements taken from the
-reference he supplied. Two different subjects that share a brand name.
-
-He also cannot install it: the installer is a shell script symlinking into
-`~/.claude/skills`, which needs a terminal, and he works in the browser.
+**The judgement that matters more than the availability.** This is the exact
+category `cinematic-web` ranks last for hero work and lists among the tells
+that mark a site as cheap. It is also the thing that produced the 420 Friendly
+mockups reading FOUR HUNDRED FRIENDLY. Generated imagery is legitimate for
+texture, mood and concept boards. It is the wrong tool for a product shot, a
+logo, or anything carrying type.
 
 ## Raylight — motion design, connectable as a custom connector
 
