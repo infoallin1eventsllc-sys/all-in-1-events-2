@@ -24,9 +24,26 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { serviceClient } from "../_shared/supabase.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
 import { verifyUnsubToken } from "../_shared/unsub.ts";
+import { allow, callerKey } from "../_shared/ratelimit.ts";
+
+/** Unsubscribe calls allowed per caller per hour.
+ *
+ *  Loose on purpose. This endpoint exists so that someone who wants to hear
+ *  less from this business can make that happen, and a throttle that stops a
+ *  person retrying a link they think did not work would be a worse failure
+ *  than the abuse it prevents. Sixty an hour stops a script hammering the
+ *  writes below without ever touching a real recipient. */
+const MAX_PER_HOUR = 60;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  // In front of the token check, not behind it: an unreadable token still
+  // reaches the database, so the throttle has to cover the failing case too.
+  const sbGate = serviceClient();
+  if (!(await allow(sbGate, await callerKey(req, "unsub"), MAX_PER_HOUR))) {
+    return json({ ok: false, error: "too_many_requests" }, 429);
+  }
 
   const url = new URL(req.url);
   let token = url.searchParams.get("t") ?? "";
@@ -63,7 +80,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  const sb = serviceClient();
+  const sb = sbGate;
   const { data: contact } = await sb
     .from("contacts").select("id, email, consent_email").eq("id", contactId).maybeSingle();
 

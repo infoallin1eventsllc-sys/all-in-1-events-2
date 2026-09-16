@@ -26,6 +26,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { serviceClient } from "../_shared/supabase.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
 import { sendEmail } from "../_shared/email.ts";
+import { allow, callerKey } from "../_shared/ratelimit.ts";
 
 /** Bookings allowed per caller per hour. A real person books once. */
 const MAX_PER_IP_PER_HOUR = 5;
@@ -44,14 +45,6 @@ const cap = (v: unknown, n: number): string =>
 /** Shape check only — deliverability is SendGrid's problem, not ours. */
 const looksLikeEmail = (v: string) => /^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(v);
 
-/** Salted hash of the caller IP: enough to rate-limit, not a visitor log. */
-async function ipHash(req: Request): Promise<string> {
-  const ip = (req.headers.get("x-forwarded-for") ?? "unknown").split(",")[0].trim();
-  const salt = Deno.env.get("RUN_SECRET") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "intake";
-  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`intake|${salt}|${ip}`));
-  return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ ok: false, error: "POST only" }, 405);
@@ -66,16 +59,10 @@ Deno.serve(async (req) => {
   // is not throttled. Everyone else — which includes the site's own form — is.
   const sbGate = serviceClient();
   if (!presentedSecret) {
-    const { data: allowed, error: rlErr } = await sbGate.rpc("planner_allow", {
-      p_ip_hash: await ipHash(req),
-      p_action: "intake",
-      p_limit: MAX_PER_IP_PER_HOUR,
-      p_window: "1 hour",
-    });
-    // Fail closed. An enquiry lost to a database blip is recoverable; an
-    // unthrottled mail relay is not.
-    if (rlErr) return json({ ok: false, error: "unavailable, please try again" }, 503);
-    if (!allowed) {
+    // `allow` fails closed on a database error, which is the behaviour this
+    // endpoint wants: an enquiry lost to a blip is recoverable, an unthrottled
+    // mail relay is not.
+    if (!(await allow(sbGate, await callerKey(req, "intake"), MAX_PER_IP_PER_HOUR))) {
       return json({
         ok: false,
         error: "too_many_requests",

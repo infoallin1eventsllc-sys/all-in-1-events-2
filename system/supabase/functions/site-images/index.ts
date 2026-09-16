@@ -19,6 +19,16 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { serviceClient } from "../_shared/supabase.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
 import { ownerTokenValid, tokenFrom } from "../_shared/ownertoken.ts";
+import { allow, callerKey } from "../_shared/ratelimit.ts";
+
+/** Reads allowed per caller per hour.
+ *
+ *  Deliberately loose. Every visitor triggers one `list` on page load, so a
+ *  person browsing the site hard might legitimately make dozens; the number
+ *  that matters is the one a scraper exceeds, not the one a reader does.
+ *  Limiting this at all was only practical once the limiter stopped writing a
+ *  row per request — see _shared/ratelimit.ts. */
+const MAX_READS_PER_HOUR = 300;
 
 const SETTINGS_KEY = "image_overrides";
 const BUCKET = "site-images";
@@ -60,6 +70,9 @@ Deno.serve(async (req) => {
   // images every visitor is about to be shown, so there is nothing to protect.
   // Keeping it open is precisely what makes an override publish.
   if (action === "list") {
+    if (!(await allow(sb, await callerKey(req, "siteimg"), MAX_READS_PER_HOUR))) {
+      return json({ ok: false, error: "too_many_requests" }, 429);
+    }
     return json({ ok: true, overrides: await readOverrides() });
   }
 

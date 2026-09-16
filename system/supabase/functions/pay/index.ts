@@ -13,7 +13,13 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { serviceClient, getSetting } from "../_shared/supabase.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
 import { ownerTokenValid, tokenFrom } from "../_shared/ownertoken.ts";
+import { allow, callerKey } from "../_shared/ratelimit.ts";
 import { createCheckoutSession, stripeKey, stripeMode } from "../_shared/stripe.ts";
+
+/** Calls allowed per caller per hour. The portal makes a handful per session;
+ *  this is a ceiling on an unauthenticated caller probing `status` in a loop,
+ *  not a constraint anyone using the portal will ever meet. */
+const MAX_CALLS_PER_HOUR = 240;
 
 type PaymentSettings = {
   /** Where Stripe returns the client afterwards. */
@@ -45,6 +51,13 @@ Deno.serve(async (req) => {
   }
 
   const sb = serviceClient();
+
+  // Before the action is even read. `status` is reachable without a token, so
+  // the throttle has to sit in front of it rather than behind the auth check.
+  if (!(await allow(sb, await callerKey(req, "pay"), MAX_CALLS_PER_HOUR))) {
+    return json({ ok: false, error: "too_many_requests" }, 429);
+  }
+
   const action = String(body.action ?? "");
 
   // Whether payments are set up at all. Deliberately says nothing secret: the

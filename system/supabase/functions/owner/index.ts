@@ -16,10 +16,16 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { serviceClient } from "../_shared/supabase.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
+import { allow, callerKey } from "../_shared/ratelimit.ts";
 import { unsubToken } from "../_shared/unsub.ts";
 
 const SESSION_TTL_SECONDS = 60 * 60 * 8; // one working day
 const MAX_FAILURES = 8;
+/** Calls of any kind allowed per caller per hour, on top of the login throttle.
+ *  A working portal session makes a few hundred requests across a day, so this
+ *  is a ceiling on a script — including one holding a stolen session token,
+ *  which the login throttle below would never see. */
+const MAX_CALLS_PER_HOUR = 600;
 const THROTTLE_WINDOW_MINUTES = 15;
 
 /* ---------------------------------------------------------------- crypto -- */
@@ -191,6 +197,25 @@ Deno.serve(async (req) => {
   }
 
   const sb = serviceClient();
+
+  // NOT YET DEPLOYED. Every other public function got this guard on 16 Sep;
+  // this one is committed and still running the previous version, because the
+  // only deploy path available in that session was hand-transcribing the file
+  // into an MCP call, and re-keying 618 lines of live invoicing code to throttle
+  // an endpoint whose sole unauthenticated action returns one boolean is a bad
+  // trade. `login` is already throttled at 8 failures per 15 minutes and
+  // everything below the token gate needs the passcode, so the exposure this
+  // closes is Supabase invocation cost, not data. Ship it with
+  // `supabase functions deploy owner` (verify_jwt stays FALSE) and delete this
+  // note.
+  //
+  // In front of every action, login and `status` included. The failed-login
+  // throttle further down counts only wrong passcodes; this counts requests,
+  // which is what a script with a valid token spends.
+  if (!(await allow(sb, await callerKey(req, "owner"), MAX_CALLS_PER_HOUR))) {
+    return json({ ok: false, error: "too_many_requests" }, 429);
+  }
+
   const action = String(body.action ?? "");
 
   if (action === "login") return await handleLogin(sb, req, body.passcode);
