@@ -1822,3 +1822,106 @@ Source kept at `system/loop-simulator.artifact.html`.
   available; rendering locally was the only path that did not need Otis's Mac.
 
 **Next:** merge `claude/prune-dead-hotlinks`; then the four key-blocked items.
+
+## Sep 16 — launch day, and everything it exposed
+
+The site went live at meridianinterface.com this morning. Most of today was
+finding out what "live" had quietly not included.
+
+### Three things that were broken and looked fine
+
+**Analytics had never recorded anything.** PostHog was configured on 15 Sep and
+the dashboard said "no events yet", which reads exactly like no traffic. It was
+not traffic. The site's own Content-Security-Policy allowed scripts from 'self'
+and connections to Supabase only, so posthog-js initialised and then had every
+request it made refused by the browser — config fetch, recorder script and
+event POST alike. Reproduced locally by serving dist with the production CSP
+and watching the console. Two hosts added to script-src and connect-src, plus
+blob: worker-src for replay compression.
+
+**The booking webhook was an open mail relay.** `intake` is public by necessity
+— the form calls it from a visitor's browser. Its only guard was
+`if (WEBHOOK_SECRET && header !== secret)`, and WEBHOOK_SECRET was never set, so
+the guard was a no-op. Proven against production with one unauthenticated POST
+that created a contact. The real exposure was not junk rows: a confirmation
+email goes to whatever address the caller supplies, from the newly authenticated
+sending domain. One script varying the address is a spam run charged to
+meridianinterface.com's reputation. A shared secret cannot fix a browser-called
+endpoint, so: 5/hour per address, 60 acknowledgements/day site-wide, length caps
+on every field, shape check on the address, bound on the raw body.
+
+**A forged session opened the studio portal.** `isUnlocked` was seeded from
+isSignedIn(), which only asks whether a token string exists — never whether the
+server signed it. Writing any value into sessionStorage opened the portal shell.
+Underneath was the worse half: `listInvoices` caught every error including 401
+and fell back to the localStorage cache, so "the server refused you" and "the
+connection dropped" took the same branch. A machine holding invoices from an
+earlier offline session would have shown them to someone who never knew the
+passcode. Verified by seeding a cached invoice and presenting a forged token.
+
+### Deployment, twice
+
+`vercel.json` cannot contain comments. Two explanatory "comment" keys failed
+schema validation before a file was built, and the whole pre-launch batch sat in
+GitHub for two hours looking shipped. Notes now live in VERCEL-CONFIG.md.
+
+Adding `www` to Vercel silently made it the primary domain and turned the apex
+into a 308 redirect to a host with no DNS record. The site was unreachable for
+about fifteen minutes. Otis decided against `www` entirely — his cards will say
+meridianinterface.com — so it was removed rather than fixed.
+
+### Built today
+
+- Rate limiting on every public endpoint, via a new counting limiter
+  (`public.rate_allow`, migration 0027). The existing planner_allow writes a row
+  per request, which is wrong for site-images at one call per page load. This
+  counts: one row per caller per window. Fails closed.
+- Nightly CRM snapshots (migration 0028) with a tested restore. Rows rebuilt
+  with jsonb_populate_recordset were byte-identical to live. This is the answer
+  to 9 Sep, when five real-looking deals were deleted and could not be recovered.
+- Health checks that stop crying wolf (migration 0029). Three alerts were open;
+  only approval_backlog was true. tasks_failed had no time window and had been
+  re-raising three tasks superseded on 7 Sep, every fifteen minutes for ten days.
+  no_recent_drafts fired although the planner runs daily and is deliberately
+  holding because 45 drafts and 10 approvals are queued. Three became one.
+- SECURITY.md in the website repo: every control with HOW it was verified,
+  and an open-items list that includes what is not done.
+- Crawler-readable content. The served HTML had 0 words, 0 headings, 0 links —
+  everything painted by JS into an empty div. Added JSON-LD and a <noscript>
+  fallback: 339 words for crawlers that do not execute, 0 of 14 samples showing
+  it to a visitor whose JavaScript works.
+
+### What the CRM actually contains
+
+Nothing real. Three contacts: two are seed data (SESSION.md line ~811 names
+Marcus Bell), one is a launch-checklist test at example.com. One deal, from that
+test. Thirteen invoices, all internal owner-account records.
+
+Worth recording because it was got wrong today: the two seeded contacts were
+reported to Otis as real prospects who had waited four weeks for a reply. They
+were not. The tell was in the data already pulled — both created at
+2026-08-18T23:38:51.488198, identical to the microsecond. Two people do not fill
+in a form at the same millionth of a second. Check timestamps before concluding
+a row is a person.
+
+### Blocked on the real world, not on code
+
+- **Stripe** — needs a business bank account, which needs the LLC and EIN.
+  Sequence: Texas Certificate of Formation ($300) → EIN (free, IRS, 10 min) →
+  bank account → Stripe. Registered agent needs a physical street address; a PO
+  box does not qualify, which matters because a UPS box was the plan.
+- **Marketing email** — refused by the compliance guard until
+  settings.business_profile.postal_address exists. Working as designed.
+- **Social channels + the 10 drafts** — deliberately deferred. Otis is not ready
+  to post; connecting a platform he cannot yet feed would produce stuck items
+  and a nagging alert. Four items approved on 6–7 Sep have never published, and
+  the publish task recorded `{"published": false, "mocked": true}` while marking
+  itself `done` — which is why nobody noticed.
+- **Safari and Firefox** — untested. This environment has Chromium only.
+
+### Standing rules confirmed today
+
+The site is a static SPA. There is no server code on Vercel, so Vercel's 500-error
+tooling returns nothing by design — errors live in Supabase. And the payment gap
+does not expose the public site: nothing there asks anyone for money. The site
+says it itself — "A booking is a request, not a purchase."
