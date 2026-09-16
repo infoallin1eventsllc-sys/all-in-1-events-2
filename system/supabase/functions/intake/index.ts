@@ -5,20 +5,83 @@
 //   { type: "appointment", payload: { clientName, clientEmail, clientPhone,
 //     companyName, serviceType, serviceTitle, preferredDate, preferredTimeSlot,
 //     budgetRange, notes, ... } }
-// Public endpoint (verify_jwt = false); protected by an optional shared secret
-// in the `x-webhook-secret` header (set WEBHOOK_SECRET to enforce).
+//
+// verify_jwt MUST stay false. The website's booking form posts here from a
+// visitor's browser with no Supabase session, so requiring a JWT does not add
+// security, it just breaks the form — as it did for two and a half minutes on
+// 16 Sep when a redeploy silently defaulted it back to true. A shared secret in
+// the `x-webhook-secret` header is honoured when WEBHOOK_SECRET is set, but
+// that cannot be the whole defence either: a secret a browser can send is a
+// secret in the shipped bundle. So the real protection is below — a per-address
+// rate limit, a hard daily ceiling on outbound acknowledgements, and length
+// caps on every field.
+//
+// Why this matters more than a messy CRM: a confirmation email goes to whatever
+// address the caller supplies, from Meridian's authenticated sending domain.
+// Left open, this endpoint is a way to send mail as Meridian to strangers. The
+// cost of that is not a few junk contacts, it is the sending reputation of
+// meridianinterface.com and a suspended SendGrid account. Verified open on
+// 16 Sep 2026 with a single unauthenticated POST.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { serviceClient } from "../_shared/supabase.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
 import { sendEmail } from "../_shared/email.ts";
+
+/** Bookings allowed per caller per hour. A real person books once. */
+const MAX_PER_IP_PER_HOUR = 5;
+/** Acknowledgements the whole site may send in a day, across every caller.
+    A rate limit alone is per-address; this is the ceiling a distributed
+    flood still cannot cross. Raise it when real volume approaches it. */
+const MAX_ACKS_PER_DAY = 60;
+
+/** Longest accepted value per field, in characters. */
+const CAP = { name: 120, email: 254, phone: 40, company: 160, message: 4000 } as const;
+
+/** Trim, drop control characters, and cut to length. Never throws. */
+const cap = (v: unknown, n: number): string =>
+  String(v ?? "").replace(/[\u0000-\u001F\u007F]/g, " ").trim().slice(0, n);
+
+/** Shape check only — deliverability is SendGrid's problem, not ours. */
+const looksLikeEmail = (v: string) => /^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(v);
+
+/** Salted hash of the caller IP: enough to rate-limit, not a visitor log. */
+async function ipHash(req: Request): Promise<string> {
+  const ip = (req.headers.get("x-forwarded-for") ?? "unknown").split(",")[0].trim();
+  const salt = Deno.env.get("RUN_SECRET") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "intake";
+  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`intake|${salt}|${ip}`));
+  return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ ok: false, error: "POST only" }, 405);
 
   const secret = Deno.env.get("WEBHOOK_SECRET");
-  if (secret && req.headers.get("x-webhook-secret") !== secret) {
+  const presentedSecret = secret && req.headers.get("x-webhook-secret") === secret;
+  if (secret && !presentedSecret) {
     return json({ ok: false, error: "unauthorized" }, 401);
+  }
+
+  // A caller holding the shared secret is a trusted server-to-server sender and
+  // is not throttled. Everyone else — which includes the site's own form — is.
+  const sbGate = serviceClient();
+  if (!presentedSecret) {
+    const { data: allowed, error: rlErr } = await sbGate.rpc("planner_allow", {
+      p_ip_hash: await ipHash(req),
+      p_action: "intake",
+      p_limit: MAX_PER_IP_PER_HOUR,
+      p_window: "1 hour",
+    });
+    // Fail closed. An enquiry lost to a database blip is recoverable; an
+    // unthrottled mail relay is not.
+    if (rlErr) return json({ ok: false, error: "unavailable, please try again" }, 503);
+    if (!allowed) {
+      return json({
+        ok: false,
+        error: "too_many_requests",
+        message: "We already have a request from you. Email otis@meridianinterface.com if it is urgent.",
+      }, 429);
+    }
   }
 
   let raw: Record<string, unknown>;
@@ -34,27 +97,48 @@ Deno.serve(async (req) => {
   const kind = String((raw.type ?? "") as string);
   const isAppointment = kind === "appointment";
 
-  const email = String((p.email ?? p.clientEmail ?? "") as string).trim().toLowerCase() || null;
-  const fullName = (p.name ?? p.full_name ?? p.clientName ?? null) as string | null;
-  const phone = (p.phone ?? p.clientPhone ?? null) as string | null;
-  const company = (p.company ?? p.companyName ?? null) as string | null;
-  const source = (p.source ?? (isAppointment ? "meridian-website:booking" : "meridian-website")) as string;
+  // Every field is capped before it reaches the database or an email body.
+  // Without this an unauthenticated caller chooses how many megabytes of text
+  // get stored per request, and what gets pasted into a message sent from
+  // Meridian's domain.
+  const emailRaw = cap(p.email ?? p.clientEmail ?? "", CAP.email).toLowerCase();
+  const email = emailRaw && looksLikeEmail(emailRaw) ? emailRaw : null;
+  if (emailRaw && !email) return json({ ok: false, error: "that email address is not valid" }, 400);
+  const fullName = cap(p.name ?? p.full_name ?? p.clientName ?? "", CAP.name) || null;
+  const phone = cap(p.phone ?? p.clientPhone ?? "", CAP.phone) || null;
+  const company = cap(p.company ?? p.companyName ?? "", CAP.company) || null;
+  const source = cap(p.source ?? (isAppointment ? "meridian-website:booking" : "meridian-website"), 120);
 
   // Build a readable message. For bookings, summarise the request.
-  let message = (p.message ?? p.details ?? p.notes ?? null) as string | null;
+  let message = cap(p.message ?? p.details ?? p.notes ?? "", CAP.message) || null;
   if (isAppointment) {
     const parts = [
-      p.serviceTitle ?? p.serviceType,
-      p.preferredDate ? `on ${p.preferredDate}` : null,
-      p.preferredTimeSlot,
-      p.budgetRange ? `budget ${p.budgetRange}` : null,
+      cap(p.serviceTitle ?? p.serviceType ?? "", 120),
+      p.preferredDate ? `on ${cap(p.preferredDate, 40)}` : null,
+      cap(p.preferredTimeSlot ?? "", 60),
+      p.budgetRange ? `budget ${cap(p.budgetRange, 60)}` : null,
     ].filter(Boolean).join(" · ");
-    message = [`Booking request: ${parts}`, p.notes ? `Notes: ${p.notes}` : null].filter(Boolean).join(" — ");
+    const notes = cap(p.notes ?? "", CAP.message);
+    message = [`Booking request: ${parts}`, notes ? `Notes: ${notes}` : null].filter(Boolean).join(" — ");
   }
 
   if (!email && !phone) return json({ ok: false, error: "email or phone required" }, 400);
 
-  const sb = serviceClient();
+  // The same client the rate-limit gate above already opened; one connection,
+  // not two, and the name the rest of this function expects.
+  const sb = sbGate;
+
+  // `raw` is the caller's entire request body, kept so an odd submission can be
+  // read back later. Bounded here for the same reason every other field is: it
+  // is attacker-chosen and it goes straight into a row.
+  const rawKept = (() => {
+    try {
+      const text = JSON.stringify(raw);
+      return text.length <= 8000 ? raw : { truncated: true, bytes: text.length, head: text.slice(0, 8000) };
+    } catch {
+      return { unserialisable: true };
+    }
+  })();
 
   // Upsert on email when present; otherwise insert a fresh contact.
   let contactId: string | undefined;
@@ -68,14 +152,14 @@ Deno.serve(async (req) => {
       lifecycle_stage: "lead",
       consent_email: Boolean(p.consent_email ?? !!email),
       consent_sms: Boolean(p.consent_sms ?? false),
-      meta: { message, raw },
+      meta: { message, raw: rawKept },
     }).select("id").single();
     if (error) return json({ ok: false, error: error.message }, 500);
     contactId = data.id;
   } else {
     await sb.from("contacts").update({
       full_name: fullName ?? undefined, phone: phone ?? undefined, company: company ?? undefined,
-      meta: { message, raw },
+      meta: { message, raw: rawKept },
     }).eq("id", contactId);
   }
 
@@ -126,8 +210,19 @@ Deno.serve(async (req) => {
         .eq("meta->>reason", "booking_confirmation")
         .gte("created_at", recent);
 
+      // A ceiling the whole site shares, not just this caller. The per-address
+      // limit above stops one machine; this stops a thousand of them, and it is
+      // the difference between a bad afternoon and a burned sending domain.
+      const dayAgo = new Date(Date.now() - 24 * 60 * 60_000).toISOString();
+      const { count: sentToday } = await sb
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .eq("meta->>reason", "booking_confirmation")
+        .gte("created_at", dayAgo);
+      const underDailyCap = (sentToday ?? 0) < MAX_ACKS_PER_DAY;
+
       // A double-submitted form should not send two confirmations.
-      if (!alreadySent) {
+      if (!alreadySent && underDailyCap) {
         const profile = await sb.from("settings").select("value").eq("key", "business_profile").maybeSingle();
         const studio = String((profile.data?.value as { name?: string } | null)?.name ?? "Meridian Interface");
         const website = String((profile.data?.value as { website?: string } | null)?.website ?? "");
