@@ -1925,3 +1925,64 @@ The site is a static SPA. There is no server code on Vercel, so Vercel's 500-err
 tooling returns nothing by design — errors live in Supabase. And the payment gap
 does not expose the public site: nothing there asks anyone for money. The site
 says it itself — "A booking is a request, not a purchase."
+
+## Sep 16 (end of day) — Otis's note for tomorrow: client data is on the front end
+
+Otis looked at the live site and raised this himself, and he is right:
+
+> "When they confirm appointment, it shows clients information. That should be
+> for the back end. Not for the front end. Or open to public viewing.
+> Appointments booked should be shown in the back end. Customers information in
+> the back end, nothing should be on the front of the page."
+
+### What is actually true today
+
+The "My Appointments & Consultations" page (DashboardView) is public — no
+passcode, reachable from the main nav. It renders client name, email address,
+service, date, budget and status in a table.
+
+It is NOT currently leaking one visitor's data to another. Bookings are read
+from `getAppointments()` in src/lib/leads.ts, which reads that browser's own
+localStorage, merged with INITIAL_APPOINTMENTS from mockData. So a visitor sees
+their own booking plus two seeded examples, and cannot see anybody else's.
+
+Real bookings to date: zero. The only appointment in the CRM is the 19 Aug
+launch-checklist test at an example.com address.
+
+### Why it still needs fixing
+
+The shape is wrong, and the shape is what gets exploited later. A public page
+that looks like a client list is a page somebody eventually wires to the server
+— "so bookings follow you between devices" is a reasonable-sounding improvement
+that would expose every client's name, email, service and budget to anyone who
+opened the tab. The vulnerability is not there yet. The invitation to it is.
+
+Earlier today this was patched cosmetically: a "Sample data" banner plus an
+"Example" badge on each seeded row, so a visitor does not read the page as
+somebody else's records leaking. That fixed the misreading, not the design.
+
+### What tomorrow should decide
+
+The question is what a logged-out visitor should see on that page at all. Three
+shapes, in rough order of effort:
+
+1. Strip client identity from the public view entirely. Keep a reference number,
+   service and status; move name, email and budget behind the portal. A person
+   who just booked still gets confirmation, and it comes by email.
+2. Remove the public page. Booking confirmation by email only; everything about
+   appointments lives in the studio portal behind the passcode.
+3. Give clients real accounts so they can see their own record and nothing else.
+   Correct, and the most work by a distance — it means real per-user auth, which
+   is a much larger change than the single owner passcode currently in place.
+
+(2) is the smallest change that matches what Otis actually asked for. (1) keeps
+the page useful to a client checking a reference number. (3) is a product
+decision, not a security fix, and should not be taken as one.
+
+Related and worth doing in the same pass: the portal's own auth is the weakest
+control in the system — a single shared passcode, no second factor, and no way
+to end a session early. Changing OWNER_PASSCODE does not invalidate live tokens,
+because they are signed with the service key rather than the passcode. Two
+cheap improvements: a session epoch so "sign out everywhere" becomes one click,
+and a TOTP second factor. Both should land before Stripe is live and real
+payment data is in the system.
