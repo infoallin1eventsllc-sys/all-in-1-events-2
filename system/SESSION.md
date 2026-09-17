@@ -2439,3 +2439,122 @@ unsubscribe link and then for the missing postal address. Checked the actual
 error text rather than assuming the nearest change was the cause. The postal
 address remains an open item and is the thing that will block real marketing
 email the day Otis wants to send some.
+
+---
+
+## 17 Sep 2026 — the saved-list flow, end to end
+
+A client can now pick what they want built, and the whole path from that click
+to an invoice line exists and is proven. What follows is what was built, what
+was wrong, and the one thing still blocking.
+
+### The flow as it now runs
+
+1. Client picks products on the site, saying how big they want it
+2. Client gets an acknowledgement immediately (real send, verified)
+3. **Otis gets an email within two minutes** — this did not exist before
+4. An agent drafts the client's reply from Otis's own Client Answers, within
+   five minutes
+5. Otis reads it in the portal (Marketing tab), edits, approves
+6. Saved Lists tab → *Start invoice from this list* pre-fills the invoice
+
+Nothing sends without him, and that is a database rule rather than a promise.
+
+### What was actually broken, and is not now
+
+- **Nothing notified Otis of a booking.** He believed he was emailed; he was
+  not. The only mail `intake` sent was the client's acknowledgement. New
+  `notify-owner` function on pg_cron every two minutes.
+- **The portal had no leads screen at all.** Its actions were invoices,
+  content, messages, health. The saved items were reaching the CRM correctly
+  and stopping there, answerable only by querying the database by hand. New
+  `leads` function + Saved Lists tab.
+- **The approval trigger was about to break the whole content pipeline.**
+  0030 computed `money_mentioned(new.subject, new.body)` in the DECLARE block;
+  Postgres evaluates those before any branch, and `content_items` has `title`,
+  not `subject`. Fixed in 0031. It had not bitten only because the queue had
+  been idle since 8 Sep.
+- **Client Answers lived only in the website bundle**, so the agents could not
+  read them and wrote from generic service descriptions. Published to
+  `settings.client_explainers` via `tools/publish-explainers.mjs`, which
+  refuses to ship anything that looks like a figure.
+- **Answers were linked to products by guessing from the title.** It resolved
+  4 of the 15 things a client can save, because the site sells under product
+  names and the answers are filed under invoice-line names. Every product now
+  DECLARES its answer (`explainerId`), and the booking carries the list as
+  data. An explicit null stays a gap rather than being filled with the nearest
+  match.
+- **A demo was being answered as a package the client had bought.** The demos
+  exist to show the studio can build this kind of thing; what gets built is the
+  client's decision, to their brief, in their colours. A saved demo now says
+  so and asks what theirs needs to do.
+- **There was no product between a 7-page site and a full web app.** A client
+  asking for eleven pages was being told about a three-to-seven page site.
+  Added Custom 8–12 Page Business Site ($12,500, Otis's figure) and Additional
+  Page ($750, Otis's figure), both with Client Answers and invoice presets.
+- **The Growth bundle undercut the tier inside it** — it promised a 6–12 page
+  site for $9,500 while the 8–12 page site alone is $12,500, so nobody would
+  ever buy the tier. Growth narrowed to seven pages. No price moved.
+- **One service card covered every size of website.** The web design card now
+  asks: one page, 3–7, 8–12, or more than a website. The size is part of the
+  saved item's identity, so two sizes are two entries.
+
+### Security work the same day
+
+- `watch_owner_login()` every five minutes: the per-IP throttle is blind to a
+  distributed attempt by construction, so this looks at failures in aggregate
+  and raises a critical alert at six distinct failing sources. It deliberately
+  does not block — the only signal is a spoofable caller hash, and a blocker
+  keyed on that locks Otis out of his own portal.
+- 0033 closed grants that 0032 only looked like it closed: `revoke ... from
+  anon, authenticated` does nothing on a fresh function, because Postgres
+  grants EXECUTE to PUBLIC. Supabase's own linter caught it.
+- `require_owner_approval` search_path pinned. It resolves
+  `public.money_mentioned` by name and could have been shadowed.
+- Advisors now report zero WARN-level findings.
+
+### Things checked and found NOT to be problems
+
+- **X-Forwarded-For spoofing.** Both throttles take `split(",")[0]`, which is
+  normally attacker-controlled. Tested with three spoofed headers: all produced
+  the same hash. Supabase's gateway replaces it. No bypass.
+- **Prices visible to customers.** The Client Answers screen showing the rate
+  card renders only after the passcode gate, and the catalogue is only fetched
+  once unlocked. Owner-only, verified.
+- **SendGrid "not configured".** The `channels` table said so and I repeated
+  it. It is a stale registry that nothing branches on — email has been sending
+  all along. Corrected in front of Otis.
+- **`VITE_OWNER_PASSCODE`.** Survives only as a comment explaining its removal.
+  `.env.production` holds a PostHog key, which is public by design.
+
+### Still open
+
+- **The postal address is the only thing blocking outbound client mail.** A
+  reply describing products to a client is commercial email; the system gates
+  it exactly like the agent's other follow-ups, and that is correct. Otis is
+  getting a PO box. The moment `settings.business_profile -> postal_address`
+  exists, the whole flow completes with no further code.
+- **Stripe is not connected** (`configured: false`). No invoice can be paid.
+  Gated behind LLC → EIN → bank.
+- **`OWNER_SESSION_SECRET` is unset.** Without it there is no way to revoke a
+  session short of rotating the service-role key. Two minutes, Otis's action,
+  and it matters more the day Stripe goes live.
+- **2FA** on Supabase, Vercel, GitHub, registrar.
+- **"Full Studio Design Bundle"** is the one product with no Client Answer
+  declared — which bundle tier it equals is Otis's call.
+- **10 posts await approval**, including an Instagram post naming $4,500 that
+  Otis approved on 6 Sep under the old rules and which now contradicts his own
+  policy.
+- **`runner` and `orchestrator` were last deployed ten days before** the price
+  removal in `_shared/context.ts`. The settings change closes the hole against
+  live code, so nothing leaks, but deployed and repo disagree.
+
+### Notes for whoever picks this up
+
+- Test data in this session used `@example.com` and was removed each time.
+  Three real contacts remain.
+- `compose-reply` has no model call, deliberately. The explainers are already
+  client-facing prose Otis approved; paraphrasing them through a model adds the
+  risk of an invented figure in exchange for nothing.
+- The portal's Marketing tab already lists any outbound draft, so the composed
+  reply appears there with no portal change.
