@@ -46,7 +46,13 @@ type Explainer = {
   excluded: string[];
 };
 
-type PickedItem = { title: string; detail: string | null; explainerId?: string | null };
+type PickedItem = {
+  title: string;
+  detail: string | null;
+  explainerId?: string | null;
+  /** `work` is a demo the client liked; `service` is the kind of work itself. */
+  kind?: "work" | "service";
+};
 
 /** Same parse as the `leads` function: this reads the note the site composed. */
 function parseNote(note: string): { items: PickedItem[]; saidByClient: string | null } {
@@ -122,12 +128,30 @@ function composeBody(
 
   items.forEach((item, n) => {
     const e = explainerFor(item, explainers);
-    const heading = `${n + 1}. ${e?.title ?? item.title}`;
+    const isDemo = item.kind === "work";
+
+    // A demo is not a product. It is there to show the studio can build this
+    // kind of thing; what actually gets built is decided by the client, to
+    // their brief, in their colours. Heading it with the answer's title would
+    // read as "here is the package you bought", which is the wrong
+    // conversation entirely.
+    const heading = isDemo
+      ? `${n + 1}. ${item.title}`
+      : `${n + 1}. ${e?.title ?? item.title}`;
 
     if (!e) {
-      // No answer written for this one. Say so plainly rather than inventing a
-      // description — Otis fills it in before sending, and an obvious gap is
-      // far safer than a confident guess about his own product.
+      if (isDemo) {
+        // Nothing is missing here. They pointed at an example; the next move
+        // is theirs, and asking is the honest thing rather than flagging a gap.
+        blocks.push([
+          heading,
+          "",
+          "You picked this as an example of the kind of thing you want. Tell me what yours would need to do and I will scope it around that.",
+        ].join("\n"));
+        return;
+      }
+      // A service with no answer written IS a gap, and Otis fills it before
+      // sending rather than having it described by guesswork.
       unmatched.push(item.title);
       blocks.push(
         [heading, "", "[No Client Answer is written for this item yet — add a description before sending.]"].join("\n"),
@@ -136,7 +160,9 @@ function composeBody(
     }
 
     matched.push(e.id);
-    const parts = [heading, "", e.short];
+    const parts = isDemo
+      ? [heading, "", `This is an example of the work, not a fixed package. Yours would be built to your own brief. The kind of work it is: ${e.title}.`, "", e.short]
+      : [heading, "", e.short];
     if (e.included?.length) {
       parts.push("", "What this includes:", ...e.included.map((i) => `  - ${i}`));
     }
@@ -162,7 +188,22 @@ function composeBody(
     // wall of text with the greeting welded to the first sentence.
     saidByClient ? `You mentioned: "${saidByClient}"` : null,
     saidByClient ? "" : null,
-    "I will come back to you with an itemised quote covering the items above, so you can see exactly what each line is for before deciding anything.",
+    // The studio builds to the client's brief; the demos only show it can.
+    // So the reply has to ask for the things only they can decide, or the
+    // next email is a list of questions anyway.
+    "WHAT I NEED FROM YOU",
+    "",
+    "  - What it should do — the job it has to take off your desk",
+    "  - Roughly how big it is, in pages or screens",
+    "  - Colours, styling, and anything you already use that it has to match",
+    "  - Anything you have already: a logo, photographs, wording, a current site",
+    "",
+    "Once I have that I will send an itemised quote, so you can see exactly what each line is for before deciding anything.",
+    "",
+    // Said now, plainly, and without a number. Otis's rule: staff decide what
+    // anything costs, and it arrives as an invoice. Saying up front that
+    // changes are quoted separately is what stops it being a surprise later.
+    "If you want to change something or add a feature after we have agreed the scope, that is quoted separately before any work starts — nothing gets added to a bill without you agreeing it first.",
     "",
     "If I have misread any of this, tell me and I will correct it before pricing it.",
     "",
@@ -248,6 +289,7 @@ Deno.serve(async (req) => {
         title: String(i.title ?? "").trim(),
         detail: i.subtitle ? String(i.subtitle) : null,
         explainerId: i.explainerId === undefined ? undefined : i.explainerId,
+        kind: i.kind === "work" || i.kind === "service" ? i.kind : undefined,
       })).filter((i) => i.title)
       : parsed.items;
     // A booking with no saved items is an ordinary enquiry; the existing
