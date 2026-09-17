@@ -4,8 +4,9 @@
 // account. Two things need a model — the advisor's blueprint and a custom
 // workflow trace — and both come through here so the Claude key never leaves
 // the server. Cost is bounded by a per-address hourly allowance (see migration
-// 0017) and by hard caps on input length and output tokens. Nothing about the
-// caller is kept except a salted hash of the address for that allowance.
+// 0017), by a ceiling on total model calls in any 24 hours, and by hard caps on
+// input length and output tokens. Nothing about the caller is kept except a
+// salted hash of the address for that allowance.
 import { callClaude, extractJson, keyAvailable } from "../_shared/claude.ts";
 import { serviceClient } from "../_shared/supabase.ts";
 
@@ -41,7 +42,10 @@ const LIMITS: Record<string, number> = { advisor: 12, simulate: 12, send_plan: 5
 
    Worst case per call is roughly ten cents — 5,000 output tokens on Sonnet 5 at
    $10 per million, plus input and thinking — so 60 is about $6 a day at the
-   ceiling, and the ceiling is only reached under abuse. */
+   ceiling, and the ceiling is only reached under abuse.
+
+   Migration 0025 puts the same numbers on the System Health panel, so the day
+   this engages is not the day a client mentions the advisor did not work. */
 const MODEL_ACTIONS = ["advisor", "simulate"];
 const DEFAULT_DAILY_MODEL_CALLS = 60;
 
@@ -158,14 +162,14 @@ async function ipHash(req: Request): Promise<string> {
 
 const clean = (v: unknown): string => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, FIELD_MAX);
 
-const VOICE = `You write for Meridian Interface, a Houston web and software studio that designs and builds agentic tech stacks for growing businesses. Plain words a business owner understands. Short sentences. No hype, no buzzwords, no exclamation marks. Never claim a certification (SOC 2, ISO 27001, HIPAA) or an audit result; describe what the design does and what the business would still have to obtain. Costs are estimates and say so. Name real, current tools and models; when you name a Claude model use these ids and prices per million tokens: Claude Sonnet 5 ($2 in / $10 out) for everyday work, Claude Opus 5 ($5 / $25) for hard judgement, Claude Haiku 4.5 ($1 / $5) for high-volume simple tasks. The five layers are: 1 Foundation model, 2 Orchestration (LangGraph or Temporal), 3 Memory and context (pgvector, Qdrant, Redis, Mem0), 4 Tools and protocols (MCP servers, OpenAPI, sandboxed code), 5 Governance (approval gates, PII masking, tracing with Langfuse/OpenTelemetry, per-agent identity). A person approves anything over an agreed threshold; say so where it applies. Answer with one JSON object and nothing else.`;
+const VOICE = `You write for Meridian Interface, a Houston web and software studio that designs and builds agentic tech stacks for growing businesses. Plain words a business owner understands. Short sentences. No hype, no buzzwords, no exclamation marks. Never claim a certification (SOC 2, ISO 27001, HIPAA) or an audit result; describe what the design does and what the business would still have to obtain. NEVER put a price, a cost, a monthly figure or a dollar amount in your answer, for any layer, tool, model or the build itself — not even as a range or an estimate. What this costs is settled with the client in conversation, not quoted by a public tool. If asked about cost, say the studio will go through it on the call. The model prices below are for YOUR reasoning about which tier to recommend; they are not for the client and must not appear in the output. Name real, current tools and models; when you name a Claude model use these ids and prices per million tokens: Claude Sonnet 5 ($2 in / $10 out) for everyday work, Claude Opus 5 ($5 / $25) for hard judgement, Claude Haiku 4.5 ($1 / $5) for high-volume simple tasks. The five layers are: 1 Foundation model, 2 Orchestration (LangGraph or Temporal), 3 Memory and context (pgvector, Qdrant, Redis, Mem0), 4 Tools and protocols (MCP servers, OpenAPI, sandboxed code), 5 Governance (approval gates, PII masking, tracing with Langfuse/OpenTelemetry, per-agent identity). A person approves anything over an agreed threshold; say so where it applies. Answer with one JSON object and nothing else.`;
 
 const ADVISOR_SHAPE = `{
   "summary": "3-5 sentences: what to automate first for this business and why, in plain words",
-  "stackLayers": [ { "layer": "1. Foundation model", "component": "the choice", "role": "what it does for this business", "status": "Recommended | Optional | Later", "estimatedCost": "$X - $Y / mo (estimate)" } ],
+  "stackLayers": [ { "layer": "1. Foundation model", "component": "the choice", "role": "what it does for this business", "status": "Recommended | Optional | Later" } ],
   "phasedDeployment": [ { "phase": "Weeks 1-2: ...", "impact": "one line on what changes for the business", "actions": ["3-5 concrete actions"] } ],
   "guardrailRecommendations": ["4-6 specific rules: who approves what, what is masked, what the agents may never do"],
-  "projectedMetrics": { "monthlyHoursSaved": 120, "headcountEquivalentLeverage": "0.7 FTE", "projectedMonthlySavings": "$4,200 (estimate)", "paybackWeeks": 9 }
+  "projectedMetrics": { "monthlyHoursSaved": 120, "headcountEquivalentLeverage": "0.7 FTE", "projectedMonthlySavings": "$4,200 (estimate)" }
 }`;
 
 const SIMULATE_SHAPE = `{ "steps": [ {
@@ -253,7 +257,7 @@ Tools already in use: ${p.currentTools || "(not given)"}
 What slows them down: ${p.painPoints || "(not given)"}
 How far they want automation to go: ${p.targetAutonomyGoal || "(not given)"}
 
-Give exactly five stackLayers, one per layer in order, and three phases. Keep the whole plan inside the stated budget where one is given, and say if it cannot be. Return JSON in this shape:
+Give exactly five stackLayers, one per layer in order, and three phases. Keep the whole plan inside the stated budget where one is given, and say if it cannot be. Do not state any figure. Return JSON in this shape:
 ${ADVISOR_SHAPE}`,
     });
     if (r.mocked) return reply({ ok: false, error: r.error ? `The AI advisor could not answer: ${r.error}` : "The AI advisor is offline right now." }, 503);

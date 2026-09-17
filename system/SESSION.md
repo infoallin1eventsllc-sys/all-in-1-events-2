@@ -1986,3 +1986,98 @@ because they are signed with the service key rather than the passcode. Two
 cheap improvements: a session epoch so "sign out everywhere" becomes one click,
 and a TOTP second factor. Both should land before Stripe is live and real
 payment data is in the system.
+
+## Sep 17 — every price came off the public Stack Planner
+
+Otis, before starting the day's work:
+
+> "There is cost for certain items for building a tech stack. I don't want the
+> customer thinking that's what it costs to build a tech stack... I'd rather
+> discuss that with them than have them reading it on the website."
+
+### What was actually there
+
+Two different kinds of money, and only one was the problem he described.
+
+**Service costs** — `monthlyCostRange` on all 20 components, `avgMonthlyCost` on
+the 4 stages, from "$0 - $30 / mo" to "$7,600 - $25,000 / mo". Third-party
+subscription costs, already labelled as such. This was the information he said
+he wanted clients to have.
+
+**The build cost** — the real find. A slider in the ROI tab, "One-off cost to
+design and build it", $2,000 to $40,000, defaulting to $7,500, with a tick on
+the scale reading "$7.5k (Meridian)". The comment above it:
+
+    /* One-off build cost. Meridian's published tech stack rate is $7,500,
+       range $4,500 - $15,000, so the default is the real number. */
+
+That is not a client confusing a service fee with a price. That is the studio's
+rate, published on a page anyone can open, flowing into the proposal the client
+prints and keeps — before anyone has described the job. A client who needs
+$15,000 of work has already read $7,500.
+
+He was offered three options (drop the build price and keep monthly, relabel
+everything, or take all money off) and chose to take all money off. The
+trade-off was put to him first — it removes the payback section and the
+homepage advertised "see the monthly cost" as the reason to open the tool — and
+he chose it anyway. Done in full.
+
+### Removed
+
+Both cost sliders and everything computed from them (payback, first-year net,
+ongoing net, annual stack cost); every per-component and per-stage cost; the
+"Estimated running cost" tile and the stage cost heuristic; published model
+token prices in the three Claude tier descriptions; "Token Cost: $0.0031" in
+the simulator; the advisor's `estimatedCost` and `paybackWeeks`; the pre-filled
+"$300 - $1,200 / month" budget anchor; the cost lines in the markdown and JSON
+exports; and "what each costs" from the page's own meta description.
+
+### Kept, deliberately
+
+The client's own figures — team size, salaries, hours, and what their freed
+time is worth. Those say what the business stands to gain, never what the work
+costs. Scenario amounts inside the worked examples stay too (a $150 approval
+gate, a $4,280 supplier invoice, ARR tiers in the stage picker): they
+demonstrate what an agent does, and stripping them would leave the simulations
+meaningless. Worth re-checking with Otis if he wants those gone too.
+
+### Rebuilt rather than deleted
+
+The ROI tab is now "What it frees up". Where payback used to be there is a card
+linking to the call: "Let us price it". Section 4 of the proposal still exists
+and says why it is blank — two numbers, both dependent on what the client
+actually needs, and a figure printed before that conversation would be a guess
+they would be entitled to hold us to.
+
+### Verified
+
+Driving the built demo at its real path in Chromium and reading every dollar
+figure on all seven tabs. What survives: four ARR tiers, the salary slider and
+its ticks, the worth of the freed time, one scenario threshold. No price for
+the stack or for the studio's work anywhere a visitor can reach.
+
+The `planner` edge function was redeployed (v20, verify_jwt stays false) with
+the advisor forbidden from emitting any figure. Confirmed against the live
+function with a real advisor run: 200, 4,527 bytes, zero dollar figures. The
+model now writes "the studio will confirm exact costs on the call" by itself.
+
+The four homepage screenshots had the old prices baked into the images, so they
+were regenerated from the rebuilt tool.
+
+### Two things found on the way, worth knowing
+
+**The repo copy of `planner/index.ts` had drifted behind production.** The
+deployed version carried two comments the repo lacked. Deploying from the repo
+would have silently reverted them. The repo is now synced — but note the
+imports legitimately differ: the repo uses `../_shared/` for the Supabase CLI
+layout, the MCP deploy flattens to `./_shared/`. Do not "fix" that difference.
+
+**`_shared/claude.ts` also differed.** The planner had been deployed with a
+stripped `mockFor`; the repo's canonical version is richer and is what the
+other functions run. The canonical one is now deployed with planner too, which
+ends the divergence. It is dead code while a key is configured.
+
+**Lesson worth repeating:** the source grep said the job was done; scanning the
+*built bundle* found five more price strings the grep had missed, because they
+lived in files that never mentioned the field names being searched for. Check
+the artefact that ships, not only the source you edited.
