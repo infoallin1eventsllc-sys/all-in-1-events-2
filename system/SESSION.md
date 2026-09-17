@@ -2160,3 +2160,73 @@ what the client gets. That is the "itemize why this cost is what the cost is"
 material, already written, sitting next to the prices it explains. Wiring those
 bullets into the invoice line descriptions is the obvious next step and has not
 been done.
+
+## Sep 17 — the money audit, and the saved list ("bucket")
+
+### The audit Otis asked for
+
+Everything a customer can reach, checked rather than assumed:
+
+| Surface | Result |
+|---|---|
+| Main site, all four public pages + booking form, driven in a browser | no dollar figure anywhere |
+| Built site bundle | only minified identifiers `$0` / `$1` |
+| All nine demos, scanned for the real rate-card figures | no leak — see below |
+| `clientExplainers` price field | never populated in the shipped file; `ClientExplainers` renders only inside the owner portal, prices fetched with the owner token |
+| `owner` → `catalogue`, no token | **401** |
+| `owner` → `list_invoices`, no token | **401** |
+| `pay` → `status`, public by design | three booleans, no numbers |
+
+**The demo scan is worth recording properly**, because the bare-number search
+looked alarming at first: `meridian-crm` matched every single rate-card figure
+(3800, 8500, 7500, 4500, 9500, 2500, 6500). All false positives — Unicode range
+tables, a Firestore error code `pt(9500)`, and fictional CRM data (a lead
+"Project Angel" with a +1 555 number and `value:8500`). Re-running against
+unambiguous rate-card *phrases* instead ("Starter Package", "Full Agency
+Package", "priceRange", "pricing_catalogue") returned one hit: "Credit Score
+Building - Starter Package", a fictional credit-repair company's service list
+inside the CRM demo. Coincidence.
+
+Note the deliberate distinction: the demos are storefronts, restaurants and
+dashboards, and their own fictional prices stay. A sandwich menu demonstrates
+the product; it does not tell anyone what Meridian charges. Stripping those
+would destroy the demos Otis specifically wants clients to explore.
+
+### The saved list
+
+> "They can upload the items to a bucket saving their item and then sending it
+> as a booked appointment to talk about the item that they chose. Then I would
+> discuss it with the client and send them an invoice for the items that they
+> picked."
+
+Built as `src/lib/bucket.ts`, `SaveToListButton`, `SavedListButton` and
+`BucketView`, on a new `bucket` tab.
+
+**It is not a cart, and must not become one.** No price field, no subtotal, no
+quantity (a quantity implies a unit price), no checkout. That constraint is
+written at the top of `bucket.ts`, because "just add a total" is the obvious
+next thing someone will do and it would reintroduce exactly the problem the
+whole mechanism exists to remove.
+
+Storage is localStorage until they send. There are no client accounts, so there
+is nothing to attach a server-side list to, and requiring registration before
+someone can keep a shortlist loses most of them. It survives closing the tab,
+does not cross devices, and every read and write is wrapped so a private window
+cannot break a page.
+
+Sending reuses `submitAppointment` → `intake`, so it lands in the CRM by the
+same path as a booking, with the same retry and local backstop.
+`serviceTitle` reads "Saved list — N items", `budgetRange` is "Not discussed",
+and the items are named plainly in the notes for Otis to price against.
+
+Verified in a browser: 9 save controls on the portfolio grid, badge counting 3
+across work and services, empty-form guard blocking a send with no contact
+details, payload carrying item names and no money, list cleared on success.
+
+### Still open
+
+`owner_invoices.line_items` descriptions are terse ("Custom Web Design &
+Frontend Development Package") while `pricing_catalogue` already holds
+`plainDeliverables` — plain-language bullets per item. Wiring those into the
+invoice lines is what would make every invoice answer "why is this cost what it
+is" by itself, which is the half of Otis's instruction not yet built.
