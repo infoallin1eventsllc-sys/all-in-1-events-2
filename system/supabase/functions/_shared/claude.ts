@@ -203,22 +203,28 @@ export function extractJson<T = unknown>(text: string): T | null {
  * "date and guest count". Placeholder text still reaches a human: the owner
  * reads it in the approval queue, and with autonomy set to `auto` a lead would
  * receive it. Keep it on-brand, keep the [mock] marker, and keep it consistent
- * with settings.content_rules — plain words, real prices, no filler verbs.
+ * with settings.content_rules.
+ *
+ * NO PRICES. Changed 17 Sep 2026 with settings.content_rules, on the owner's
+ * instruction: nothing public names a figure, because a number on a page lets
+ * a client assemble their own total before anyone has scoped the job. Every
+ * price arrives in an itemised invoice after a conversation. This text can
+ * reach a lead, so it obeys the same rule as everything else.
  */
 function mockFor(prompt: string): string {
   if (/\bplan\b|ONLY JSON|"tasks"/i.test(prompt)) {
     return JSON.stringify({
-      summary: "[mock] Follow up new leads and draft one post about what a site actually costs.",
+      summary: "[mock] Follow up new leads and draft one post about what is included in a build.",
       tasks: [
         { type: "follow_up_lead" },
-        { type: "generate_content", payload: { channel: "instagram", kind: "post", topic: "What a small-business website costs" } },
+        { type: "generate_content", payload: { channel: "instagram", kind: "post", topic: "What is included in a small-business website build" } },
       ],
     });
   }
   if (/follow-up|outreach|invites a reply/i.test(prompt)) {
     return JSON.stringify({
       subject: "Thanks for reaching out",
-      body: "[mock draft] Thanks for getting in touch. So I can give you a real number rather than a range: what does the business do, and is this a new site or a rebuild of one you already have? If there is a site now, send me the address and I will tell you what I would change before you spend anything. (This is placeholder text — add an Anthropic key for real, personalised copy.)",
+      body: "[mock draft] Thanks for getting in touch. So I can put together a proper quote rather than a guess: what does the business do, and is this a new site or a rebuild of one you already have? If there is a site now, send me the address and I will tell you what I would change before you spend anything. You will get an itemised quote showing what each line is for. (This is placeholder text — add an Anthropic key for real, personalised copy.)",
     });
   }
   // The summary branch must come before the content branch: the report prompt
@@ -230,8 +236,8 @@ function mockFor(prompt: string): string {
   }
   if (/write a|content|post|caption/i.test(prompt)) {
     return JSON.stringify({
-      title: "[mock draft] What a small-business website actually costs",
-      body: "[mock draft] A single landing page is $3,800. A 3-7 page business site is $8,500. Those are the real numbers, published on our site, because a quote you cannot get without a sales call is not a price. What is not included: we do not run your ads, and we do not promise a Google ranking. What is: a site you can edit yourself without calling us. (Placeholder text — add an Anthropic key for real, on-brand copy.)",
+      title: "[mock draft] What is actually included in a small-business website",
+      body: "[mock draft] A landing page is one focused page built to turn visitors into enquiries. A business site is up to seven pages, each designed around what that page has to do, with an enquiry form that reaches you instantly. What is not included: we do not run your ads, and we do not promise a Google ranking. What is: a site you can edit yourself without calling us. Tell us what you are building and you will get an itemised quote showing what each line is for. (Placeholder text — add an Anthropic key for real, on-brand copy.)",
     });
   }
   return "[mock] Placeholder copy generated without an Anthropic API key. Add ANTHROPIC_API_KEY to produce real content.";

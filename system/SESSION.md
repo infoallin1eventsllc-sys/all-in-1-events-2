@@ -2081,3 +2081,82 @@ ends the divergence. It is dead code while a key is configured.
 *built bundle* found five more price strings the grep had missed, because they
 lived in files that never mentioned the field names being searched for. Check
 the artefact that ships, not only the source you edited.
+
+## Sep 17 — the standing rule on money, and what was contradicting it
+
+Otis, stating policy rather than asking for a task:
+
+> "I want the customer to be able to go through demos and see the product. If
+> they decide they want the product, I will send them all the prices... But I
+> don't want them coming up with numbers by themselves. Because it's on my
+> page... Anything that comes with money, I'd rather send it all in an invoice,
+> itemize why this cost is what the cost is."
+
+### The rule
+
+Demos and the work are public and free to explore. **No figure is public** —
+not a price, not a range, not a budget bracket, not an implied one. Every
+number reaches a client as an itemised invoice from Otis, after a conversation,
+with each line explaining what it is for. Treat this as standing policy for the
+website, the planner, the marketing system, and anything built later.
+
+### What was contradicting it
+
+**`settings.content_rules` told the writer to do the opposite.** Its `always`
+list contained:
+
+    "Make one concrete claim per piece and support it with something real
+     (a price, a shipped project, a specific mechanism)"
+    "Name real prices plainly when relevant — price transparency is a
+     differentiator, use it"
+
+So every post, caption and email the system generates was under instruction to
+name the rate card. Rewritten to match the policy: naming a figure is now the
+first entry in `never`, along with implying one ("starting from", "under five
+figures"), and `always` tells the writer to name what the client GETS and
+invite the conversation instead. The reason is recorded in a `_why` key inside
+the setting so the next person to read it knows why it flipped.
+
+**It had already produced content.** Of the queue at the time of the change:
+
+| status | items | containing a price |
+|---|---|---|
+| approved | 4 | **1** |
+| pending_approval | 10 | **6** |
+| rejected | 28 | 11 |
+| failed | 3 | 2 |
+
+One pending LinkedIn video is titled *"A 3–7 page business site: $8,500."* —
+the rate card as the headline. One **approved** Instagram video quotes $4,500
+and would publish the moment a channel is connected.
+
+These were NOT touched. Approving, rejecting and editing content is Otis's
+decision and the owner-approval trigger is never worked around. Nothing can
+publish today because no social channel is connected, so there is no urgency —
+but the queue must be cleared or rewritten before any channel is, or the first
+thing the studio broadcasts is the price list the policy just removed.
+
+**The booking form invented a budget for every client.** `budgetRange` was
+state with a default of "$3,000 - $5,000" and no field rendered anywhere. The
+client never saw it or set it; it was filed against their enquiry and shown
+back on the appointments table as if they had said it. Now "Not discussed", in
+both booking paths and in the two seeded examples.
+
+**The mock marketing copy quoted prices and claimed they were published.** The
+placeholder used when no Anthropic key is configured said "A single landing
+page is $3,800... those are the real numbers, published on our site". Rewritten
+to describe deliverables and promise an itemised quote. Note this is repo-only
+until the functions using `_shared/claude.ts` are next deployed, and it is
+unreachable while a key is configured (it is the no-key fallback).
+
+### What already does the job
+
+`settings.pricing_catalogue` holds the real rate card server-side, service-role
+only, never sent to a browser — the right home for it, and what invoices are
+built from. `owner_invoices.line_items` already carries category, description,
+quantity, rate and amount per line, with subtotal, discount, tax and notes. The
+catalogue also carries `plainDeliverables` per item: plain-language bullets of
+what the client gets. That is the "itemize why this cost is what the cost is"
+material, already written, sitting next to the prices it explains. Wiring those
+bullets into the invoice line descriptions is the obvious next step and has not
+been done.
