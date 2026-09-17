@@ -2297,3 +2297,77 @@ setting that broke the booking form on 16 Sep). Also moves intake onto the
 shared `rate_allow` limiter, which counts in place rather than writing a row
 per request; `rate_allow` was verified to exist, be executable by service_role,
 and return true/true/true/false at a limit of 3 before anything depended on it.
+
+## Sep 17 — pricing is a staff decision, and the agent was built to quote
+
+Otis:
+
+> "Moving forward, when it comes to pricing any product or items, or any
+> interface, staff will be the ones making those decisions for the client or
+> customer."
+
+This is broader than "no prices on the page". It is about WHO DECIDES. A person
+at Meridian sets every price; the website does not, the planner does not, and
+the agent does not.
+
+### Where the system was deciding
+
+**The lead follow-up.** `runner/index.ts` writes the first reply to every new
+enquiry. Its prompt said:
+
+    If their message hints at what they need, you may name
+    the matching service and its price plainly
+
+and `_shared/context.ts` fed it the rate card under the heading:
+
+    ## What we sell (real prices — cite them plainly when useful)
+
+So the agent was explicitly built to quote a figure to a stranger, unprompted,
+in the studio's name. That is not a social post staged for review — it is a
+direct reply to a client.
+
+**What held:** `settings.agent.autonomy` is `"draft"`, so the reply waits for
+Otis rather than sending itself. Had it ever been switched to `"auto"` — one
+word in one settings row — priced emails would have gone out unreviewed.
+
+### Fixed in two places, for two different reasons
+
+**`settings.services`, applied immediately.** The agent reads this to describe
+what the studio sells, and the `price` field is rendered straight into its
+prompt. All ten entries now read "priced by Meridian Interface staff after a
+conversation — never state a figure" instead of `$3,800`, `$8,500` and so on.
+This takes effect against the CURRENTLY DEPLOYED runner, with no redeploy —
+which is the point of choosing it as the first move.
+
+**The source, for durability.** `context.ts` no longer renders the price at all
+and its heading now says pricing is a staff decision; the runner's follow-up
+prompt tells the writer to name the service and what it gives them, never a
+figure, and to say plainly that a person will send an itemised quote.
+
+NOT YET DEPLOYED: `runner` and `orchestrator` both import `context.ts`. The
+source change only takes effect when they are next deployed. This is recorded
+rather than rushed because the settings change above already closes the hole
+against the live code, and a transcription-driven redeploy of the runner is its
+own risk. Deploy them on the next planned pass.
+
+### Untouched on purpose
+
+`settings.pricing_catalogue` still holds the real rate card, service-role only —
+verified intact after the change ($3,500 – $5,500 on the first preset, ten
+presets, the invoice price source unchanged). That is what invoices are built
+from, and it is the one place a number belongs.
+
+### Also confirmed for Otis, who asked whether drafts could leak
+
+Tested as a customer's browser would, with the public key:
+
+| Read attempt | Result |
+|---|---|
+| `content_items` (the drafts) | `[]` |
+| `owner_invoices` | `[]` |
+| `settings` → `pricing_catalogue` | `[]` |
+
+RLS on, zero policies, deny by default. The invoice path touches neither the
+drafts table nor anything that references it — checked in the portal code and
+in the `owner` function's invoice action. The portal's CODE ships to every
+browser because the portal and the public site are one app; the DATA does not.

@@ -426,14 +426,17 @@ async function followUpLead(sb: SupabaseClient, task: Task) {
   const { profile, agent } = await agentCfg(sb);
 
   // Context matters here too: a follow-up that can name the service the lead
-  // likely needs, at its real price, reads as competence rather than a form
-  // letter. The rules also stop it over-promising to a stranger.
+  // likely needs reads as competence rather than a form letter. What it must
+  // NOT do is put a number on it — pricing is a staff decision, made after a
+  // conversation, and delivered as an itemised invoice.
   const business = await contextBlock(sb);
 
   const out = await callClaude({
     system: `You write brief, warm first-touch outreach for ${profile.name}.\n\n${business}\n\n` +
-      `Follow the writing rules above. If their message hints at what they need, you may name ` +
-      `the matching service and its price plainly; never quote a timeline or invent details. ` +
+      `Follow the writing rules above. If their message hints at what they need, name the matching ` +
+      `service and what it gives them — never a price, a range or an estimate, and never a timeline. ` +
+      `Pricing is decided by Meridian Interface staff after a conversation and sent as an itemised ` +
+      `quote; if they asked what it costs, say exactly that and invite the conversation. ` +
       `Return JSON {"subject": "...", "body": "..."} only. Keep body under 120 words, no placeholders.`,
     prompt: `New lead: ${contact.full_name ?? "there"} (source: ${contact.source ?? "website"}). ` +
       `Message they left: ${contact.meta?.message ?? "n/a"}. Write a friendly follow-up that invites a reply.`,

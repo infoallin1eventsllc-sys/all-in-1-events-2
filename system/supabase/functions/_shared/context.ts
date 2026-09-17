@@ -113,9 +113,22 @@ export function renderContextBlock(ctx: BusinessContext): string {
   }
 
   if (ctx.services.length) {
-    lines.push(``, `## What we sell (real prices — cite them plainly when useful)`);
+    // NO PRICES REACH THE MODEL FROM HERE.
+    //
+    // This block used to be headed "real prices — cite them plainly when
+    // useful" and rendered each service's price into the prompt, which is how
+    // the lead follow-up came to quote figures at strangers. Otis's rule of
+    // 17 Sep: pricing any product, item or interface is a decision Meridian
+    // Interface staff make for the client, never the system. The agent
+    // describes what the work IS and who it is for; what it costs is settled
+    // by a person and arrives in an itemised invoice.
+    //
+    // `price` is still carried on ServiceSummary because settings.services
+    // holds it, and the field is now set to a sentence telling the writer to
+    // defer rather than to a figure. It is deliberately not rendered.
+    lines.push(``, `## What we sell (pricing is decided by staff — NEVER state a figure, a range, or an estimate)`);
     for (const s of ctx.services) {
-      lines.push(`- **${s.title}** (${s.price}) — for ${s.is_for}. Outcome: ${s.outcome}`);
+      lines.push(`- **${s.title}** — for ${s.is_for}. Outcome: ${s.outcome}`);
     }
   }
 
