@@ -2230,3 +2230,70 @@ Frontend Development Package") while `pricing_catalogue` already holds
 `plainDeliverables` — plain-language bullets per item. Wiring those into the
 invoice lines is what would make every invoice answer "why is this cost what it
 is" by itself, which is the half of Otis's instruction not yet built.
+
+## Sep 17 — "fix whatever needs fixing": what the intake deploy turned up
+
+Otis gave a blanket go-ahead after the fifty-customers question. Three things
+came out of it, and one of them was a real defect nobody had seen.
+
+### The limits are now tunable, and the ack cap is 200
+
+`MAX_PER_IP_PER_HOUR` and `MAX_ACKS_PER_DAY` were compiled into `intake`. They
+now live in `settings.intake_limits`, the same way `planner_budget` does, so
+the day one of them stops a real client the fix is one UPDATE and not a
+redeploy:
+
+    update settings set value = '{"per_ip_per_hour": 5, "acks_per_day": 200}'::jsonb
+     where key = 'intake_limits';
+
+Acknowledgements per day went 60 -> 200. Fifty saved lists in one day would
+have very nearly exhausted 60. Per-address stays at 5/hour: it is not broken,
+and it only bites when several clients share one connection, which is the case
+to raise it for temporarily and put back after.
+
+A nonsense or missing value falls back to the default rather than to zero,
+because a typo that reads as `0` would lock the booking form shut.
+
+Second ceiling worth remembering: the SendGrid plan's own daily allowance sits
+above this number. If acknowledgements stop while this cap says there is room,
+that is where to look.
+
+### The bug: every saved list was losing its deal
+
+Found by actually POSTing to the deployed function instead of trusting a 200.
+The response came back `{"ok":true, ... "deal_id":null}` — contact written,
+activity written, **no deal**.
+
+Cause: `BucketView` sends `preferredDate: ''` because a saved list has no date.
+`event_date: (p.preferredDate as string | null) ?? null` leaves `""` intact —
+`??` only catches null and undefined — and Postgres rejects `""` as a date.
+The insert threw, and `const { data: deal }` never looked at `error`, so it
+failed in total silence. The client got their confirmation. The studio never
+got the pipeline entry.
+
+Two fixes: blank coerces to null server-side (defensive, covers any caller),
+and `dealErr` is now logged instead of discarded. Retested both paths against
+the live function — saved list with no date, and an ordinary booking with one —
+and both return a real `deal_id`. Test contacts and their deals, activities,
+messages and tasks were then removed; the CRM is back to 3 contacts and 1 deal,
+exactly as before.
+
+### A correction worth recording
+
+Mid-task I "fixed" `—` escapes in three files, believing clients would
+receive a literal `—` in their confirmation email. **That was wrong.**
+A `—` in a TypeScript string literal or template literal is a valid escape
+and renders as an em dash — checked in node rather than argued about. The
+sweep was cosmetic, and in `_shared/clipkit.ts` it made things worse: it turned
+deliberate regex escapes into literal characters and left the file
+inconsistent, since the sweep only matched lowercase `“`. Reverted
+clipkit.ts and orchestrator/index.ts. The lesson is the ordinary one: run the
+thing before believing a reading of it.
+
+### Deployed
+
+`intake` v38, verify_jwt false (checked explicitly both times — this is the
+setting that broke the booking form on 16 Sep). Also moves intake onto the
+shared `rate_allow` limiter, which counts in place rather than writing a row
+per request; `rate_allow` was verified to exist, be executable by service_role,
+and return true/true/true/false at a limit of 3 before anything depended on it.

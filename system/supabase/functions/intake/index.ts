@@ -28,12 +28,52 @@ import { json, corsHeaders } from "../_shared/cors.ts";
 import { sendEmail } from "../_shared/email.ts";
 import { allow, callerKey } from "../_shared/ratelimit.ts";
 
-/** Bookings allowed per caller per hour. A real person books once. */
-const MAX_PER_IP_PER_HOUR = 5;
-/** Acknowledgements the whole site may send in a day, across every caller.
-    A rate limit alone is per-address; this is the ceiling a distributed
-    flood still cannot cross. Raise it when real volume approaches it. */
-const MAX_ACKS_PER_DAY = 60;
+/* ------------------------------------------------------------ the limits --
+   Both of these are tunable from `settings` rather than compiled in, the same
+   way planner_budget is, because the day one of them bites is the day a real
+   client cannot reach the studio — and waiting on a redeploy to fix that is
+   the wrong shape of problem. One UPDATE, no deploy:
+
+     update settings set value = '{"per_ip_per_hour": 5, "acks_per_day": 200}'::jsonb
+      where key = 'intake_limits';
+
+   PER-ADDRESS, PER HOUR. A real person enquires once; five is already
+   generous. It only bites when several people share one connection — an
+   office, or a stand at an event — which is exactly when to raise it
+   temporarily and put it back afterwards.
+
+   ACKNOWLEDGEMENTS PER DAY, WHOLE SITE. The per-address limit stops one
+   machine; this is the ceiling a thousand of them still cannot cross, and it
+   is the difference between a bad afternoon and a burned sending domain.
+
+   The default was 60, which fifty saved lists in one day would have very
+   nearly exhausted — Otis asked exactly that question on 17 Sep. Now 200:
+   comfortably past any real day this studio will have for a long time, and
+   still a hard stop on abuse.
+
+   Note the ceiling above this one: the email provider's own daily allowance.
+   If SendGrid's plan is lower than this number, SendGrid becomes the real
+   limit. That fails safely — the lead is still saved and the error is logged,
+   the client just does not get the acknowledgement — but it is the first
+   thing to check if acknowledgements stop while this cap says there is room. */
+const DEFAULT_PER_IP_PER_HOUR = 5;
+const DEFAULT_ACKS_PER_DAY = 200;
+
+async function intakeLimits(sb: ReturnType<typeof serviceClient>): Promise<{
+  perIpPerHour: number;
+  acksPerDay: number;
+}> {
+  const { data } = await sb.from("settings").select("value").eq("key", "intake_limits").maybeSingle();
+  const v = (data?.value ?? {}) as { per_ip_per_hour?: unknown; acks_per_day?: unknown };
+  const ip = Number(v.per_ip_per_hour);
+  const acks = Number(v.acks_per_day);
+  return {
+    // A nonsense or missing value falls back to the default rather than to
+    // zero, which would lock the form shut on a typo.
+    perIpPerHour: Number.isFinite(ip) && ip > 0 ? ip : DEFAULT_PER_IP_PER_HOUR,
+    acksPerDay: Number.isFinite(acks) && acks >= 0 ? acks : DEFAULT_ACKS_PER_DAY,
+  };
+}
 
 /** Longest accepted value per field, in characters. */
 const CAP = { name: 120, email: 254, phone: 40, company: 160, message: 4000 } as const;
@@ -58,11 +98,12 @@ Deno.serve(async (req) => {
   // A caller holding the shared secret is a trusted server-to-server sender and
   // is not throttled. Everyone else — which includes the site's own form — is.
   const sbGate = serviceClient();
+  const limits = await intakeLimits(sbGate);
   if (!presentedSecret) {
     // `allow` fails closed on a database error, which is the behaviour this
     // endpoint wants: an enquiry lost to a blip is recoverable, an unthrottled
     // mail relay is not.
-    if (!(await allow(sbGate, await callerKey(req, "intake"), MAX_PER_IP_PER_HOUR))) {
+    if (!(await allow(sbGate, await callerKey(req, "intake"), limits.perIpPerHour))) {
       return json({
         ok: false,
         error: "too_many_requests",
@@ -103,7 +144,11 @@ Deno.serve(async (req) => {
       cap(p.serviceTitle ?? p.serviceType ?? "", 120),
       p.preferredDate ? `on ${cap(p.preferredDate, 40)}` : null,
       cap(p.preferredTimeSlot ?? "", 60),
-      p.budgetRange ? `budget ${cap(p.budgetRange, 60)}` : null,
+      // "Not discussed" is the honest default now that no budget is asked for
+      // at booking; printing it back adds a line that says nothing.
+      p.budgetRange && !/^not discussed$/i.test(String(p.budgetRange).trim())
+        ? `budget ${cap(p.budgetRange, 60)}`
+        : null,
     ].filter(Boolean).join(" · ");
     const notes = cap(p.notes ?? "", CAP.message);
     message = [`Booking request: ${parts}`, notes ? `Notes: ${notes}` : null].filter(Boolean).join(" — ");
@@ -159,12 +204,19 @@ Deno.serve(async (req) => {
   let dealId: string | undefined;
   if (isAppointment) {
     const amount = parseBudget(String(p.budgetRange ?? ""));
-    const { data: deal } = await sb.from("deals").insert({
+    // An empty string is not a date. The saved-list flow has no preferred
+    // date and was sending "", which Postgres rejects outright — and because
+    // the error below was not checked, the whole deal insert failed in
+    // silence. The client got a confirmation, the contact and activity were
+    // written, and the studio simply never got the pipeline entry. Blank
+    // means null.
+    const eventDate = cap(p.preferredDate ?? "", 40) || null;
+    const { data: deal, error: dealErr } = await sb.from("deals").insert({
       contact_id: contactId,
       title: String(p.serviceTitle ?? p.serviceType ?? "Design project"),
       stage: "quoted",
       amount,
-      event_date: (p.preferredDate as string | null) ?? null,
+      event_date: eventDate,
       details: {
         service_type: p.serviceType ?? null,
         time_slot: p.preferredTimeSlot ?? null,
@@ -172,6 +224,10 @@ Deno.serve(async (req) => {
         appointment_id: p.id ?? null,
       },
     }).select("id").single();
+    // Never silent again. The booking itself is already saved, so this must
+    // not fail the request — but a lost deal is a lost job, and it belongs in
+    // the log where the System Health panel can find it.
+    if (dealErr) console.error("deal insert failed:", dealErr.message);
     dealId = deal?.id;
   }
 
@@ -206,7 +262,7 @@ Deno.serve(async (req) => {
         .select("id", { count: "exact", head: true })
         .eq("meta->>reason", "booking_confirmation")
         .gte("created_at", dayAgo);
-      const underDailyCap = (sentToday ?? 0) < MAX_ACKS_PER_DAY;
+      const underDailyCap = (sentToday ?? 0) < limits.acksPerDay;
 
       // A double-submitted form should not send two confirmations.
       if (!alreadySent && underDailyCap) {
@@ -231,10 +287,12 @@ Deno.serve(async (req) => {
             : `Thanks for getting in touch with ${studio}. Your message is in front of us now.`,
           "",
           isAppointment
-            ? "This is an automatic acknowledgement so you know the form worked. A person will confirm the time with you and answer anything you asked \u2014 that reply comes from a human, not this message."
+            ? "This is an automatic acknowledgement so you know the form worked. A person will confirm the time with you and answer anything you asked — that reply comes from a human, not this message."
             : "This is an automatic acknowledgement so you know the form worked. A person will read it and reply.",
           "",
-          website ? `In the meantime, everything we do and what it costs is published at ${website}.` : "",
+          website ? `In the meantime you can see the work, and try the demos, at ${website}.` : "",
+          "",
+          "If you asked about a particular piece of work, the reply will include an itemised quote showing what each line is for.",
           "",
           studio,
         ].filter((line) => line !== null).join("\n");
@@ -257,7 +315,7 @@ Deno.serve(async (req) => {
             mocked: res.mocked,
             automatic: true,
             ...(res.mocked
-              ? { not_connected: "no email provider connected \u2014 set SENDGRID_API_KEY and SENDGRID_FROM_EMAIL" }
+              ? { not_connected: "no email provider connected — set SENDGRID_API_KEY and SENDGRID_FROM_EMAIL" }
               : {}),
             ...(res.error ? { error: res.error } : {}),
           },
