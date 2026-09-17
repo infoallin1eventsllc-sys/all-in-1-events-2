@@ -46,7 +46,7 @@ type Explainer = {
   excluded: string[];
 };
 
-type PickedItem = { title: string; detail: string | null };
+type PickedItem = { title: string; detail: string | null; explainerId?: string | null };
 
 /** Same parse as the `leads` function: this reads the note the site composed. */
 function parseNote(note: string): { items: PickedItem[]; saidByClient: string | null } {
@@ -75,6 +75,20 @@ function parseNote(note: string): { items: PickedItem[]; saidByClient: string | 
  * the general one and the client is told less than Otis actually wrote.
  */
 function explainerFor(item: PickedItem, explainers: Explainer[]): Explainer | null {
+  // The declared link wins, always. The site now sends the Client Answer each
+  // product names as its own, so there is nothing to work out. Text matching
+  // below is only for bookings saved before that shipped — it found 4 of the
+  // 15 things a client can save, because the site sells under product names
+  // and the answers are filed under invoice-line names.
+  if (item.explainerId) {
+    const declared = explainers.find((e) => e.id === item.explainerId);
+    if (declared) return declared;
+  }
+  // An explicit null means Otis has not written an answer for this product.
+  // Do not fall through to guessing: the whole point of declaring it is that a
+  // gap stays a gap instead of being filled with the nearest match.
+  if (item.explainerId === null) return null;
+
   const hay = `${item.title} ${item.detail ?? ""}`.toLowerCase();
   let best: Explainer | null = null;
   let bestLen = 0;
@@ -222,7 +236,20 @@ Deno.serve(async (req) => {
     if (!contact?.email) { skipped.push("no email"); continue; }
 
     const note = String(contact.meta?.raw?.payload?.notes ?? "");
-    const { items, saidByClient } = parseNote(note);
+    const parsed = parseNote(note);
+    const saidByClient = parsed.saidByClient;
+
+    // Prefer the structured list the site sends. intake keeps the whole request
+    // body, so it arrives here untouched and no parsing or matching is needed.
+    // deno-lint-ignore no-explicit-any
+    const sent: any[] = contact.meta?.raw?.payload?.items ?? [];
+    const items: PickedItem[] = Array.isArray(sent) && sent.length
+      ? sent.map((i) => ({
+        title: String(i.title ?? "").trim(),
+        detail: i.subtitle ? String(i.subtitle) : null,
+        explainerId: i.explainerId === undefined ? undefined : i.explainerId,
+      })).filter((i) => i.title)
+      : parsed.items;
     // A booking with no saved items is an ordinary enquiry; the existing
     // follow-up path already handles those, and a reply listing nothing would
     // be worse than no reply.
