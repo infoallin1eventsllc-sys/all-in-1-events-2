@@ -2371,3 +2371,71 @@ RLS on, zero policies, deny by default. The invoice path touches neither the
 drafts table nor anything that references it — checked in the portal code and
 in the `owner` function's invoice action. The portal's CODE ships to every
 browser because the portal and the public site are one app; the DATA does not.
+
+## Sep 17 — the agent must ask before it says a number, enforced in the database
+
+Otis:
+
+> "The agent has to prompt me for approval to send anything when it comes to
+> prices, to clients or customers. I approve what the agent can and can't do.
+> Make sure that's updated inside the agent's protocol."
+
+### The hole this closed
+
+`require_owner_approval()` already stopped anything outbound without
+`meta.approved_by = 'owner'`. It carried one deliberate exemption,
+`auto_transactional`: a fixed template about something already in motion, so
+somebody booking at 11pm gets an acknowledgement rather than silence.
+
+That exemption's reason list included **`invoice`** and **`payment_receipt`** —
+the two reasons that are entirely about money. A row marked automatic with
+either reason could carry a figure to a client with no approval at all.
+
+### What changed (migration 0030)
+
+`public.money_mentioned(subject, body)` detects a currency figure. The
+exemption now applies only when the message names no figure. So:
+
+| Case | Before | Now |
+|---|---|---|
+| Agent sends a price, unapproved | blocked | **blocked** |
+| Automatic acknowledgement, no price | allowed | **allowed** (must not break) |
+| Automatic message naming a price | **ALLOWED** | **blocked** |
+| Payment receipt naming money already paid | allowed | allowed (kept on purpose) |
+
+`payment_receipt` is the one exemption kept, deliberately: it records money the
+client already chose to pay, not the studio proposing a price. Nothing emits it
+yet — Stripe is not connected — so leaving it open costs nothing and closing it
+would be a silent breakage later.
+
+Detector checked directly: `$4,500` true, `8500 dollars` true, `5 pages and 3
+forms` false, ordinary prose false. It errs toward catching too much on
+purpose — a false positive costs one approval click, a false negative sends a
+price to a client unreviewed.
+
+### Why the database and not the prompt
+
+A prompt is a request, and a model can be talked out of a request by text a
+stranger typed into a form. A trigger is a constraint. This one holds whether
+the message came from the agent, the runner, a future Stripe flow, a script or
+a mistake — and it holds if `autonomy` is ever switched from `draft` to `auto`,
+which is one word in one settings row.
+
+### The protocol itself
+
+`settings.agent.protocol` now states, in Otis's authority and readable by him:
+what the agent must ask before doing (four items, money first), what it may do
+unasked (four), and what it must never do (three, starting with quoting a
+figure even when asked directly). `_enforced_by` names the trigger, so the next
+person to read the protocol knows which parts are enforced and which are
+merely asked for.
+
+### A false alarm worth recording
+
+A test showed an owner-approved priced message being BLOCKED, which looked like
+a regression in this change. It was not: the other trigger on that table,
+`require_marketing_compliance()`, was refusing it first for a missing
+unsubscribe link and then for the missing postal address. Checked the actual
+error text rather than assuming the nearest change was the cause. The postal
+address remains an open item and is the thing that will block real marketing
+email the day Otis wants to send some.
