@@ -2558,3 +2558,53 @@ Nothing sends without him, and that is a database rule rather than a promise.
   risk of an invented figure in exchange for nothing.
 - The portal's Marketing tab already lists any outbound draft, so the composed
   reply appears there with no portal change.
+
+---
+
+## The reel's closing line
+
+Otis asked for the video to stop closing on "built in Houston" and close on
+"Here at Meridian, we put the future in your hands." instead.
+
+The line is not in the website source. The site plays a pre-rendered MP4 from
+`social-videos/clips/83373a8d604e20d6d2ba.mp4` (see `src/lib/reel.ts` in the
+website repo), so editing the composition changes nothing a visitor sees until
+someone re-renders. The old text read
+`DIGITAL DESIGN & DEVELOPMENT STUDIO - HOUSTON, TEXAS`.
+
+Changed in all three places it lives:
+
+- `system/motion/clipkit/meridian-sizzle.json` - the archived composition.
+- `system/supabase/functions/_shared/clipkit.ts` - the wordmark card that
+  `buildComposition()` appends to every agent-generated video, so a clip made
+  next month closes the same way.
+- The live Clipkit project `2a439163-a677-4f14-99d2-b558a07ed9e6`, via
+  `edit_element` with `project_id` passed, so the editor link and its history
+  survive.
+
+Two things were worth getting right rather than just swapping the string:
+
+- **Size.** The slot was 14-15px blue kicker text under the wordmark, correct
+  for a studio descriptor and wrong for a closing statement - the first preview
+  showed it as fine print dwarfed by the CTA beneath it. Now 30px (24 portrait),
+  weight 600, `#93C5FD`, letter spacing 0.5.
+- **The box.** It was 30px tall, sized for the old 15px text. At 30px the
+  descenders in "put", "your" and "hands" would clip, so it is 44px. This was
+  fixed in the code and in the live project.
+
+A near miss worth recording: the first edit to `clipkit.ts` left the old
+`font_size: portrait ? 14 : 15` on the following line. In a JS object literal
+the later key wins, so the committed line would have rendered at 14px and the
+preview would never have shown it. Caught by reading the diff.
+
+Verified: ASCII only (the cloud font atlas drops non-ASCII), `validate_project`
+returns `valid: true` with no warnings, and the still at t=46 reads
+MERIDIAN / INTERFACE / the line / the CTA, descenders intact.
+
+**Still to do - Otis's call.** The MP4 has not been re-rendered, so the live
+site still plays the Houston ending. The editor link is
+`https://www.clipkit.dev/public-editor?id=2a439163-a677-4f14-99d2-b558a07ed9e6`
+- rendering there is free in the browser. This exact 46.9s composition has
+stalled at 96% on a cloud render before, and credits are spent per render, so
+do not re-submit a cloud render to diagnose. Once a new MP4 exists it replaces
+the storage object and the site picks it up with no code change.
