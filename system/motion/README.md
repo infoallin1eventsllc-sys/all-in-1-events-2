@@ -238,3 +238,42 @@ marketing system instead of the text cards it was drafting. Three pieces:
   the CRM card move to time 0 once).
   The `media` edge function ingests any fetchable URL into the library
   server-side, for a future host that this sandbox can reach.
+
+## Changing what the narrator says (`rebuild-reel-audio.py`)
+
+`meridian-reel.mp4` was cut from screen recordings that no longer exist, so
+the film cannot be re-composed. Changing the *words* does not need it to be:
+only the audio is rebuilt, and the video stream is copied out of the finished
+render byte for byte. Verified with `framemd5` — every frame identical.
+
+The spoken script lives in **`reel-narration.json`**, with the start time of
+each line. It was recovered on 18 Sep 2026 by transcribing the render, because
+the script had never been written down and the voice-over mp3 is gitignored.
+Do not let that happen again: edit the words there, then run the rebuild.
+
+```bash
+# needs two gitignored files first:
+#   audio/building-the-future.wav   Adobe Stock 1196747893 (id in the json;
+#                                   re-licensing the same asset is free)
+#   audio/vo-reel.mp3               the narration, ElevenLabs "Brian"
+#                                   (nPczCjzI2devNBz1zQrb), via vidIQ
+python3 rebuild-reel-audio.py
+```
+
+It writes the master in `renders/` and both web copies in the website repo's
+`public/video/` (mp4 and webm), each keeping its own video stream.
+
+Two things it handles that are easy to get wrong:
+
+- **Text-to-speech never returns the same lengths twice.** So the narration is
+  not laid down as one block — each line is placed at the start time recorded
+  in the json, which is what keeps the words on the pictures they describe.
+  Supply the voice either as one `audio/vo-reel.mp3` (the script finds the
+  pauses and cuts it into lines) or as `audio/vo-lines/1.mp3 .. 6.mp3`, which
+  is used in preference and cannot be misread.
+- **A re-written line can be longer than its slot.** Before writing anything
+  the script prints each line's length against the gap before the next one and
+  says plainly if one overruns.
+
+The mix is the same chain `compose-reel.py` used — the voice ducks the music
+under it, then the whole thing is levelled to -16 LUFS.

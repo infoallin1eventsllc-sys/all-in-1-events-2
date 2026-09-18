@@ -1,0 +1,32 @@
+{
+  "_why": "The spoken script of meridian-reel.mp4, which existed nowhere. The voice-over mp3 is gitignored and the sandbox that held it is gone, so when Otis asked to change the closing line on 18 Sep 2026 the words had to be recovered by transcribing the finished render. Recording them here means that never has to happen again. Timings are from that transcript and are what rebuild-reel-audio.py places each line at, so narration stays locked to the picture.",
+  "video": "renders/meridian-reel.mp4",
+  "total_seconds": 30.933333,
+  "voice": {
+    "provider": "vidIQ (ElevenLabs)",
+    "name": "Brian - Deep, Resonant and Comforting",
+    "voice_id": "nPczCjzI2devNBz1zQrb"
+  },
+  "music": {
+    "file": "audio/building-the-future.wav",
+    "source": "Adobe Stock (Audio, free tier)",
+    "asset_id": "1196747893",
+    "note": "Re-download with asset_license_and_download_stock on the same id; it refreshes the URL without consuming another licence."
+  },
+  "lines": [
+    { "start": 3.098,  "text": "Meridian Interface builds the tools that run a business." },
+    { "start": 6.678,  "text": "Ordering apps that take the order and sell the merch." },
+    { "start": 9.948,  "text": "Executive dashboards with live revenue, forecasts, and runway, board-ready in one view." },
+    { "start": 16.717, "text": "And an AI tech stack, five layers planned for your company with guardrails built in." },
+    { "start": 23.468, "text": "Here at Meridian, we put the future in your hands." },
+    { "start": 27.868, "text": "MeridianInterface.com." }
+  ],
+  "changed": {
+    "date": "2026-09-18",
+    "line_index": 4,
+    "was": "Websites, apps, and AI systems built in Houston.",
+    "now": "Here at Meridian, we put the future in your hands.",
+    "asked_by": "Otis",
+    "note": "Only the spoken line changed. The end card still reads 'Websites . Apps . Marketing Systems' and 'Houston, Texas' on screen; he did not ask for those to change, and the video track is copied untouched."
+  }
+}
