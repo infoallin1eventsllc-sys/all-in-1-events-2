@@ -53,6 +53,7 @@ Match the job, not the brand name. Everything below is on this account.
 | Build a screen someone operates — portal, booking flow, dashboard, form | the `apple-interface` skill — four states, navigation models, glass rules, spring motion |
 | Make a hero or landing page read premium / Fortune-500 | the `cinematic-web` skill — hero media ranked, the weight budget, and the four techniques that cost nothing |
 | Stop a build from growing past the problem it solves | the `restraint` skill — five rungs before writing code, plus the over-builds this stack repeats |
+| Palettes, font pairings, UX guidelines, a11y checks, stack-specific UI — for a **client** project with no brand yet | the `ui-ux-pro-max` skill — vendored, searchable, offline. Never for All in 1 Events or Meridian: their tokens are locked |
 | A decision worth arguing over — client, price, direction, hire | `/council <question>` — five seats, blind review, chairman. Seven subagents; user-invoked only |
 | Poke holes in one plan without the full council | **Devil's Advocate** connector — `run_premortem`, `challenge_assumptions` *(connected; authorize per session)* |
 
@@ -82,8 +83,8 @@ Install, for reference — pinned per house rules, never `@latest`:
 
 ## Tools once recorded as absent — RE-VERIFY, DO NOT REPEAT
 
-**This section has been wrong three times in three days.** Of its five original
-entries, Higgsfield, `frontend-design` and Nano Banana all turned out to exist,
+**This section has now been wrong four times.** Of its six original
+entries, Higgsfield, `frontend-design`, Nano Banana and 21st.dev all turned out to exist,
 and each wrong answer sent Otis away from something real. Treat every line here
 as a dated observation, never as a standing fact. **Before repeating any of it,
 re-check `ListConnectors`, `SearchMcpRegistry` and the open web.** A tool that
@@ -96,7 +97,7 @@ did not exist in August frequently exists now.
 | **Nano Banana** | **WAS WRONG.** Google ships no MCP, but community servers wrap it — see below |
 | **Google Stitch MCP** | Checked Aug 2026: Stitch is real, shipped no MCP server. Its Figma export is the bridge. **Re-verify before repeating** |
 | **`motion.dev` skill** | Checked Aug 2026: none found. For animation use the Figma motion skills. **Re-verify before repeating** |
-| **21st.dev connector** | Checked Aug 2026: none found. Its density idiom reproduces by hand; Mobbin is the better reference. **Re-verify before repeating** |
+| **21st.dev connector** | **WAS WRONG (4th correction, 18 Sep 2026).** 21st MCP is real and hosted — see its own section below |
 
 ## Nano Banana — community MCP servers, not connected
 
@@ -190,6 +191,42 @@ Overlap to weigh before adding it: `vidIQ` (`vidiq_generate_video`,
 connected and already cover scripted, branded and edited video. Higgsfield's
 distinct value is cinematic camera control on a single generated shot. Worth it
 for hero footage; not a replacement for the four already loaded.
+
+## 21st.dev — real, hosted, but the auth shape blocks the browser path
+
+Checked 18 Sep 2026, correcting a fourth wrong "not found". 21st.dev is a
+library of 12,000+ React/Tailwind components, and **Magic MCP is now the 21st
+MCP**. It is not in Anthropic's connector directory.
+
+It does publish a hosted HTTP endpoint, `https://21st.dev/api/mcp` — but it
+authenticates with a static `x-api-key` header, not OAuth. claude.ai's **Add
+custom connector** dialog takes a URL and runs an OAuth flow; it has no field
+for a static header. So unlike Raylight and Higgsfield, this one probably
+cannot be added from the browser. Say "probably" — `21st.dev` is blocked by
+this sandbox's egress proxy, so the endpoint above came from search results,
+not the vendor's page.
+
+What still works for Otis without any connector: the components are browsable
+and copyable at 21st.dev by hand. The MCP only saves the copy-paste.
+
+## Framer Motion is a library, not a plugin
+
+It comes up because tutorials say "install the Framer Motion plugin." There is
+no such plugin. `framer-motion` (now published as `motion`) is an npm package
+for React. That means:
+
+- **All in 1 Events** is deliberately no-build (see `meridian-engineering`).
+  It cannot take an npm animation library without abandoning that stance, and
+  `cinematic-web` is explicit that CSS transforms and a scrubbed canvas read
+  more expensive than a JS animation library anyway.
+- **The Meridian Interface site** is React + Vite, so it *could* take it — at
+  roughly 30–60 KB gzipped against a hero budget that `cinematic-web` caps at
+  1 MB above the fold. Worth it only for real spring physics and gesture work,
+  not for fades and reveals that three lines of CSS already do.
+
+For motion guidance without the dependency: `figma:figma-use-motion`,
+`figma:figma-implement-motion`, the GSAP presets in `ui-ux-pro-max`
+(`--domain gsap`), and `cinematic-web`.
 
 ## Real, but not installable from a browser session
 
