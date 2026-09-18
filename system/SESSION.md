@@ -2755,3 +2755,56 @@ shop window.
 - `otis@meridianinterface.com` receives mail - he confirmed it. Owner booking
   alerts are addressed there and are exempt from the postal-address gate, so
   that path should be working.
+
+---
+
+## Security pass (18 Sep, end of day)
+
+Otis asked for a diagnostic and authorization check across the website before
+stopping. What was checked and what it found.
+
+**Clean, verified rather than assumed:**
+
+- **No secret reaches the browser.** Built the bundle and grepped the shipped
+  JS for Anthropic/Stripe/SendGrid key shapes, JWTs, `service_role` and
+  passcode literals. One hit for `OWNER_PASSCODE` turned out to be the variable
+  NAME rendered in on-screen setup instructions, not a value. `.env.production`
+  is committed on purpose and holds only the PostHog project key, which is
+  public by design.
+- **Security headers are strong** (`vercel.json`): CSP with no `unsafe-inline`
+  on scripts, `frame-ancestors 'none'`, `object-src 'none'`, HSTS with
+  `includeSubDomains`, nosniff, strict-origin referrer, and a Permissions-Policy
+  denying geolocation/mic/camera/payment/USB.
+- **Owner session handling is right.** Token in `sessionStorage`, so it dies
+  with the tab -- never `localStorage`, never a cookie. Passcode verified
+  server-side by `owner`. `UnauthorizedError` keeps "server rejected you"
+  distinct from "network is down", so a rejected session is not handed cached
+  invoices.
+- **Every `verify_jwt = false` function does its own auth.** `site-images`,
+  `pay` and `leads` all gate on `ownerTokenValid` and answer 401.
+  `unsubscribe` is deliberately open but the link carries an HMAC over the
+  contact id -- the token IS the authorisation -- and it tolerates the link
+  prefetching that scanners do. `intake` stays public by design.
+- **0 dependency vulnerabilities** (`npm audit --omit=dev`).
+
+**One real finding, fixed (migration 0038):**
+
+`require_owner_approval()` -- SECURITY DEFINER -- was executable by `anon` and
+`authenticated` over `/rest/v1/rpc/`, along with `require_marketing_compliance`,
+`validate_video_scenes` and `money_mentioned`. Migration 0033 had revoked
+exactly this. **It regressed because 0034 and 0035 redefined two of those
+functions with CREATE OR REPLACE, which resets a function's ACL to the default
+(EXECUTE to PUBLIC).** An unrelated feature change silently undid a security
+fix and nothing failed; only the linter noticed. Any future migration that
+redefines one of these must re-run the revoke.
+
+Not actually exploitable -- Postgres refuses to call a trigger function
+directly -- but it is the state the architecture expects, and the regression
+mechanism is the lesson. After applying, verified the gate still bites: an
+INSERT of `status = 'approved'` content without `meta.approved_by = 'owner'`
+is still refused, and the probe left no rows. Advisor re-run: both WARNs gone.
+
+**The 22 remaining INFO findings are the intended design, not a backlog.**
+"RLS enabled, no policy" on all 22 tables means deny-by-default: no policy, no
+access through the API. Only `service_role` (which bypasses RLS) can read
+them, and it lives in the edge functions. Adding policies would loosen it.
