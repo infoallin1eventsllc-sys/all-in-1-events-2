@@ -2663,3 +2663,28 @@ end to end across the whole film, which cannot run out:
   47s `public/video/meridian-sizzle.mp4` sits unused in the repo. The local one
   is a DIFFERENT cut (opens "Custom websites, apps," not "You formed the LLC"),
   so swapping it in changes what a visitor sees — Otis's call, not a silent fix.
+
+### Correction (same day): the bucket reels are 28s, not 46.9s
+
+Otis's screenshot of the live concept panel showed the player reading **0:28**.
+Every "46.9s" written above for the three `social-videos/clips/*.mp4` renders
+was taken from the Clipkit *projects*, not measured off the files — this
+sandbox cannot reach that bucket, so they were never opened. The number was
+inferred and stated as fact. It is 28 seconds.
+
+Two things follow, and the second matters more:
+
+- The silence still fits. A 16.41s track against a 28s film leaves ~11.6s
+  quiet, which is what he described. The tiling fix is unaffected: the builder
+  lays tiles across `total`, whatever `total` turns out to be.
+- **The bucket renders do not match the current projects.** Those projects are
+  46.9s; the files on the site are 28s, so they came from an older, shorter
+  composition. Re-rendering the projects as they stand will NOT reproduce the
+  video now on the site — it will produce a longer, different film. That is
+  probably desirable (the current composition is the approved seven-scene reel
+  and carries the corrected closing line), but it is a replacement, not a
+  repair, and Otis should see it before it goes anywhere.
+
+Also now known, from that same screenshot: the landscape bucket cut opens on
+"A client asked for your website and you winced." A generic studio hook about
+websites — which is why it made no sense on the agentic tech stack entry.
