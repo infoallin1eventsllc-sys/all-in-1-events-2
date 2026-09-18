@@ -14,19 +14,44 @@
     "note": "Re-download with asset_license_and_download_stock on the same id; it refreshes the URL without consuming another licence."
   },
   "lines": [
-    { "start": 3.098,  "text": "Meridian Interface builds the tools that run a business." },
-    { "start": 6.678,  "text": "Ordering apps that take the order and sell the merch." },
-    { "start": 9.948,  "text": "Executive dashboards with live revenue, forecasts, and runway, board-ready in one view." },
-    { "start": 16.717, "text": "And an AI tech stack, five layers planned for your company with guardrails built in." },
-    { "start": 23.468, "text": "Here at Meridian, we put the future in your hands." },
-    { "start": 27.868, "text": "MeridianInterface.com." }
+    {
+      "start": 3.098,
+      "text": "Meridian Interface builds the tools that run a business."
+    },
+    {
+      "start": 6.678,
+      "text": "Ordering apps that take the order and sell the merch."
+    },
+    {
+      "start": 9.948,
+      "text": "Executive dashboards with live revenue, forecasts, and runway, board-ready in one view."
+    },
+    {
+      "start": 16.717,
+      "text": "And an AI tech stack, five layers planned for your company with guardrails built in."
+    },
+    {
+      "start": 23.468,
+      "text": "Websites, apps, and AI systems. We put the future in your hands."
+    },
+    {
+      "start": 27.868,
+      "text": "MeridianInterface.com."
+    }
   ],
   "changed": {
     "date": "2026-09-18",
     "line_index": 4,
     "was": "Websites, apps, and AI systems built in Houston.",
-    "now": "Here at Meridian, we put the future in your hands.",
+    "now": "Websites, apps, and AI systems. We put the future in your hands.",
     "asked_by": "Otis",
-    "note": "Only the spoken line changed. The end card still reads 'Websites . Apps . Marketing Systems' and 'Houston, Texas' on screen; he did not ask for those to change, and the video track is copied untouched."
+    "note": "One change only: the words 'built in Houston' come out, his line goes in, and the address line after it is untouched. The end card still reads 'Websites . Apps . Marketing Systems' and 'Houston, Texas' ON SCREEN - he has not asked for that, and the video track is copied untouched anyway.",
+    "measured": {
+      "_why": "File lengths of real readings of the new line, so nobody re-estimates it. These include whatever silence the generator padded on, so treat them as an upper bound; rebuild-reel-audio.py measures the real files and warns if one overruns.",
+      "Sterling (dc382508-c8bd-443c-8cb2-46e57b8d2e6f)": 5.66,
+      "Marcus (6f98d3dd-324f-4845-8c28-c1d1647a06cd)": 6.5,
+      "slot_if_nothing_else_moves": 4.67,
+      "slot_if_the_address_is_pushed_as_late_as_it_can_go": 5.4
+    }
   }
 }
