@@ -3,9 +3,10 @@
   "video": "renders/meridian-reel.mp4",
   "total_seconds": 30.933333,
   "voice": {
-    "provider": "vidIQ (ElevenLabs)",
-    "name": "Brian - Deep, Resonant and Comforting",
-    "voice_id": "nPczCjzI2devNBz1zQrb"
+    "provider": "Higgsfield (seed_audio)",
+    "name": "Sterling",
+    "voice_id": "dc382508-c8bd-443c-8cb2-46e57b8d2e6f",
+    "note": "Brian (ElevenLabs, nPczCjzI2devNBz1zQrb via vidIQ) read the original. He was unavailable when this was rebuilt - vidIQ was 6 credits short - so every line was re-read by Sterling. That is why the whole film sounds like a different man, not just the closing line."
   },
   "music": {
     "file": "audio/building-the-future.wav",
@@ -15,27 +16,27 @@
   },
   "lines": [
     {
-      "start": 3.098,
+      "start": 2.6,
       "text": "Meridian Interface builds the tools that run a business."
     },
     {
-      "start": 6.678,
+      "start": 6.45,
       "text": "Ordering apps that take the order and sell the merch."
     },
     {
-      "start": 9.948,
+      "start": 9.6,
       "text": "Executive dashboards with live revenue, forecasts, and runway, board-ready in one view."
     },
     {
-      "start": 16.717,
+      "start": 17.4,
       "text": "And an AI tech stack, five layers planned for your company with guardrails built in."
     },
     {
-      "start": 23.468,
+      "start": 23.4,
       "text": "Websites, apps, and AI systems. We put the future in your hands."
     },
     {
-      "start": 27.868,
+      "start": 29.05,
       "text": "MeridianInterface.com."
     }
   ],
@@ -53,5 +54,15 @@
       "slot_if_nothing_else_moves": 4.67,
       "slot_if_the_address_is_pushed_as_late_as_it_can_go": 5.4
     }
-  }
+  },
+  "raw_durations_sterling": {
+    "_why": "File lengths as generated, including the silence the generator pads on. rebuild-reel-audio.py trims that off before placing, so the real speech is shorter. Kept so nobody has to re-measure.",
+    "1": 3.864,
+    "2": 3.128,
+    "3": 7.751,
+    "4": 5.953,
+    "5": 5.657,
+    "6": 1.88
+  },
+  "timing_note": "Sterling reads slower than Brian, so the start times above are not the original ones. Total speech is close to the length of the film: the padding MUST be trimmed or the lines collide. rebuild-reel-audio.py trims and then reports every line against its slot - trust its output over these numbers."
 }

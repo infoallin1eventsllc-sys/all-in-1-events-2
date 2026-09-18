@@ -102,12 +102,44 @@ def split_on_pauses(src, want):
              f'into audio/vo-lines/1.mp3 .. {want}.mp3 and run this again.')
 
 
+def trim(src, dst):
+    """Strip the silence a generator pads onto both ends of a clip.
+
+    This is not cosmetic. Six lines of padded audio ran about a second longer
+    than the film, so the lines collided with each other; trimmed, they fit.
+    Placement depends on a clip starting exactly when the speech does.
+    """
+    sil = ('silenceremove=start_periods=1:start_duration=0:'
+           'start_threshold=-45dB:detection=peak')
+    run(['-i', src, '-af', f'{sil},areverse,{sil},areverse', dst])
+    return dst
+
+
+def find_line(i):
+    """audio/vo-lines/1.mp3 or .wav - whatever the generator handed back."""
+    for ext in ('mp3', 'wav', 'm4a', 'ogg'):
+        p = f'audio/vo-lines/{i}.{ext}'
+        if os.path.exists(p):
+            return p
+    return None
+
+
 # ---- gather the voice, one file per line ----------------------------------
-per_line = [f'audio/vo-lines/{i + 1}.mp3' for i in range(len(LINES))]
-if all(os.path.exists(p) for p in per_line):
+per_line = [find_line(i + 1) for i in range(len(LINES))]
+if all(per_line):
     print(f'Using {len(per_line)} per-line files from audio/vo-lines/')
-    pieces = [(p, None, None) for p in per_line]
+    os.makedirs('audio/.trimmed', exist_ok=True)
+    pieces = []
+    for i, src in enumerate(per_line):
+        raw = duration(src)
+        cut = trim(src, f'audio/.trimmed/{i + 1}.wav')
+        print(f'  {i + 1}. {os.path.basename(src)}  {raw:.2f}s -> {duration(cut):.2f}s trimmed')
+        pieces.append((cut, None, None))
 else:
+    missing = [str(i + 1) for i, p in enumerate(per_line) if not p]
+    if any(per_line):
+        sys.exit(f'audio/vo-lines/ is missing line(s): {", ".join(missing)}.\n'
+                 'Supply all six, or one audio/vo-reel.mp3 with all six in it.')
     src = 'audio/vo-reel.mp3'
     if not os.path.exists(src):
         sys.exit(f'Need {src} (all six lines) or audio/vo-lines/1..{len(LINES)}.mp3.\n'
