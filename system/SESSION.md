@@ -2688,3 +2688,70 @@ Two things follow, and the second matters more:
 Also now known, from that same screenshot: the landscape bucket cut opens on
 "A client asked for your website and you winced." A generic studio hook about
 websites — which is why it made no sense on the agentic tech stack entry.
+
+---
+
+## The website, same evening (18 Sep)
+
+All in `meridian-interface-website`, branch `main`, which deploys live. Six
+commits, `9e75b42` to `13d23d4`. Otis approved each one as it landed.
+
+**The reel on the services page.** He pointed at the blurred picture beside
+"Custom Web Design & Development" and asked for the 47s film there. It plays
+there now on every service, with that service's OWN picture as the play
+surface, so nothing service-specific was lost. `ReelPlayer` gained an optional
+`poster`. It still mounts no `<video>` until clicked.
+
+**Every device.** The sizzle shipped as H.264 only, so a browser without that
+decoder got a dead frame. It now has a VP9/WebM twin (47.03s, Opus, 2.8MB),
+mp4 listed FIRST because the devices that can play both decode H.264 in
+hardware. Proved rather than assumed: this sandbox's Chromium reports
+`canPlayType` "" for H.264 and "probably" for VP9, so it IS the device this
+is for - before, DEMUXER_ERROR_NO_SUPPORTED_STREAMS; after, it picks the WebM
+itself and plays the full 47.03s with sound.
+
+**One card, three actions.** Save lived only on Portfolio, the demo only on the
+front page, so a visitor had to cross pages to do both. Both pages now carry
+save, demo and View concept. This needed the portfolio card restructured: its
+body WAS the `<button>` that opens the concept, and a link cannot nest inside a
+button - which is exactly why the demo could never live there.
+
+**One concept panel, not two.** The panel (picture or film, demo link,
+highlights, Save and Book) lived inside ImpactView, so the front page could
+show a piece but not open it. Extracted to `ConceptModal.tsx`; both pages
+render it. A rename during extraction silently missed `setActiveItem` because
+of the capital A - it typechecked and would have thrown on the close button.
+Caught by grepping the new file, not by trusting the rename.
+
+**The tech stack entry.** Otis: the video "doesn't fit anything about the tech
+stack... no music, no one talking... does not help the client." All true - it
+was `REEL.landscape`, a general showreel that opens "A client asked for your
+website and you winced." Removed. The panel now shows the Stack Planner's own
+screen over its working demo. Copy rewritten to lead with the owner's Monday
+rather than the category. Two panel-wide faults fixed with it: it appended
+"clean visual hierarchy, responsive layout, and scalable front-end
+architecture" to EVERY summary, and headed plain benefits with "Project
+Technical Highlights".
+
+**The name.** "Agentic Tech Stack for Growing Businesses" -> "Tech Stack for
+Growing Businesses". Taken off the badge and filter chip too (now "Business
+Systems"), and out of the Stack Planner alt text. The demo itself still says
+"5-Layer Agentic Architecture" on its own screen - that is the product, not the
+shop window.
+
+### For tomorrow
+
+- **No page plays the bucket cuts any more.** The tech stack panel was the last
+  one. `REEL.landscape` still points at one, and `Showreel.tsx` still
+  references it, but nothing renders Showreel - it is dead code Otis has been
+  told about and not yet asked to delete.
+- `ReelPlayer` now defaults to `REEL.local` (measured, unbroken audio) rather
+  than the bucket cut, so a future caller that forgets `src` cannot ship the
+  silent one by accident.
+- Still open, flagged and NOT actioned: "Houston, Texas" on the 31s reel's end
+  card; dollar figures in the Stack Planner segment around 24s, against his
+  no-prices rule; the two repos still hold separate card code.
+- The PO box remains the only blocker on outbound client mail.
+- `otis@meridianinterface.com` receives mail - he confirmed it. Owner booking
+  alerts are addressed there and are exempt from the postal-address gate, so
+  that path should be working.
