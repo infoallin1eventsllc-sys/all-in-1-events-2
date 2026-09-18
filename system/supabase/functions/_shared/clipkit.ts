@@ -34,14 +34,27 @@ const BUCKET = "social-videos";
 
 export type ClipkitHandle = { provider: "clipkit"; render_id: string };
 
-type Cfg = { key: string; music?: string };
+type Cfg = { key: string; music?: string; musicSeconds?: number };
+
+/** Length of the soundtrack, in seconds.
+ *
+ *  The track in the library is a 16.41s loop and a reel runs about 47s, so the
+ *  music has to repeat roughly three times to cover one. The protocol says
+ *  `loop: true` wraps within the trim window, and the composition set it -- but
+ *  a finished render still went quiet partway, which is the fault Otis reported
+ *  on 18 Sep. Rather than depend on the renderer honouring `loop`, the builder
+ *  now lays the track end to end across the whole film, which cannot run out.
+ *  Set `clipkit_music_seconds` if the track is ever swapped. */
+const MUSIC_SECONDS_DEFAULT = 16.41;
 
 async function config(sb: SupabaseClient): Promise<Cfg | null> {
   const cfg = await loadChannelConfig(sb);
   const key = (Deno.env.get("CLIPKIT_API_KEY") ?? cfg.clipkit_api_key ?? "").trim();
   if (!key) return null;
   const music = (Deno.env.get("CLIPKIT_MUSIC_URL") ?? cfg.clipkit_music_url ?? "").trim() || undefined;
-  return { key, music };
+  const secs = Number(Deno.env.get("CLIPKIT_MUSIC_SECONDS") ?? cfg.clipkit_music_seconds ?? MUSIC_SECONDS_DEFAULT);
+  const musicSeconds = Number.isFinite(secs) && secs > 0.5 ? secs : MUSIC_SECONDS_DEFAULT;
+  return { key, music, musicSeconds };
 }
 
 export async function clipkitConfigured(sb: SupabaseClient): Promise<boolean> {
@@ -268,7 +281,7 @@ function typeScene(id: string, layer: number, t0: number, t1: number, s: Scene, 
  * (16:9) for LinkedIn and Facebook; portrait (9:16) for TikTok and Reels,
  * where the product scenes play as a band across the middle of the frame.
  */
-export function buildComposition(set: SceneSet, script: VideoScript, aspect: "9:16" | "16:9", music?: string) {
+export function buildComposition(set: SceneSet, script: VideoScript, aspect: "9:16" | "16:9", music?: string, musicSeconds = MUSIC_SECONDS_DEFAULT) {
   const problem = sceneSetProblem(set);
   if (problem) throw new Error(`no approved product reel to build from: ${problem}`);
   const portrait = aspect === "9:16";
@@ -331,7 +344,22 @@ export function buildComposition(set: SceneSet, script: VideoScript, aspect: "9:
     gradient: { type: "radial", stops: [{ color: "rgba(255,255,255,1)", offset: 0 }, { color: "rgba(255,255,255,1)", offset: 0.65 }, { color: "rgba(140,150,175,1)", offset: 1 }] } });
 
   if (music) {
-    elements.push({ id: "music", type: "audio", layer: 100, time: 0, duration: "end", source: music, loop: true, volume: 80, audio_fade_in: 0.3, audio_fade_out: 1.6 });
+    // Laid end to end rather than looped. The last tile runs to "end" so it
+    // covers the film however long it is, and only the first fades in and only
+    // the last fades out - a fade on every tile would dip the music twice a
+    // minute.
+    const tiles = Math.max(1, Math.ceil(total / musicSeconds));
+    for (let i = 0; i < tiles; i++) {
+      const last = i === tiles - 1;
+      elements.push({
+        id: `music-${i + 1}`, type: "audio", layer: 100 + i,
+        time: Number((i * musicSeconds).toFixed(2)),
+        duration: last ? "end" : musicSeconds,
+        source: music, volume: 80,
+        ...(i === 0 ? { audio_fade_in: 0.3 } : {}),
+        ...(last ? { audio_fade_out: 1.6 } : {}),
+      });
+    }
   }
 
   return {
@@ -353,7 +381,7 @@ export async function submitClipkit(sb: SupabaseClient, script: VideoScript, asp
   const cfg = await config(sb);
   if (!cfg) return null;
   const set = await loadScenes(sb);
-  const { scenes: _picked, ...source } = buildComposition(set, script, aspect, cfg.music);
+  const { scenes: _picked, ...source } = buildComposition(set, script, aspect, cfg.music, cfg.musicSeconds);
   const res = await fetch(`${API}/api/v1/renders`, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${cfg.key}` },

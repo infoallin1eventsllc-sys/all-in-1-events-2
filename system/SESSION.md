@@ -2608,3 +2608,58 @@ site still plays the Houston ending. The editor link is
 stalled at 96% on a cloud render before, and credits are spent per render, so
 do not re-submit a cloud render to diagnose. Once a new MP4 exists it replaces
 the storage object and the site picks it up with no code change.
+
+---
+
+## The videos going silent (18 Sep)
+
+Otis: "The music and the words stop and the images keep going with no one
+talking." Measured every video rather than guessing.
+
+**The seven hand-cut films are fine.** Decoded each one's audio and computed
+RMS per second — `renders/*.mp4` and the website's `public/video/*` copies all
+carry unbroken sound from first second to last. No gaps. A first pass using
+ffmpeg's `astats` reported nonsense because the timestamps parsed wrong; the
+decode-and-measure pass is the one to trust.
+
+**The fault is in the Clipkit reels, and the cause is the soundtrack's
+length.** `music-modern-electronic-loop.wav` (Adobe Stock 513024064) is
+**16.41s**. The reels are **46.9s**. The composition asked the renderer to
+`loop` it, and CKP/1.0 §5.3.2 does say `loop` wraps within the trim window —
+but a finished render still went quiet, and 16.41s of music against 46.9s of
+picture leaves exactly the ~30s of silence Otis describes. The three Clipkit
+renders sit in the `social-videos` bucket, which this sandbox cannot reach, so
+they could not be opened and confirmed; his ears are the evidence.
+
+Fixed by removing the dependency on `loop` altogether — the track is now laid
+end to end across the whole film, which cannot run out:
+
+- **Both live Clipkit projects** (landscape `2a439163-…`, portrait
+  `a5fe57e2-…`): `#music` replaced with `music-1/2/3` at 0s, 16.41s and
+  32.82s, the last running to `end`. Fade in on the first only, fade out on
+  the last only — a fade per tile would dip the music twice a minute. Both
+  validate clean at 17 elements.
+- **`_shared/clipkit.ts`** does the same for every future agent video:
+  `Math.ceil(total / musicSeconds)` tiles, last one to `end`. Track length
+  comes from `clipkit_music_seconds` / `CLIPKIT_MUSIC_SECONDS`, default 16.41,
+  so swapping the track is a settings change. Verified the maths leaves no gap
+  at 10s, 16.4s, 33s, 46.9s and 60s.
+
+### Still open
+
+- **`runner` must be redeployed** for the builder change to reach production.
+  Deliberately not done from this web session: it means re-sending 122 KB of
+  source through a model, which is how a silent transcription error reaches
+  the one function that spends render credits. Same caveat already recorded
+  for the v37 `sceneSetProblem` guard.
+- **The three bucket renders still carry the old audio.** They need
+  re-rendering from the fixed projects. Free in the browser via
+  `open_in_editor`; do NOT submit a cloud render to test (credits per render,
+  and this composition has stalled at 96% before).
+- **The site streams the older cut.** `src/lib/reel.ts` points `REEL.landscape`
+  at `clips/83373a8d604e20d6d2ba.mp4` — titled "You formed the LLC (older
+  cut)" — while a newer Clipkit cut ("One studio, every system you run",
+  `4313320085514066dba0.mp4`) sits unused in `media_assets`, and a verified-good
+  47s `public/video/meridian-sizzle.mp4` sits unused in the repo. The local one
+  is a DIFFERENT cut (opens "Custom websites, apps," not "You formed the LLC"),
+  so swapping it in changes what a visitor sees — Otis's call, not a silent fix.
