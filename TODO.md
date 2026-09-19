@@ -1,6 +1,6 @@
 # To do — next session
 
-Updated 2026-09-18. Branch `claude/420-friendly-hoodie-page-yl8ho9`, PR #3,
+Updated 2026-09-19. Branch `claude/420-friendly-hoodie-page-yl8ho9`, PR #3,
 **unmerged**. Working tree clean, everything pushed.
 
 ---
@@ -15,11 +15,15 @@ photography, not the test suite. Everything below lives only on this branch.
 
 ## Two things that need Otis, not code
 
-**Raylight needs re-authorising.** As of 18 Sep the connector requires auth and
-is unreachable, so the 29.1s Raylight edit is frozen. Reconnect it in claude.ai
-connector settings. That edit still has to be **exported by hand from the
-Raylight tab** — the connector exposes no video export, only stills and
-filmstrips, and those return to the agent rather than to disk.
+**The Raylight edit has to be exported by hand from the Raylight tab.** The
+connector exposes no video export, only stills and filmstrips, and those
+return to the agent rather than to disk. The project is now 62.1s (20 shots)
+and on 19 Sep every image layer was reworked to float in and out instead of
+hard-cutting — see `420-friendly/assets/LAUNCH-VIDEO.md` for the cut sheet
+and the four Raylight traps that caused the "popping". Otis has not yet said
+whether the new float reads right on his screen, and has not decided on the
+~45s clean cut (drop the old middle five shots, move the old end card to the
+end).
 
 **Higgsfield appeared as a connector but is unusable.** Free plan, **2.5
 credits**. It does image-to-video, which is the one tool here that could
