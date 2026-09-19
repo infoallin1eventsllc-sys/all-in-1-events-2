@@ -9,3 +9,6 @@ node_modules/
 # OS / editor
 .DS_Store
 *.swp
+
+# Local Netlify folder
+.netlify
