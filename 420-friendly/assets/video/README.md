@@ -5,11 +5,45 @@ garments, no models.
 
 | File | Runtime | What it is |
 |---|---|---|
-| `420-cinematic-cut.mp4` | 25.8s · 1280×720 · 2.6 MB | The cinematic pass. Current. |
+| `420-motion-cut.mp4` | 34.3s · 1280×720 · 3.0 MB | More angles, more motion. Current. |
+| `420-cinematic-cut.mp4` | 25.8s · 1280×720 · 2.6 MB | The cinematic pass. |
 | `420-launch-preview.mp4` | 20.5s · 1280×720 · 2.6 MB | The first cut. Kept — Otis likes it. |
 
-Rebuild either with `../../tools/build_cinematic_cut.py` or
-`../../tools/build_launch_preview.py`.
+Rebuild with `build_motion_cut.py`, `build_cinematic_cut.py` or
+`build_launch_preview.py` in `../../tools/`.
+
+## The motion cut — what "more angles" can and cannot mean here
+
+Every source photograph is a flat-lay shot from one fixed viewpoint. There is
+no second camera position hiding in a flat image and no depth to recover, so a
+literal new angle is not available at any price. What this cut does instead:
+
+- **Perspective tilt.** A keystone warp leans the garment plane off-axis so a
+  flat-lay reads as though the camera sat to one side. Under a dolly it is
+  convincing — the "resting 3D tilt" the Raylight craft guide calls a signature.
+- **Wide, medium and macro** pulled from the same frame: three different angles
+  in every sense an edit cares about.
+- **21 beats** against the cinematic cut's 8, most between 1.3s and 2.1s, so the
+  cut carries the energy rather than the camera moves.
+- **Whip pans** between sections — six frames of lateral smear, the one
+  transition that reads as camera rather than software.
+- **Speed ramp** on the climax: a slow drift, then the punch lands late and hard.
+
+It is also the first cut to use **C1, C4, C6, H12, H13, P12, P14** — seven
+pieces neither earlier version touched.
+
+Run `PREVIEW=1 python3 build_motion_cut.py` to get one still per beat as a
+contact sheet. Use it. A full render is about seven minutes and the preview is
+two, and it caught three real faults before they cost a render.
+
+### The trap specific to detail crops
+
+A macro crop pasted over a blur of the **whole** photo shows its own rectangle,
+because the content behind it does not match. `detail_ground()` blurs the *same
+crop region* up to plate size instead, so the feathered edge has nothing to
+contrast against. Where the subject does not fill the frame, the ground also
+needs a much heavier blur (about 110 rather than 54) or the backdrop reads as a
+second, ghostly garment behind the real one.
 
 ## What changed in the cinematic cut
 
