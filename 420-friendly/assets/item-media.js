@@ -126,6 +126,15 @@ function filmCard() {
     video.className = "absolute inset-0 w-full h-full object-contain bg-black rounded-xl";
     btn.replaceWith(video);
     video.focus({ preventScroll: true });
+
+    /* The shop soundtrack is a bar pinned to the bottom of this same page. If
+     * it is playing when the film starts, the customer gets both at once. Pause
+     * whatever else is sounding rather than reaching into soundtrack.js: this
+     * stays correct if another player is ever added, and the bar repaints
+     * itself off its own `pause` event, so its button shows the truth. */
+    document.querySelectorAll("audio, video").forEach((el) => {
+      if (el !== video && !el.paused) el.pause();
+    });
   });
 
   stage.appendChild(btn);

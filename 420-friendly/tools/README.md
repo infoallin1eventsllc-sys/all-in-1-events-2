@@ -10,6 +10,22 @@ Run from this directory. Needs `pillow`, `numpy`, `scipy`, `imageio-ffmpeg`
   background already matches the blurred ground beneath it); `grade()`,
   `vignette()`, `haze()`, `grain()`; `stamp()` composites the keyed emblem.
 - **`build_launch_preview.py`** — renders `../assets/video/420-launch-preview.mp4`.
+- **`add_soundtrack.py`** — lays a music track under a finished film.
+  `python3 tools/add_soundtrack.py track.wav --start 18.5`. Trims the track to
+  the film's exact length from `--start`, pads with silence if it runs short,
+  normalises to -16 LUFS, fades both ends, and copies the video stream
+  untouched — no re-encode, about a second to run. Writes `-scored.mp4`
+  alongside the original so the silent cut survives for an A/B.
+
+## The one thing that is not a technical question
+
+A commercial song on a film we host needs a **sync licence**. Instagram and
+TikTok hold blanket deals with the labels, which is why any song works in a
+Reel — that licence covers their platform, not this site. Use music Otis owns,
+or a production-music subscription (Epidemic Sound, Artlist, Musicbed,
+Soundstripe) whose terms name web use, and keep the licence receipt. Pulling
+audio out of a Spotify or Apple playlist is not an option regardless: those are
+encrypted streams, so there is no file to take.
 
 ## Two things that will bite
 
