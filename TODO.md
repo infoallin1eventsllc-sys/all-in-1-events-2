@@ -95,8 +95,10 @@ is not visibly broken. It does not mean a checkout succeeds.
    lookbook says $380 for the two separately *and* $380 as a set. The set costs
    exactly what the pieces cost apart, so it is not a bundle discount.
 2. **Merge PR #3.**
-3. **Set `OWNER_PASSCODE`** in Netlify, scopes: All scopes. Until it is set the
-   owner surfaces are gated by a passcode that does not exist.
+3. ~~**Set `OWNER_PASSCODE`**~~ — done 20 Sep on the `allin1-events` site, all
+   scopes, same value in every deploy context. If the portal ever reports it
+   missing again, the cause is almost always one of the two settings named in
+   the function's own error message, or a preview that was never rebuilt.
 4. Six `policy.js` values; a Stripe account (check their cannabis policy
    first); the Anthropic key into **Supabase** Edge Function secrets — not
    Netlify, not his Mac.

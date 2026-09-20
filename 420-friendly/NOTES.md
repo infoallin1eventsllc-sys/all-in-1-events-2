@@ -403,7 +403,7 @@ different branch with local edits, so every `git checkout` aborted and the site
 
 | Variable | Unlocks | Notes |
 |---|---|---|
-| `OWNER_PASSCODE` | The owner Portal (scope it to **all** deploy contexts, or previews cannot be tested) | **Do this first** — nothing else is reachable without it. Long passphrase, not a PIN; the function refuses anything under 8 characters |
+| `OWNER_PASSCODE` | The owner Portal — **set 20 Sep** on `allin1-events` | Two separate settings, both required: **Scopes** must include Functions, and the **value** must cover every deploy context, not Production alone. Long passphrase, not a PIN; the function refuses anything under 8 characters. Env changes only reach a preview when that preview is rebuilt — Retry deploy on the preview, or push to the branch; Trigger deploy rebuilds production |
 | `MERIDIAN_INTAKE_URL` | Website → CRM lead capture | The `intake` function URL. Until set, signups are kept locally and the form says so |
 | `ANTHROPIC_API_KEY` | The events-site concierge | Until set it answers from scripted FAQ copy and admits it |
 | `STRIPE_SECRET_KEY` + publishable key | Card / Apple Pay / Google Pay / Cash App | See PAYMENTS-SETUP.md; needs his own verified Stripe account |

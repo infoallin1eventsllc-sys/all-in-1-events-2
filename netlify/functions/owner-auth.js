@@ -79,9 +79,13 @@ exports.handler = async (event) => {
       context: process.env.CONTEXT || null,
       message:
         "OWNER_PASSCODE is not set for this deploy" + deployContext(event) + ". " +
-        "Add it in Netlify → Site settings → Environment variables. If it is " +
-        "already set, check its scope — a variable scoped to Production only " +
-        "is invisible to deploy previews. Redeploy after changing it."
+        "Add it in Netlify → Site configuration → Environment variables. If the " +
+        "dashboard already shows it, two settings are easy to confuse and both " +
+        "have to be right: Scopes must include Functions (Builds-only is " +
+        "invisible here), and the value must cover this deploy context, not " +
+        "Production alone. Then rebuild THIS deploy — on a preview, Trigger " +
+        "deploy rebuilds production instead, so use Retry deploy on the preview " +
+        "itself or push a commit to the branch."
     });
   }
 
