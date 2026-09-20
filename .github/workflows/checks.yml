@@ -1,0 +1,28 @@
+name: checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # npm ci must come first: the Events Tailwind config requires two
+      # plugins from node_modules, and without them check-refs can only warn
+      # that it could not verify the build - which is the check silently
+      # switching itself off.
+      - run: npm ci
+
+      - name: References
+        run: node scripts/check-refs.mjs
+
+      - run: npx playwright install --with-deps chromium
+      - name: Smoke
+        run: node scripts/smoke.mjs
