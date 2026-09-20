@@ -186,6 +186,37 @@ function mountItemMedia(mountId) {
   mount.appendChild(grid);
 }
 
+/* index.html — the film full width, the way a lookbook opens.
+ *
+ * Wider than the product-page treatment on purpose: here it is the thing
+ * being shown, not a footnote to a garment. */
+function mountHomeFilm(mountId) {
+  const mount = document.getElementById(mountId);
+  if (!mount) return;
+
+  const film = filmCard();
+  if (!film) return;
+
+  const head = document.createElement("div");
+  head.className = "flex justify-between items-end mb-8";
+  head.innerHTML =
+    '<h2 class="h-section text-on-surface">The Film</h2>' +
+    '<a href="playlist.html" class="font-body-md text-body-md text-on-surface-variant ' +
+    'hover:text-secondary transition-colors underline decoration-1 underline-offset-4">' +
+    "The Sound</a>";
+  mount.appendChild(head);
+  mount.appendChild(film);
+
+  // Only when a playlist is linked; otherwise the film stands on its own.
+  const service = primaryService();
+  if (!service) return;
+  const row = document.createElement("div");
+  row.className = "mt-6 flex flex-wrap items-center gap-x-4 gap-y-2";
+  row.appendChild(listenAnchor(service));
+  row.appendChild(listenNote(service));
+  mount.appendChild(row);
+}
+
 /* shop.html — one quiet control above the grid, and nothing at all until a
  * playlist is linked. */
 function mountListenBar(mountId) {

@@ -76,6 +76,10 @@
     <div id="featured-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-gutter gap-y-10"></div>
   </section>
 
+  <!-- The collection film. Our own file, so the homepage still loads nothing
+       from anyone else until a visitor presses play. -->
+  <section id="home-film" class="reveal px-margin-mobile md:px-margin-desktop section md:section max-w-container-max mx-auto"></section>
+
   <!-- Owner-uploaded music and video. Hidden until something is uploaded, so
        the page never shows an empty shell to a customer. -->
   <section id="landing-media" class="hidden px-margin-mobile md:px-margin-desktop section md:section max-w-container-max mx-auto">
@@ -119,10 +123,13 @@ LIST</span>
 <script src="assets/products.js"></script>
 <script src="assets/app.js"></script>
 <script src="assets/soundtrack.js"></script>
+<script src="assets/media-links.js"></script>
+<script src="assets/item-media.js"></script>
 <script src="assets/store.js"></script>
 <script src="assets/media.js"></script>
 <script>
   renderChrome("SHOP ALL");
+  mountHomeFilm("home-film");
   renderLandingMedia("landing-media");
 
   // Category tiles: one representative product's art per category.

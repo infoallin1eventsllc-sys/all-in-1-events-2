@@ -62,9 +62,9 @@ Two different audiences, previously both called "Portal", which made the nav
 link land on the customer signup instead of the owner tools:
 
 - **Music and video while shopping.** All links live in one file,
-  `assets/media-links.js`, read by three pages: `playlist.html` (the full
-  players), `product.html` (the film plus a listen button) and `shop.html`
-  (a listen button above the grid). Paste a share link once and it is live
+  `assets/media-links.js`, read by four pages: `playlist.html` (the full
+  players), `index.html` (the film, full width), `product.html` (the film plus
+  a listen button) and `shop.html` (a listen button above the grid). Paste a share link once and it is live
   everywhere; leave a line empty and nothing appears for it anywhere.
   - The **film** plays in place — it is our own file, so a product page costs
     a visitor nothing until they press play, and no outside company is told

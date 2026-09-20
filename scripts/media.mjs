@@ -161,6 +161,7 @@ try {
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
 
 const ROUTES = [
+  ["/420-friendly/index.html", "the homepage"],
   ["/420-friendly/playlist.html", "the playlist page"],
   ["/420-friendly/shop.html", "the shop grid"],
   [`/420-friendly/product.html?id=${firstProductId()}`, "a product page"],
@@ -192,6 +193,11 @@ for (const [route, label] of ROUTES) {
 
   const facade = page.locator("#item-media button.player-facade");
   check("the product page offers the film", await facade.count() === 1);
+
+  const home = await ctx.newPage();
+  await home.goto(`${origin}/420-friendly/index.html`, { waitUntil: "networkidle" });
+  check("the homepage offers the film",
+    await home.locator("#home-film button.player-facade").count() === 1);
 
   if (await facade.count()) {
     await facade.click();
