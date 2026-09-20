@@ -12,3 +12,7 @@ node_modules/
 
 # Local Netlify folder
 .netlify
+
+# Video build scratch: contact sheets and the raw pre-encode render
+420-friendly/tools/_*
+__pycache__/

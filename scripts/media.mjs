@@ -110,6 +110,19 @@ for (const f of [m.BRAND_FILM.file, m.BRAND_FILM.poster]) {
     fs.existsSync(path.join(ROOT, "420-friendly", f)), f);
 }
 
+// Every local clip and still the reel names has to be committed, or the page
+// shows a poster-less card that plays nothing. check-refs only reads markup,
+// so this is the one place that looks inside VIDEO_REEL.
+for (const clip of m.VIDEO_REEL) {
+  for (const key of ["file", "poster"]) {
+    if (!clip[key]) continue;
+    check(`reel "${clip.title}" ${key} is committed`,
+      fs.existsSync(path.join(ROOT, "420-friendly", clip[key])), clip[key]);
+    check(`reel "${clip.title}" ${key} is a safe local path`,
+      m.parseLocalPath(clip[key]) === clip[key], clip[key]);
+  }
+}
+
 // With a link configured, the shop offers it — and offers the page, not the embed.
 const configured = loadLinks({ spotify: `https://open.spotify.com/playlist/${ID}` });
 const first = configured.linkedServices()[0];

@@ -10,6 +10,13 @@ Run from this directory. Needs `pillow`, `numpy`, `scipy`, `imageio-ffmpeg`
   background already matches the blurred ground beneath it); `grade()`,
   `vignette()`, `haze()`, `grain()`; `stamp()` composites the keyed emblem.
 - **`build_launch_preview.py`** — renders `../assets/video/420-launch-preview.mp4`.
+- **`build_ad_cut.py`** — the 18s consumer ad, 9:16 and 16:9, from the same
+  picks. Borrows every helper from `build_cinematic_cut` by rebinding its
+  module globals (`FW`, `FH`, `OW`, `OH`, `VX0`, `VY0`, `BAR`) — the helpers
+  read them at call time, so one `configure()` retargets the whole toolchain
+  to a new aspect ratio with no second copy of the compositing code. Sizes are
+  fractions of the short edge so both formats keep proportion; layouts stack
+  on a phone and go side by side on a screen. `--preview` for contact sheets.
 - **`add_soundtrack.py`** — lays a music track under a finished film.
   `python3 tools/add_soundtrack.py track.wav --start 18.5`. Trims the track to
   the film's exact length from `--start`, pads with silence if it runs short,
