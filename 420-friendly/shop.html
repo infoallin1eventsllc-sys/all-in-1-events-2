@@ -25,6 +25,9 @@
     <h1 id="plp-title" class="font-headline-xl-mobile text-headline-xl-mobile md:font-headline-xl md:text-headline-xl text-on-surface uppercase tracking-tighter">Shop All</h1>
   </section>
 
+  <!-- Music while browsing. Empty, and invisible, until a playlist is linked. -->
+  <div id="shop-listen" class="px-margin-mobile md:px-margin-desktop pt-4"></div>
+
   <!-- Product listing -->
   <section id="shop-grid" class="px-margin-mobile md:px-margin-desktop py-12">
     <!-- Toolbar -->
@@ -63,9 +66,12 @@
 <script src="assets/products.js"></script>
 <script src="assets/app.js"></script>
 <script src="assets/soundtrack.js"></script>
+<script src="assets/media-links.js"></script>
+<script src="assets/item-media.js"></script>
 <script src="assets/store.js"></script>
 <script>
   renderChrome("SHOP ALL");
+  mountListenBar("shop-listen");
 
   const urlParams = new URLSearchParams(location.search);
   const requestedCat = (urlParams.get("cat") || "ALL").toUpperCase();

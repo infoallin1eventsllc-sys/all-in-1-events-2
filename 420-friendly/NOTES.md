@@ -61,6 +61,25 @@ page, preserving the original URL.
 Two different audiences, previously both called "Portal", which made the nav
 link land on the customer signup instead of the owner tools:
 
+- **Music and video while shopping.** All links live in one file,
+  `assets/media-links.js`, read by three pages: `playlist.html` (the full
+  players), `product.html` (the film plus a listen button) and `shop.html`
+  (a listen button above the grid). Paste a share link once and it is live
+  everywhere; leave a line empty and nothing appears for it anywhere.
+  - The **film** plays in place — it is our own file, so a product page costs
+    a visitor nothing until they press play, and no outside company is told
+    they were looking. Swap it by changing `BRAND_FILM` and making a new
+    still: `ffmpeg -ss 3 -i <film> -frames:v 1 -vf scale=1280:-2 <still>.jpg`.
+  - The **music opens a new tab** rather than playing inline. An iframe is
+    destroyed the moment the browser navigates, so an embedded player would
+    stop dead each time a customer clicked to the next garment. A tab is its
+    own document and keeps playing for the whole visit. The in-page players
+    stay on `playlist.html`, where someone has come to listen rather than shop.
+  - Nothing reaches Spotify, Apple or YouTube until a visitor asks. That is a
+    privacy commitment, not a preference — those embeds profile whoever loads
+    them and this site has no consent banner. `npm run test:media` fails if a
+    player ever loads on page open.
+
 - **`portal.html` — the owner hub.** Passcode-gated. Tiles through to
   transactions/invoices, photos, and the marketing system. This is what the
   Portal nav item points at.

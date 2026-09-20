@@ -1,12 +1,13 @@
 # Safety net
 
 ```
-npm test          # both, ~25s
+npm test          # all three, ~40s
 npm run test:refs # static only, instant
 npm run test:smoke
+npm run test:media
 ```
 
-Two scripts, no test framework, no config file. They exist to catch the
+Three scripts, no test framework, no config file. They exist to catch the
 specific ways this repo has actually broken — not to chase coverage.
 
 ## What each one is for
@@ -21,6 +22,24 @@ specific ways this repo has actually broken — not to chase coverage.
 - Every external host in the markup is allowed by the CSP in `netlify.toml`.
 - Both compiled Tailwind files are current — it rebuilds each to a temp file
   and compares. Set `SKIP_TAILWIND_CHECK=1` to skip (it needs `npx`).
+
+**`media.mjs`** — the playlist and film wiring, which fails invisibly.
+
+- No request reaches Spotify, Apple, YouTube or their CDNs on page load.
+  The players are drawn as our own facades and the real iframe is built on
+  click; a page that loads one unasked looks *identical* and tracks every
+  visitor who never pressed play. Only a request log sees the difference.
+- The film is fetched on the click, not before.
+- The link parsers in `media-links.js` reject lookalike hosts
+  (`open.spotify.com.evil.tld`), `javascript:`, plain http, quote break-outs
+  and wrong-length ids, and rebuild each URL from the captured id rather than
+  echoing input. Every value there is hand-pasted into an `href` or an iframe
+  `src`, so they are a security boundary.
+- The YouTube embed uses `youtube-nocookie.com` while the new-tab link uses
+  the real host — each is wrong in the other's place.
+- The listen link carries `rel=noopener`; without it the new tab can navigate
+  this one.
+- With nothing configured the shop renders nothing, rather than an empty box.
 
 **`smoke.mjs`** — loads all 24 pages in Chromium at 1280px and 390px,
 including checkout and every owner-gated surface.
@@ -41,10 +60,12 @@ Each one is a bug that already shipped here:
 | Horizontal scroll | A `nowrap` word in the footer pushed every page 11px sideways on desktop only. |
 | CSP hosts | A host missing from `img-src` blocks images with **no error at all** — just a hole where the photo should be. |
 | Stale Tailwind | Tailwind is compiled, not CDN. A class added without a rebuild does nothing, silently. |
+| Player loads unasked | Inlining a Spotify or YouTube iframe instead of a click-to-load facade tracks every visitor. The page looks the same, so nothing else catches it. |
 
 Each was verified by deliberately reintroducing the fault and confirming the
-suite goes red — the blank product page, the sideways scroll, and a drifted
-Tailwind build.
+suite goes red — the blank product page, the sideways scroll, a drifted
+Tailwind build, an off-site film URL, and a Spotify iframe inlined into the
+shop.
 
 ## What this does NOT cover
 

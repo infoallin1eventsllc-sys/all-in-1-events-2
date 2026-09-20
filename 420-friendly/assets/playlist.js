@@ -1,5 +1,9 @@
 /* 420 FRIENDLY — "The Sound": the brand playlist and the video reel.
  *
+ * The links themselves live in assets/media-links.js, which this page loads
+ * first — the shop pages use the same file, so a playlist pasted once is live
+ * on every surface. This file is only the page: tabs, facades and the reel.
+ *
  * HOW THIS PAGE LOADS THIRD-PARTY PLAYERS
  *
  * Nothing from Spotify, Apple or YouTube is requested when the page opens.
@@ -16,146 +20,6 @@
  * nothing in usability. Do not "simplify" this by putting the iframes
  * straight into the markup.
  */
-
-/* ============================================================================
- * EDIT THIS BLOCK — and nothing else in this file.
- *
- * Paste the ordinary share link for each service. Not an ID, not the embed
- * code — just the link you get from the Share menu. Leave a line as "" and
- * that service's tab simply does not appear.
- * ==========================================================================*/
-const PLAYLIST_CONFIG = {
-  // Spotify: open the playlist → ⋯ → Share → Copy link to playlist
-  // Looks like: https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M
-  // The playlist must be PUBLIC or visitors will see an empty player.
-  spotify: "",
-
-  // Apple Music: open the playlist → ⋯ → Share → Copy Link
-  // Looks like: https://music.apple.com/us/playlist/the-sound/pl.u-abc123
-  appleMusic: "",
-
-  // YouTube: open the playlist page → Share → Copy
-  // Looks like: https://www.youtube.com/playlist?list=PLabc123
-  youtube: ""
-};
-
-/* Video reel. Each entry needs a `title` and exactly ONE source:
- *
- *   youtube: "https://youtu.be/XXXXXXXXXXX"   — a link or the 11-character id
- *   file:    "assets/video/teaser.mp4"        — a file committed to the repo
- *
- * `caption` is optional. `poster` is optional, used only with `file`, and
- * should be a local image path — it is the still shown before playback.
- *
- * Uncomment the examples and replace them, or add your own.
- */
-const VIDEO_REEL = [
-  // { title: "Vibrant Series — Lookbook", caption: "The launch drop, head to toe",
-  //   youtube: "https://youtu.be/XXXXXXXXXXX" },
-  // { title: "450gsm", caption: "Why the fleece weighs what it weighs",
-  //   file: "assets/video/fleece.mp4", poster: "assets/video/fleece.jpg" }
-];
-
-/* ============================================================================
- * Below here is machinery. You should not need to touch it.
- * ==========================================================================*/
-
-/* Every value pasted above ends up in an iframe `src`. These parsers are the
- * only thing standing between a mistyped or hostile string and that attribute,
- * so each one rebuilds the URL from matched pieces rather than passing input
- * through. A value that does not match exactly is rejected, never patched up.
- */
-
-// Spotify ids are 22 base62 characters today; the range is loose in case that
-// ever changes, but the character class is not.
-function parseSpotify(value) {
-  const v = String(value || "").trim();
-  if (!v) return null;
-  const m =
-    v.match(/^https:\/\/open\.spotify\.com\/(?:embed\/)?playlist\/([A-Za-z0-9]{16,32})(?:[/?#]|$)/) ||
-    v.match(/^spotify:playlist:([A-Za-z0-9]{16,32})$/) ||
-    v.match(/^([A-Za-z0-9]{16,32})$/);
-  if (!m) return null;
-  return "https://open.spotify.com/embed/playlist/" + m[1];
-}
-
-// Apple has no short id to extract — the embed is the same URL on a different
-// host — so the whole path is matched and then rebuilt piece by piece.
-function parseAppleMusic(value) {
-  const v = String(value || "").trim();
-  if (!v) return null;
-  const m = v.match(
-    /^https:\/\/(?:embed\.)?music\.apple\.com\/([a-z]{2})\/playlist\/([A-Za-z0-9._~%-]{1,120})\/((?:pl\.)?[A-Za-z0-9._~%-]{1,120})(?:[?#]|$)/
-  );
-  if (!m) return null;
-  return "https://embed.music.apple.com/" + m[1] + "/playlist/" + m[2] + "/" + m[3];
-}
-
-// youtube-nocookie.com, not youtube.com: it holds off on cookies until the
-// visitor actually plays something.
-function parseYouTubePlaylist(value) {
-  const v = String(value || "").trim();
-  if (!v) return null;
-  let id = null;
-  const q = v.match(/^https:\/\/(?:www\.|m\.)?youtube(?:-nocookie)?\.com\/[^?#]*\?(.*)$/);
-  if (q) {
-    const list = new URLSearchParams(q[1]).get("list");
-    if (list) id = list;
-  } else if (/^[A-Za-z0-9_-]{12,64}$/.test(v)) {
-    id = v;
-  }
-  if (!id || !/^[A-Za-z0-9_-]{12,64}$/.test(id)) return null;
-  return "https://www.youtube-nocookie.com/embed/videoseries?list=" + id;
-}
-
-function parseYouTubeVideo(value) {
-  const v = String(value || "").trim();
-  if (!v) return null;
-  let id = null;
-  let m;
-  if ((m = v.match(/^https:\/\/youtu\.be\/([A-Za-z0-9_-]{11})(?:[?#]|$)/))) id = m[1];
-  else if ((m = v.match(/^https:\/\/(?:www\.|m\.)?youtube(?:-nocookie)?\.com\/watch\?(.*)$/))) {
-    id = new URLSearchParams(m[1]).get("v");
-  } else if ((m = v.match(/^https:\/\/(?:www\.|m\.)?youtube(?:-nocookie)?\.com\/(?:embed|shorts)\/([A-Za-z0-9_-]{11})(?:[?#]|$)/))) {
-    id = m[1];
-  } else if (/^[A-Za-z0-9_-]{11}$/.test(v)) id = v;
-  if (!id || !/^[A-Za-z0-9_-]{11}$/.test(id)) return null;
-  return "https://www.youtube-nocookie.com/embed/" + id + "?rel=0";
-}
-
-// Local media only: a relative path, no scheme, no parent traversal. Blocks
-// `javascript:` and anything pointing off-site.
-function parseLocalPath(value) {
-  const v = String(value || "").trim();
-  if (!v) return null;
-  if (!/^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(v)) return null;
-  if (v.includes("..")) return null;
-  return v;
-}
-
-const SERVICES = [
-  { key: "spotify", label: "Spotify", icon: "graphic_eq", parse: parseSpotify,
-    height: 480, note: "Full tracks for anyone signed in to Spotify. 30-second previews for everyone else." },
-  { key: "appleMusic", label: "Apple Music", icon: "album", parse: parseAppleMusic,
-    height: 480, note: "Full tracks for Apple Music subscribers. Previews otherwise." },
-  { key: "youtube", label: "YouTube", icon: "play_circle", parse: parseYouTubePlaylist,
-    height: 480, note: "Plays for everyone, no sign-in needed." }
-];
-
-function availableServices() {
-  return SERVICES
-    .map((s) => ({ ...s, src: s.parse(PLAYLIST_CONFIG[s.key]) }))
-    .filter((s) => s.src);
-}
-
-// Anything configured but unparseable is a typo worth surfacing rather than
-// silently dropping — otherwise the tab just never shows up and nobody knows why.
-function rejectedServices() {
-  return SERVICES.filter((s) => {
-    const raw = String(PLAYLIST_CONFIG[s.key] || "").trim();
-    return raw && !s.parse(raw);
-  });
-}
 
 function makeIframe(src, title, height) {
   const frame = document.createElement("iframe");
@@ -186,7 +50,7 @@ function facadeButton(labelText, subText, onActivate) {
     "hover:border-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-tertiary " +
     "transition-colors cursor-pointer";
   btn.innerHTML =
-    '<span class="material-symbols-outlined text-tertiary text-[52px] group-hover:scale-110 transition-transform">play_circle</span>' +
+    '<span class="text-tertiary inline-block group-hover:scale-110 transition-transform">' + playGlyph(52) + "</span>" +
     '<span class="font-label-caps text-label-caps text-on-surface">' + esc(labelText) + "</span>" +
     '<span class="font-body-md text-body-md text-on-surface-variant max-w-sm">' + esc(subText) + "</span>";
   btn.addEventListener("click", () => onActivate(btn));
@@ -196,7 +60,7 @@ function facadeButton(labelText, subText, onActivate) {
 function renderMusic(mountId, tabsId) {
   const mount = document.getElementById(mountId);
   const tabsMount = document.getElementById(tabsId);
-  const services = availableServices();
+  const services = linkedServices();
   const rejected = rejectedServices();
 
   if (rejected.length) {
@@ -205,7 +69,7 @@ function renderMusic(mountId, tabsId) {
       "font-body-md text-body-md text-error border border-error/40 rounded-xl px-4 py-3 mb-4";
     warn.textContent =
       "Could not read the link for " + rejected.map((s) => s.label).join(" and ") +
-      ". Check it in assets/playlist.js — it needs to be the plain share link.";
+      ". Check it in assets/media-links.js — it needs to be the plain share link.";
     mount.appendChild(warn);
   }
 
@@ -287,7 +151,7 @@ function renderReel(mountId) {
   const clips = VIDEO_REEL.map((clip) => {
     const yt = clip.youtube ? parseYouTubeVideo(clip.youtube) : null;
     const file = clip.file ? parseLocalPath(clip.file) : null;
-    return { ...clip, ytSrc: yt, fileSrc: file };
+    return { ...clip, ytSrc: yt && yt.embed, fileSrc: file };
   }).filter((c) => c.ytSrc || c.fileSrc);
 
   if (!clips.length) {
@@ -368,14 +232,14 @@ function setupCard(kind) {
     "border border-dashed border-outline-variant rounded-2xl bg-surface-container-low/50 px-6 py-12 text-center";
 
   const music =
-    "<p>Open <span class=\"font-label-caps text-label-caps text-on-surface\">420-friendly/assets/playlist.js</span> " +
+    "<p>Open <span class=\"font-label-caps text-label-caps text-on-surface\">420-friendly/assets/media-links.js</span> " +
     "and paste your playlist link into <span class=\"font-label-caps text-label-caps text-on-surface\">PLAYLIST_CONFIG</span>. " +
     "One line per service — Spotify, Apple Music, YouTube. Fill in one or all three; " +
     "only the ones you fill in get a tab.</p>";
 
   const video =
     "<p>Add clips to <span class=\"font-label-caps text-label-caps text-on-surface\">VIDEO_REEL</span> in " +
-    "<span class=\"font-label-caps text-label-caps text-on-surface\">420-friendly/assets/playlist.js</span>. " +
+    "<span class=\"font-label-caps text-label-caps text-on-surface\">420-friendly/assets/media-links.js</span>. " +
     "Each one takes a title plus either a YouTube link or the path to a video file you commit to the repo.</p>";
 
   box.innerHTML =

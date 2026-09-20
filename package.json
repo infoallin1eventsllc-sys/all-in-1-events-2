@@ -9,9 +9,10 @@
     "build:420": "npx -y tailwindcss@3.4.17 -c 420-friendly/tailwind.config.js -i 420-friendly/assets/tailwind.src.css -o 420-friendly/assets/tailwind.css --minify",
     "dev:note": "echo 'npm run dev is static only - the Portal, uploads and checkout need: npm start'",
     "build:events": "npx -y tailwindcss@3.4.17 -c tailwind.events.config.js -i css/tailwind.src.css -o css/tailwind.css --minify",
-    "test": "node scripts/check-refs.mjs && node scripts/smoke.mjs",
+    "test": "node scripts/check-refs.mjs && node scripts/smoke.mjs && node scripts/media.mjs",
     "test:refs": "node scripts/check-refs.mjs",
-    "test:smoke": "node scripts/smoke.mjs"
+    "test:smoke": "node scripts/smoke.mjs",
+    "test:media": "node scripts/media.mjs"
   },
   "keywords": [
     "events",

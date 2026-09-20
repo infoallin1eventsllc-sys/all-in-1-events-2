@@ -17,6 +17,10 @@
 <main class="pt-20 md:pt-[116px] max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
   <div id="product-root"></div>
 
+  <!-- The film, and a way to put the music on. Renders nothing at all until
+       assets/media-links.js has something in it. -->
+  <section id="item-media" class="mt-20"></section>
+
   <!-- Related products -->
   <section id="related" class="hidden mt-20">
     <h2 class="h-section text-on-surface mb-8">Complete the Fit</h2>
@@ -30,6 +34,8 @@
 <script src="assets/products.js"></script>
 <script src="assets/app.js"></script>
 <script src="assets/soundtrack.js"></script>
+<script src="assets/media-links.js"></script>
+<script src="assets/item-media.js"></script>
 <script src="assets/store.js"></script>
 <script>
   renderChrome("SHOP ALL");
@@ -185,6 +191,7 @@
     if (product) {
       renderProduct();
       renderRelated();
+      mountItemMedia("item-media");
     } else {
       renderNotFound();
     }

@@ -268,6 +268,17 @@ body > * { position: relative; z-index: 1; }
   color: #f4f3ef;
 }
 .player-facade--dark .material-symbols-outlined { color: #9dc4a8; }
+/* `> *` above lifts every child above the scrim by making it relative, which
+   also cancels any absolute placement a child asks for. The film's caption
+   wants the bottom edge, so it needs to win that on specificity. */
+.player-facade--dark > .facade-caption { position: absolute; }
+.player-facade--dark > .facade-caption::before {
+  content: "";
+  position: absolute;
+  inset: -3rem 0 0 0;
+  background: linear-gradient(to top, rgba(8, 12, 9, 0.88), transparent);
+  z-index: -1;
+}
 
 
 /* ── In-store soundtrack bar ───────────────────────────────────────────────
