@@ -36,7 +36,16 @@ not answered.** Ask before spending anything.
 
 ## Where the work stands
 
-**Two launch videos, both from real product photography.** In
+**The consumer ad — 20 Sep.** `420-friendly/assets/video/420-ad-9x16.mp4`
+(the one to post — Reels / TikTok / Stories) and `420-ad-16x9.mp4` (on The
+Sound page and for YouTube). 17s, seven beats, hook by 0.5s, spec and prices
+in the type, ends on *Shop the Archive*. Built by `tools/build_ad_cut.py`
+from the same real product photography. **Silent until a licensed track
+arrives** — Otis chose a production-music subscription (Epidemic Sound /
+Artlist); score it with `tools/add_soundtrack.py` when the file lands. The
+CTA carries no URL because there is no custom domain yet.
+
+**Three lookbook videos, all from real product photography.** In
 `420-friendly/assets/video/`:
 
 - `420-cinematic-cut.mp4` — 25.8s, the current pass. Every shot gets a

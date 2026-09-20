@@ -57,7 +57,9 @@ const BRAND_FILM = {
  */
 const VIDEO_REEL = [
   { title: "Archive V.24 — The Film", caption: "The full collection in motion",
-    file: "assets/video/420-motion-cut.mp4", poster: "assets/video/420-motion-cut.jpg" }
+    file: "assets/video/420-motion-cut.mp4", poster: "assets/video/420-motion-cut.jpg" },
+  { title: "Archive V.24 — The Ad", caption: "Eighteen seconds. Hoodies from $135.",
+    file: "assets/video/420-ad-16x9.mp4", poster: "assets/video/420-ad-16x9.jpg" }
   // { title: "450gsm", caption: "Why the fleece weighs what it weighs",
   //   file: "assets/video/fleece.mp4", poster: "assets/video/fleece.jpg" }
 ];

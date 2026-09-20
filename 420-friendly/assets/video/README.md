@@ -1,16 +1,51 @@
-# Launch video — two cuts
+# Launch video — the lookbook cuts and the ad
 
-Both are built **entirely from real product photography**. No generated
+All of it is built **entirely from real product photography**. No generated
 garments, no models.
 
 | File | Runtime | What it is |
 |---|---|---|
-| `420-motion-cut.mp4` | 34.3s · 1280×720 · 3.0 MB | More angles, more motion. Current. |
+| `420-ad-9x16.mp4` | 16.9s · 1080×1920 · 10.2 MB | **The consumer ad.** Vertical, for Reels / TikTok / Stories. |
+| `420-ad-16x9.mp4` | 16.9s · 1280×720 · 4.5 MB | The same ad for the website and YouTube. |
+| `420-motion-cut.mp4` | 34.3s · 1280×720 · 3.0 MB | The lookbook film. On the homepage and every product page. |
 | `420-cinematic-cut.mp4` | 25.8s · 1280×720 · 2.6 MB | The cinematic pass. |
 | `420-launch-preview.mp4` | 20.5s · 1280×720 · 2.6 MB | The first cut. Kept — Otis likes it. |
 
-Rebuild with `build_motion_cut.py`, `build_cinematic_cut.py` or
-`build_launch_preview.py` in `../../tools/`.
+Rebuild with `build_ad_cut.py`, `build_motion_cut.py`, `build_cinematic_cut.py`
+or `build_launch_preview.py` in `../../tools/`.
+
+## The ad — how it differs from the lookbook, and why
+
+The motion cut is a lookbook: it unfolds, it has room, it assumes someone
+chose to watch. An ad is interrupting someone who was doing something else,
+so it is built to a different set of rules:
+
+| | Lookbook film | The ad |
+|---|---|---|
+| Format | 16:9 letterboxed | **9:16 first** — it is watched upright in a feed. 16:9 is the website copy. |
+| Length | 34s | 17s (18s of beats, six 0.2s crossfades overlapping) |
+| First second | slow pull-back | the mark is already landing and the line is readable by 0.5s |
+| Argument | none — it shows | one beat on the spec: *450GSM loopwheel fleece*, because a number sells a $148 hoodie and "nice hoodie" does not |
+| Price | none | **stated** — *Hoodies from $135*, *Headwear from $44*. It pre-qualifies the click. |
+| Ending | the logo | an instruction: *Shop the Archive* |
+| Cuts | 0.42s crossfades | 0.20s — an ad cuts, it does not drift |
+
+Seven beats: hook (2.6s) → grey set → crimson family → black set (2.4s each)
+→ the spec (2.6s) → headwear (2.0s) → the ask (3.6s, longest, because it is
+the only frame that has to be *read*).
+
+Every price and spec in the type is taken from `products.js`, so the ad
+cannot promise what the store does not sell. There is no URL in the CTA
+because the site has no custom domain yet — add one when there is.
+
+Run `python3 tools/build_ad_cut.py --preview` first. One still per beat for
+both formats in about a minute; the full render is several. The preview
+caught the emblem colliding with the copy at 16:9 and a cap sitting on the
+price line at 9:16 before either cost a render.
+
+**Music.** Both files are silent. When a licensed track arrives, score them
+with `tools/add_soundtrack.py` — the tool and the licensing note are in
+`tools/README.md`.
 
 ## The motion cut — what "more angles" can and cannot mean here
 
