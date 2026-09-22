@@ -1,10 +1,11 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Crosshair, Sun, Moon, Flame, UserSearch, Home, ChevronUp, ChevronDown, ZoomIn, ZoomOut, Map as MapIcon, Video, Maximize2, Clock3, SunMedium, MoonStar,
 } from 'lucide-react';
 import { useSurveillanceSimulation, WAYPOINTS, type PatrolDrone, type Detection } from '../hooks/useSurveillanceSimulation';
 import { SurveillanceMapCanvas } from './SurveillanceMapCanvas';
 import { DroneFeedCanvas } from './DroneFeedCanvas';
+import { useAircraftLink } from '../link/useAircraftLink';
 import {
   Headline, Card, Section, Divider, Tabs, Stat, Row, Chip, Dot, Meter, Sparkline, ToolButton, IconButton, Toggle, Segmented, Activity, formatClock, useAccentHex, type Tone,
 } from './ui';
@@ -25,6 +26,15 @@ export const SurveillanceDashboard: React.FC = () => {
   const [rail, setRail] = useState<RailTab>('AIRCRAFT');
   const [hero, setHero] = useState<'CAMERA' | 'MAP'>('CAMERA');
 
+  // Real aircraft: while the link is live, the selected aircraft is driven by MAVLink telemetry.
+  const link = useAircraftLink();
+  const liveId = link.live ? selectedDroneId : null;
+  useEffect(() => {
+    if (!liveId) return;
+    sim.applyLiveTelemetry(liveId, link.telemetry);
+  }, [liveId, link.telemetry]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => { if (liveId) sim.releaseLive(liveId); }, [liveId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const airborne = drones.filter(x => x.status !== 'OFFLINE');
   const unacked = detections.filter(x => !x.acknowledged);
   const offline = d.status === 'OFFLINE';
@@ -43,7 +53,7 @@ export const SurveillanceDashboard: React.FC = () => {
       <Headline
         title="Patrol"
         context={`Venue compound · ${WAYPOINTS.length}-point loop · ${d.id} selected${nextWp ? ` · next ${nextWp.label}` : ''}`}
-        status={{ label: isNight ? 'Night · thermal' : 'Daylight', tone: isNight ? 'accent' : 'neutral' }}
+        status={liveId ? { label: `Live · ${link.deviceName}`, tone: 'ok', pulse: true } : { label: isNight ? 'Night · thermal' : 'Daylight', tone: isNight ? 'accent' : 'neutral' }}
         stats={[
           { label: 'Airborne', value: `${airborne.length} / ${drones.length}` },
           { label: 'Flight time', value: formatClock(missionElapsedSec) },
@@ -115,7 +125,7 @@ export const SurveillanceDashboard: React.FC = () => {
               <IconButton icon={<ZoomIn />} label="Zoom in" disabled={offline} onClick={() => sim.setZoom(d.id, Math.min(10, d.zoom + 1))} />
               <span className="ml-auto flex items-center gap-3">
                 <span className="w-40"><Toggle on={d.autopilot} onChange={on => sim.setAutopilot(d.id, on)} label="Autopilot" /></span>
-                <ToolButton icon={<Home />} label="Return home" danger disabled={offline || d.status === 'RTH'} onClick={() => sim.returnHome(d.id)} />
+                <ToolButton icon={<Home />} label="Return home" danger disabled={offline || d.status === 'RTH'} onClick={() => { sim.returnHome(d.id); if (liveId) link.returnToLaunch(); }} title={liveId ? 'Sends MAV_CMD_NAV_RETURN_TO_LAUNCH to the aircraft' : undefined} />
               </span>
             </div>
           </Card>
@@ -136,7 +146,7 @@ export const SurveillanceDashboard: React.FC = () => {
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="text-[15px] font-semibold text-ink">{d.id}</div>
-                    <div className="text-[12px] text-ink-3">{d.model} · {SENSOR_LABEL[d.sensorMode]}</div>
+                    <div className="text-[12px] text-ink-3">{liveId ? `${link.transport === 'BLUETOOTH' ? 'Bluetooth LE' : 'USB radio'} · ${link.telemetry.msgsPerSec} msg/s` : d.model} · {SENSOR_LABEL[d.sensorMode]}</div>
                   </div>
                   <Chip tone={STATUS_TONE[d.status]} pulse={d.status === 'MONITORING'}>{STATUS_LABEL[d.status]}</Chip>
                 </div>

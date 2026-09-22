@@ -27,7 +27,8 @@ all-in-1-events/
 
 Operator dashboards for the All in 1 drone platform — **Light Show**, **Defense**
 (counter-UAS) and **Surveillance** — plus the fleet-coordination engineering views
-behind them. It is a separate Vite/React app that deploys under `/drone/` on this site.
+behind them, and a Bluetooth / USB-radio link to real PX4 / ArduPilot aircraft over
+MAVLink. It is a separate Vite/React app that deploys under `/drone/` on this site.
 
 ```bash
 npm run dev:drone     # local: http://localhost:3000/drone/

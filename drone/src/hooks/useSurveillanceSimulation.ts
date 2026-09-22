@@ -100,6 +100,13 @@ function mkDrone(i: number, model: string, status: PatrolStatus, wp: number, bat
 
 let detSeq = 0;
 
+/** Subset of MAVLink telemetry the patrol model consumes (see src/link/mavlink.ts). */
+export interface LiveTelemetry {
+  lat: number; lon: number; altRelM: number; headingDeg: number; groundspeedMps: number; climbMps: number;
+  batteryPct: number; voltageV: number; currentA: number; armed: boolean; customMode: number;
+  radioRssi: number; satellites: number; msgsPerSec: number;
+}
+
 export function useSurveillanceSimulation() {
   const [drones, setDrones] = useState<PatrolDrone[]>(() => [
     mkDrone(0, 'UAV-MAVIC3', 'ON_PATROL', 0, 84.2),
@@ -119,6 +126,9 @@ export function useSurveillanceSimulation() {
 
   const dronesRef = useRef(drones);
   useEffect(() => { dronesRef.current = drones; }, [drones]);
+  // Aircraft driven by a real link are skipped by the simulation tick.
+  const liveRef = useRef<Set<string>>(new Set());
+  const originRef = useRef<{ lat: number; lon: number } | null>(null);
 
   const log = useCallback((severity: PatrolEvent['severity'], text: string, droneId?: string) => {
     setEvents(prev => [{ id: `EV-${Math.random().toString(36).slice(2, 7).toUpperCase()}`, ts: new Date().toLocaleTimeString([], { hour12: false }), severity, text, droneId }, ...prev].slice(0, 60));
@@ -161,6 +171,43 @@ export function useSurveillanceSimulation() {
   }, [patch]);
 
   const setZoom = useCallback((id: string, zoom: number) => patch(id, d => ({ ...d, zoom })), [patch]);
+
+  /**
+   * Replace one aircraft's simulated state with real telemetry. The first GPS fix
+   * becomes the map origin at the site marker; later fixes are offsets in metres.
+   */
+  const applyLiveTelemetry = useCallback((id: string, t: LiveTelemetry) => {
+    liveRef.current.add(id);
+    if (t.lat !== 0 && !originRef.current) originRef.current = { lat: t.lat, lon: t.lon };
+    patch(id, d => {
+      let x = d.x, y = d.y;
+      if (originRef.current && t.lat !== 0) {
+        const mPerDegLat = 111320, mPerDegLon = 111320 * Math.cos((originRef.current.lat * Math.PI) / 180);
+        x = SITE.x + ((t.lon - originRef.current.lon) * mPerDegLon) / METERS_PER_PX;
+        y = SITE.y - ((t.lat - originRef.current.lat) * mPerDegLat) / METERS_PER_PX;
+      }
+      const status: PatrolStatus = !t.armed ? 'OFFLINE' : t.customMode === 6 ? 'RTH' : t.groundspeedMps < 1 ? 'MONITORING' : 'EN_ROUTE';
+      const battery = t.batteryPct >= 0 ? t.batteryPct : d.battery;
+      return {
+        ...d, x, y, status,
+        altM: Math.max(0, t.altRelM), headingDeg: t.headingDeg, groundSpeedMps: t.groundspeedMps, verticalSpeedMps: t.climbMps,
+        battery, voltageV: t.voltageV || d.voltageV, currentA: t.currentA || d.currentA,
+        enduranceMin: Math.max(0, Math.round((battery / 100) * 190 / (Math.max(1, t.currentA || d.currentA) / 18))),
+        signalPct: t.radioRssi ? Math.round((t.radioRssi / 254) * 100) : d.signalPct,
+        rttMs: t.msgsPerSec ? Math.max(20, Math.round(1000 / t.msgsPerSec)) : d.rttMs,
+        packetLossPct: 0,
+        history: {
+          airspeed: [...d.history.airspeed.slice(1), t.groundspeedMps],
+          vspeed: [...d.history.vspeed.slice(1), t.climbMps],
+          egt: d.history.egt,
+          signal: [...d.history.signal.slice(1), t.radioRssi ? (t.radioRssi / 254) * 100 : d.signalPct],
+        },
+      };
+    });
+  }, [patch]);
+
+  /** Hand an aircraft back to the simulation (link dropped or disconnected). */
+  const releaseLive = useCallback((id: string) => { liveRef.current.delete(id); if (liveRef.current.size === 0) originRef.current = null; }, []);
 
   const acknowledgeDetection = useCallback((id: string) => {
     setDetections(prev => prev.map(d => (d.id === id ? { ...d, acknowledged: true } : d)));
@@ -207,6 +254,7 @@ export function useSurveillanceSimulation() {
       if (tick % 10 === 0) setUplinkGbps(v => Math.max(1.4, Math.min(2.6, v + (Math.random() - 0.5) * 0.15)));
 
       setDrones(prev => prev.map(d0 => {
+        if (liveRef.current.has(d0.id)) return d0; // real aircraft: telemetry comes from the link
         if (d0.status === 'OFFLINE') return d0;
         const d = { ...d0, tasks: { ...d0.tasks }, history: { ...d0.history } };
         const now = Date.now();
@@ -333,5 +381,6 @@ export function useSurveillanceSimulation() {
     missionElapsedSec, uplinkGbps, routeProgress,
     isNight, nightMode, setNightMode, setSensorMode,
     toggleTask, setAutopilot, goToWaypoint, returnHome, setGimbal, setZoom, acknowledgeDetection, dispatchToDetection,
+    applyLiveTelemetry, releaseLive,
   };
 }

@@ -14,6 +14,34 @@ radar (100–500 unit swarm sim), live cockpit / PTT GCS, 3D light-show studio, 
 software architecture spec, and the fleet telemetry grid, plus the DTLS / TimescaleDB /
 Gazebo SITL / benchmark / radio / FAA-waiver labs.
 
+## Talking to a real aircraft
+
+The **link button** in the app bar (next to the theme toggle) connects the browser to a
+flight controller over **MAVLink** — the protocol PX4 and ArduPilot speak:
+
+| Transport | Browser API | Hardware | Range |
+| --- | --- | --- | --- |
+| **Bluetooth** | Web Bluetooth (BLE) | A BLE bridge on the flight controller's TELEM port exposing the Nordic UART Service — an ESP32 running a MAVLink-to-NUS sketch is the usual part. | ~30 m: pairing, pre-flight, pad checks |
+| **USB telemetry radio** | Web Serial, 57600 baud | SiK 915 MHz, mLRS or ELRS radio plugged into the laptop, or the controller's own USB port | kilometres |
+| **Simulation** | — | none | — |
+
+Both need **Chrome or Edge** (desktop, or Android for Bluetooth) over **HTTPS**, and a
+click — the browser shows its own device picker and never connects silently.
+
+Once linked, the Surveillance dashboard drives the selected aircraft from live
+telemetry (position, altitude, heading, speed, battery, GPS, radio RSSI) and
+**Return home** sends `MAV_CMD_NAV_RETURN_TO_LAUNCH` to the aircraft. The codec is
+`src/link/mavlink.ts` (v2 framing with CRC, the messages the dashboards read, and
+heartbeat / command encoding); the transports are `src/link/useAircraftLink.tsx`.
+
+**Not DJI.** DJI consumer and enterprise aircraft don't expose Bluetooth or MAVLink;
+they only connect through DJI's Mobile SDK or Cloud API. A custom-built aircraft on
+a Pixhawk / Cube / Holybro-class controller is what this link is for.
+
+**Video** does not travel over MAVLink. The feed panel stays synthetic until a video
+path exists (WebRTC from a companion computer, or an HDMI capture card via
+`getUserMedia`) — that's the next integration.
+
 ## Simulation, not hardware (yet)
 
 Every dashboard runs against a client-side simulation so it can be exercised without a

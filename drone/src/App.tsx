@@ -18,6 +18,7 @@ import { RegulatoryComplianceModal } from './components/production/RegulatoryCom
 import { LightShowDashboard } from './dashboards/LightShowDashboard';
 import { DefenseDashboard } from './dashboards/DefenseDashboard';
 import { SurveillanceDashboard } from './dashboards/SurveillanceDashboard';
+import { LinkButton } from './link/LinkButton';
 import { 
   Compass, 
   Layers, 
@@ -181,6 +182,7 @@ export default function App() {
           )}
 
           <div className="flex items-center gap-2">
+            <LinkButton />
             <button
               onClick={() => setTheme(t => (t === 'light' ? 'dark' : 'light'))}
               aria-label={theme === 'light' ? 'Switch to dark (night ops)' : 'Switch to light'}
