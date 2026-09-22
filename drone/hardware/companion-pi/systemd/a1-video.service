@@ -1,0 +1,14 @@
+[Unit]
+Description=All in 1 Drone Command — WebRTC video streamer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pi
+WorkingDirectory=/opt/a1/video
+ExecStart=/home/pi/a1/bin/python3 /opt/a1/video/stream.py --device /dev/video0 --size 1280x720 --fps 30 --mjpeg --port 8080
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

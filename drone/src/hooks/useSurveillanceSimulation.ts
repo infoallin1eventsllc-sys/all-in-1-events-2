@@ -206,6 +206,14 @@ export function useSurveillanceSimulation() {
     });
   }, [patch]);
 
+  /** Map pixel → WGS84 using the live origin; null until a real fix has been seen. */
+  const waypointLatLon = useCallback((index: number): { lat: number; lon: number } | null => {
+    const o = originRef.current; if (!o) return null;
+    const w = WAYPOINTS[index]; if (!w) return null;
+    const mPerDegLat = 111320, mPerDegLon = 111320 * Math.cos((o.lat * Math.PI) / 180);
+    return { lat: o.lat - ((w.y - SITE.y) * METERS_PER_PX) / mPerDegLat, lon: o.lon + ((w.x - SITE.x) * METERS_PER_PX) / mPerDegLon };
+  }, []);
+
   /** Hand an aircraft back to the simulation (link dropped or disconnected). */
   const releaseLive = useCallback((id: string) => { liveRef.current.delete(id); if (liveRef.current.size === 0) originRef.current = null; }, []);
 
@@ -381,6 +389,6 @@ export function useSurveillanceSimulation() {
     missionElapsedSec, uplinkGbps, routeProgress,
     isNight, nightMode, setNightMode, setSensorMode,
     toggleTask, setAutopilot, goToWaypoint, returnHome, setGimbal, setZoom, acknowledgeDetection, dispatchToDetection,
-    applyLiveTelemetry, releaseLive,
+    applyLiveTelemetry, releaseLive, waypointLatLon,
   };
 }

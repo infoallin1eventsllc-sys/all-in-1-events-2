@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Crosshair, Sun, Moon, Flame, UserSearch, Home, ChevronUp, ChevronDown, ZoomIn, ZoomOut, Map as MapIcon, Video, Maximize2, Clock3, SunMedium, MoonStar,
+  Crosshair, Sun, Moon, Flame, UserSearch, Home, ChevronUp, ChevronDown, ZoomIn, ZoomOut, Map as MapIcon, Video, Maximize2, Clock3, SunMedium, MoonStar, Upload, Cable, Cpu, Globe,
 } from 'lucide-react';
 import { useSurveillanceSimulation, WAYPOINTS, type PatrolDrone, type Detection } from '../hooks/useSurveillanceSimulation';
 import { SurveillanceMapCanvas } from './SurveillanceMapCanvas';
 import { DroneFeedCanvas } from './DroneFeedCanvas';
 import { useAircraftLink } from '../link/useAircraftLink';
+import { useVideoSource, type VideoSource } from '../link/useVideoSource';
 import {
   Headline, Card, Section, Divider, Tabs, Stat, Row, Chip, Dot, Meter, Sparkline, ToolButton, IconButton, Toggle, Segmented, Activity, formatClock, useAccentHex, type Tone,
 } from './ui';
@@ -26,14 +27,35 @@ export const SurveillanceDashboard: React.FC = () => {
   const [rail, setRail] = useState<RailTab>('AIRCRAFT');
   const [hero, setHero] = useState<'CAMERA' | 'MAP'>('CAMERA');
 
-  // Real aircraft: while the link is live, the selected aircraft is driven by MAVLink telemetry.
+  // Real aircraft: every vehicle heard on the link takes over an aircraft slot, primary first.
   const link = useAircraftLink();
-  const liveId = link.live ? selectedDroneId : null;
+  const liveSysIds = link.live ? Object.keys(link.vehicles).map(Number).sort((a, b) => (a === link.primarySysId ? -1 : b === link.primarySysId ? 1 : a - b)) : [];
+  const liveIds = liveSysIds.map((_, i) => drones[i]?.id).filter(Boolean) as string[];
   useEffect(() => {
-    if (!liveId) return;
-    sim.applyLiveTelemetry(liveId, link.telemetry);
-  }, [liveId, link.telemetry]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => () => { if (liveId) sim.releaseLive(liveId); }, [liveId]); // eslint-disable-line react-hooks/exhaustive-deps
+    liveSysIds.forEach((sys, i) => { const id = drones[i]?.id; if (id) sim.applyLiveTelemetry(id, link.vehicles[sys]); });
+  }, [link.vehicles]); // eslint-disable-line react-hooks/exhaustive-deps
+  const liveKey = liveIds.join(',');
+  useEffect(() => () => { liveKey.split(',').filter(Boolean).forEach(id => sim.releaseLive(id)); }, [liveKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const liveId = liveIds.includes(selectedDroneId) ? selectedDroneId : null;
+  const isPrimary = liveId === liveIds[0];
+
+  // Send an aircraft to a waypoint: the simulation always; the real aircraft when it is the linked one.
+  const sendToWaypoint = (i: number) => {
+    sim.goToWaypoint(selectedDroneId, i);
+    if (liveId && isPrimary) { const ll = sim.waypointLatLon(i); if (ll) link.goTo(ll.lat, ll.lon, WAYPOINTS[i].altM).catch(() => {}); }
+  };
+  const uploadPatrol = () => {
+    const items = WAYPOINTS.map((w, i) => { const ll = sim.waypointLatLon(i); return ll ? { lat: ll.lat, lon: ll.lon, altRelM: w.altM, holdS: w.holdSec } : null; });
+    if (items.some(x => !x)) return;
+    link.uploadMission(items as { lat: number; lon: number; altRelM: number; holdS: number }[], true).catch(() => {});
+  };
+
+  // Video: synthetic by default; a capture device or the companion computer's WebRTC stream when chosen.
+  const [videoSource, setVideoSource] = useState<VideoSource>({ kind: 'SIM' });
+  const [videoMenu, setVideoMenu] = useState(false);
+  const [webrtcUrl, setWebrtcUrl] = useState(() => { try { return localStorage.getItem('a1-webrtc-url') || 'http://192.168.1.50:8080'; } catch { return 'http://192.168.1.50:8080'; } });
+  const video = useVideoSource(videoSource);
+  const videoLabel = videoSource.kind === 'CAPTURE' ? 'CAPTURE · LIVE' : videoSource.kind === 'WEBRTC' ? 'WEBRTC · LIVE' : undefined;
 
   const airborne = drones.filter(x => x.status !== 'OFFLINE');
   const unacked = detections.filter(x => !x.acknowledged);
@@ -42,10 +64,10 @@ export const SurveillanceDashboard: React.FC = () => {
   const battTone: Tone = d.battery > 30 ? 'ok' : d.battery > 15 ? 'warn' : 'bad';
 
   const feed = (
-    <DroneFeedCanvas key={d.id} drone={d} isNight={isNight} width={960} onSetSensorMode={m => sim.setSensorMode(d.id, m)} onSetZoom={z => sim.setZoom(d.id, z)} className="w-full h-full" />
+    <DroneFeedCanvas key={d.id} drone={d} isNight={isNight} width={960} onSetSensorMode={m => sim.setSensorMode(d.id, m)} onSetZoom={z => sim.setZoom(d.id, z)} className="w-full h-full" videoStream={video.stream} videoLabel={videoLabel} />
   );
   const map = (
-    <SurveillanceMapCanvas drones={drones} detections={detections} selectedDroneId={selectedDroneId} onSelectDrone={setSelectedDroneId} onSelectWaypoint={i => sim.goToWaypoint(selectedDroneId, i)} />
+    <SurveillanceMapCanvas drones={drones} detections={detections} selectedDroneId={selectedDroneId} onSelectDrone={setSelectedDroneId} onSelectWaypoint={sendToWaypoint} />
   );
 
   return (
@@ -53,7 +75,7 @@ export const SurveillanceDashboard: React.FC = () => {
       <Headline
         title="Patrol"
         context={`Venue compound · ${WAYPOINTS.length}-point loop · ${d.id} selected${nextWp ? ` · next ${nextWp.label}` : ''}`}
-        status={liveId ? { label: `Live · ${link.deviceName}`, tone: 'ok', pulse: true } : { label: isNight ? 'Night · thermal' : 'Daylight', tone: isNight ? 'accent' : 'neutral' }}
+        status={liveIds.length ? { label: `Live · ${liveIds.length} aircraft on ${link.deviceName}`, tone: 'ok', pulse: true } : { label: isNight ? 'Night · thermal' : 'Daylight', tone: isNight ? 'accent' : 'neutral' }}
         stats={[
           { label: 'Airborne', value: `${airborne.length} / ${drones.length}` },
           { label: 'Flight time', value: formatClock(missionElapsedSec) },
@@ -124,8 +146,33 @@ export const SurveillanceDashboard: React.FC = () => {
               <span className="num text-[12px] text-ink w-7 text-center">{d.zoom}×</span>
               <IconButton icon={<ZoomIn />} label="Zoom in" disabled={offline} onClick={() => sim.setZoom(d.id, Math.min(10, d.zoom + 1))} />
               <span className="ml-auto flex items-center gap-3">
+                <span className="relative">
+                  <ToolButton icon={videoSource.kind === 'SIM' ? <Cpu /> : videoSource.kind === 'CAPTURE' ? <Cable /> : <Globe />} label={videoSource.kind === 'SIM' ? 'Video: simulation' : videoSource.kind === 'CAPTURE' ? 'Video: capture' : 'Video: aircraft'} active={videoSource.kind !== 'SIM'} onClick={() => setVideoMenu(m => !m)} />
+                  {videoMenu && (
+                    <div className="absolute right-0 bottom-full mb-2 w-[320px] rounded-[var(--radius-card)] border border-line bg-surface shadow-[0_12px_40px_rgba(16,24,40,0.14)] p-2 z-40">
+                      <div className="px-2 pt-1 pb-2 flex items-center justify-between"><span className="text-[13px] font-semibold text-ink">Video source</span><Chip tone={video.status === 'LIVE' ? 'ok' : video.status === 'CONNECTING' ? 'warn' : video.status === 'ERROR' ? 'bad' : 'neutral'}>{video.status === 'IDLE' ? 'Simulation' : video.status[0] + video.status.slice(1).toLowerCase()}</Chip></div>
+                      <button onClick={() => { setVideoSource({ kind: 'SIM' }); setVideoMenu(false); }} className={`w-full text-left rounded-lg px-2 py-2 text-[13px] ${videoSource.kind === 'SIM' ? 'bg-accent-soft' : 'hover:bg-surface-2'}`}><span className="font-medium text-ink">Simulation</span><span className="block text-[11px] text-ink-3">Synthetic gimbal renderer</span></button>
+                      <button onClick={() => { setVideoSource({ kind: 'CAPTURE' }); video.refreshDevices(); }} className={`w-full text-left rounded-lg px-2 py-2 text-[13px] ${videoSource.kind === 'CAPTURE' ? 'bg-accent-soft' : 'hover:bg-surface-2'}`}><span className="font-medium text-ink">Capture device</span><span className="block text-[11px] text-ink-3">HDMI capture stick or USB camera on this computer</span></button>
+                      {videoSource.kind === 'CAPTURE' && video.devices.length > 0 && (
+                        <select value={videoSource.deviceId ?? ''} onChange={e => setVideoSource({ kind: 'CAPTURE', deviceId: e.target.value || undefined })} className="mx-2 mb-1 w-[calc(100%-16px)] rounded-md border border-line bg-surface px-2 py-1 text-[12px] text-ink">
+                          <option value="">Default camera</option>
+                          {video.devices.map(dv => <option key={dv.id} value={dv.id}>{dv.label}</option>)}
+                        </select>
+                      )}
+                      <div className={`rounded-lg px-2 py-2 ${videoSource.kind === 'WEBRTC' ? 'bg-accent-soft' : ''}`}>
+                        <div className="text-[13px] font-medium text-ink">Aircraft (WebRTC)</div>
+                        <div className="text-[11px] text-ink-3">Companion computer streamer, hardware/companion-pi/video</div>
+                        <div className="mt-1.5 flex gap-1.5">
+                          <input value={webrtcUrl} onChange={e => { setWebrtcUrl(e.target.value); try { localStorage.setItem('a1-webrtc-url', e.target.value); } catch { /* ignore */ } }} placeholder="http://<pi>:8080" className="flex-1 min-w-0 rounded-md border border-line bg-surface px-2 py-1 text-[12px] text-ink num" />
+                          <ToolButton size="sm" primary label="Connect" onClick={() => setVideoSource({ kind: 'WEBRTC', url: webrtcUrl })} />
+                        </div>
+                      </div>
+                      {video.error && <div className="mx-2 mt-1 rounded bg-bad-soft px-2.5 py-1.5 text-[11px] text-bad">{video.error}</div>}
+                    </div>
+                  )}
+                </span>
                 <span className="w-40"><Toggle on={d.autopilot} onChange={on => sim.setAutopilot(d.id, on)} label="Autopilot" /></span>
-                <ToolButton icon={<Home />} label="Return home" danger disabled={offline || d.status === 'RTH'} onClick={() => { sim.returnHome(d.id); if (liveId) link.returnToLaunch(); }} title={liveId ? 'Sends MAV_CMD_NAV_RETURN_TO_LAUNCH to the aircraft' : undefined} />
+                <ToolButton icon={<Home />} label="Return home" danger disabled={offline || d.status === 'RTH'} onClick={() => { sim.returnHome(d.id); if (liveId && isPrimary) link.returnToLaunch(); }} title={liveId ? 'Sends MAV_CMD_NAV_RETURN_TO_LAUNCH to the aircraft' : undefined} />
               </span>
             </div>
           </Card>
@@ -194,6 +241,17 @@ export const SurveillanceDashboard: React.FC = () => {
                     <Stat label="ETA" value={routeProgress.etaSec > 0 ? formatClock(routeProgress.etaSec) : '—'} size="sm" />
                   </div>
                 </Section>
+                {liveId && isPrimary && (
+                  <div className="rounded-lg bg-accent-soft px-3 py-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-[12px] text-ink">Fly this loop on {liveId}</div>
+                      <ToolButton size="sm" primary icon={<Upload />} label={link.missionUpload.state === 'UPLOADING' ? `Uploading ${link.missionUpload.sent}/${link.missionUpload.total}` : 'Upload patrol'} disabled={link.missionUpload.state === 'UPLOADING' || !link.preflight.ok} onClick={uploadPatrol} title={link.preflight.ok ? 'Sends the five waypoints as a MAVLink mission and starts AUTO' : 'Pre-flight gate not satisfied (see link popover)'} />
+                    </div>
+                    {link.missionUpload.state === 'DONE' && <div className="mt-1 text-[11px] text-ok">Mission on the aircraft · AUTO started</div>}
+                    {link.missionUpload.state === 'FAILED' && <div className="mt-1 text-[11px] text-bad">{link.missionUpload.error}</div>}
+                    {link.telemetry.missionCurrent > 0 && <div className="mt-1 text-[11px] text-ink-2">Aircraft reports mission item {link.telemetry.missionCurrent}</div>}
+                  </div>
+                )}
                 <Divider />
                 <Section title="Waypoints" right="click to send the aircraft">
                   <ol className="-mx-2">
@@ -201,7 +259,7 @@ export const SurveillanceDashboard: React.FC = () => {
                       const isNext = i === d.targetWpIndex;
                       return (
                         <li key={w.id}>
-                          <button onClick={() => sim.goToWaypoint(selectedDroneId, i)} disabled={offline}
+                          <button onClick={() => sendToWaypoint(i)} disabled={offline}
                             className={`w-full flex items-center justify-between gap-3 rounded-lg px-2 py-2 text-[13px] transition-colors disabled:opacity-40 ${isNext ? 'bg-accent-soft text-ink' : 'text-ink-2 hover:bg-surface-2'}`}>
                             <span className="flex items-center gap-2.5"><span className={`num text-[11px] font-semibold w-8 ${isNext ? 'text-accent' : 'text-ink-3'}`}>{w.id}</span>{w.label}</span>
                             <span className="num text-[11px] text-ink-3">{w.altM} m · hold {w.holdSec}s</span>

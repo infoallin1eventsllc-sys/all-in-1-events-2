@@ -28,19 +28,54 @@ flight controller over **MAVLink** — the protocol PX4 and ArduPilot speak:
 Both need **Chrome or Edge** (desktop, or Android for Bluetooth) over **HTTPS**, and a
 click — the browser shows its own device picker and never connects silently.
 
-Once linked, the Surveillance dashboard drives the selected aircraft from live
-telemetry (position, altitude, heading, speed, battery, GPS, radio RSSI) and
-**Return home** sends `MAV_CMD_NAV_RETURN_TO_LAUNCH` to the aircraft. The codec is
-`src/link/mavlink.ts` (v2 framing with CRC, the messages the dashboards read, and
-heartbeat / command encoding); the transports are `src/link/useAircraftLink.tsx`.
+Once linked, every vehicle heard on the radio takes over an aircraft slot in the
+Surveillance dashboard (routing by MAVLink system id), driven by live telemetry —
+position, altitude, heading, speed, battery, GPS, radio RSSI. The link popover shows a
+**pre-flight gate** (heartbeat, 3D fix, ≥10 satellites, HDOP, battery, link) and the
+flight commands: **Arm · Take off · Land · Return to launch**. In the Route tab,
+clicking a waypoint sends a GUIDED go-to, and **Upload patrol** pushes the five
+waypoints as a MAVLink mission and starts AUTO. The codec is `src/link/mavlink.ts`
+(v2 framing with CRC, decoders, heartbeat / command / mission encoders; `npm test`);
+the transports and handshakes are `src/link/useAircraftLink.tsx`. ArduCopter is the
+reference autopilot for mode numbers.
 
 **Not DJI.** DJI consumer and enterprise aircraft don't expose Bluetooth or MAVLink;
 they only connect through DJI's Mobile SDK or Cloud API. A custom-built aircraft on
 a Pixhawk / Cube / Holybro-class controller is what this link is for.
 
-**Video** does not travel over MAVLink. The feed panel stays synthetic until a video
-path exists (WebRTC from a companion computer, or an HDMI capture card via
-`getUserMedia`) — that's the next integration.
+**Video** does not travel over MAVLink. The action bar's **Video** button switches the
+feed to a **capture device** (HDMI capture stick or USB camera on this computer —
+works with DJI aircraft too) or to **WebRTC from the aircraft's companion computer**
+(`hardware/companion-pi/video`). The HUD stays; the synthetic renderer is replaced.
+
+## Hardware kit
+
+| Folder | What |
+| --- | --- |
+| `hardware/esp32-ble-bridge/` | Arduino sketch + wiring: MAVLink TELEM port → Bluetooth LE (Nordic UART) |
+| `hardware/companion-pi/video/` | aiortc WebRTC streamer for the aircraft's camera(s) |
+| `hardware/companion-pi/remoteid/` | ASTM F3411 Remote ID receiver → WebSocket, the legal counter-drone sensor |
+| `hardware/companion-pi/systemd/` | services for both |
+
+## Defense on real data, legally
+
+**Sensors → Remote ID receiver** connects to the venue Pi and plots every Remote ID
+broadcast — the aircraft *and the operator's position* — relative to the **venue
+position** you set. The action bar's default posture is **detect & alert**: mark
+priority, notify security, export the track log. Effector controls (jam / GNSS deny /
+takeover) are a federal crime for anyone but a few US agencies and stay hidden unless
+an authorized integrator enables them in Sensors; every effector command is logged.
+
+## Light show handoff
+
+**Cues → Export show package** downloads a zip with one CSV per aircraft
+(`Time [msec],x,y,z,Red,Green,Blue`, z up) and a manifest — the format Skybrush
+Studio / Blender and Verge Aero import. The show-control stack flies it.
+
+## Where this stands
+
+[`docs/COMPLETION.md`](docs/COMPLETION.md): what's built, what needs hardware, the
+bill of materials, the regulatory path, and the next engineering steps in order.
 
 ## Simulation, not hardware (yet)
 

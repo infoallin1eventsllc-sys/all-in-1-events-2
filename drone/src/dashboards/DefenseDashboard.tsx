@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
-  Radio, Radar, Eye, Ear, Zap, RotateCw, XOctagon, Target, Flag, Plus, Pause, Play, Layers, Video, Map as MapIcon, Maximize2, SunMedium, MoonStar,
+  Radio, Radar, Eye, Ear, Zap, RotateCw, XOctagon, Target, Flag, Plus, Pause, Play, Layers, Video, Map as MapIcon, Maximize2, SunMedium, MoonStar, Siren, Download, MapPin, Wifi, ShieldAlert,
 } from 'lucide-react';
 import { useDefenseSimulation, type Threat, type EffectorType, type ThreatClass } from '../hooks/useDefenseSimulation';
 import { DefenseMapCanvas } from './DefenseMapCanvas';
@@ -9,7 +9,7 @@ import { Headline, Card, Section, Divider, Tabs, Stat, Row, Chip, Dot, Meter, To
 
 const LEVEL_TONE: Record<Threat['level'], Tone> = { LOW: 'neutral', MEDIUM: 'warn', HIGH: 'warn', CRITICAL: 'bad' };
 const LEVEL_LABEL: Record<Threat['level'], string> = { LOW: 'Low', MEDIUM: 'Medium', HIGH: 'High', CRITICAL: 'Critical' };
-const CLASS_LABEL: Record<ThreatClass, string> = { DJI_OCUSYNC: 'DJI OcuSync', FPV_ANALOG: 'FPV analog', WIFI_UAS: 'Wi-Fi drone', FIXED_WING: 'Fixed wing', UNKNOWN: 'Unclassified' };
+const CLASS_LABEL: Record<ThreatClass, string> = { DJI_OCUSYNC: 'DJI OcuSync', FPV_ANALOG: 'FPV analog', WIFI_UAS: 'Wi-Fi drone', FIXED_WING: 'Fixed wing', UNKNOWN: 'Unclassified', REMOTE_ID: 'Remote ID' };
 const EFFECTORS: { id: EffectorType; label: string; title: string }[] = [
   { id: 'RF_JAM', label: 'RF jam', title: 'Sever the control and video link' },
   { id: 'GNSS_DENY', label: 'GNSS deny', title: 'Deny the satellite fix' },
@@ -40,6 +40,9 @@ export const DefenseDashboard: React.FC = () => {
   const hour = new Date().getHours();
   const [night, setNight] = useState<boolean>(hour >= 19 || hour < 6);
   const [camMode, setCamMode] = useState<'EO' | 'IR'>(night ? 'IR' : 'EO');
+  const [ridUrl, setRidUrl] = useState(sim.remoteId.url);
+  const [venueLat, setVenueLat] = useState(sim.venue ? String(sim.venue.lat) : '');
+  const [venueLon, setVenueLon] = useState(sim.venue ? String(sim.venue.lon) : '');
 
   const active = useMemo(
     () => threats.filter(t => t.status === 'TRACKING' || t.status === 'DISRUPTING').sort((a, b) => Number(b.priority) - Number(a.priority) || sim.rangeM(a) - sim.rangeM(b)),
@@ -103,30 +106,42 @@ export const DefenseDashboard: React.FC = () => {
             </button>
           </div>
 
-          {/* Action bar: effector + the decisions */}
+          {/* Action bar. Default posture is detect-and-alert; effectors appear only for authorized integrators. */}
           <Card padded={false} className="px-3 py-2.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <Segmented value={dz.effector} onChange={sim.setEffector} items={EFFECTORS.map(e => ({ id: e.id, label: e.label, title: e.title }))} />
-              <span className="flex items-center gap-2 ml-1">
-                <span className="text-[11px] text-ink-3">Power</span>
-                <input type="range" min={10} max={100} value={dz.powerPct} onChange={e => sim.setPower(Number(e.target.value))} aria-label="Effector power" className="w-24 h-1 cursor-pointer" />
-                <span className="num text-[12px] text-ink w-9">{dz.powerPct}%</span>
-              </span>
-              <span className="flex items-center gap-1">
-                {([['b24', '2.4 GHz'], ['b58', '5.8 GHz'], ['gnss', 'GNSS']] as const).map(([k, label]) => (
-                  <ToolButton key={k} size="sm" label={label} active={dz.bands[k]} onClick={() => sim.toggleBand(k)} title={`Gate the ${label} band`} />
-                ))}
-              </span>
-              <span className="w-px h-6 bg-line mx-1" />
-              <ToolButton icon={<Zap />} label="Pulse" onClick={sim.pulseBurst} title="1.5 s wideband burst inside the engage ring" />
-              <ToolButton icon={<RotateCw />} label="Sweep" active={dz.sweepActive} onClick={sim.toggleSweep} title="360° rotating beam" />
-              <span className="ml-auto flex items-center gap-2">
-                <span className="w-24"><Toggle on={dz.autoEngage} onChange={sim.setAutoEngage} label="Auto" /></span>
-                <ToolButton icon={<XOctagon />} label="Stand down" disabled={!anyDisrupting && !dz.sweepActive} onClick={sim.cancelDisruption} />
-                <ToolButton icon={<Target />} label={selected ? `Disrupt ${selected.id}` : 'Disrupt target'} primary disabled={!selected || selected.status !== 'TRACKING'} onClick={() => selected && sim.disruptTarget(selected.id)} />
-                <ToolButton label="Disrupt all" danger onClick={sim.disruptAll} />
-              </span>
-            </div>
+            {sim.effectorsAuthorized ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <Segmented value={dz.effector} onChange={sim.setEffector} items={EFFECTORS.map(e => ({ id: e.id, label: e.label, title: e.title }))} />
+                <span className="flex items-center gap-2 ml-1">
+                  <span className="text-[11px] text-ink-3">Power</span>
+                  <input type="range" min={10} max={100} value={dz.powerPct} onChange={e => sim.setPower(Number(e.target.value))} aria-label="Effector power" className="w-24 h-1 cursor-pointer" />
+                  <span className="num text-[12px] text-ink w-9">{dz.powerPct}%</span>
+                </span>
+                <span className="flex items-center gap-1">
+                  {([['b24', '2.4 GHz'], ['b58', '5.8 GHz'], ['gnss', 'GNSS']] as const).map(([k, label]) => (
+                    <ToolButton key={k} size="sm" label={label} active={dz.bands[k]} onClick={() => sim.toggleBand(k)} title={`Gate the ${label} band`} />
+                  ))}
+                </span>
+                <span className="w-px h-6 bg-line mx-1" />
+                <ToolButton icon={<Zap />} label="Pulse" onClick={sim.pulseBurst} title="1.5 s wideband burst inside the engage ring" />
+                <ToolButton icon={<RotateCw />} label="Sweep" active={dz.sweepActive} onClick={sim.toggleSweep} title="360° rotating beam" />
+                <span className="ml-auto flex items-center gap-2">
+                  <span className="w-24"><Toggle on={dz.autoEngage} onChange={sim.setAutoEngage} label="Auto" /></span>
+                  <ToolButton icon={<XOctagon />} label="Stand down" disabled={!anyDisrupting && !dz.sweepActive} onClick={sim.cancelDisruption} />
+                  <ToolButton icon={<Target />} label={selected ? `Disrupt ${selected.id}` : 'Disrupt target'} primary disabled={!selected || selected.status !== 'TRACKING'} onClick={() => selected && sim.disruptTarget(selected.id)} />
+                  <ToolButton label="Disrupt all" danger onClick={sim.disruptAll} />
+                </span>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <Chip tone="ok">Detect &amp; alert</Chip>
+                <span className="text-[12px] text-ink-3 hidden md:inline">Locate the aircraft and its operator, alert security, hand off to law enforcement.</span>
+                <span className="ml-auto flex items-center gap-2">
+                  <ToolButton icon={<Flag />} label={selected?.priority ? 'Priority set' : 'Mark priority'} active={!!selected?.priority} disabled={!selected} onClick={() => selected && sim.setPriority(selected.id)} />
+                  <ToolButton icon={<Download />} label="Export log" onClick={sim.exportTrackLog} title="CSV of every track and event — the record for law enforcement" />
+                  <ToolButton icon={<Siren />} label={selected ? `Notify security · ${selected.id}` : 'Notify security'} primary onClick={() => sim.notifySecurity(selected?.id)} />
+                </span>
+              </div>
+            )}
           </Card>
         </div>
 
@@ -145,7 +160,8 @@ export const DefenseDashboard: React.FC = () => {
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="text-[15px] font-semibold text-ink">{selected.id}</div>
-                        <div className="text-[12px] text-ink-3">{CLASS_LABEL[selected.classification]} · {selected.protocol}</div>
+                        <div className="text-[12px] text-ink-3">{CLASS_LABEL[selected.classification]} · {selected.protocol}{selected.live ? ` · ${selected.live.uasId}` : ''}</div>
+                        {selected.live && <div className="text-[11px] text-ok">Live · Remote ID{selected.operator ? ` · operator at ${selected.operator.lat.toFixed(5)}, ${selected.operator.lon.toFixed(5)}` : ''}{selected.live.operatorId ? ` · ${selected.live.operatorId}` : ''}</div>}
                       </div>
                       <Chip tone={LEVEL_TONE[selected.level]} pulse={selected.level === 'CRITICAL'}>{LEVEL_LABEL[selected.level]}</Chip>
                     </div>
@@ -207,7 +223,38 @@ export const DefenseDashboard: React.FC = () => {
                   </ul>
                 </Section>
                 <Divider />
-                <Section title="RF spectrum" right="live">
+                <Section title="Remote ID receiver" right={<Chip tone={sim.remoteId.status === 'ON' ? 'ok' : sim.remoteId.status === 'CONNECTING' ? 'warn' : sim.remoteId.status === 'ERROR' ? 'bad' : 'neutral'}>{sim.remoteId.status === 'ON' ? 'Receiving' : sim.remoteId.status === 'CONNECTING' ? 'Connecting' : sim.remoteId.status === 'ERROR' ? 'Error' : 'Off'}</Chip>}>
+                  <p className="text-[11px] text-ink-3 mb-2">The venue Pi (hardware/companion-pi/remoteid) decodes the Remote ID every drone broadcasts and streams tracks here — aircraft <em>and</em> operator position.</p>
+                  <div className="flex gap-1.5">
+                    <input value={ridUrl} onChange={e => setRidUrl(e.target.value)} placeholder="ws://<pi>:8765" className="flex-1 min-w-0 rounded-md border border-line bg-surface px-2 py-1 text-[12px] text-ink num" />
+                    {sim.remoteId.status === 'ON' || sim.remoteId.status === 'CONNECTING'
+                      ? <ToolButton size="sm" label="Disconnect" onClick={sim.disconnectRemoteId} />
+                      : <ToolButton size="sm" primary icon={<Wifi />} label="Connect" onClick={() => sim.connectRemoteId(ridUrl)} />}
+                  </div>
+                  {sim.remoteId.error && <div className="mt-1.5 rounded bg-bad-soft px-2.5 py-1.5 text-[11px] text-bad">{sim.remoteId.error}</div>}
+                  {sim.remoteId.status === 'ON' && <div className="mt-1.5 text-[11px] text-ink-3">{threats.filter(t => t.live).length} live tracks · last message {sim.remoteId.lastMessageMs ? `${Math.round((Date.now() - sim.remoteId.lastMessageMs) / 1000)} s ago` : '—'}</div>}
+                </Section>
+                <Divider />
+                <Section title="Venue position" right={sim.venue ? 'set' : 'not set'}>
+                  <p className="text-[11px] text-ink-3 mb-2">The protected asset's coordinates. Real tracks are placed on the map relative to this point.</p>
+                  <div className="flex gap-1.5">
+                    <input value={venueLat} onChange={e => setVenueLat(e.target.value)} placeholder="lat" inputMode="decimal" className="flex-1 min-w-0 rounded-md border border-line bg-surface px-2 py-1 text-[12px] text-ink num" />
+                    <input value={venueLon} onChange={e => setVenueLon(e.target.value)} placeholder="lon" inputMode="decimal" className="flex-1 min-w-0 rounded-md border border-line bg-surface px-2 py-1 text-[12px] text-ink num" />
+                    <ToolButton size="sm" label="Set" disabled={!Number.isFinite(parseFloat(venueLat)) || !Number.isFinite(parseFloat(venueLon))} onClick={() => sim.setVenue({ lat: parseFloat(venueLat), lon: parseFloat(venueLon) })} />
+                    <IconButton icon={<MapPin />} label="Use my location" onClick={() => { sim.useMyLocation(); }} />
+                  </div>
+                  {sim.venue && <div className="mt-1.5 num text-[11px] text-ink-3">{sim.venue.lat.toFixed(5)}, {sim.venue.lon.toFixed(5)}</div>}
+                </Section>
+                <Divider />
+                <Section title="Effector integration" right={<Chip tone={sim.effectorsAuthorized ? 'bad' : 'ok'}>{sim.effectorsAuthorized ? 'Enabled' : 'Locked'}</Chip>}>
+                  <div className="rounded-lg bg-surface-2 px-3 py-2 text-[11px] text-ink-2 flex gap-2">
+                    <ShieldAlert className="w-4 h-4 shrink-0 text-ink-3" />
+                    <span>Jamming, GNSS denial or taking over an aircraft is a federal crime for anyone but a few US federal agencies (18 U.S.C. 32, 47 U.S.C. 333). Enable only as an authorized integrator on a government contract. Every effector command is logged.</span>
+                  </div>
+                  <div className="mt-2"><Toggle on={sim.effectorsAuthorized} onChange={sim.setEffectorsAuthorized} label="I am an authorized effector integrator" description="Reveals the effector bar and auto-engage" /></div>
+                </Section>
+                <Divider />
+                <Section title="RF spectrum" right="simulated until an SDR is attached">
                   <div className="space-y-3">
                     <Spectrum bins={metrics.spectrum24} label="2.4 GHz" range="2400–2500 MHz" enabled={dz.bands.b24} accent={accent} />
                     <Spectrum bins={metrics.spectrum58} label="5.8 GHz" range="5725–5875 MHz" enabled={dz.bands.b58} accent={accent} />

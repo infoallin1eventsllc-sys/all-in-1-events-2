@@ -141,6 +141,18 @@ export const DefenseMapCanvas: React.FC<Props> = ({ threats, sensors, disruption
           ctx.strokeStyle = `rgba(255,255,255,${selected ? 0.25 : 0.07})`; ctx.lineWidth = 1; ctx.stroke();
         }
 
+        // Operator (pilot) position from Remote ID: the thing security actually walks to.
+        if (t.operator) {
+          ctx.setLineDash([3, 4]); ctx.strokeStyle = 'rgba(251,191,36,0.6)'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(t.x, t.y); ctx.lineTo(t.operator.x, t.operator.y); ctx.stroke(); ctx.setLineDash([]);
+          ctx.beginPath(); ctx.arc(t.operator.x, t.operator.y - 5, 3, 0, Math.PI * 2); ctx.fillStyle = '#fbbf24'; ctx.fill();
+          ctx.beginPath(); ctx.moveTo(t.operator.x, t.operator.y - 2); ctx.lineTo(t.operator.x, t.operator.y + 6); ctx.moveTo(t.operator.x - 4, t.operator.y + 1); ctx.lineTo(t.operator.x + 4, t.operator.y + 1);
+          ctx.moveTo(t.operator.x, t.operator.y + 6); ctx.lineTo(t.operator.x - 3, t.operator.y + 11); ctx.moveTo(t.operator.x, t.operator.y + 6); ctx.lineTo(t.operator.x + 3, t.operator.y + 11);
+          ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 1.5; ctx.stroke();
+          ctx.font = '600 10px ui-monospace, SFMono-Regular, Menlo, monospace'; ctx.fillStyle = 'rgba(254,243,199,0.95)';
+          ctx.fillText('OPERATOR', t.operator.x + 8, t.operator.y + 4);
+        }
+
         // Track glyph: rotated triangle for heading
         const hd = Math.atan2(t.vy, t.vx);
         ctx.save(); ctx.translate(t.x, t.y); ctx.rotate(hd);

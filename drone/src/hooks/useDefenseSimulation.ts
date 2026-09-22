@@ -14,7 +14,7 @@ export const MAP_W = 1200;
 export const MAP_H = 720;
 export const METERS_PER_PX = 2.2; // map scale: 1200px ≈ 2.6 km
 
-export type ThreatClass = 'DJI_OCUSYNC' | 'FPV_ANALOG' | 'WIFI_UAS' | 'FIXED_WING' | 'UNKNOWN';
+export type ThreatClass = 'DJI_OCUSYNC' | 'FPV_ANALOG' | 'WIFI_UAS' | 'FIXED_WING' | 'UNKNOWN' | 'REMOTE_ID';
 export type ThreatLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type ThreatStatus = 'TRACKING' | 'DISRUPTING' | 'NEUTRALIZED' | 'LOST';
 export type EffectorType = 'RF_JAM' | 'GNSS_DENY' | 'PROTOCOL_TAKEOVER';
@@ -36,6 +36,10 @@ export interface Threat {
   disruptProgress: number;       // 0..1 while DISRUPTING
   trail: { x: number; y: number }[];
   confidence: number;            // 0..1 classifier confidence
+  /** Set on tracks fed by a real sensor; the simulation never moves or auto-engages these. */
+  live?: { source: 'REMOTE_ID'; uasId: string; uaType: string; operatorId?: string; lastSeenMs: number; lat: number; lon: number };
+  /** Pilot position from Remote ID System messages, map px + WGS84. */
+  operator?: { x: number; y: number; lat: number; lon: number };
 }
 
 export interface Sensor {
@@ -88,7 +92,17 @@ const CLASS_META: Record<ThreatClass, { protocol: string; freq: () => number; sp
   WIFI_UAS:    { protocol: '802.11 Wi-Fi control', freq: () => 2412 + Math.floor(Math.random() * 11) * 5, speed: () => 6 + Math.random() * 6, level: 'MEDIUM' },
   FIXED_WING:  { protocol: 'ELRS 900 MHz', freq: () => 915, speed: () => 18 + Math.random() * 10, level: 'HIGH' },
   UNKNOWN:     { protocol: 'Unclassified emitter', freq: () => 2400 + Math.random() * 80, speed: () => 5 + Math.random() * 10, level: 'LOW' },
+  REMOTE_ID:   { protocol: 'Remote ID broadcast', freq: () => 2402, speed: () => 0, level: 'LOW' },
 };
+
+export interface RemoteIdState { url: string; status: 'OFF' | 'CONNECTING' | 'ON' | 'ERROR'; error: string; tracks: number; lastMessageMs: number }
+export interface Venue { lat: number; lon: number }
+
+/** WGS84 → map px around the protected asset. */
+function toMap(venue: Venue, lat: number, lon: number) {
+  const mPerDegLat = 111320, mPerDegLon = 111320 * Math.cos((venue.lat * Math.PI) / 180);
+  return { x: ASSET.x + ((lon - venue.lon) * mPerDegLon) / METERS_PER_PX, y: ASSET.y - ((lat - venue.lat) * mPerDegLat) / METERS_PER_PX };
+}
 
 const INITIAL_SENSORS: Sensor[] = [
   { id: 'RF-N', type: 'RF', x: MAP_W * 0.5, y: MAP_H * 0.16, rangePx: 380, status: 'ONLINE', bearingDeg: 0, fovDeg: 360 },
@@ -149,6 +163,18 @@ export function useDefenseSimulation() {
   const [neutralized, setNeutralized] = useState(7);
   const [spectrum, setSpectrum] = useState<{ s24: number[]; s58: number[] }>({ s24: new Array(32).fill(8), s58: new Array(32).fill(8) });
   const [paused, setPaused] = useState(false);
+  // Real sensor: Remote ID receiver (hardware/companion-pi/remoteid) over WebSocket.
+  const [remoteId, setRemoteId] = useState<RemoteIdState>({ url: (() => { try { return localStorage.getItem('a1-remoteid-url') || 'ws://192.168.1.60:8765'; } catch { return 'ws://192.168.1.60:8765'; } })(), status: 'OFF', error: '', tracks: 0, lastMessageMs: 0 });
+  const [venue, setVenueState] = useState<Venue | null>(() => { try { const v = localStorage.getItem('a1-venue'); return v ? JSON.parse(v) : null; } catch { return null; } });
+  const venueRef = useRef<Venue | null>(venue);
+  useEffect(() => { venueRef.current = venue; }, [venue]);
+  const wsRef = useRef<WebSocket | null>(null);
+  /**
+   * Effectors (jam / GNSS deny / takeover) are unlawful for anyone but a few US federal
+   * agencies. They stay hidden until an authorized integrator enables them; the product
+   * posture is detect → locate the operator → alert.
+   */
+  const [effectorsAuthorized, setEffectorsAuthorized] = useState<boolean>(() => { try { return localStorage.getItem('a1-effectors') === '1'; } catch { return false; } });
 
   const threatsRef = useRef(threats);
   const disruptionRef = useRef(disruption);
@@ -162,18 +188,24 @@ export function useDefenseSimulation() {
   }, []);
 
   // ---- Operator actions -------------------------------------------------
+  const effectorsRef = useRef(effectorsAuthorized);
+  useEffect(() => { effectorsRef.current = effectorsAuthorized; }, [effectorsAuthorized]);
+  const refuse = useCallback(() => log('CRITICAL', 'Effector command refused: not authorized. Posture is detect and alert; notify law enforcement.'), [log]);
+
   const disruptTarget = useCallback((id: string) => {
+    if (!effectorsRef.current) { refuse(); return; }
     setDisruption(d => ({ ...d, targetId: id }));
     setThreats(prev => prev.map(t => (t.id === id && t.status === 'TRACKING' ? { ...t, status: 'DISRUPTING', disruptProgress: 0 } : t)));
     const t = threatsRef.current.find(x => x.id === id);
     log('WARNING', `Effector ${disruptionRef.current.effector.replace('_', ' ')} engaged on ${id}${t ? ` (${t.protocol})` : ''}`, id);
-  }, [log]);
+  }, [log, refuse]);
 
   const disruptAll = useCallback(() => {
+    if (!effectorsRef.current) { refuse(); return; }
     setThreats(prev => prev.map(t => (t.status === 'TRACKING' ? { ...t, status: 'DISRUPTING', disruptProgress: 0 } : t)));
     setDisruption(d => ({ ...d, sweepActive: true }));
     log('CRITICAL', 'Area denial: all active tracks engaged, omni sweep on');
-  }, [log]);
+  }, [log, refuse]);
 
   const cancelDisruption = useCallback(() => {
     setThreats(prev => prev.map(t => (t.status === 'DISRUPTING' ? { ...t, status: 'TRACKING', disruptProgress: 0 } : t)));
@@ -182,15 +214,17 @@ export function useDefenseSimulation() {
   }, [log]);
 
   const pulseBurst = useCallback(() => {
+    if (!effectorsRef.current) { refuse(); return; }
     setDisruption(d => ({ ...d, pulseUntilMs: Date.now() + 1500 }));
     // A burst knocks RSSI down on every track inside the engage ring for a moment.
     setThreats(prev => prev.map(t => (rangeM(t) < ENGAGE_RING_PX * METERS_PER_PX ? { ...t, rssiDbm: t.rssiDbm - 12 } : t)));
     log('WARNING', '1.5 s wideband pulse burst emitted (engage ring)');
-  }, [log]);
+  }, [log, refuse]);
 
   const toggleSweep = useCallback(() => {
+    if (!effectorsRef.current) { refuse(); return; }
     setDisruption(d => { log('INFO', d.sweepActive ? 'Sector sweep off' : 'Sector sweep on: 360° rotating beam'); return { ...d, sweepActive: !d.sweepActive }; });
-  }, [log]);
+  }, [log, refuse]);
 
   const setPriority = useCallback((id: string) => {
     setThreats(prev => prev.map(t => ({ ...t, priority: t.id === id ? !t.priority : t.priority })));
@@ -210,6 +244,99 @@ export function useDefenseSimulation() {
     setThreats(prev => [...prev, t]);
     log('WARNING', `New emitter ${t.id}: ${t.protocol} @ ${t.freqMHz} MHz, ${rangeM(t).toFixed(0)} m`, t.id);
   }, [log]);
+
+  const setVenue = useCallback((v: Venue | null) => {
+    setVenueState(v);
+    try { if (v) localStorage.setItem('a1-venue', JSON.stringify(v)); else localStorage.removeItem('a1-venue'); } catch { /* ignore */ }
+    if (v) log('INFO', `Venue position set to ${v.lat.toFixed(5)}, ${v.lon.toFixed(5)}`);
+  }, [log]);
+
+  const useMyLocation = useCallback(() => {
+    if (!navigator.geolocation) { log('WARNING', 'Geolocation not available in this browser'); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => setVenue({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      err => log('WARNING', `Could not read location: ${err.message}`),
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  }, [setVenue, log]);
+
+  const setEffectorsAuthorizedPersist = useCallback((on: boolean) => {
+    setEffectorsAuthorized(on);
+    try { localStorage.setItem('a1-effectors', on ? '1' : '0'); } catch { /* ignore */ }
+    log(on ? 'CRITICAL' : 'INFO', on ? 'Effector integration enabled by an authorized integrator. Every effector command is logged.' : 'Effectors disabled. Detect-and-alert posture.');
+    if (!on) { setDisruption(d => ({ ...d, autoEngage: false, sweepActive: false, targetId: null })); setThreats(prev => prev.map(t => (t.status === 'DISRUPTING' ? { ...t, status: 'TRACKING', disruptProgress: 0 } : t))); }
+  }, [log]);
+
+  const notifySecurity = useCallback((id?: string) => {
+    const t = id ? threatsRef.current.find(x => x.id === id) : null;
+    const where = t?.operator ? ` · operator at ${t.operator.lat.toFixed(5)}, ${t.operator.lon.toFixed(5)}` : '';
+    log('CRITICAL', `Security notified${t ? `: ${t.id} ${t.protocol} at ${rangeM(t).toFixed(0)} m, ${t.altitudeM.toFixed(0)} m AGL${where}` : ' of all active tracks'}`, id);
+    // Integration point: SMS / radio dispatch / venue PA. The log is the audit record.
+  }, [log]);
+
+  const exportTrackLog = useCallback(() => {
+    const rows = [['time', 'track', 'class', 'protocol', 'status', 'level', 'range_m', 'alt_m', 'speed_mps', 'rssi_dbm', 'uas_id', 'operator_lat', 'operator_lon', 'operator_id']];
+    for (const t of threatsRef.current) rows.push([new Date(t.firstSeenMs).toISOString(), t.id, t.classification, t.protocol, t.status, t.level, rangeM(t).toFixed(0), t.altitudeM.toFixed(0), t.speedMps.toFixed(1), t.rssiDbm.toFixed(0), t.live?.uasId ?? '', t.operator?.lat.toFixed(6) ?? '', t.operator?.lon.toFixed(6) ?? '', t.live?.operatorId ?? '']);
+    for (const e of [...events].reverse()) rows.push([e.ts, e.threatId ?? '', 'EVENT', e.severity, e.text, '', '', '', '', '', '', '', '', '']);
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `airspace-log-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+  }, [events]);
+
+  /** Upsert a Remote ID track from the receiver's JSON. */
+  const ingestRemoteId = useCallback((rec: { addr: string; rssi: number; basic_id?: { uas_id?: string; ua_type?: string }; location?: { lat: number; lon: number; height_m?: number | null; geo_alt_m?: number | null; speed_mps?: number | null; direction_deg?: number | null; status?: string }; system?: { operator_lat?: number; operator_lon?: number }; operator_id?: { operator_id?: string } }) => {
+    const loc = rec.location; if (!loc || !loc.lat) return;
+    let v = venueRef.current;
+    if (!v) { v = { lat: loc.lat, lon: loc.lon }; venueRef.current = v; setVenueState(v); log('WARNING', 'Venue position not set — using the first Remote ID fix as the map origin. Set the venue in Sensors.'); }
+    const uas = rec.basic_id?.uas_id || rec.addr.replace(/:/g, '').slice(-6);
+    const id = `RID-${uas.slice(-6).toUpperCase()}`;
+    const pos = toMap(v, loc.lat, loc.lon);
+    const op = rec.system?.operator_lat && rec.system.operator_lon ? { ...toMap(v, rec.system.operator_lat, rec.system.operator_lon), lat: rec.system.operator_lat, lon: rec.system.operator_lon } : undefined;
+    const now = Date.now();
+    setThreats(prev => {
+      const existing = prev.find(t => t.id === id);
+      const r = Math.hypot(pos.x - ASSET.x, pos.y - ASSET.y) * METERS_PER_PX;
+      const level: ThreatLevel = r < ENGAGE_RING_PX * METERS_PER_PX ? 'HIGH' : r < WARN_RING_PX * METERS_PER_PX ? 'MEDIUM' : 'LOW';
+      const hd = ((loc.direction_deg ?? 0) - 90) * Math.PI / 180;
+      const spd = (loc.speed_mps ?? 0) / METERS_PER_PX;
+      const base: Threat = existing ?? {
+        id, classification: 'REMOTE_ID', protocol: `Remote ID · ${rec.basic_id?.ua_type ?? 'aircraft'}`, freqMHz: 2402, rssiDbm: rec.rssi, x: pos.x, y: pos.y, vx: 0, vy: 0,
+        altitudeM: 0, speedMps: 0, level, status: 'TRACKING', priority: false, firstSeenMs: now, disruptProgress: 0, trail: [], confidence: 1,
+      };
+      if (!existing) log('WARNING', `Remote ID: ${id} (${rec.basic_id?.ua_type ?? 'aircraft'}) ${uas} at ${r.toFixed(0)} m${op ? ' · operator located' : ''}`, id);
+      const next: Threat = {
+        ...base, x: pos.x, y: pos.y, vx: Math.cos(hd) * spd, vy: Math.sin(hd) * spd, rssiDbm: rec.rssi,
+        altitudeM: loc.height_m ?? loc.geo_alt_m ?? base.altitudeM, speedMps: loc.speed_mps ?? base.speedMps, level: base.priority ? base.level : level,
+        status: loc.status === 'ground' ? 'LOST' : base.status === 'LOST' ? 'TRACKING' : base.status,
+        trail: base.trail.length === 0 || Math.hypot(pos.x - base.trail[base.trail.length - 1].x, pos.y - base.trail[base.trail.length - 1].y) > 4 ? [...base.trail.slice(-45), { x: pos.x, y: pos.y }] : base.trail,
+        live: { source: 'REMOTE_ID', uasId: uas, uaType: rec.basic_id?.ua_type ?? 'aircraft', operatorId: rec.operator_id?.operator_id, lastSeenMs: now, lat: loc.lat, lon: loc.lon },
+        operator: op ?? base.operator,
+      };
+      return existing ? prev.map(t => (t.id === id ? next : t)) : [...prev, next];
+    });
+  }, [log]);
+
+  const connectRemoteId = useCallback((url: string) => {
+    try { localStorage.setItem('a1-remoteid-url', url); } catch { /* ignore */ }
+    wsRef.current?.close();
+    setRemoteId(r => ({ ...r, url, status: 'CONNECTING', error: '' }));
+    let ws: WebSocket;
+    try { ws = new WebSocket(url); } catch (e) { setRemoteId(r => ({ ...r, status: 'ERROR', error: e instanceof Error ? e.message : String(e) })); return; }
+    wsRef.current = ws;
+    ws.onopen = () => { setRemoteId(r => ({ ...r, status: 'ON', error: '' })); log('SUCCESS', `Remote ID receiver connected: ${url}`); };
+    ws.onmessage = ev => {
+      try {
+        const m = JSON.parse(ev.data);
+        if (m.event === 'track') { ingestRemoteId(m.track); setRemoteId(r => ({ ...r, lastMessageMs: Date.now(), tracks: threatsRef.current.filter(t => t.live).length + 1 })); }
+        if (m.event === 'lost') setThreats(prev => prev.map(t => (t.live && t.id.endsWith(String(m.addr).replace(/:/g, '').slice(-6).toUpperCase()) ? { ...t, status: 'LOST' } : t)));
+      } catch { /* ignore malformed */ }
+    };
+    ws.onerror = () => setRemoteId(r => ({ ...r, status: 'ERROR', error: `Could not reach ${url}. Is a1-remoteid running, and wss:// if this page is https?` }));
+    ws.onclose = () => { setRemoteId(r => (r.status === 'ERROR' ? r : { ...r, status: 'OFF' })); if (wsRef.current === ws) wsRef.current = null; };
+  }, [ingestRemoteId, log]);
+
+  const disconnectRemoteId = useCallback(() => { wsRef.current?.close(); wsRef.current = null; setRemoteId(r => ({ ...r, status: 'OFF' })); }, []);
+  useEffect(() => () => { wsRef.current?.close(); }, []);
 
   const toggleSensor = useCallback((id: string) => {
     setSensors(prev => prev.map(s => (s.id === id ? { ...s, status: s.status === 'OFFLINE' ? 'ONLINE' : 'OFFLINE' } : s)));
@@ -231,6 +358,13 @@ export function useDefenseSimulation() {
           const t = { ...t0 };
           const r = rangeM(t);
 
+          if (t.live) {
+            // Real track: position comes from the receiver. Drop it after 60 s of silence.
+            if (now - t.live.lastSeenMs > 60000) continue;
+            if (now - t.live.lastSeenMs > 30000 && t.status === 'TRACKING') t.status = 'LOST';
+            next.push(t); continue;
+          }
+
           if (t.status === 'TRACKING') {
             // Slight weave; converge on the asset.
             const ang = Math.atan2(ASSET.y - t.y, ASSET.x - t.x);
@@ -244,7 +378,7 @@ export function useDefenseSimulation() {
             // Escalate as it closes.
             if (r < ENGAGE_RING_PX * METERS_PER_PX && t.level !== 'CRITICAL' && t.classification !== 'UNKNOWN') t.level = 'CRITICAL';
             else if (r < WARN_RING_PX * METERS_PER_PX && t.level === 'LOW') t.level = 'MEDIUM';
-            if (d.autoEngage && r < ENGAGE_RING_PX * METERS_PER_PX && (t.level === 'HIGH' || t.level === 'CRITICAL') && bandOk(t)) {
+            if (d.autoEngage && effectorsRef.current && r < ENGAGE_RING_PX * METERS_PER_PX && (t.level === 'HIGH' || t.level === 'CRITICAL') && bandOk(t)) {
               t.status = 'DISRUPTING'; t.disruptProgress = 0;
               log('WARNING', `Auto-engage: ${t.id} inside ${(ENGAGE_RING_PX * METERS_PER_PX).toFixed(0)} m ring`, t.id);
             }
@@ -331,5 +465,8 @@ export function useDefenseSimulation() {
     disruptTarget, disruptAll, cancelDisruption, pulseBurst, toggleSweep, setPriority,
     setAutoEngage, setEffector, setPower, toggleBand, injectThreat, toggleSensor,
     rangeM,
+    // Real sensor + posture
+    remoteId, connectRemoteId, disconnectRemoteId, venue, setVenue, useMyLocation,
+    effectorsAuthorized, setEffectorsAuthorized: setEffectorsAuthorizedPersist, notifySecurity, exportTrackLog,
   };
 }

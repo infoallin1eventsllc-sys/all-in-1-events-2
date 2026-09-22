@@ -1,5 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { MavParser, decodeInto, encodeHeartbeat, encodeCommandLong, encodeSetInterval, EMPTY_TELEMETRY, MAV_CMD, type Telemetry } from './mavlink';
+import {
+  MavParser, decodeInto, encodeHeartbeat, encodeCommandLong, encodeSetInterval, encodeSetMode, encodeArm, encodeTakeoff, encodeGotoGlobal,
+  encodeMissionCount, encodeMissionClearAll, encodeMissionItemInt, encodeMissionAck, decodeMissionRequestSeq, decodeMissionAck,
+  EMPTY_TELEMETRY, MAV_CMD, COPTER_MODE, type Telemetry, type MavFrame, type MissionItem,
+} from './mavlink';
 
 /**
  * Aircraft link: the one place the browser talks to real hardware.
@@ -19,12 +23,17 @@ import { MavParser, decodeInto, encodeHeartbeat, encodeCommandLong, encodeSetInt
 export type Transport = 'SIMULATION' | 'BLUETOOTH' | 'SERIAL';
 export type LinkStatus = 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'ERROR';
 
+export interface PreflightCheck { id: string; label: string; ok: boolean; detail: string }
+
 interface LinkState {
   transport: Transport;
   status: LinkStatus;
   deviceName: string;
   error: string;
   telemetry: Telemetry;
+  /** Every vehicle heard on the link, by MAVLink system id. `telemetry` is the primary one. */
+  vehicles: Record<number, Telemetry>;
+  primarySysId: number;
   bytesIn: number;
   badCrc: number;
   lastHeartbeatAgoS: number;
@@ -38,6 +47,15 @@ interface LinkApi extends LinkState {
   send: (bytes: Uint8Array) => Promise<void>;
   returnToLaunch: () => Promise<void>;
   land: () => Promise<void>;
+  arm: (arm: boolean) => Promise<void>;
+  takeoff: (altM: number) => Promise<void>;
+  setMode: (customMode: number) => Promise<void>;
+  /** GUIDED go-to: switches to GUIDED then sends the position target. */
+  goTo: (lat: number, lon: number, altRelM: number) => Promise<void>;
+  /** Upload a waypoint mission (home item is added automatically) and optionally start it in AUTO. */
+  uploadMission: (items: MissionItem[], start?: boolean) => Promise<void>;
+  missionUpload: { state: 'IDLE' | 'UPLOADING' | 'DONE' | 'FAILED'; sent: number; total: number; error: string };
+  preflight: { ok: boolean; checks: PreflightCheck[] };
   /** True when live telemetry should replace the simulation for the selected aircraft. */
   live: boolean;
 }
@@ -58,11 +76,15 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }), [nav]);
 
   const [state, setState] = useState<LinkState>({
-    transport: 'SIMULATION', status: 'DISCONNECTED', deviceName: '', error: '', telemetry: { ...EMPTY_TELEMETRY }, bytesIn: 0, badCrc: 0, lastHeartbeatAgoS: 0, support,
+    transport: 'SIMULATION', status: 'DISCONNECTED', deviceName: '', error: '', telemetry: { ...EMPTY_TELEMETRY }, vehicles: {}, primarySysId: 0, bytesIn: 0, badCrc: 0, lastHeartbeatAgoS: 0, support,
   });
+  const [missionUpload, setMissionUpload] = useState<LinkApi['missionUpload']>({ state: 'IDLE', sent: 0, total: 0, error: '' });
 
   const parser = useRef(new MavParser());
   const telem = useRef<Telemetry>({ ...EMPTY_TELEMETRY });
+  const vehicles = useRef<Record<number, Telemetry>>({});
+  const primarySys = useRef(0);
+  const frameListeners = useRef<Set<(f: MavFrame) => void>>(new Set());
   const bytesIn = useRef(0);
   const msgCount = useRef(0);
   const writer = useRef<((b: Uint8Array) => Promise<void>) | null>(null);
@@ -76,7 +98,7 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
       telem.current.msgsPerSec = last ? Math.round(msgCount.current / ((now - last) / 1000)) : 0;
       msgCount.current = 0; last = now;
       setState(s => (s.status === 'CONNECTED'
-        ? { ...s, telemetry: { ...telem.current }, bytesIn: bytesIn.current, badCrc: parser.current.badCrc, lastHeartbeatAgoS: telem.current.heartbeatMs ? (now - telem.current.heartbeatMs) / 1000 : 0 }
+        ? { ...s, telemetry: { ...telem.current }, vehicles: Object.fromEntries(Object.entries(vehicles.current).map(([k, v]) => [k, { ...v }])), primarySysId: primarySys.current, bytesIn: bytesIn.current, badCrc: parser.current.badCrc, lastHeartbeatAgoS: telem.current.heartbeatMs ? (now - telem.current.heartbeatMs) / 1000 : 0 }
         : s));
     }, 100);
     return () => clearInterval(t);
@@ -90,7 +112,16 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const ingest = useCallback((chunk: Uint8Array) => {
     bytesIn.current += chunk.length;
-    for (const f of parser.current.push(chunk)) { decodeInto(telem.current, f); msgCount.current++; }
+    for (const f of parser.current.push(chunk)) {
+      if (f.compId !== 1 && f.msgId === 0) continue; // ignore heartbeats from cameras/gimbals; the autopilot is component 1
+      // Route by system id: the first autopilot heard is the primary; others are extra vehicles on a shared radio.
+      if (!primarySys.current && f.msgId === 0) primarySys.current = f.sysId;
+      const target = f.sysId === primarySys.current ? telem.current : (vehicles.current[f.sysId] ??= { ...EMPTY_TELEMETRY });
+      decodeInto(target, f);
+      if (f.sysId === primarySys.current) vehicles.current[f.sysId] = telem.current;
+      msgCount.current++;
+      frameListeners.current.forEach(l => l(f));
+    }
   }, []);
 
   const send = useCallback(async (bytes: Uint8Array) => { if (writer.current) await writer.current(bytes); }, []);
@@ -105,8 +136,9 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const disconnect = useCallback(async () => {
     try { await closer.current?.(); } catch { /* already gone */ }
     closer.current = null; writer.current = null;
-    telem.current = { ...EMPTY_TELEMETRY }; parser.current = new MavParser(); bytesIn.current = 0;
-    setState(s => ({ ...s, transport: 'SIMULATION', status: 'DISCONNECTED', deviceName: '', error: '', telemetry: { ...EMPTY_TELEMETRY }, bytesIn: 0, badCrc: 0 }));
+    telem.current = { ...EMPTY_TELEMETRY }; vehicles.current = {}; primarySys.current = 0; parser.current = new MavParser(); bytesIn.current = 0;
+    setMissionUpload({ state: 'IDLE', sent: 0, total: 0, error: '' });
+    setState(s => ({ ...s, transport: 'SIMULATION', status: 'DISCONNECTED', deviceName: '', error: '', telemetry: { ...EMPTY_TELEMETRY }, vehicles: {}, primarySysId: 0, bytesIn: 0, badCrc: 0 }));
   }, []);
 
   const connectBluetooth = useCallback(async () => {
@@ -166,12 +198,69 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, [support.serial, ingest, requestStreams]);
 
-  const returnToLaunch = useCallback(() => send(encodeCommandLong(MAV_CMD.RETURN_TO_LAUNCH)), [send]);
-  const land = useCallback(() => send(encodeCommandLong(MAV_CMD.LAND)), [send]);
+  const sysId = () => primarySys.current || 1;
+  const returnToLaunch = useCallback(() => send(encodeCommandLong(MAV_CMD.RETURN_TO_LAUNCH, [], sysId())), [send]);
+  const land = useCallback(() => send(encodeCommandLong(MAV_CMD.LAND, [], sysId())), [send]);
+  const arm = useCallback((on: boolean) => send(encodeArm(on)), [send]);
+  const takeoff = useCallback((altM: number) => send(encodeTakeoff(altM)), [send]);
+  const setMode = useCallback((m: number) => send(encodeSetMode(m)), [send]);
+  const goTo = useCallback(async (lat: number, lon: number, altRelM: number) => {
+    await send(encodeSetMode(COPTER_MODE.GUIDED));
+    await send(encodeGotoGlobal(lat, lon, altRelM, sysId()));
+  }, [send]);
+
+  /**
+   * Mission upload handshake: MISSION_COUNT → autopilot asks for each item with
+   * MISSION_REQUEST(_INT) → we answer → MISSION_ACK. ArduPilot treats item 0 as home,
+   * so the caller's first waypoint becomes seq 1.
+   */
+  const uploadMission = useCallback(async (items: MissionItem[], start = false) => {
+    if (!writer.current) throw new Error('Not connected');
+    const t = telem.current;
+    const home: MissionItem = { lat: t.lat, lon: t.lon, altRelM: 0 };
+    const all = [home, ...items];
+    setMissionUpload({ state: 'UPLOADING', sent: 0, total: all.length, error: '' });
+    await new Promise<void>((resolve, reject) => {
+      let done = false;
+      const finish = (err?: string) => {
+        if (done) return; done = true; frameListeners.current.delete(onFrame); clearTimeout(timer);
+        if (err) { setMissionUpload(m => ({ ...m, state: 'FAILED', error: err })); reject(new Error(err)); }
+        else { setMissionUpload(m => ({ ...m, state: 'DONE', sent: all.length })); resolve(); }
+      };
+      let timer = setTimeout(() => finish('Autopilot did not respond to MISSION_COUNT'), 5000);
+      const onFrame = (f: MavFrame) => {
+        const seq = decodeMissionRequestSeq(f);
+        if (seq !== null) {
+          clearTimeout(timer); timer = setTimeout(() => finish(`Timed out waiting for request after item ${seq}`), 5000);
+          if (seq < all.length) { send(encodeMissionItemInt(seq, all[seq], seq === 1 ? 1 : 0, sysId())).catch(() => {}); setMissionUpload(m => ({ ...m, sent: seq + 1 })); }
+          return;
+        }
+        const ack = decodeMissionAck(f);
+        if (ack !== null) finish(ack === 0 ? undefined : `Mission rejected (MAV_MISSION_RESULT ${ack})`);
+      };
+      frameListeners.current.add(onFrame);
+      send(encodeMissionClearAll(sysId())).then(() => send(encodeMissionCount(all.length, sysId()))).catch(e => finish(String(e)));
+    });
+    if (start) await send(encodeSetMode(COPTER_MODE.AUTO));
+  }, [send]);
+
+  // Pre-flight gate: what must be true before the dashboard will arm a real aircraft.
+  const tNow = state.telemetry;
+  const hbFresh = tNow.heartbeatMs > 0 && state.lastHeartbeatAgoS < 3;
+  const checks: PreflightCheck[] = [
+    { id: 'hb', label: 'Heartbeat from the autopilot', ok: hbFresh, detail: hbFresh ? `${tNow.msgsPerSec} msg/s` : 'none' },
+    { id: 'gps', label: 'GPS 3D fix or better', ok: tNow.fixType >= 3, detail: ['No GPS', 'No fix', '2D', '3D', 'DGPS', 'RTK float', 'RTK fixed'][tNow.fixType] ?? '—' },
+    { id: 'sats', label: 'At least 10 satellites', ok: tNow.satellites >= 10, detail: `${tNow.satellites} sats` },
+    { id: 'hdop', label: 'HDOP under 2.0', ok: tNow.hdop < 2, detail: tNow.hdop.toFixed(1) },
+    { id: 'batt', label: 'Battery at least 40%', ok: tNow.batteryPct < 0 ? tNow.voltageV > 0 : tNow.batteryPct >= 40, detail: tNow.batteryPct >= 0 ? `${tNow.batteryPct}%` : `${tNow.voltageV.toFixed(1)} V (no %)` },
+    { id: 'link', label: 'Radio link quality', ok: tNow.radioRssi === 0 || tNow.radioRssi > 60, detail: tNow.radioRssi ? `RSSI ${tNow.radioRssi}` : 'n/a on this transport' },
+  ];
+  const preflight = { ok: checks.every(c => c.ok), checks };
+  void encodeMissionAck;
 
   const api: LinkApi = {
     ...state, support,
-    connectBluetooth, connectSerial, disconnect, send, returnToLaunch, land,
+    connectBluetooth, connectSerial, disconnect, send, returnToLaunch, land, arm, takeoff, setMode, goTo, uploadMission, missionUpload, preflight,
     live: state.status === 'CONNECTED' && state.telemetry.heartbeatMs > 0,
   };
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;

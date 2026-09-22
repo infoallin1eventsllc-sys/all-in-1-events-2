@@ -35,7 +35,8 @@ npm run dev:drone     # local: http://localhost:3000/drone/
 npm run build:drone   # what Netlify / Vercel run on deploy
 ```
 
-See [`drone/README.md`](drone/README.md).
+See [`drone/README.md`](drone/README.md) and [`drone/docs/COMPLETION.md`](drone/docs/COMPLETION.md)
+for the hardware kit, the bill of materials and what remains.
 
 ## Quick Start (Local Demo)
 

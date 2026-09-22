@@ -26,6 +26,9 @@ interface Props {
   onSetSensorMode?: (mode: SensorMode) => void;
   onSetZoom?: (zoom: number) => void;
   className?: string;
+  /** A real MediaStream (capture device or WebRTC) replaces the synthetic renderer; the HUD stays. */
+  videoStream?: MediaStream | null;
+  videoLabel?: string;
 }
 
 interface Target {
@@ -73,8 +76,10 @@ function seedTargets(seed: number): Target[] {
   return list;
 }
 
-export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, width = 640, compact = false, onSetSensorMode, onSetZoom, className = '' }) => {
+export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, width = 640, compact = false, onSetSensorMode, onSetZoom, className = '', videoStream = null, videoLabel }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  useEffect(() => { if (videoRef.current) videoRef.current.srcObject = videoStream; }, [videoStream]);
   const droneRef = useRef(drone);
   droneRef.current = drone;
   const nightRef = useRef(isNight);
@@ -87,7 +92,7 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, width = 640, 
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || videoStream) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     // Render at a reduced resolution and let the canvas upscale — it also reads as a compressed stream.
@@ -266,14 +271,16 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, width = 640, 
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [compact]);
+  }, [compact, videoStream]);
 
   const offline = drone.status === 'OFFLINE';
   const thermal = drone.sensorMode.startsWith('THERMAL');
 
   return (
     <div data-feed className={`relative bg-black overflow-hidden select-none ${className}`} style={{ aspectRatio: '16 / 9' }}>
-      <canvas ref={canvasRef} width={width} height={height} className="w-full h-full block" aria-label={`Live feed from ${drone.id}`} role="img" />
+      {videoStream
+        ? <video ref={videoRef} autoPlay muted playsInline className="w-full h-full block object-cover bg-black" aria-label={`Live video from ${drone.id}`} />
+        : <canvas ref={canvasRef} width={width} height={height} className="w-full h-full block" aria-label={`Live feed from ${drone.id}`} role="img" />}
 
       {compact ? (
         <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-1.5 py-1 bg-gradient-to-t from-black/80 to-transparent font-mono text-[9px] text-slate-200">
@@ -292,7 +299,7 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, width = 640, 
             <div className="flex items-center gap-2">
               <span className="px-1.5 py-0.5 rounded bg-black/60 font-bold">{drone.id}</span>
               <span className="hidden sm:inline px-1.5 py-0.5 rounded bg-black/60 text-slate-300">{drone.model}</span>
-              <span className={`px-1.5 py-0.5 rounded bg-black/60 font-bold ${thermal ? 'text-rose-300' : drone.sensorMode === 'NIGHT_VISION' ? 'text-lime-300' : 'text-emerald-300'}`}>{MODE_LABEL[drone.sensorMode]}</span>
+              <span className={`px-1.5 py-0.5 rounded bg-black/60 font-bold ${videoStream ? 'text-sky-300' : thermal ? 'text-rose-300' : drone.sensorMode === 'NIGHT_VISION' ? 'text-lime-300' : 'text-emerald-300'}`}>{videoStream ? (videoLabel ?? 'LIVE VIDEO') : MODE_LABEL[drone.sensorMode]}</span>
               <span className="px-1.5 py-0.5 rounded bg-black/60 text-amber-300">{drone.zoom.toFixed(1)}×</span>
             </div>
             <div className="flex items-center gap-2">
@@ -315,7 +322,7 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, width = 640, 
           )}
 
           {/* Target lock */}
-          {lock && !offline && (
+          {lock && !offline && !videoStream && (
             <div className="absolute" style={{ left: `${(lock.x / width) * 100}%`, top: `${(lock.y / height) * 100}%`, width: `${Math.max(4, (lock.w / width) * 100)}%`, height: `${Math.max(4, (lock.h / height) * 100)}%` }}>
               <div className={`w-full h-full min-w-[26px] min-h-[26px] border ${drone.tasks.autoTrack ? 'border-orange-400' : 'border-white/70'}`} />
               <div className={`absolute left-full top-0 ml-1.5 whitespace-nowrap px-1.5 py-0.5 rounded bg-black/70 ${drone.tasks.autoTrack ? 'text-orange-200' : 'text-slate-100'}`}>
@@ -334,7 +341,7 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, width = 640, 
               <span className="px-1.5 py-0.5 rounded bg-black/60">SPD <b className="text-slate-50">{(drone.groundSpeedMps * 3.6).toFixed(0)}</b> km/h</span>
             </div>
             <div className="pointer-events-auto flex items-center gap-1">
-              {(['RGB_4K', 'THERMAL_WHITE_HOT', 'THERMAL_IRONBOW', 'NIGHT_VISION'] as SensorMode[]).map(m => (
+              {!videoStream && (['RGB_4K', 'THERMAL_WHITE_HOT', 'THERMAL_IRONBOW', 'NIGHT_VISION'] as SensorMode[]).map(m => (
                 <button key={m} onClick={() => onSetSensorMode?.(m)} disabled={offline} aria-pressed={drone.sensorMode === m}
                   className={`px-1.5 py-0.5 rounded bg-black/60 border ${drone.sensorMode === m ? 'border-white/60 text-white' : 'border-transparent text-slate-400 hover:text-slate-100'} disabled:opacity-40`}>
                   {m === 'RGB_4K' ? 'EO' : m === 'THERMAL_WHITE_HOT' ? 'IR·WH' : m === 'THERMAL_IRONBOW' ? 'IR·IB' : 'NV'}
@@ -353,7 +360,7 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, width = 640, 
               <span className="text-slate-500">{drone.id} is on the pad</span>
             </div>
           )}
-          {!offline && isNight && !thermal && drone.sensorMode !== 'NIGHT_VISION' && (
+          {!offline && !videoStream && isNight && !thermal && drone.sensorMode !== 'NIGHT_VISION' && (
             <div className="absolute left-1/2 top-12 -translate-x-1/2 px-2 py-1 rounded bg-amber-500/20 border border-amber-400/50 text-amber-200 flex items-center gap-1.5">
               <CrosshairIcon className="w-3 h-3" /><span className="hidden sm:inline">NIGHT · EO IMAGE UNUSABLE — </span>SWITCH TO IR
             </div>

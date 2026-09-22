@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Bluetooth, Usb, Cpu, Link2, Link2Off, Satellite, Radio } from 'lucide-react';
+import { Bluetooth, Usb, Cpu, Link2, Link2Off, Satellite, Radio, ShieldCheck, Plane, ArrowDownToLine } from 'lucide-react';
 import { useAircraftLink, type Transport } from './useAircraftLink';
 import { FIX_NAMES, FLIGHT_MODE_NAMES } from './mavlink';
 import { Chip, Dot, ToolButton, type Tone } from '../dashboards/ui';
@@ -69,10 +69,27 @@ export const LinkButton: React.FC = () => {
               </div>
               {t.statusText && <div className="text-[11px] text-ink-2 rounded bg-surface-2 px-2 py-1 num">{t.statusText}</div>}
               {link.lastHeartbeatAgoS > 3 && <div className="text-[11px] text-warn">No heartbeat for {link.lastHeartbeatAgoS.toFixed(0)} s</div>}
-              <div className="flex gap-2 pt-1">
-                <ToolButton size="sm" icon={<Satellite />} label="Return to launch" onClick={() => link.returnToLaunch()} disabled={!link.live} />
+              <div className="pt-1">
+                <div className="flex items-center justify-between"><span className="text-[12px] font-semibold text-ink">Pre-flight</span><Chip tone={link.preflight.ok ? 'ok' : 'warn'}>{link.preflight.ok ? 'Go' : 'Hold'}</Chip></div>
+                <ul className="mt-1 divide-y divide-line">
+                  {link.preflight.checks.map(c => (
+                    <li key={c.id} className="flex items-center justify-between gap-2 py-1 text-[12px]"><span className="flex items-center gap-2 text-ink-2"><Dot tone={c.ok ? 'ok' : 'warn'} />{c.label}</span><span className="num text-[11px] text-ink-3">{c.detail}</span></li>
+                  ))}
+                </ul>
+              </div>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {!t.armed
+                  ? <ToolButton size="sm" icon={<ShieldCheck />} label="Arm" primary disabled={!link.live || !link.preflight.ok} onClick={() => link.arm(true)} title={link.preflight.ok ? 'COMPONENT_ARM_DISARM' : 'Pre-flight gate not satisfied'} />
+                  : <ToolButton size="sm" icon={<ShieldCheck />} label="Disarm" disabled={!link.live} onClick={() => link.arm(false)} />}
+                <ToolButton size="sm" icon={<Plane />} label="Take off 30 m" disabled={!link.live || !t.armed} onClick={() => link.takeoff(30)} />
+                <ToolButton size="sm" icon={<ArrowDownToLine />} label="Land" disabled={!link.live || !t.armed} onClick={() => link.land()} />
+                <ToolButton size="sm" icon={<Satellite />} label="Return to launch" disabled={!link.live} onClick={() => link.returnToLaunch()} />
                 <ToolButton size="sm" label="Disconnect" onClick={() => { link.disconnect(); }} />
               </div>
+              {t.lastAck && Date.now() - t.lastAck.atMs < 8000 && (
+                <div className={`text-[11px] ${t.lastAck.result === 0 ? 'text-ok' : 'text-warn'}`}>Command {t.lastAck.command}: {['accepted', 'temporarily rejected', 'denied', 'unsupported', 'failed', 'in progress'][t.lastAck.result] ?? `result ${t.lastAck.result}`}</div>
+              )}
+              {Object.keys(link.vehicles).length > 1 && <div className="text-[11px] text-ink-3">{Object.keys(link.vehicles).length} vehicles on this link (system ids {Object.keys(link.vehicles).join(', ')})</div>}
             </div>
           ) : (
             <div className="space-y-0.5">

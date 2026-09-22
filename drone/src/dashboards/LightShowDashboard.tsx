@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Play, Pause, RotateCcw, AlertOctagon, ShieldCheck, Layers, Clock, ListChecks, Scale } from 'lucide-react';
+import { Play, Pause, RotateCcw, AlertOctagon, ShieldCheck, Layers, Clock, ListChecks, Scale, Download } from 'lucide-react';
+import { downloadShowPackage } from '../lightshow/exportShow';
 import { useLightShowSimulation } from '../hooks/useLightShowSimulation';
 import { LightShowCanvas3D } from '../components/lightshow/LightShowCanvas3D';
 import { SHOW_FORMATIONS } from '../data/lightShowFormations';
@@ -147,9 +148,11 @@ export const LightShowDashboard: React.FC = () => {
                 </Section>
                 <Divider />
                 <div className="flex flex-wrap gap-2">
+                  <ToolButton size="sm" primary icon={<Download />} label={`Export show package (${droneCount})`} onClick={() => downloadShowPackage('All in 1 show', droneCount)} title="CSV per aircraft + manifest, for Skybrush Studio / Blender or Verge Aero" />
                   <ToolButton size="sm" icon={<Layers />} label="Choreography engine" onClick={() => setModal('CHOREO')} />
                   <ToolButton size="sm" icon={<ListChecks />} label="Launch pads" onClick={() => setModal('PADS')} />
                 </div>
+                <p className="text-[11px] text-ink-3">The package is the handoff to the show-control stack (Skybrush / Verge) that uploads trajectories and LED programs to the aircraft.</p>
               </div>
             )}
 

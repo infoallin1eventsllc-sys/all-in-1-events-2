@@ -1,0 +1,4 @@
+aiortc>=1.9
+aiohttp>=3.9
+bleak>=0.22
+websockets>=12
