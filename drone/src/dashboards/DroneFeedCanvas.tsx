@@ -327,7 +327,7 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, width = 640, 
 
           {/* Bottom strip */}
           <div className="absolute bottom-3 left-8 right-8 flex items-end justify-between">
-            <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2">
               <span className="px-1.5 py-0.5 rounded bg-black/60">ALT <b className="text-slate-50">{drone.altM.toFixed(0)}</b> m</span>
               <span className="px-1.5 py-0.5 rounded bg-black/60">HDG <b className="text-slate-50">{String(Math.round(drone.headingDeg)).padStart(3, '0')}°</b></span>
               <span className="px-1.5 py-0.5 rounded bg-black/60">GMB <b className="text-slate-50">{drone.gimbalPitchDeg}°</b></span>
