@@ -55,6 +55,7 @@ Match the job, not the brand name. Everything below is on this account.
 | Stop a build from growing past the problem it solves | the `restraint` skill — five rungs before writing code, plus the over-builds this stack repeats |
 | Palettes, font pairings, UX guidelines, a11y checks, stack-specific UI — for a **client** project with no brand yet | the `ui-ux-pro-max` skill — vendored, searchable, offline. Never for All in 1 Events or Meridian: their tokens are locked |
 | Render a video that does not exist yet — brand sting, merch reel from stills, title card, per-client cut | the `remotion-video` skill — React to 4K MP4. Two mandatory sandbox flags live there; free up to 3 people, paid at 4+ |
+| Confirm a site is safe before a client owns it | the `client-security-gate` skill — deployed surface, CSP dead grants, Supabase exposure, credential handoff |
 | A decision worth arguing over — client, price, direction, hire | `/council <question>` — five seats, blind review, chairman. Seven subagents; user-invoked only |
 | Poke holes in one plan without the full council | **Devil's Advocate** connector — `run_premortem`, `challenge_assumptions` *(connected; authorize per session)* |
 
