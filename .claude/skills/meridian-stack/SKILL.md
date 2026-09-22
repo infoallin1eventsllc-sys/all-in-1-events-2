@@ -229,6 +229,35 @@ For motion guidance without the dependency: `figma:figma-use-motion`,
 `figma:figma-implement-motion`, the GSAP presets in `ui-ux-pro-max`
 (`--domain gsap`), and `cinematic-web`.
 
+## Strix — security testing, and the cloud version IS browser-reachable
+
+Checked 22 Sep 2026. Strix (`usestrix/strix`) is an **AI penetration testing**
+tool, not a design or video tool — worth saying plainly, because the name comes
+up in the same breath as design tools and the jump surprises people.
+
+Three tiers, and only one works for Otis:
+
+| Tier | Reachable from a browser? |
+|---|---|
+| Open-source CLI — `curl -sSL https://strix.ai/install \| bash` | **No.** Needs Docker running and a terminal |
+| Agent skills — `npx skills add usestrix/strix` | **No.** npx |
+| **Strix Cloud at `app.strix.ai`** | **Yes.** A hosted web app he signs into |
+
+No hosted MCP server, so it never becomes a Claude connector — but the cloud
+app does not need one. He uses it directly against a deployed URL.
+
+**Static vs dynamic is the distinction that matters.** What he already has reads
+code: the bundled `/security-review`, the `edge-function-reviewer` agent, the
+`meridian-auth` rules, GitHub secret scanning, and the two commit hooks. Strix
+probes a *running* application. Those are complementary, not redundant, so
+"he already has security tooling" is the wrong answer. The right answer is that
+static review is free and available every session, and a dynamic pentest is
+worth doing against a deployed site before a client handoff.
+
+Caveat: `app.strix.ai` and `docs.strix.ai` were not reachable from this
+sandbox's egress proxy; the tiers above come from the project's own README on
+GitHub, which was readable.
+
 ## Real, but not installable from a browser session
 
 These exist and are not vapor — they are simply outside the claude.ai plugin
