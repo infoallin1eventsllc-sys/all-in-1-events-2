@@ -112,6 +112,10 @@ export function useSurveillanceSimulation() {
   const [selectedDroneId, setSelectedDroneId] = useState<string>('T-80M');
   const [missionElapsedSec, setMissionElapsedSec] = useState(25 * 60 + 1);
   const [uplinkGbps, setUplinkGbps] = useState(2.2);
+  // Night protocol: AUTO follows the local clock (19:00–06:00), or force DAY / NIGHT.
+  const [nightMode, setNightMode] = useState<'AUTO' | 'DAY' | 'NIGHT'>('AUTO');
+  const clockHour = new Date().getHours();
+  const isNight = nightMode === 'NIGHT' || (nightMode === 'AUTO' && (clockHour >= 19 || clockHour < 6));
 
   const dronesRef = useRef(drones);
   useEffect(() => { dronesRef.current = drones; }, [drones]);
@@ -169,6 +173,24 @@ export function useSurveillanceSimulation() {
     setDetections(prev => prev.map(d => (d.id === detId ? { ...d, acknowledged: true } : d)));
     log('WARNING', `${droneId} dispatched to ${det.kind.toLowerCase().replace('_', ' ')} ${det.id}`, droneId);
   }, [detections, patch, log]);
+
+  // Night protocol: on entering night, every airborne payload switches to thermal so moving
+  // heat signatures stay visible; on day it returns to RGB. Operators can still override per drone.
+  const isNightRef = useRef(isNight);
+  useEffect(() => {
+    if (isNightRef.current === isNight) return;
+    isNightRef.current = isNight;
+    setDrones(prev => prev.map(d => d.status === 'OFFLINE' ? d : ({
+      ...d,
+      tasks: { ...d.tasks, thermalScan: isNight, nightVision: false },
+      sensorMode: isNight ? 'THERMAL_WHITE_HOT' : 'RGB_4K',
+    })));
+    log(isNight ? 'WARNING' : 'INFO', isNight ? 'Night protocol: thermal imaging on all airborne payloads' : 'Daylight: payloads back to RGB');
+  }, [isNight, log]);
+
+  const setSensorMode = useCallback((id: string, mode: SensorMode) => {
+    patch(id, d => ({ ...d, sensorMode: mode, tasks: { ...d.tasks, thermalScan: mode.startsWith('THERMAL'), nightVision: mode === 'NIGHT_VISION' } }));
+  }, [patch]);
 
   // ---- 10 Hz tick ---------------------------------------------------------
   const detectionsRef = useRef(detections);
@@ -307,6 +329,7 @@ export function useSurveillanceSimulation() {
   return {
     drones, detections, events, selected, selectedDroneId, setSelectedDroneId,
     missionElapsedSec, uplinkGbps, routeProgress,
+    isNight, nightMode, setNightMode, setSensorMode,
     toggleTask, setAutopilot, goToWaypoint, returnHome, setGimbal, setZoom, acknowledgeDetection, dispatchToDetection,
   };
 }

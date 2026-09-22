@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import {
-  ShieldAlert, Radar, Radio, Crosshair, Zap, RotateCw, XOctagon, Target, Flag, Cpu, Eye, Ear, Activity, Plus, Pause, Play, AlertTriangle,
+  ShieldAlert, Radar, Radio, Crosshair, Zap, RotateCw, XOctagon, Target, Flag, Cpu, Eye, Ear, Activity, Plus, Pause, Play, AlertTriangle, Video, MoonStar, SunMedium,
 } from 'lucide-react';
 import { useDefenseSimulation, type Threat, type EffectorType, type ThreatClass } from '../hooks/useDefenseSimulation';
 import { DefenseMapCanvas } from './DefenseMapCanvas';
+import { EoIrFeedCanvas } from './EoIrFeedCanvas';
 import { Panel, Stat, Label, Meter, StatusDot, Toggle, ActionButton, Pill, DashboardHeader, ACCENT, STATUS, type StatusKey } from './ui';
 
 const LEVEL_TONE: Record<Threat['level'], StatusKey> = { LOW: 'idle', MEDIUM: 'warning', HIGH: 'serious', CRITICAL: 'critical' };
@@ -33,6 +34,10 @@ export const DefenseDashboard: React.FC = () => {
   const { threats, sensors, disruption, events, metrics, selectedThreatId, setSelectedThreatId } = sim;
   const [showCoverage, setShowCoverage] = useState(true);
   const [showTrails, setShowTrails] = useState(true);
+  // EO/IR-1 is the venue's fixed camera; at night it defaults to IR so an approaching drone's motor heat is visible.
+  const hour = new Date().getHours();
+  const [night, setNight] = useState<boolean>(hour >= 19 || hour < 6);
+  const [camMode, setCamMode] = useState<'EO' | 'IR'>(hour >= 19 || hour < 6 ? 'IR' : 'EO');
 
   const active = useMemo(
     () => threats.filter(t => t.status === 'TRACKING' || t.status === 'DISRUPTING')
@@ -54,6 +59,9 @@ export const DefenseDashboard: React.FC = () => {
       >
         <StatusDot tone={posture} pulse={posture !== 'good'} label={postureLabel} />
         <Pill tone={disruption.autoEngage ? 'rose' : 'idle'}>{disruption.autoEngage ? 'Auto-engage' : 'Manual auth'}</Pill>
+        <button onClick={() => { const n = !night; setNight(n); setCamMode(n ? 'IR' : 'EO'); }} aria-pressed={night} className={`px-2.5 py-1.5 rounded-lg border text-xs flex items-center gap-1.5 ${night ? 'border-indigo-400/50 bg-indigo-500/10 text-indigo-200' : 'border-white/[0.08] bg-white/[0.03] text-slate-300 hover:bg-white/[0.07]'}`} title="Toggle night: EO/IR-1 switches to thermal">
+          {night ? <MoonStar className="w-3.5 h-3.5" /> : <SunMedium className="w-3.5 h-3.5" />}{night ? 'Night · IR' : 'Day · EO'}
+        </button>
         <button onClick={() => sim.setPaused(!sim.paused)} className="px-2.5 py-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.07] text-slate-300 text-xs flex items-center gap-1.5">
           {sim.paused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}{sim.paused ? 'Resume feed' : 'Freeze feed'}
         </button>
@@ -102,6 +110,12 @@ export const DefenseDashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* EO/IR camera on the selected track */}
+        <Panel title="EO/IR-1 · camera feed" icon={<Video className="w-3.5 h-3.5" />} right={<span className="font-mono text-[10px] text-slate-500">{selected ? `slewed to ${selected.id}` : 'parked'}</span>}>
+          <EoIrFeedCanvas target={selected} rangeM={selected ? sim.rangeM(selected) : 0} mode={camMode} onSetMode={setCamMode} isNight={night} />
+          <p className="mt-2 text-[10px] text-slate-500">Confirm the classification on camera before engaging: a quad shows four motor hot-spots in IR; a bird or balloon does not.</p>
+        </Panel>
+
         {/* Threat board */}
         <Panel title="Threat board" icon={<Crosshair className="w-3.5 h-3.5" />} right={<span className="font-mono text-[10px] text-slate-500">{active.length} active · sorted by priority, range</span>} className="lg:col-span-2">
           {active.length === 0 ? (

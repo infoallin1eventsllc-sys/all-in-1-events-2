@@ -163,7 +163,7 @@ export const DefenseMapCanvas: React.FC<Props> = ({ threats, sensors, disruption
         // Label: keep it on the board near the edges
         const flip = t.x > MAP_W - 150;
         const lx = flip ? t.x - 12 : t.x + 12;
-        const ly = Math.max(24, Math.min(MAP_H - 24, t.y));
+        const ly = Math.max(t.x < 360 ? 72 : 24, Math.min(MAP_H - 24, t.y)); // clear of the posture strip
         ctx.textAlign = flip ? 'right' : 'left';
         ctx.font = '600 10px ui-monospace, SFMono-Regular, Menlo, monospace';
         ctx.fillStyle = 'rgba(248,250,252,0.92)';

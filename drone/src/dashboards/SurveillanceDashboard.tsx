@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import {
   Eye, Radio, Battery, Navigation, Crosshair, Sun, Moon, Flame, UserSearch, Home, Gauge, Clock, Wifi,
-  ChevronUp, ChevronDown, ZoomIn, ZoomOut, Activity, Map, Video, Thermometer,
+  ChevronUp, ChevronDown, ZoomIn, ZoomOut, Activity, Map, Video, MoonStar, SunMedium, Clock3,
 } from 'lucide-react';
 import { useSurveillanceSimulation, WAYPOINTS, type PatrolDrone, type Detection } from '../hooks/useSurveillanceSimulation';
 import { SurveillanceMapCanvas } from './SurveillanceMapCanvas';
+import { DroneFeedCanvas } from './DroneFeedCanvas';
 import { Panel, Stat, Label, Meter, StatusDot, Toggle, ActionButton, Pill, Sparkline, DashboardHeader, ACCENT, STATUS, formatClock, type StatusKey } from './ui';
 
 const STATUS_TONE: Record<PatrolDrone['status'], StatusKey> = { ON_PATROL: 'good', EN_ROUTE: 'good', MONITORING: 'warning', RTH: 'warning', OFFLINE: 'idle' };
@@ -14,7 +15,7 @@ const DET_TONE: Record<Detection['kind'], StatusKey> = { PERSON: 'warning', VEHI
 
 export const SurveillanceDashboard: React.FC = () => {
   const sim = useSurveillanceSimulation();
-  const { drones, detections, events, selected, selectedDroneId, setSelectedDroneId, missionElapsedSec, uplinkGbps, routeProgress } = sim;
+  const { drones, detections, events, selected, selectedDroneId, setSelectedDroneId, missionElapsedSec, uplinkGbps, routeProgress, isNight, nightMode, setNightMode } = sim;
   const [filter, setFilter] = useState<'ALL' | 'AIRBORNE'>('ALL');
 
   const airborne = drones.filter(d => d.status !== 'OFFLINE');
@@ -42,6 +43,15 @@ export const SurveillanceDashboard: React.FC = () => {
           <span className="font-mono text-xs text-slate-100 tabular-nums">{uplinkGbps.toFixed(1)} Gbps</span>
         </div>
         <Pill tone={unacked.some(x => x.kind === 'PERSON' || x.kind === 'HEAT_SIGNATURE') ? 'warning' : 'emerald'}>{unacked.length ? `${unacked.length} to review` : 'All clear'}</Pill>
+        {/* Night protocol: AUTO follows the clock; forcing NIGHT flips every airborne payload to thermal */}
+        <div className="flex items-center gap-1 rounded-lg border border-white/[0.08] bg-white/[0.03] p-0.5" title="Night protocol: at night all airborne payloads switch to thermal so moving heat signatures stay visible">
+          {(['AUTO', 'DAY', 'NIGHT'] as const).map(m => (
+            <button key={m} onClick={() => setNightMode(m)} aria-pressed={nightMode === m} className={`px-2 py-1 rounded-md font-mono text-[10px] font-semibold flex items-center gap-1 ${nightMode === m ? (isNight ? 'bg-indigo-400 text-slate-950' : `${ACCENT.emerald.solid} text-slate-950`) : 'text-slate-400 hover:text-slate-100'}`}>
+              {m === 'AUTO' ? <Clock3 className="w-3 h-3" /> : m === 'DAY' ? <SunMedium className="w-3 h-3" /> : <MoonStar className="w-3 h-3" />}{m}
+            </button>
+          ))}
+        </div>
+        <Pill tone={isNight ? 'violet' : 'emerald'}>{isNight ? 'Night · IR on all airframes' : 'Daylight · EO'}</Pill>
       </DashboardHeader>
 
       <div className="grid grid-cols-1 xl:grid-cols-[260px_1fr_300px] gap-4">
@@ -104,8 +114,28 @@ export const SurveillanceDashboard: React.FC = () => {
           </Panel>
         </div>
 
-        {/* Center: map + flight control */}
+        {/* Center: live feed + map + flight control */}
         <div className="space-y-4 min-w-0 order-1 xl:order-2">
+          {/* Live video feed from the selected airframe's gimbal */}
+          <div id="live-feed" className="rounded-2xl overflow-hidden border border-white/[0.08] bg-black shadow-2xl">
+            <DroneFeedCanvas
+              key={d.id}
+              drone={d}
+              isNight={isNight}
+              width={960}
+              onSetSensorMode={m => sim.setSensorMode(d.id, m)}
+              onSetZoom={z => sim.setZoom(d.id, z)}
+            />
+            {/* Other airframes' feeds — click to switch the hero */}
+            <div className="grid grid-cols-3 gap-px bg-white/[0.06] border-t border-white/[0.08]">
+              {drones.filter(x => x.id !== d.id).map(x => (
+                <button key={x.id} onClick={() => setSelectedDroneId(x.id)} className="relative bg-black hover:ring-1 hover:ring-inset hover:ring-emerald-400/60 focus:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400" title={`Switch feed to ${x.id}`}>
+                  <DroneFeedCanvas drone={x} isNight={isNight} width={320} compact />
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="relative rounded-2xl overflow-hidden border border-white/[0.08] bg-[#070b0c] shadow-2xl">
             <SurveillanceMapCanvas
               drones={drones} detections={detections} selectedDroneId={selectedDroneId}

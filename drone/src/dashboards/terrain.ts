@@ -51,9 +51,10 @@ function noise(x: number, y: number, seed: number) {
   const u = smooth(xf), v = smooth(yf);
   return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
 }
-function fbm(x: number, y: number, seed: number) {
+/** Fractional Brownian motion over the value noise; `octaves` trades detail for speed. */
+export function fbm(x: number, y: number, seed: number, octaves = 5) {
   let sum = 0, amp = 0.5, freq = 1;
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < octaves; i++) {
     sum += amp * noise(x * freq, y * freq, seed + i * 7);
     amp *= 0.5;
     freq *= 2.1;
