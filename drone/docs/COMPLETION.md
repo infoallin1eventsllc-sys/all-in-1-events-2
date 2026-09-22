@@ -23,6 +23,7 @@ what needs hardware in your hands, and what needs a permit rather than code.
 | Light-show package export (CSV per aircraft + manifest, Skybrush/Blender import) | ✅ built | Light show → Cues → Export |
 | CI: typecheck, codec tests, build on every push | ✅ built | `.github/workflows/drone.yml` |
 | Flight recorder: every session recorded, browsable, exportable, printable | ✅ built, unit-tested | `src/record`, Records tab |
+| Analytics: flight hours, products, fleet health (service interval, battery drain), safety, flight-log export | ✅ built, unit-tested | Analytics tab, `src/analytics` |
 | Crash isolation: one view failing cannot take down the console | ✅ built | `src/dashboards/ErrorBoundary.tsx` |
 | Keyboard operation, visible focus, reduced motion, print stylesheet | ✅ built | `src/index.css`, App shortcuts |
 | Offline reload at a venue with no signal | ✅ built | `public/sw.js` |

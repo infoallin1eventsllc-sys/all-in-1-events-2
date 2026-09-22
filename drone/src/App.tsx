@@ -21,6 +21,7 @@ import { SurveillanceDashboard } from './dashboards/SurveillanceDashboard';
 import { LinkButton } from './link/LinkButton';
 import { PlatformView } from './dashboards/PlatformView';
 import { RecordsView } from './dashboards/RecordsView';
+import { AnalyticsView } from './dashboards/AnalyticsView';
 import { ErrorBoundary } from './dashboards/ErrorBoundary';
 import { recorder } from './record/recorder';
 import { 
@@ -47,6 +48,7 @@ import {
   Moon,
   ChevronLeft,
   Archive,
+  BarChart3,
   Keyboard,
   X
 } from 'lucide-react';
@@ -55,7 +57,7 @@ import {
 type VerticalTab = 'LIGHT_SHOW_OPS' | 'SURVEY_OPS' | 'SURVEILLANCE_OPS';
 type EngineeringTab = 'RADAR' | 'DRONE_OPERATOR' | 'LIGHT_SHOW' | 'ARCHITECTURE' | 'TABLE';
 /** 'PLATFORM' is the client-readable explanation that fronts the engineering views. */
-type ViewTab = VerticalTab | EngineeringTab | 'PLATFORM' | 'RECORDS';
+type ViewTab = VerticalTab | EngineeringTab | 'PLATFORM' | 'RECORDS' | 'ANALYTICS';
 
 const VERTICALS: { id: VerticalTab; label: string; icon: React.ReactNode }[] = [
   { id: 'LIGHT_SHOW_OPS', label: 'Light show', icon: <Sparkles className="w-3.5 h-3.5" /> },
@@ -70,9 +72,10 @@ export default function App() {
   const isVertical = activeTab === 'LIGHT_SHOW_OPS' || activeTab === 'SURVEY_OPS' || activeTab === 'SURVEILLANCE_OPS';
   const isPlatform = activeTab === 'PLATFORM';
   const isRecords = activeTab === 'RECORDS';
+  const isAnalytics = activeTab === 'ANALYTICS';
   // Client-facing chrome covers the three dashboards and the "How it works" page;
   // the deep engineering views keep their original dark tooling look.
-  const isClient = isVertical || isPlatform || isRecords;
+  const isClient = isVertical || isPlatform || isRecords || isAnalytics;
   const [showShortcuts, setShowShortcuts] = useState<boolean>(false);
   const [showEngineering, setShowEngineering] = useState<boolean>(false);
   // Light by default (client-facing); dark for night operations. Persisted per browser.
@@ -152,6 +155,7 @@ export default function App() {
       else if (e.key === '2') setActiveTab('SURVEY_OPS');
       else if (e.key === '3') setActiveTab('SURVEILLANCE_OPS');
       else if (e.key.toLowerCase() === 'r') setActiveTab('RECORDS');
+      else if (e.key.toLowerCase() === 'a') setActiveTab('ANALYTICS');
       else if (e.key.toLowerCase() === 'h') setActiveTab('PLATFORM');
       else if (e.key === '?') setShowShortcuts(v => !v);
     };
@@ -226,6 +230,20 @@ export default function App() {
 
           <div className="flex items-center gap-2">
             <LinkButton />
+            {isClient && (
+              <button
+                id="nav-analytics"
+                onClick={() => setActiveTab('ANALYTICS')}
+                aria-pressed={isAnalytics}
+                className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border transition-colors ${
+                  isAnalytics ? 'bg-accent-soft text-accent border-accent/30' : 'text-ink-2 hover:text-ink border-line'
+                }`}
+                title="Analytics — flight hours, products, fleet health and safety (a)"
+              >
+                <BarChart3 className="w-3.5 h-3.5" />
+                <span className="hidden lg:inline">Analytics</span>
+              </button>
+            )}
             {isClient && (
               <button
                 id="nav-records"
@@ -430,6 +448,11 @@ export default function App() {
         {/* Flight records */}
         {isRecords && (
           <ErrorBoundary name="Flight records"><RecordsView /></ErrorBoundary>
+        )}
+
+        {/* Analytics across every recorded flight */}
+        {isAnalytics && (
+          <ErrorBoundary name="Analytics"><AnalyticsView /></ErrorBoundary>
         )}
 
         {/* How it works: the client-readable front for the engineering views */}
@@ -641,7 +664,7 @@ export default function App() {
               <button onClick={() => setShowShortcuts(false)} aria-label="Close" className="w-8 h-8 rounded-lg border border-line text-ink-2 hover:text-ink inline-flex items-center justify-center"><X className="w-4 h-4" /></button>
             </div>
             <ul className="mt-3 divide-y divide-line">
-              {[['1', 'Light show'], ['2', 'Site survey'], ['3', 'Surveillance'], ['R', 'Flight records'], ['H', 'How it works'], ['Esc', 'Close dialogs and deselect'], ['?', 'This list']].map(([k, v]) => (
+              {[['1', 'Light show'], ['2', 'Site survey'], ['3', 'Surveillance'], ['A', 'Analytics'], ['R', 'Flight records'], ['H', 'How it works'], ['Esc', 'Close dialogs and deselect'], ['?', 'This list']].map(([k, v]) => (
                 <li key={k} className="flex items-center justify-between py-2 text-[13px]">
                   <span className="text-ink-2">{v}</span>
                   <kbd className="num rounded-md border border-line bg-surface-2 px-2 py-0.5 text-[11px] text-ink">{k}</kbd>

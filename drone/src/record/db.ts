@@ -1,10 +1,15 @@
+import type { SessionRollup } from '../analytics/rollup';
+import type { ServiceRecord } from '../analytics/aggregate';
+
 /**
  * Flight recorder storage.
  *
- * IndexedDB, no dependencies. Three stores:
- *   sessions  one per dashboard run — what flew, when, on what link
- *   samples   periodic position/state rows, the flight path
- *   events    commands, alerts, detections, authorisations — what was done and why
+ * IndexedDB, no dependencies. Five stores:
+ *   sessions     one per dashboard run — what flew, when, on what link
+ *   samples      periodic position/state rows, the flight path
+ *   events       commands, alerts, detections, authorisations — what was done and why
+ *   rollups      one small summary per closed session; never pruned (Analytics)
+ *   maintenance  services logged per aircraft (Analytics → Fleet health)
  *
  * This is the local tier of the record the platform promises. A deployment with
  * the server-side time-series tier (architecture layer 08) syncs these rows up;
@@ -12,7 +17,7 @@
  */
 
 const DB_NAME = 'a1-drone-recorder';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 /** DEFENSE is retired; kept so sessions recorded before then still open. */
 export type Vertical = 'SURVEILLANCE' | 'SURVEY' | 'LIGHT_SHOW' | 'DEFENSE';
@@ -78,6 +83,13 @@ function open(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains('events')) {
         db.createObjectStore('events', { keyPath: 'id', autoIncrement: true }).createIndex('sessionId', 'sessionId');
       }
+      // v2: Analytics
+      if (!db.objectStoreNames.contains('rollups')) {
+        db.createObjectStore('rollups', { keyPath: 'sessionId' }).createIndex('startedAt', 'startedAt');
+      }
+      if (!db.objectStoreNames.contains('maintenance')) {
+        db.createObjectStore('maintenance', { keyPath: 'id', autoIncrement: true }).createIndex('aircraft', 'aircraft');
+      }
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error ?? new Error('IndexedDB open failed'));
@@ -134,11 +146,16 @@ export const recordDb = {
   samplesFor: (sessionId: string) => byIndex<FlightSample>('samples', 'sessionId', sessionId).then(r => r.sort((a, b) => a.t - b.t)),
   eventsFor: (sessionId: string) => byIndex<FlightEvent>('events', 'sessionId', sessionId).then(r => r.sort((a, b) => a.t - b.t)),
 
-  deleteSession: async (id: string) => {
+  /**
+   * Delete a session's record. Pruning keeps the rollup (the flight still happened
+   * and still counts in Analytics); an operator deleting a record removes it too.
+   */
+  deleteSession: async (id: string, keepRollup = false) => {
     const db = await open();
     await new Promise<void>((resolve, reject) => {
-      const t = db.transaction(['sessions', 'samples', 'events'], 'readwrite');
+      const t = db.transaction(['sessions', 'samples', 'events', 'rollups'], 'readwrite');
       t.objectStore('sessions').delete(id);
+      if (!keepRollup) t.objectStore('rollups').delete(id);
       for (const store of ['samples', 'events'] as const) {
         const idx = t.objectStore(store).index('sessionId');
         const cur = idx.openKeyCursor(IDBKeyRange.only(id));
@@ -152,7 +169,32 @@ export const recordDb = {
   /** Keep storage bounded: drop the oldest sessions beyond `keep`. */
   prune: async (keep = 50) => {
     const all = await recordDb.listSessions();
-    for (const s of all.slice(keep)) await recordDb.deleteSession(s.id);
+    for (const s of all.slice(keep)) await recordDb.deleteSession(s.id, true);
     return Math.max(0, all.length - keep);
   },
+
+  // ---- Analytics ----
+  putRollups: (rows: SessionRollup[]) => open().then(db => new Promise<void>((resolve, reject) => {
+    if (rows.length === 0) return resolve();
+    const t = db.transaction('rollups', 'readwrite');
+    for (const r of rows) t.objectStore('rollups').put(r);
+    t.oncomplete = () => resolve();
+    t.onerror = () => reject(t.error ?? new Error('rollup write failed'));
+  })),
+  listRollups: () => tx<SessionRollup[]>('rollups', 'readonly', st => st.getAll()),
+  /** Remove generated sample history (rollups and service entries), leaving real records alone. */
+  clearSamples: async () => {
+    const db = await open();
+    await new Promise<void>((resolve, reject) => {
+      const t = db.transaction(['rollups', 'maintenance'], 'readwrite');
+      for (const store of ['rollups', 'maintenance'] as const) {
+        const cur = t.objectStore(store).openCursor();
+        cur.onsuccess = () => { const c = cur.result; if (!c) return; if ((c.value as { sample?: boolean }).sample) c.delete(); c.continue(); };
+      }
+      t.oncomplete = () => resolve();
+      t.onerror = () => reject(t.error ?? new Error('clear failed'));
+    });
+  },
+  addService: (r: ServiceRecord) => tx<IDBValidKey>('maintenance', 'readwrite', st => st.add(r)),
+  listService: () => tx<ServiceRecord[]>('maintenance', 'readonly', st => st.getAll()),
 };

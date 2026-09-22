@@ -1,4 +1,5 @@
 import { recordDb, type FlightEvent, type FlightSample, type FlightSession, type LinkSource, type Vertical } from './db';
+import { rollupSession } from '../analytics/rollup';
 
 /**
  * The flight recorder.
@@ -17,6 +18,7 @@ let sampleBuf: FlightSample[] = [];
 let eventBuf: FlightEvent[] = [];
 let timer: ReturnType<typeof setInterval> | null = null;
 const listeners = new Set<(s: FlightSession | null) => void>();
+const closedListeners = new Set<() => void>();
 
 function notify() { listeners.forEach(l => l(session ? { ...session } : null)); }
 
@@ -98,12 +100,19 @@ export const recorder = {
       if (closing.eventCount <= 2 && closing.sampleCount < MIN_KEEP_SAMPLES) {
         await recordDb.deleteSession(closing.id);
       } else {
+        // Condense the flight for Analytics before the raw rows can be pruned.
+        const [samples, events] = await Promise.all([recordDb.samplesFor(closing.id), recordDb.eventsFor(closing.id)]);
+        await recordDb.putRollups([rollupSession(closing, samples, events)]);
         await recordDb.prune();
       }
     } catch { /* best effort */ }
     session = null;
     notify();
+    closedListeners.forEach(l => l());
   },
+
+  /** Fires after a session is closed and its rollup is stored. */
+  onClosed(fn: () => void) { closedListeners.add(fn); return () => { closedListeners.delete(fn); }; },
 };
 
 // A closed tab should not lose the last few seconds.

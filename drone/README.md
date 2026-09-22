@@ -83,6 +83,35 @@ The Defense (counter-UAS) dashboard was retired in favour of Site survey. Flight
 records made with it still open in Records; the Remote ID receiver in `hardware/`
 still works on its own and can be brought back as an airspace-awareness panel.
 
+## Analytics
+
+**Analytics** (app bar, or press `a`) answers four questions from the flight
+records: how much the fleet flew (flight hours per day or week, against the
+previous period), for which product, which aircraft need attention, and what went
+wrong.
+
+- **Rollups.** When a recording closes, the recorder condenses it into one small
+  summary per flight (`src/analytics/rollup.ts`): time airborne, distance, battery
+  used and packs swapped, drain rate, alerts, and per-product numbers (photos and
+  coverage, show drift, detections). Raw telemetry is still pruned after 50 flights;
+  rollups are kept, so trends cover the whole history. Older recordings are
+  back-filled the first time Analytics opens.
+- **Fleet health.** Hours since the last logged service (due every 25 flight hours)
+  and each aircraft's battery drain rate flight by flight — a pack that now uses
+  15% more per minute than on its first flights is flagged *Check battery*.
+  **Log service** writes to a maintenance log on the device.
+- **Honest numbers.** A session where nothing left the ground is a record, not a
+  flight. The alert rate needs an hour of flying before it shows. Real aircraft and
+  simulation can be filtered apart. Periods are calendar days, so the headline and
+  the chart always agree.
+- **Sample history.** On a fresh install, *Load sample history* adds three months of
+  example operations (marked as samples, with a banner and a one-click remove) so the
+  page can be shown before the fleet has flown.
+- **Export flight log** — one CSV row per flight in the current view.
+
+The maths is unit-tested in `scripts/analytics.test.mjs`. The chart colours were
+validated for colour-blind separation and contrast in both themes.
+
 ## Light show handoff
 
 **Cues → Export show package** downloads a zip with one CSV per aircraft
