@@ -1,281 +1,232 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
-  ShieldAlert, Radar, Radio, Crosshair, Zap, RotateCw, XOctagon, Target, Flag, Cpu, Eye, Ear, Activity, Plus, Pause, Play, AlertTriangle, Video, MoonStar, SunMedium,
+  Radio, Radar, Eye, Ear, Zap, RotateCw, XOctagon, Target, Flag, Plus, Pause, Play, Layers, Video, Map as MapIcon, Maximize2, SunMedium, MoonStar,
 } from 'lucide-react';
 import { useDefenseSimulation, type Threat, type EffectorType, type ThreatClass } from '../hooks/useDefenseSimulation';
 import { DefenseMapCanvas } from './DefenseMapCanvas';
 import { EoIrFeedCanvas } from './EoIrFeedCanvas';
-import { Panel, Stat, Label, Meter, StatusDot, Toggle, ActionButton, Pill, DashboardHeader, ACCENT, STATUS, type StatusKey } from './ui';
+import { Headline, Card, Section, Divider, Tabs, Stat, Row, Chip, Dot, Meter, ToolButton, IconButton, Toggle, Segmented, Activity, useAccentHex, TONE_HEX, type Tone } from './ui';
 
-const LEVEL_TONE: Record<Threat['level'], StatusKey> = { LOW: 'idle', MEDIUM: 'warning', HIGH: 'serious', CRITICAL: 'critical' };
-const CLASS_LABEL: Record<ThreatClass, string> = {
-  DJI_OCUSYNC: 'DJI OcuSync', FPV_ANALOG: 'FPV analog', WIFI_UAS: 'Wi-Fi UAS', FIXED_WING: 'Fixed wing', UNKNOWN: 'Unknown',
-};
-const EFFECTORS: { id: EffectorType; label: string; hint: string }[] = [
-  { id: 'RF_JAM', label: 'RF jam', hint: 'Sever C2 + video link' },
-  { id: 'GNSS_DENY', label: 'GNSS deny', hint: 'Deny GPS/GLONASS fix' },
-  { id: 'PROTOCOL_TAKEOVER', label: 'Takeover', hint: 'Protocol-level forced land' },
+const LEVEL_TONE: Record<Threat['level'], Tone> = { LOW: 'neutral', MEDIUM: 'warn', HIGH: 'warn', CRITICAL: 'bad' };
+const LEVEL_LABEL: Record<Threat['level'], string> = { LOW: 'Low', MEDIUM: 'Medium', HIGH: 'High', CRITICAL: 'Critical' };
+const CLASS_LABEL: Record<ThreatClass, string> = { DJI_OCUSYNC: 'DJI OcuSync', FPV_ANALOG: 'FPV analog', WIFI_UAS: 'Wi-Fi drone', FIXED_WING: 'Fixed wing', UNKNOWN: 'Unclassified' };
+const EFFECTORS: { id: EffectorType; label: string; title: string }[] = [
+  { id: 'RF_JAM', label: 'RF jam', title: 'Sever the control and video link' },
+  { id: 'GNSS_DENY', label: 'GNSS deny', title: 'Deny the satellite fix' },
+  { id: 'PROTOCOL_TAKEOVER', label: 'Takeover', title: 'Protocol-level forced landing' },
 ];
 
-/** 32-bin spectrum bars for one band. Uses a single accent hue; peaks are magnitude, not identity. */
-const SpectrumBars: React.FC<{ bins: number[]; lo: number; hi: number; label: string; enabled: boolean }> = ({ bins, lo, hi, label, enabled }) => (
+type RailTab = 'TRACKS' | 'SENSORS' | 'ACTIVITY';
+
+/** One band of the RF spectrum. Magnitude only, so a single hue with status colours for hot bins. */
+const Spectrum: React.FC<{ bins: number[]; label: string; range: string; enabled: boolean; accent: string }> = ({ bins, label, range, enabled, accent }) => (
   <div className={enabled ? '' : 'opacity-40'}>
-    <div className="flex items-center justify-between"><Label>{label}</Label><span className="font-mono text-[10px] text-slate-500">{lo}–{hi} MHz</span></div>
-    <div className="mt-1 flex items-end gap-px h-9" aria-hidden="true">
-      {bins.map((v, i) => (
-        <div key={i} className="flex-1 rounded-t-[2px]" style={{ height: `${Math.max(4, v)}%`, backgroundColor: v > 60 ? STATUS.critical.hex : v > 30 ? STATUS.warning.hex : ACCENT.rose.hex, opacity: v > 30 ? 0.95 : 0.45 }} />
-      ))}
+    <div className="flex items-center justify-between text-[11px]"><span className="text-ink-2">{label}</span><span className="num text-ink-3">{range}</span></div>
+    <div className="mt-1 flex items-end gap-px h-8" aria-hidden="true">
+      {bins.map((v, i) => <div key={i} className="flex-1 rounded-t-[2px]" style={{ height: `${Math.max(4, v)}%`, backgroundColor: v > 60 ? TONE_HEX.bad : v > 30 ? TONE_HEX.warn : accent, opacity: v > 30 ? 0.9 : 0.45 }} />)}
     </div>
   </div>
 );
 
 export const DefenseDashboard: React.FC = () => {
   const sim = useDefenseSimulation();
-  const { threats, sensors, disruption, events, metrics, selectedThreatId, setSelectedThreatId } = sim;
+  const { threats, sensors, disruption: dz, events, metrics, selectedThreatId, setSelectedThreatId } = sim;
+  const rootRef = useRef<HTMLDivElement>(null);
+  const accent = useAccentHex(rootRef, '#c2410c');
+  const [rail, setRail] = useState<RailTab>('TRACKS');
+  const [hero, setHero] = useState<'MAP' | 'CAMERA'>('MAP');
   const [showCoverage, setShowCoverage] = useState(true);
   const [showTrails, setShowTrails] = useState(true);
-  // EO/IR-1 is the venue's fixed camera; at night it defaults to IR so an approaching drone's motor heat is visible.
   const hour = new Date().getHours();
   const [night, setNight] = useState<boolean>(hour >= 19 || hour < 6);
-  const [camMode, setCamMode] = useState<'EO' | 'IR'>(hour >= 19 || hour < 6 ? 'IR' : 'EO');
+  const [camMode, setCamMode] = useState<'EO' | 'IR'>(night ? 'IR' : 'EO');
 
   const active = useMemo(
-    () => threats.filter(t => t.status === 'TRACKING' || t.status === 'DISRUPTING')
-      .sort((a, b) => Number(b.priority) - Number(a.priority) || sim.rangeM(a) - sim.rangeM(b)),
+    () => threats.filter(t => t.status === 'TRACKING' || t.status === 'DISRUPTING').sort((a, b) => Number(b.priority) - Number(a.priority) || sim.rangeM(a) - sim.rangeM(b)),
     [threats, sim],
   );
   const selected = threats.find(t => t.id === selectedThreatId) ?? active[0] ?? null;
-  const posture: StatusKey = metrics.criticalTracks > 0 ? 'critical' : metrics.activeTracks > 0 ? 'warning' : 'good';
-  const postureLabel = posture === 'critical' ? 'Engage' : posture === 'warning' ? 'Tracking' : 'Clear';
+  const anyDisrupting = threats.some(t => t.status === 'DISRUPTING');
+  const posture: Tone = metrics.criticalTracks > 0 ? 'bad' : metrics.activeTracks > 0 ? 'warn' : 'ok';
+  const postureLabel = posture === 'bad' ? 'Engaging' : posture === 'warn' ? 'Tracking' : 'Clear';
+
+  const map = (
+    <DefenseMapCanvas threats={threats} sensors={sensors} disruption={dz} selectedThreatId={selectedThreatId} onSelectThreat={setSelectedThreatId} showSensorCoverage={showCoverage} showTrails={showTrails} />
+  );
+  const camera = <EoIrFeedCanvas target={selected} rangeM={selected ? sim.rangeM(selected) : 0} mode={camMode} onSetMode={setCamMode} isNight={night} />;
 
   return (
-    <div id="defense-dashboard" className="space-y-4">
-      <DashboardHeader
-        accent="rose"
-        icon={<ShieldAlert />}
-        kicker="Vertical 02 · Counter-UAS Defense"
-        title="Airspace Defense"
-        subtitle={`Protected asset · engage ring ${metrics.engageRingM.toFixed(0)} m · ${metrics.sensorsOnline}/${metrics.sensorsTotal} sensors online`}
-      >
-        <StatusDot tone={posture} pulse={posture !== 'good'} label={postureLabel} />
-        <Pill tone={disruption.autoEngage ? 'rose' : 'idle'}>{disruption.autoEngage ? 'Auto-engage' : 'Manual auth'}</Pill>
-        <button onClick={() => { const n = !night; setNight(n); setCamMode(n ? 'IR' : 'EO'); }} aria-pressed={night} className={`px-2.5 py-1.5 rounded-lg border text-xs flex items-center gap-1.5 ${night ? 'border-indigo-400/50 bg-indigo-500/10 text-indigo-200' : 'border-white/[0.08] bg-white/[0.03] text-slate-300 hover:bg-white/[0.07]'}`} title="Toggle night: EO/IR-1 switches to thermal">
-          {night ? <MoonStar className="w-3.5 h-3.5" /> : <SunMedium className="w-3.5 h-3.5" />}{night ? 'Night · IR' : 'Day · EO'}
-        </button>
-        <button onClick={() => sim.setPaused(!sim.paused)} className="px-2.5 py-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.07] text-slate-300 text-xs flex items-center gap-1.5">
-          {sim.paused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}{sim.paused ? 'Resume feed' : 'Freeze feed'}
-        </button>
-        <button onClick={() => sim.injectThreat()} className="px-2.5 py-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.07] text-slate-300 text-xs flex items-center gap-1.5"><Plus className="w-3.5 h-3.5" />Inject track</button>
-      </DashboardHeader>
+    <div ref={rootRef} data-accent="defense" id="defense-dashboard" className="space-y-5">
+      <Headline
+        title="Airspace defense"
+        context={`Venue perimeter · engage ring ${metrics.engageRingM.toFixed(0)} m · ${metrics.sensorsOnline} of ${metrics.sensorsTotal} sensors online`}
+        status={{ label: postureLabel, tone: posture, pulse: posture !== 'ok' }}
+        stats={[
+          { label: 'Active tracks', value: metrics.activeTracks, tone: metrics.activeTracks ? 'warn' : 'neutral' },
+          { label: 'Critical', value: metrics.criticalTracks, tone: metrics.criticalTracks ? 'bad' : 'neutral' },
+          { label: 'Closest', value: Number.isFinite(metrics.closestRangeM) ? `${metrics.closestRangeM.toFixed(0)} m` : '—' },
+          { label: 'Neutralized today', value: metrics.neutralizedToday, tone: 'ok' },
+        ]}
+        actions={<>
+          <Segmented size="sm" value={night ? 'NIGHT' : 'DAY'} onChange={v => { const n = v === 'NIGHT'; setNight(n); setCamMode(n ? 'IR' : 'EO'); }} items={[
+            { id: 'DAY', label: <><SunMedium className="w-3 h-3" />Day</> }, { id: 'NIGHT', label: <><MoonStar className="w-3 h-3" />Night</>, title: 'Camera switches to thermal' },
+          ]} />
+          <ToolButton size="sm" icon={sim.paused ? <Play /> : <Pause />} label={sim.paused ? 'Resume' : 'Freeze'} onClick={() => sim.setPaused(!sim.paused)} />
+          <ToolButton size="sm" icon={<Plus />} label="Inject track" onClick={() => sim.injectThreat()} />
+        </>}
+      />
 
-      {/* Stage: map with floating panels on wide screens, stacked below on narrow ones */}
-      <div className="relative rounded-2xl overflow-hidden border border-white/[0.08] bg-[#07090f] shadow-2xl">
-        <DefenseMapCanvas
-          threats={threats} sensors={sensors} disruption={disruption}
-          selectedThreatId={selectedThreatId} onSelectThreat={setSelectedThreatId}
-          showSensorCoverage={showCoverage} showTrails={showTrails}
-        />
-
-        {/* Top-left: posture strip */}
-        <div className="absolute top-3 left-3 flex flex-wrap items-center gap-2 pointer-events-none">
-          <div className="rounded-lg border border-white/[0.08] bg-slate-950/80 backdrop-blur px-3 py-1.5 flex items-center gap-4">
-            <Stat label="Tracks" value={metrics.activeTracks} size="sm" tone={metrics.activeTracks ? 'warning' : 'neutral'} />
-            <Stat label="Critical" value={metrics.criticalTracks} size="sm" tone={metrics.criticalTracks ? 'critical' : 'neutral'} />
-            <Stat label="Closest" value={Number.isFinite(metrics.closestRangeM) ? metrics.closestRangeM.toFixed(0) : '—'} unit="m" size="sm" />
-            <Stat label="Neutralized" value={metrics.neutralizedToday} size="sm" tone="good" />
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_336px] gap-5 items-start">
+        {/* ---------------- Stage ---------------- */}
+        <div className="space-y-3 min-w-0">
+          <div className="relative rounded-[var(--radius-card)] overflow-hidden bg-imagery border border-line" style={{ aspectRatio: '5 / 3' }}>
+            <div className="absolute inset-0">{hero === 'MAP' ? map : <div className="w-full h-full [&>div]:h-full [&>div]:rounded-none">{camera}</div>}</div>
+            {/* Layer controls */}
+            {hero === 'MAP' && (
+              <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                <IconButton icon={<Radar />} label="Sensor coverage" active={showCoverage} onClick={() => setShowCoverage(v => !v)} />
+                <IconButton icon={<Layers />} label="Track history" active={showTrails} onClick={() => setShowTrails(v => !v)} />
+              </div>
+            )}
+            {/* Picture-in-picture: camera on the map, or map on the camera */}
+            <button
+              onClick={() => setHero(h => (h === 'MAP' ? 'CAMERA' : 'MAP'))}
+              title={hero === 'MAP' ? 'Show camera full size' : 'Show map full size'}
+              className="hidden md:block absolute bottom-3 right-3 w-[26%] min-w-[180px] rounded-lg overflow-hidden border border-white/25 shadow-xl bg-imagery group"
+              style={{ aspectRatio: hero === 'MAP' ? '16 / 9' : '5 / 3' }}
+            >
+              <div className="absolute inset-0 pointer-events-none [&>div]:h-full [&>div]:rounded-none">{hero === 'MAP' ? camera : map}</div>
+              <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                {hero === 'MAP' ? <><Video className="w-3 h-3" />Camera</> : <><MapIcon className="w-3 h-3" />Map</>}
+              </span>
+              <span className="absolute top-1.5 right-1.5 rounded bg-black/60 p-1 text-white opacity-0 group-hover:opacity-100 transition-opacity"><Maximize2 className="w-3 h-3" /></span>
+            </button>
           </div>
-        </div>
 
-        {/* Top-right: layer toggles */}
-        <div className="absolute top-3 right-3 rounded-lg border border-white/[0.08] bg-slate-950/80 backdrop-blur px-3 py-1 w-44 hidden md:block">
-          <Toggle on={showCoverage} onChange={setShowCoverage} label="Sensor coverage" accent="rose" />
-          <Toggle on={showTrails} onChange={setShowTrails} label="Track history" accent="rose" />
-        </div>
-
-        {/* Bottom-right (wide screens): disruption control */}
-        <div className="hidden xl:block absolute bottom-3 right-3 w-[340px]">
-          <DisruptionControl sim={sim} selected={selected} />
-        </div>
-
-        {/* Bottom-left (wide screens): selected track */}
-        <div className="hidden xl:block absolute bottom-3 left-3 w-[300px]">
-          <SelectedTrack t={selected} sim={sim} />
-        </div>
-      </div>
-
-      {/* Narrow-screen versions of the floating panels */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 xl:hidden">
-        <SelectedTrack t={selected} sim={sim} />
-        <DisruptionControl sim={sim} selected={selected} />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* EO/IR camera on the selected track */}
-        <Panel title="EO/IR-1 · camera feed" icon={<Video className="w-3.5 h-3.5" />} right={<span className="font-mono text-[10px] text-slate-500">{selected ? `slewed to ${selected.id}` : 'parked'}</span>}>
-          <EoIrFeedCanvas target={selected} rangeM={selected ? sim.rangeM(selected) : 0} mode={camMode} onSetMode={setCamMode} isNight={night} />
-          <p className="mt-2 text-[10px] text-slate-500">Confirm the classification on camera before engaging: a quad shows four motor hot-spots in IR; a bird or balloon does not.</p>
-        </Panel>
-
-        {/* Threat board */}
-        <Panel title="Threat board" icon={<Crosshair className="w-3.5 h-3.5" />} right={<span className="font-mono text-[10px] text-slate-500">{active.length} active · sorted by priority, range</span>} className="lg:col-span-2">
-          {active.length === 0 ? (
-            <div className="py-6 text-center text-xs text-slate-500">No active emitters. Sensors are listening.</div>
-          ) : (
-            <div className="overflow-x-auto -mx-3.5">
-              <table className="w-full text-xs min-w-[640px]">
-                <thead>
-                  <tr className="text-left">
-                    {['Track', 'Class / protocol', 'Freq', 'RSSI', 'Range', 'Alt', 'Speed', 'Level', 'Status', ''].map(h => (
-                      <th key={h} className="px-3.5 pb-2 font-mono text-[10px] uppercase tracking-wider text-slate-500 font-medium">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/[0.05]">
-                  {active.map(t => {
-                    const sel = t.id === selected?.id;
-                    return (
-                      <tr key={t.id} onClick={() => setSelectedThreatId(t.id)} className={`cursor-pointer transition-colors ${sel ? 'bg-rose-500/10' : 'hover:bg-white/[0.03]'}`}>
-                        <td className="px-3.5 py-2 font-mono text-slate-100 whitespace-nowrap">
-                          <span className="flex items-center gap-1.5">{t.priority && <Flag className="w-3 h-3 text-rose-300 fill-current" />}{t.id}</span>
-                        </td>
-                        <td className="px-3.5 py-2 text-slate-300 whitespace-nowrap">
-                          <div>{CLASS_LABEL[t.classification]}</div>
-                          <div className="text-[10px] text-slate-500">{t.protocol} · {(t.confidence * 100).toFixed(0)}%</div>
-                        </td>
-                        <td className="px-3.5 py-2 font-mono text-slate-300 tabular-nums">{t.freqMHz.toFixed(0)}<span className="text-slate-600"> MHz</span></td>
-                        <td className="px-3.5 py-2 font-mono text-slate-300 tabular-nums">{t.rssiDbm.toFixed(0)}<span className="text-slate-600"> dBm</span></td>
-                        <td className="px-3.5 py-2 font-mono text-slate-100 tabular-nums">{sim.rangeM(t).toFixed(0)}<span className="text-slate-600"> m</span></td>
-                        <td className="px-3.5 py-2 font-mono text-slate-300 tabular-nums">{t.altitudeM.toFixed(0)}<span className="text-slate-600"> m</span></td>
-                        <td className="px-3.5 py-2 font-mono text-slate-300 tabular-nums">{t.speedMps.toFixed(0)}<span className="text-slate-600"> m/s</span></td>
-                        <td className="px-3.5 py-2"><StatusDot tone={LEVEL_TONE[t.level]} label={t.level} /></td>
-                        <td className="px-3.5 py-2">
-                          {t.status === 'DISRUPTING' ? (
-                            <div className="w-20"><div className="flex justify-between font-mono text-[10px] text-rose-300"><span>DISRUPT</span><span>{(t.disruptProgress * 100).toFixed(0)}%</span></div><Meter value={t.disruptProgress * 100} tone="critical" /></div>
-                          ) : <span className="font-mono text-[10px] text-slate-400">TRACKING</span>}
-                        </td>
-                        <td className="px-3.5 py-2 text-right whitespace-nowrap">
-                          <button onClick={e => { e.stopPropagation(); sim.setPriority(t.id); }} title="Toggle priority" className={`p-1.5 rounded-md border mr-1 ${t.priority ? 'border-rose-500/50 text-rose-300 bg-rose-500/10' : 'border-white/[0.08] text-slate-400 hover:text-slate-100'}`}><Flag className="w-3 h-3" /></button>
-                          {t.status === 'TRACKING'
-                            ? <button onClick={e => { e.stopPropagation(); sim.disruptTarget(t.id); }} className="px-2 py-1 rounded-md bg-rose-500/20 border border-rose-500/50 text-rose-200 font-mono text-[10px] font-bold">DISRUPT</button>
-                            : <button onClick={e => { e.stopPropagation(); sim.cancelDisruption(); }} className="px-2 py-1 rounded-md border border-white/[0.1] text-slate-300 font-mono text-[10px]">CANCEL</button>}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+          {/* Action bar: effector + the decisions */}
+          <Card padded={false} className="px-3 py-2.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <Segmented value={dz.effector} onChange={sim.setEffector} items={EFFECTORS.map(e => ({ id: e.id, label: e.label, title: e.title }))} />
+              <span className="flex items-center gap-2 ml-1">
+                <span className="text-[11px] text-ink-3">Power</span>
+                <input type="range" min={10} max={100} value={dz.powerPct} onChange={e => sim.setPower(Number(e.target.value))} aria-label="Effector power" className="w-24 h-1 cursor-pointer" />
+                <span className="num text-[12px] text-ink w-9">{dz.powerPct}%</span>
+              </span>
+              <span className="flex items-center gap-1">
+                {([['b24', '2.4 GHz'], ['b58', '5.8 GHz'], ['gnss', 'GNSS']] as const).map(([k, label]) => (
+                  <ToolButton key={k} size="sm" label={label} active={dz.bands[k]} onClick={() => sim.toggleBand(k)} title={`Gate the ${label} band`} />
+                ))}
+              </span>
+              <span className="w-px h-6 bg-line mx-1" />
+              <ToolButton icon={<Zap />} label="Pulse" onClick={sim.pulseBurst} title="1.5 s wideband burst inside the engage ring" />
+              <ToolButton icon={<RotateCw />} label="Sweep" active={dz.sweepActive} onClick={sim.toggleSweep} title="360° rotating beam" />
+              <span className="ml-auto flex items-center gap-2">
+                <span className="w-24"><Toggle on={dz.autoEngage} onChange={sim.setAutoEngage} label="Auto" /></span>
+                <ToolButton icon={<XOctagon />} label="Stand down" disabled={!anyDisrupting && !dz.sweepActive} onClick={sim.cancelDisruption} />
+                <ToolButton icon={<Target />} label={selected ? `Disrupt ${selected.id}` : 'Disrupt target'} primary disabled={!selected || selected.status !== 'TRACKING'} onClick={() => selected && sim.disruptTarget(selected.id)} />
+                <ToolButton label="Disrupt all" danger onClick={sim.disruptAll} />
+              </span>
             </div>
-          )}
-        </Panel>
+          </Card>
+        </div>
 
-        {/* Sensor network */}
-        <Panel title="Sensor network" icon={<Radar className="w-3.5 h-3.5" />} right={<StatusDot tone={metrics.sensorsOnline === metrics.sensorsTotal ? 'good' : 'warning'} label={`${metrics.sensorsOnline}/${metrics.sensorsTotal}`} />}>
-          <ul className="divide-y divide-white/[0.05]">
-            {sensors.map(s => {
-              const Icon = s.type === 'RF' ? Radio : s.type === 'RADAR' ? Radar : s.type === 'EO_IR' ? Eye : Ear;
-              const tone: StatusKey = s.status === 'ONLINE' ? 'good' : s.status === 'DEGRADED' ? 'warning' : 'idle';
-              return (
-                <li key={s.id} className="flex items-center justify-between py-1.5 text-xs">
-                  <span className="flex items-center gap-2 text-slate-300"><Icon className="w-3.5 h-3.5 text-slate-500" /><span className="font-mono">{s.id}</span><span className="text-[10px] text-slate-500">{(s.rangePx * 2.2).toFixed(0)} m{s.fovDeg < 360 ? ` · ${s.fovDeg}°` : ''}</span></span>
-                  <button onClick={() => sim.toggleSensor(s.id)} className="flex items-center gap-2" title="Toggle sensor online/offline"><StatusDot tone={tone} label={s.status} /></button>
-                </li>
-              );
-            })}
-          </ul>
-          <div className="mt-3 space-y-3 pt-3 border-t border-white/[0.06]">
-            <SpectrumBars bins={metrics.spectrum24} lo={2400} hi={2500} label="2.4 GHz band" enabled={disruption.bands.b24} />
-            <SpectrumBars bins={metrics.spectrum58} lo={5725} hi={5875} label="5.8 GHz band" enabled={disruption.bands.b58} />
+        {/* ---------------- Inspector rail ---------------- */}
+        <Card className="xl:sticky xl:top-[72px]">
+          <Tabs value={rail} onChange={setRail} items={[
+            { id: 'TRACKS', label: 'Tracks', badge: active.length || undefined },
+            { id: 'SENSORS', label: 'Sensors' },
+            { id: 'ACTIVITY', label: 'Activity' },
+          ]} />
+          <div className="mt-4 rail-scroll max-h-[calc(100vh-180px)] overflow-y-auto pr-1">
+            {rail === 'TRACKS' && (
+              <div className="space-y-5">
+                {selected ? (
+                  <div>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="text-[15px] font-semibold text-ink">{selected.id}</div>
+                        <div className="text-[12px] text-ink-3">{CLASS_LABEL[selected.classification]} · {selected.protocol}</div>
+                      </div>
+                      <Chip tone={LEVEL_TONE[selected.level]} pulse={selected.level === 'CRITICAL'}>{LEVEL_LABEL[selected.level]}</Chip>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3 mt-3">
+                      <Stat label="Range" value={sim.rangeM(selected).toFixed(0)} unit="m" />
+                      <Stat label="Altitude" value={selected.altitudeM.toFixed(0)} unit="m" />
+                      <Stat label="Speed" value={selected.speedMps.toFixed(0)} unit="m/s" />
+                      <Stat label="Signal" value={selected.rssiDbm.toFixed(0)} unit="dBm" size="sm" />
+                      <Stat label="Frequency" value={selected.freqMHz.toFixed(0)} unit="MHz" size="sm" />
+                      <Stat label="Confidence" value={`${(selected.confidence * 100).toFixed(0)}%`} size="sm" />
+                    </div>
+                    {selected.status === 'DISRUPTING' && (
+                      <div className="mt-3">
+                        <div className="flex items-center justify-between text-[11px]"><span className="text-ink-2">Disrupting · {dz.effector.replace('_', ' ').toLowerCase()}</span><span className="num text-ink">{(selected.disruptProgress * 100).toFixed(0)}%</span></div>
+                        <Meter value={selected.disruptProgress * 100} tone="bad" className="mt-1" />
+                      </div>
+                    )}
+                    <div className="mt-3 flex gap-2">
+                      <ToolButton size="sm" icon={<Flag />} label={selected.priority ? 'Priority' : 'Mark priority'} active={selected.priority} onClick={() => sim.setPriority(selected.id)} />
+                      <ToolButton size="sm" icon={<Video />} label="Camera" onClick={() => { setHero('CAMERA'); }} />
+                    </div>
+                  </div>
+                ) : <p className="text-[13px] text-ink-3">No active emitters. Sensors are listening.</p>}
+
+                <Divider />
+                <Section title="All tracks" right="sorted by priority, range">
+                  <ul className="divide-y divide-line -mx-2">
+                    {active.map(t => {
+                      const sel = t.id === selected?.id;
+                      return (
+                        <li key={t.id}>
+                          <button onClick={() => setSelectedThreatId(t.id)} className={`w-full flex items-center justify-between gap-2 px-2 py-2 text-[13px] rounded-lg ${sel ? 'bg-accent-soft' : 'hover:bg-surface-2'}`}>
+                            <span className="flex items-center gap-2 min-w-0"><Dot tone={LEVEL_TONE[t.level]} pulse={t.status === 'DISRUPTING'} />{t.priority && <Flag className="w-3 h-3 text-accent" />}<span className="font-medium text-ink">{t.id}</span><span className="text-ink-3 truncate">{CLASS_LABEL[t.classification]}</span></span>
+                            <span className="num text-[12px] text-ink-2 shrink-0">{sim.rangeM(t).toFixed(0)} m{t.status === 'DISRUPTING' ? ` · ${(t.disruptProgress * 100).toFixed(0)}%` : ''}</span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                    {active.length === 0 && <li className="px-2 py-3 text-[13px] text-ink-3">Nothing tracked.</li>}
+                  </ul>
+                </Section>
+              </div>
+            )}
+
+            {rail === 'SENSORS' && (
+              <div className="space-y-5">
+                <Section title="Sensor network" right={`${metrics.sensorsOnline} / ${metrics.sensorsTotal} online`}>
+                  <ul className="divide-y divide-line">
+                    {sensors.map(s => {
+                      const Icon = s.type === 'RF' ? Radio : s.type === 'RADAR' ? Radar : s.type === 'EO_IR' ? Eye : Ear;
+                      const tone: Tone = s.status === 'ONLINE' ? 'ok' : s.status === 'DEGRADED' ? 'warn' : 'neutral';
+                      return (
+                        <li key={s.id} className="flex items-center justify-between py-2 text-[13px]">
+                          <span className="flex items-center gap-2.5 text-ink"><Icon className="w-4 h-4 text-ink-3" />{s.id}<span className="num text-[11px] text-ink-3">{(s.rangePx * 2.2).toFixed(0)} m{s.fovDeg < 360 ? ` · ${s.fovDeg}°` : ''}</span></span>
+                          <button onClick={() => sim.toggleSensor(s.id)} title="Toggle online / offline"><Chip tone={tone}>{s.status === 'ONLINE' ? 'Online' : s.status === 'DEGRADED' ? 'Degraded' : 'Offline'}</Chip></button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </Section>
+                <Divider />
+                <Section title="RF spectrum" right="live">
+                  <div className="space-y-3">
+                    <Spectrum bins={metrics.spectrum24} label="2.4 GHz" range="2400–2500 MHz" enabled={dz.bands.b24} accent={accent} />
+                    <Spectrum bins={metrics.spectrum58} label="5.8 GHz" range="5725–5875 MHz" enabled={dz.bands.b58} accent={accent} />
+                  </div>
+                </Section>
+              </div>
+            )}
+
+            {rail === 'ACTIVITY' && (
+              <Section title="Activity" right={`${events.length} events`}>
+                <Activity empty="Quiet. Detections and effector actions appear here." items={events.map(e => ({ id: e.id, ts: e.ts, text: e.text, tone: e.severity === 'CRITICAL' ? 'bad' : e.severity === 'WARNING' ? 'warn' : e.severity === 'SUCCESS' ? 'ok' : 'neutral', onClick: e.threatId ? () => setSelectedThreatId(e.threatId!) : undefined }))} />
+              </Section>
+            )}
           </div>
-        </Panel>
+        </Card>
       </div>
-
-      {/* Event log */}
-      <Panel title="Event log" icon={<Activity className="w-3.5 h-3.5" />} right={<span className="font-mono text-[10px] text-slate-500">{events.length} entries</span>}>
-        <ul className="max-h-48 overflow-y-auto divide-y divide-white/[0.05] -mx-1 px-1">
-          {events.length === 0 && <li className="py-3 text-xs text-slate-500">Quiet. Detections and effector actions appear here.</li>}
-          {events.map(e => {
-            const tone: StatusKey = e.severity === 'CRITICAL' ? 'critical' : e.severity === 'WARNING' ? 'warning' : e.severity === 'SUCCESS' ? 'good' : 'idle';
-            return (
-              <li key={e.id} className="flex items-start gap-3 py-1.5 text-xs">
-                <span className="font-mono text-[10px] text-slate-500 tabular-nums shrink-0 pt-0.5">{e.ts}</span>
-                <span className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${STATUS[tone].dot}`} />
-                <button onClick={() => e.threatId && setSelectedThreatId(e.threatId)} className={`text-left text-slate-300 ${e.threatId ? 'hover:text-slate-100' : 'cursor-default'}`}>{e.text}</button>
-              </li>
-            );
-          })}
-        </ul>
-      </Panel>
     </div>
   );
 };
 
-/** Selected track card. */
-const SelectedTrack: React.FC<{ t: Threat | null; sim: ReturnType<typeof useDefenseSimulation> }> = ({ t, sim }) => {
-  if (!t) return (
-    <Panel title="Selected track" icon={<Target className="w-3.5 h-3.5" />}>
-      <div className="text-xs text-slate-500">Click a track on the map or in the board.</div>
-    </Panel>
-  );
-  const first = Math.max(0, (Date.now() - t.firstSeenMs) / 1000);
-  return (
-    <Panel title="Selected track" icon={<Target className="w-3.5 h-3.5" />} right={<StatusDot tone={LEVEL_TONE[t.level]} pulse={t.level === 'CRITICAL'} label={t.level} />}>
-      <div className="flex items-baseline justify-between">
-        <span className="font-mono text-lg font-semibold text-slate-50">{t.id}</span>
-        <span className="text-[11px] text-slate-400">{CLASS_LABEL[t.classification]} · {t.protocol}</span>
-      </div>
-      <div className="mt-2 grid grid-cols-3 gap-3">
-        <Stat label="Range" value={sim.rangeM(t).toFixed(0)} unit="m" size="sm" />
-        <Stat label="Altitude" value={t.altitudeM.toFixed(0)} unit="m AGL" size="sm" />
-        <Stat label="Speed" value={t.speedMps.toFixed(0)} unit="m/s" size="sm" />
-        <Stat label="RSSI" value={t.rssiDbm.toFixed(0)} unit="dBm" size="sm" />
-        <Stat label="Freq" value={t.freqMHz.toFixed(0)} unit="MHz" size="sm" />
-        <Stat label="Tracked" value={`${first.toFixed(0)}s`} size="sm" hint={`${(t.confidence * 100).toFixed(0)}% ID conf.`} />
-      </div>
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        <ActionButton icon={<Flag />} label={t.priority ? 'Priority set' : 'Mark priority'} active={t.priority} accent="rose" onClick={() => sim.setPriority(t.id)} />
-        {t.status === 'TRACKING'
-          ? <ActionButton icon={<Zap />} label="Disrupt signal" danger onClick={() => sim.disruptTarget(t.id)} />
-          : <ActionButton icon={<XOctagon />} label="Cancel" onClick={sim.cancelDisruption} disabled={t.status !== 'DISRUPTING'} />}
-        <ActionButton icon={<Crosshair />} label="Engage now" danger onClick={() => { sim.setPriority(t.id); sim.disruptTarget(t.id); }} disabled={t.status !== 'TRACKING'} />
-      </div>
-    </Panel>
-  );
-};
-
-/** Effector selection, band gates, power and area actions. */
-const DisruptionControl: React.FC<{ sim: ReturnType<typeof useDefenseSimulation>; selected: Threat | null }> = ({ sim, selected }) => {
-  const d = sim.disruption;
-  const anyDisrupting = sim.threats.some(t => t.status === 'DISRUPTING');
-  return (
-    <Panel title="Disruption control" icon={<Cpu className="w-3.5 h-3.5" />} right={<StatusDot tone={anyDisrupting ? 'critical' : 'good'} pulse={anyDisrupting} label={anyDisrupting ? 'emitting' : 'ready'} />}>
-      <div className="grid grid-cols-3 gap-1.5">
-        {EFFECTORS.map(e => (
-          <button key={e.id} onClick={() => sim.setEffector(e.id)} title={e.hint} className={`rounded-md border px-2 py-1.5 text-left transition-colors ${d.effector === e.id ? 'border-rose-500/50 bg-rose-500/10 text-rose-200' : 'border-white/[0.08] text-slate-400 hover:text-slate-100'}`}>
-            <div className="font-mono text-[10px] font-bold uppercase">{e.label}</div>
-            <div className="text-[10px] opacity-70 truncate">{e.hint}</div>
-          </button>
-        ))}
-      </div>
-      <div className="mt-3 flex items-center gap-3">
-        <Label className="shrink-0 w-14">Power</Label>
-        <input type="range" min={10} max={100} value={d.powerPct} onChange={e => sim.setPower(Number(e.target.value))} aria-label="Effector power" className="flex-1 h-1 bg-white/[0.08] rounded-full appearance-none cursor-pointer accent-rose-400" />
-        <span className="font-mono text-xs text-slate-200 w-10 text-right tabular-nums">{d.powerPct}%</span>
-      </div>
-      <div className="mt-2 flex items-center gap-1.5">
-        {([['b24', '2.4 GHz'], ['b58', '5.8 GHz'], ['gnss', 'GNSS L1/L2']] as const).map(([k, label]) => (
-          <button key={k} onClick={() => sim.toggleBand(k)} aria-pressed={d.bands[k]} className={`flex-1 rounded-md border px-2 py-1 font-mono text-[10px] font-semibold transition-colors ${d.bands[k] ? 'border-rose-500/50 bg-rose-500/10 text-rose-200' : 'border-white/[0.08] text-slate-500'}`}>{label}</button>
-        ))}
-      </div>
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        <ActionButton icon={<Zap />} label="Pulse burst" accent="rose" onClick={sim.pulseBurst} />
-        <ActionButton icon={<RotateCw />} label="Sweep area" accent="rose" active={d.sweepActive} onClick={sim.toggleSweep} />
-        <ActionButton icon={<Target />} label="Disrupt target" danger disabled={!selected || selected.status !== 'TRACKING'} onClick={() => selected && sim.disruptTarget(selected.id)} />
-        <ActionButton icon={<AlertTriangle />} label="Disrupt all" danger onClick={sim.disruptAll} />
-        <ActionButton icon={<XOctagon />} label="Cancel all" onClick={sim.cancelDisruption} disabled={!anyDisrupting && !d.sweepActive} />
-        <div className="flex items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.03] px-2">
-          <Toggle on={d.autoEngage} onChange={sim.setAutoEngage} label="Auto" accent="rose" />
-        </div>
-      </div>
-    </Panel>
-  );
-};
+// Row is imported for parity with the other dashboards' rails; keep the kit surface consistent.
+void Row;

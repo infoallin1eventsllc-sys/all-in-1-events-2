@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSwarmSimulation } from './hooks/useSwarmSimulation';
 import { RadarCanvas } from './components/RadarCanvas';
 import { FleetControls } from './components/FleetControls';
@@ -37,7 +37,10 @@ import {
   Video,
   ShieldAlert,
   Eye,
-  Wrench
+  Wrench,
+  Sun,
+  Moon,
+  ChevronLeft
 } from 'lucide-react';
 
 /** Product verticals (operator dashboards) and the engineering views behind them. */
@@ -45,16 +48,26 @@ type VerticalTab = 'LIGHT_SHOW_OPS' | 'DEFENSE_OPS' | 'SURVEILLANCE_OPS';
 type EngineeringTab = 'RADAR' | 'DRONE_OPERATOR' | 'LIGHT_SHOW' | 'ARCHITECTURE' | 'TABLE';
 type ViewTab = VerticalTab | EngineeringTab;
 
-const VERTICALS: { id: VerticalTab; label: string; icon: React.ReactNode; active: string }[] = [
-  { id: 'LIGHT_SHOW_OPS', label: 'Light Show', icon: <Sparkles className="w-3.5 h-3.5" />, active: 'bg-violet-400 text-slate-950' },
-  { id: 'DEFENSE_OPS', label: 'Defense', icon: <ShieldAlert className="w-3.5 h-3.5" />, active: 'bg-rose-400 text-slate-950' },
-  { id: 'SURVEILLANCE_OPS', label: 'Surveillance', icon: <Eye className="w-3.5 h-3.5" />, active: 'bg-emerald-400 text-slate-950' },
+const VERTICALS: { id: VerticalTab; label: string; icon: React.ReactNode }[] = [
+  { id: 'LIGHT_SHOW_OPS', label: 'Light show', icon: <Sparkles className="w-3.5 h-3.5" /> },
+  { id: 'DEFENSE_OPS', label: 'Defense', icon: <ShieldAlert className="w-3.5 h-3.5" /> },
+  { id: 'SURVEILLANCE_OPS', label: 'Surveillance', icon: <Eye className="w-3.5 h-3.5" /> },
 ];
+
+const THEME_KEY = 'drone-command-theme';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ViewTab>('LIGHT_SHOW_OPS');
   const isVertical = activeTab === 'LIGHT_SHOW_OPS' || activeTab === 'DEFENSE_OPS' || activeTab === 'SURVEILLANCE_OPS';
   const [showEngineering, setShowEngineering] = useState<boolean>(false);
+  // Light by default (client-facing); dark for night operations. Persisted per browser.
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    try { return (localStorage.getItem(THEME_KEY) as 'light' | 'dark') || 'light'; } catch { return 'light'; }
+  });
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem(THEME_KEY, theme); } catch { /* private mode */ }
+  }, [theme]);
   const [showBenchmarkModal, setShowBenchmarkModal] = useState<boolean>(false);
   const [showSecurityModal, setShowSecurityModal] = useState<boolean>(false);
   const [showDatabaseModal, setShowDatabaseModal] = useState<boolean>(false);
@@ -127,62 +140,75 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-sky-500 selection:text-slate-950">
-      {/* 1. Global Navigation Header */}
-      <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40 px-4 lg:px-6 py-3">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-          {/* Logo & System Brand */}
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-600 to-cyan-400 flex items-center justify-center shadow-lg shadow-sky-500/20">
-              <Compass className="w-5 h-5 text-slate-950 stroke-[2.5]" />
+    <div className={`min-h-screen flex flex-col ${isVertical ? 'bg-bg text-ink' : 'bg-slate-950 text-slate-100'}`}>
+      {/* 1. App bar */}
+      <header className="sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur">
+        <div className="max-w-[1600px] mx-auto px-5 h-14 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-ink text-surface flex items-center justify-center shrink-0">
+              <Compass className="w-4 h-4" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-bold text-sm tracking-tight text-slate-100 uppercase">
-                  All in 1 Drone Command
-                </h1>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-sky-950 text-sky-400 border border-sky-800">
-                  100–500+ FLEET
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400">
-                One airframe platform &bull; three operator dashboards: light show, counter-UAS defense, surveillance
-              </p>
+            <div className="leading-tight min-w-0">
+              <div className="text-[13px] font-semibold text-ink truncate">All in 1 · Drone Command</div>
+              <div className="text-[11px] text-ink-3 truncate hidden sm:block">Light show · Defense · Surveillance</div>
             </div>
           </div>
 
-          {/* Vertical (product) switcher */}
-          <div id="nav-verticals" className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 max-w-full overflow-x-auto">
-            {VERTICALS.map(v => (
-              <button
-                key={v.id}
-                id={`nav-vertical-${v.id.toLowerCase()}`}
-                onClick={() => setActiveTab(v.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
-                  activeTab === v.id ? `${v.active} font-bold shadow` : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                {v.icon}
-                <span>{v.label}</span>
-              </button>
-            ))}
-            <span className="w-px h-5 bg-slate-800 mx-0.5" />
+          {isVertical ? (
+            <nav id="nav-verticals" className="flex items-center gap-0.5 bg-surface-2 rounded-lg p-0.5 max-w-full overflow-x-auto">
+              {VERTICALS.map(v => (
+                <button
+                  key={v.id}
+                  id={`nav-vertical-${v.id.toLowerCase()}`}
+                  onClick={() => setActiveTab(v.id)}
+                  aria-pressed={activeTab === v.id}
+                  className={`inline-flex items-center gap-1.5 px-3 h-8 rounded-md text-[13px] font-medium whitespace-nowrap transition-colors ${
+                    activeTab === v.id ? 'bg-surface text-ink shadow-[var(--shadow-card)]' : 'text-ink-2 hover:text-ink'
+                  }`}
+                >
+                  {v.icon}
+                  <span>{v.label}</span>
+                </button>
+              ))}
+            </nav>
+          ) : (
             <button
-              id="nav-engineering-toggle"
-              onClick={() => setShowEngineering(s => !s)}
-              aria-expanded={showEngineering}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
-                !isVertical ? 'bg-slate-700 text-slate-100 font-bold' : 'text-slate-400 hover:text-slate-200'
-              }`}
-              title="Engineering views: radar, cockpit, 3D studio, architecture, telemetry grid"
+              onClick={() => { setActiveTab('SURVEILLANCE_OPS'); setShowEngineering(false); }}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] font-medium text-ink-2 hover:text-ink border border-line"
             >
-              <Wrench className="w-3.5 h-3.5" />
-              <span>Engineering</span>
+              <ChevronLeft className="w-4 h-4" />Back to dashboards
             </button>
-          </div>
+          )}
 
-          {/* Engineering view switcher (collapsed by default) */}
-          <div className={`${showEngineering || !isVertical ? 'flex' : 'hidden'} flex-wrap items-center gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800 w-full lg:w-auto`}>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setTheme(t => (t === 'light' ? 'dark' : 'light'))}
+              aria-label={theme === 'light' ? 'Switch to dark (night ops)' : 'Switch to light'}
+              title={theme === 'light' ? 'Dark mode for night operations' : 'Light mode'}
+              className="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-line text-ink-2 hover:text-ink"
+            >
+              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            </button>
+            {isVertical && (
+              <button
+                id="nav-engineering-toggle"
+                onClick={() => { setShowEngineering(true); setActiveTab('RADAR'); }}
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium text-ink-2 hover:text-ink border border-line"
+                title="Engineering views: radar, cockpit, 3D studio, architecture, telemetry grid"
+              >
+                <Wrench className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Engineering</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Engineering views keep their original dark tooling chrome */}
+      {!isVertical && (
+        <div className="border-b border-slate-800 bg-slate-950 text-slate-100 px-4 lg:px-6 py-3">
+          <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
             <button
               id="nav-tab-radar"
               onClick={() => setActiveTab('RADAR')}
@@ -250,7 +276,7 @@ export default function App() {
           </div>
 
           {/* Right Action Tools (engineering labs) */}
-          <div className={`${showEngineering || !isVertical ? 'flex' : 'hidden'} flex-wrap items-center gap-2`}>
+          <div className="flex flex-wrap items-center gap-2">
             {/* Security Quick Pill */}
             <button
               id="header-security-btn"
@@ -325,7 +351,8 @@ export default function App() {
             </button>
           </div>
         </div>
-      </header>
+        </div>
+      )}
 
       {/* 2. Real-time Telemetry Stats Ribbon (engineering views) */}
       {!isVertical && (
@@ -337,7 +364,7 @@ export default function App() {
       )}
 
       {/* 3. Main Dynamic Content Area */}
-      <main className={`flex-1 w-full mx-auto p-4 lg:p-6 flex flex-col gap-6 ${isVertical ? 'max-w-[1600px]' : 'max-w-7xl'}`}>
+      <main className={`flex-1 w-full mx-auto flex flex-col gap-6 ${isVertical ? 'max-w-[1600px] px-5 py-5' : 'max-w-7xl p-4 lg:p-6'}`}>
         {/* VERTICAL 1: Aerial light show operator dashboard */}
         {activeTab === 'LIGHT_SHOW_OPS' && <LightShowDashboard />}
 
@@ -520,10 +547,8 @@ export default function App() {
       )}
 
       {/* 5. Footer */}
-      <footer className="mt-auto border-t border-slate-900 bg-slate-950 px-6 py-4 text-center text-xs text-slate-500">
-        <p>
-          All in 1 Events &bull; Drone Command &bull; FAA Part 107 / BVLOS waiver workflow &bull; Eclipse Zenoh + ROS 2 + PX4 stack
-        </p>
+      <footer className={`mt-auto px-6 py-4 text-center text-[11px] ${isVertical ? 'text-ink-3' : 'border-t border-slate-900 text-slate-500'}`}>
+        All in 1 Events · Drone Command · Simulated data · FAA Part 107 / BVLOS waiver workflow
       </footer>
     </div>
   );

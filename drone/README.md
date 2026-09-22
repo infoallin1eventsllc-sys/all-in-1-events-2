@@ -27,10 +27,12 @@ The shapes those hooks return are the contract for the real feeds (MAVLink telem
 RF sensor fusion, payload classifiers). Swap a hook's internals for a WebSocket / Zenoh
 subscriber and the dashboard above it does not change.
 
-Shared UI (`src/dashboards/ui.tsx`) keeps a single palette: one accent per vertical
-(violet / rose / emerald) and a reserved status set (good / warning / serious /
-critical) that is never reused for anything else. Map backdrops are procedural
-(`src/dashboards/terrain.ts`), rendered once and cached.
+Design system: see [`DESIGN.md`](DESIGN.md). Light chrome by default (client-facing),
+dark for night operations (toggle in the app bar, persisted). Every screen is the same
+shape: headline → hero (camera / map / 3D, with picture-in-picture) → action bar →
+one tabbed inspector rail. Tokens live in `src/index.css`, components in
+`src/dashboards/ui.tsx`. Map backdrops are procedural (`src/dashboards/terrain.ts`),
+rendered once and cached.
 
 ## Run
 

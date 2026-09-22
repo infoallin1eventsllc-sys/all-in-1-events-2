@@ -1,195 +1,177 @@
 import React from 'react';
 
 /**
- * Shared glass-panel UI kit for the three vertical dashboards
- * (Light Show, Defense, Surveillance). Operate-mode surfaces: state first,
- * decoration only where it carries information.
+ * Drone Command UI kit (v2).
+ *
+ * Quiet, client-facing components over the semantic tokens in index.css.
+ * Rules: sentence-case labels, Inter for text, tabular numerals for values,
+ * one accent per vertical, status colours only for status, no glass, no
+ * decorative shadows, cards only where a boundary carries meaning.
  */
 
-export type Accent = 'violet' | 'rose' | 'emerald' | 'sky' | 'amber';
+export type Tone = 'ok' | 'warn' | 'bad' | 'neutral' | 'accent';
 
-export const ACCENT: Record<Accent, { text: string; bg: string; border: string; solid: string; hex: string }> = {
-  violet: { text: 'text-violet-300', bg: 'bg-violet-500/10', border: 'border-violet-500/40', solid: 'bg-violet-500', hex: '#a78bfa' },
-  rose:   { text: 'text-rose-300',   bg: 'bg-rose-500/10',   border: 'border-rose-500/40',   solid: 'bg-rose-500',   hex: '#fb7185' },
-  emerald:{ text: 'text-emerald-300',bg: 'bg-emerald-500/10',border: 'border-emerald-500/40',solid: 'bg-emerald-500',hex: '#34d399' },
-  sky:    { text: 'text-sky-300',    bg: 'bg-sky-500/10',    border: 'border-sky-500/40',    solid: 'bg-sky-500',    hex: '#38bdf8' },
-  amber:  { text: 'text-amber-300',  bg: 'bg-amber-500/10',  border: 'border-amber-500/40',  solid: 'bg-amber-500',  hex: '#fbbf24' },
+const TONE_TEXT: Record<Tone, string> = {
+  ok: 'text-ok', warn: 'text-warn', bad: 'text-bad', neutral: 'text-ink', accent: 'text-accent',
+};
+const TONE_DOT: Record<Tone, string> = {
+  ok: 'bg-ok', warn: 'bg-warn', bad: 'bg-bad', neutral: 'bg-ink-3', accent: 'bg-accent',
+};
+const TONE_SOFT: Record<Tone, string> = {
+  ok: 'bg-ok-soft text-ok', warn: 'bg-warn-soft text-warn', bad: 'bg-bad-soft text-bad', neutral: 'bg-surface-2 text-ink-2', accent: 'bg-accent-soft text-accent',
 };
 
-/** Reserved status palette — never reused for series colour. */
-export const STATUS = {
-  good: { text: 'text-emerald-400', dot: 'bg-emerald-400', hex: '#34d399' },
-  warning: { text: 'text-amber-400', dot: 'bg-amber-400', hex: '#fbbf24' },
-  serious: { text: 'text-orange-400', dot: 'bg-orange-400', hex: '#fb923c' },
-  critical: { text: 'text-rose-400', dot: 'bg-rose-400', hex: '#fb7185' },
-  idle: { text: 'text-slate-400', dot: 'bg-slate-500', hex: '#64748b' },
-} as const;
-export type StatusKey = keyof typeof STATUS;
+/** Hex values for canvas / SVG drawing that can't use CSS classes. */
+export const TONE_HEX = { ok: '#15803d', warn: '#b45309', bad: '#b91c1c', neutral: '#8a94a6' } as const;
 
-interface PanelProps {
-  title?: string;
-  icon?: React.ReactNode;
-  right?: React.ReactNode;
-  className?: string;
-  children: React.ReactNode;
-  id?: string;
+export const formatClock = (secs: number) => {
+  const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = Math.floor(secs % 60);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+};
+
+/** Read the live accent colour (for canvases/SVG) from the nearest dashboard root. */
+export function useAccentHex(ref: React.RefObject<HTMLElement | null>, fallback = '#2563eb') {
+  const [hex, setHex] = React.useState(fallback);
+  React.useEffect(() => {
+    const read = () => { if (ref.current) setHex(getComputedStyle(ref.current).getPropertyValue('--color-accent').trim() || fallback); };
+    read();
+    const obs = new MutationObserver(read);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => obs.disconnect();
+  }, [ref, fallback]);
+  return hex;
 }
 
-/** Translucent panel that floats over the map/3D stage. */
-export const Panel: React.FC<PanelProps> = ({ title, icon, right, className = '', children, id }) => (
-  <section
-    id={id}
-    className={`rounded-xl border border-white/[0.08] bg-slate-950/75 backdrop-blur-md shadow-[0_8px_30px_rgba(0,0,0,0.35)] ${className}`}
-  >
-    {title && (
-      <header className="flex items-center justify-between gap-2 px-3.5 pt-3 pb-2">
-        <div className="flex items-center gap-2 min-w-0">
-          {icon && <span className="text-slate-400 shrink-0">{icon}</span>}
-          <h3 className="font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-slate-300 truncate">{title}</h3>
+// ---------------------------------------------------------------------------
+// Layout
+// ---------------------------------------------------------------------------
+
+interface HeadlineProps {
+  title: string;
+  context: string;
+  stats: { label: string; value: React.ReactNode; tone?: Tone }[];
+  status?: { label: string; tone: Tone; pulse?: boolean };
+  actions?: React.ReactNode;
+}
+
+/** The one header a dashboard gets: what this is, its state, four numbers, a few actions. */
+export const Headline: React.FC<HeadlineProps> = ({ title, context, stats, status, actions }) => (
+  <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+    <div className="min-w-0">
+      <div className="flex items-center gap-2.5">
+        <h1 className="text-[22px] font-semibold tracking-[-0.01em] text-ink leading-none">{title}</h1>
+        {status && <Chip tone={status.tone} pulse={status.pulse}>{status.label}</Chip>}
+      </div>
+      <p className="mt-1.5 text-[13px] text-ink-2">{context}</p>
+    </div>
+    <div className="flex flex-wrap items-end gap-x-8 gap-y-2">
+      {stats.map(s => (
+        <div key={s.label} className="min-w-[72px]">
+          <div className="text-[11px] text-ink-3">{s.label}</div>
+          <div className={`num text-[20px] font-semibold leading-tight ${TONE_TEXT[s.tone ?? 'neutral']}`}>{s.value}</div>
         </div>
-        {right && <div className="shrink-0">{right}</div>}
-      </header>
-    )}
-    <div className={title ? 'px-3.5 pb-3.5' : 'p-3.5'}>{children}</div>
+      ))}
+      {actions && <div className="flex items-center gap-2 ml-2">{actions}</div>}
+    </div>
+  </div>
+);
+
+/** A bounded surface. Use for the rail and the action bar, not for every group of numbers. */
+export const Card: React.FC<{ children: React.ReactNode; className?: string; id?: string; padded?: boolean }> = ({ children, className = '', id, padded = true }) => (
+  <div id={id} className={`bg-surface border border-line rounded-[var(--radius-card)] shadow-[var(--shadow-card)] ${padded ? 'p-4' : ''} ${className}`}>{children}</div>
+);
+
+/** Section heading inside a rail: title + optional right-side detail, hairline below. */
+export const Section: React.FC<{ title: string; right?: React.ReactNode; children: React.ReactNode; className?: string }> = ({ title, right, children, className = '' }) => (
+  <section className={className}>
+    <div className="flex items-center justify-between gap-2 mb-2.5">
+      <h3 className="text-[13px] font-semibold text-ink">{title}</h3>
+      {right && <div className="text-[11px] text-ink-3">{right}</div>}
+    </div>
+    {children}
   </section>
 );
 
-/** Small uppercase caption used above values. */
-export const Label: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
-  <span className={`font-mono text-[10px] uppercase tracking-[0.12em] text-slate-500 ${className}`}>{children}</span>
+export const Divider: React.FC<{ className?: string }> = ({ className = '' }) => <hr className={`border-0 border-t border-line ${className}`} />;
+
+interface TabsProps<T extends string> { items: { id: T; label: string; badge?: React.ReactNode }[]; value: T; onChange: (id: T) => void; className?: string }
+
+/** Segmented tabs for the rail. One visible section at a time. */
+export function Tabs<T extends string>({ items, value, onChange, className = '' }: TabsProps<T>) {
+  return (
+    <div role="tablist" className={`flex items-center gap-0.5 bg-surface-2 rounded-lg p-0.5 ${className}`}>
+      {items.map(t => (
+        <button
+          key={t.id} role="tab" aria-selected={value === t.id} onClick={() => onChange(t.id)}
+          className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[12px] font-medium transition-colors ${value === t.id ? 'bg-surface text-ink shadow-[var(--shadow-card)]' : 'text-ink-2 hover:text-ink'}`}
+        >
+          {t.label}{t.badge != null && <span className="num text-[10px] text-ink-3">{t.badge}</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Data display
+// ---------------------------------------------------------------------------
+
+interface StatProps { label: string; value: React.ReactNode; unit?: string; tone?: Tone; size?: 'sm' | 'md' | 'lg'; hint?: string }
+
+export const Stat: React.FC<StatProps> = ({ label, value, unit, tone = 'neutral', size = 'md', hint }) => {
+  const sz = size === 'lg' ? 'text-[28px]' : size === 'sm' ? 'text-[14px]' : 'text-[18px]';
+  return (
+    <div className="min-w-0">
+      <div className="text-[11px] text-ink-3 truncate">{label}</div>
+      <div className="flex items-baseline gap-1">
+        <span className={`num font-semibold leading-tight ${sz} ${TONE_TEXT[tone]}`}>{value}</span>
+        {unit && <span className="text-[11px] text-ink-3">{unit}</span>}
+      </div>
+      {hint && <div className="text-[11px] text-ink-3 truncate">{hint}</div>}
+    </div>
+  );
+};
+
+/** Label / value row for dense lists. */
+export const Row: React.FC<{ label: string; value: React.ReactNode; tone?: Tone; right?: React.ReactNode }> = ({ label, value, tone = 'neutral', right }) => (
+  <div className="flex items-center justify-between gap-3 py-1.5 text-[13px]">
+    <span className="text-ink-2">{label}</span>
+    <span className="flex items-center gap-3">
+      {right}
+      <span className={`num font-medium ${TONE_TEXT[tone]}`}>{value}</span>
+    </span>
+  </div>
 );
 
-interface StatProps {
-  label: string;
-  value: string | number;
-  unit?: string;
-  tone?: StatusKey | 'neutral';
-  size?: 'sm' | 'md' | 'lg';
-  hint?: string;
-}
-
-/** Stat tile: one number, one label, optional unit and hint. */
-export const Stat: React.FC<StatProps> = ({ label, value, unit, tone = 'neutral', size = 'md', hint }) => {
-  const color = tone === 'neutral' ? 'text-slate-100' : STATUS[tone].text;
-  const sizeCls = size === 'lg' ? 'text-2xl' : size === 'sm' ? 'text-sm' : 'text-lg';
-  return (
-    <div className="flex flex-col gap-0.5 min-w-0">
-      <Label>{label}</Label>
-      <div className="flex items-baseline gap-1 min-w-0">
-        <span className={`font-mono font-semibold tabular-nums ${sizeCls} ${color} truncate`}>{value}</span>
-        {unit && <span className="font-mono text-[10px] text-slate-500">{unit}</span>}
-      </div>
-      {hint && <span className="text-[10px] text-slate-500 truncate">{hint}</span>}
-    </div>
-  );
-};
-
-interface MeterProps {
-  value: number; // 0..100
-  tone?: StatusKey | Accent;
-  className?: string;
-}
-
-/** Thin horizontal meter. Tone maps to a status colour or an accent. */
-export const Meter: React.FC<MeterProps> = ({ value, tone = 'good', className = '' }) => {
-  const pct = Math.max(0, Math.min(100, value));
-  const bar = tone in STATUS ? STATUS[tone as StatusKey].dot : ACCENT[tone as Accent].solid;
-  return (
-    <div className={`h-1 w-full rounded-full bg-white/[0.06] overflow-hidden ${className}`} role="meter" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-      <div className={`h-full rounded-full ${bar} transition-[width] duration-300`} style={{ width: `${pct}%` }} />
-    </div>
-  );
-};
-
-interface StatusDotProps { tone: StatusKey; pulse?: boolean; label?: string }
-
-export const StatusDot: React.FC<StatusDotProps> = ({ tone, pulse, label }) => (
-  <span className="inline-flex items-center gap-1.5">
-    <span className={`relative inline-flex w-1.5 h-1.5 rounded-full ${STATUS[tone].dot}`}>
-      {pulse && <span className={`absolute inset-0 rounded-full ${STATUS[tone].dot} animate-ping opacity-60`} />}
+export const Chip: React.FC<{ tone?: Tone; pulse?: boolean; children: React.ReactNode; className?: string }> = ({ tone = 'neutral', pulse, children, className = '' }) => (
+  <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ${TONE_SOFT[tone]} ${className}`}>
+    <span className="relative inline-flex w-1.5 h-1.5">
+      <span className={`w-1.5 h-1.5 rounded-full ${TONE_DOT[tone]}`} />
+      {pulse && <span className={`absolute inset-0 rounded-full ${TONE_DOT[tone]} animate-ping opacity-50`} />}
     </span>
-    {label && <span className={`font-mono text-[10px] uppercase tracking-wider ${STATUS[tone].text}`}>{label}</span>}
+    {children}
   </span>
 );
 
-interface ToggleProps {
-  on: boolean;
-  onChange: (next: boolean) => void;
-  label: string;
-  accent?: Accent;
-}
-
-export const Toggle: React.FC<ToggleProps> = ({ on, onChange, label, accent = 'emerald' }) => (
-  <button
-    type="button"
-    role="switch"
-    aria-checked={on}
-    onClick={() => onChange(!on)}
-    className="flex items-center justify-between gap-3 w-full py-1 text-left group"
-  >
-    <span className="text-xs text-slate-300 group-hover:text-slate-100 transition-colors">{label}</span>
-    <span className={`relative w-8 h-[18px] rounded-full transition-colors ${on ? ACCENT[accent].solid : 'bg-white/10'}`}>
-      <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-slate-950 transition-all ${on ? 'left-[16px]' : 'left-[2px]'}`} />
-    </span>
-  </button>
+export const Dot: React.FC<{ tone: Tone; pulse?: boolean; className?: string }> = ({ tone, pulse, className = '' }) => (
+  <span className={`relative inline-flex w-1.5 h-1.5 shrink-0 ${className}`}>
+    <span className={`w-1.5 h-1.5 rounded-full ${TONE_DOT[tone]}`} />
+    {pulse && <span className={`absolute inset-0 rounded-full ${TONE_DOT[tone]} animate-ping opacity-50`} />}
+  </span>
 );
 
-interface ActionButtonProps {
-  icon: React.ReactNode;
-  label: string;
-  onClick?: () => void;
-  active?: boolean;
-  accent?: Accent;
-  danger?: boolean;
-  disabled?: boolean;
-  title?: string;
-  id?: string;
-}
-
-/** Square icon-over-label action tile used in control grids. */
-export const ActionButton: React.FC<ActionButtonProps> = ({ icon, label, onClick, active, accent = 'sky', danger, disabled, title, id }) => {
-  const a = ACCENT[accent];
-  const cls = danger
-    ? 'border-rose-500/50 bg-rose-500/15 text-rose-200 hover:bg-rose-500/25'
-    : active
-    ? `${a.border} ${a.bg} ${a.text}`
-    : 'border-white/[0.08] bg-white/[0.03] text-slate-300 hover:bg-white/[0.07] hover:text-slate-100';
+export const Meter: React.FC<{ value: number; tone?: Tone; className?: string }> = ({ value, tone = 'accent', className = '' }) => {
+  const pct = Math.max(0, Math.min(100, value));
   return (
-    <button
-      id={id}
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      aria-pressed={active}
-      className={`flex flex-col items-center justify-center gap-1.5 rounded-lg border px-2 py-2.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${cls}`}
-    >
-      <span className="[&>svg]:w-4 [&>svg]:h-4">{icon}</span>
-      <span className="font-mono text-[10px] leading-tight text-center">{label}</span>
-    </button>
+    <div className={`h-1.5 w-full rounded-full bg-surface-2 overflow-hidden ${className}`} role="meter" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+      <div className={`h-full rounded-full ${TONE_DOT[tone]} transition-[width] duration-300`} style={{ width: `${pct}%` }} />
+    </div>
   );
 };
 
-interface PillProps { children: React.ReactNode; tone?: StatusKey | Accent; className?: string }
-
-export const Pill: React.FC<PillProps> = ({ children, tone = 'idle', className = '' }) => {
-  const cls = tone in STATUS
-    ? `${STATUS[tone as StatusKey].text} border-current/30`
-    : `${ACCENT[tone as Accent].text} ${ACCENT[tone as Accent].border} ${ACCENT[tone as Accent].bg}`;
-  return (
-    <span className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider ${cls} ${className}`}>
-      {children}
-    </span>
-  );
-};
-
-/** Sparkline drawn as inline SVG; one series, no axis, accent stroke. */
-export const Sparkline: React.FC<{ data: number[]; color?: string; height?: number; className?: string }> = ({ data, color = '#94a3b8', height = 22, className = '' }) => {
+export const Sparkline: React.FC<{ data: number[]; color: string; height?: number; className?: string }> = ({ data, color, height = 20, className = '' }) => {
   if (data.length < 2) return null;
-  const w = 100;
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const span = max - min || 1;
+  const w = 100, min = Math.min(...data), max = Math.max(...data), span = max - min || 1;
   const pts = data.map((v, i) => `${(i / (data.length - 1)) * w},${height - 2 - ((v - min) / span) * (height - 4)}`).join(' ');
   return (
     <svg viewBox={`0 0 ${w} ${height}`} preserveAspectRatio="none" className={`w-full ${className}`} style={{ height }} aria-hidden="true">
@@ -198,34 +180,76 @@ export const Sparkline: React.FC<{ data: number[]; color?: string; height?: numb
   );
 };
 
-/** Header strip for a vertical dashboard: brand mark, title, and a live status cluster. */
-export const DashboardHeader: React.FC<{
-  accent: Accent;
-  icon: React.ReactNode;
-  kicker: string;
-  title: string;
-  subtitle: string;
-  children?: React.ReactNode;
-}> = ({ accent, icon, kicker, title, subtitle, children }) => {
-  const a = ACCENT[accent];
+// ---------------------------------------------------------------------------
+// Controls
+// ---------------------------------------------------------------------------
+
+interface ToolButtonProps {
+  icon?: React.ReactNode; label: string; onClick?: () => void; active?: boolean; primary?: boolean; danger?: boolean; disabled?: boolean; title?: string; id?: string; size?: 'sm' | 'md';
+}
+
+/** Toolbar button. Ghost by default; `primary` is the one action that matters; `danger` is destructive. */
+export const ToolButton: React.FC<ToolButtonProps> = ({ icon, label, onClick, active, primary, danger, disabled, title, id, size = 'md' }) => {
+  const base = size === 'sm' ? 'h-8 px-2.5 text-[12px]' : 'h-9 px-3 text-[13px]';
+  const look = danger
+    ? 'bg-bad text-white hover:opacity-90'
+    : primary
+    ? 'bg-accent text-accent-ink hover:opacity-90'
+    : active
+    ? 'bg-accent-soft text-accent border border-accent/30'
+    : 'bg-surface text-ink-2 border border-line hover:text-ink hover:border-line-2';
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex items-center gap-3 min-w-0">
-        <div className={`w-10 h-10 rounded-xl border ${a.border} ${a.bg} ${a.text} flex items-center justify-center [&>svg]:w-5 [&>svg]:h-5 shrink-0`}>{icon}</div>
-        <div className="min-w-0">
-          <div className={`font-mono text-[10px] uppercase tracking-[0.18em] ${a.text}`}>{kicker}</div>
-          <h2 className="text-base font-semibold text-slate-100 leading-tight truncate">{title}</h2>
-          <p className="text-[11px] text-slate-400 truncate">{subtitle}</p>
-        </div>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">{children}</div>
-    </div>
+    <button id={id} type="button" onClick={onClick} disabled={disabled} title={title} aria-pressed={active}
+      className={`inline-flex items-center gap-1.5 rounded-lg font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed [&>svg]:w-4 [&>svg]:h-4 ${base} ${look}`}>
+      {icon}{label}
+    </button>
   );
 };
 
-export const formatClock = (secs: number) => {
-  const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
-  const s = Math.floor(secs % 60);
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-};
+export const IconButton: React.FC<{ icon: React.ReactNode; label: string; onClick?: () => void; active?: boolean; disabled?: boolean }> = ({ icon, label, onClick, active, disabled }) => (
+  <button type="button" onClick={onClick} disabled={disabled} aria-label={label} title={label} aria-pressed={active}
+    className={`inline-flex items-center justify-center w-8 h-8 rounded-lg border transition-colors disabled:opacity-40 [&>svg]:w-4 [&>svg]:h-4 ${active ? 'bg-accent-soft text-accent border-accent/30' : 'bg-surface text-ink-2 border-line hover:text-ink'}`}>
+    {icon}
+  </button>
+);
+
+export const Toggle: React.FC<{ on: boolean; onChange: (v: boolean) => void; label: string; description?: string }> = ({ on, onChange, label, description }) => (
+  <button type="button" role="switch" aria-checked={on} onClick={() => onChange(!on)} className="flex items-center justify-between gap-3 w-full py-1.5 text-left group">
+    <span className="min-w-0">
+      <span className="block text-[13px] text-ink group-hover:text-ink">{label}</span>
+      {description && <span className="block text-[11px] text-ink-3">{description}</span>}
+    </span>
+    <span className={`relative w-9 h-5 rounded-full shrink-0 transition-colors ${on ? 'bg-accent' : 'bg-line-2'}`}>
+      <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${on ? 'left-[18px]' : 'left-0.5'}`} />
+    </span>
+  </button>
+);
+
+/** Segmented single-choice control. */
+export function Segmented<T extends string>({ items, value, onChange, size = 'md' }: { items: { id: T; label: React.ReactNode; title?: string }[]; value: T; onChange: (v: T) => void; size?: 'sm' | 'md' }) {
+  const pad = size === 'sm' ? 'px-2 h-6 text-[11px]' : 'px-3 h-8 text-[12px]';
+  return (
+    <div className="inline-flex items-center gap-0.5 bg-surface-2 rounded-lg p-0.5">
+      {items.map(i => (
+        <button key={i.id} type="button" title={i.title} aria-pressed={value === i.id} onClick={() => onChange(i.id)}
+          className={`inline-flex items-center gap-1 rounded-md font-medium transition-colors ${pad} ${value === i.id ? 'bg-surface text-ink shadow-[var(--shadow-card)]' : 'text-ink-2 hover:text-ink'}`}>
+          {i.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Activity list row (event log). */
+export const Activity: React.FC<{ items: { id: string; ts: string; tone: Tone; text: string; onClick?: () => void }[]; empty: string; max?: number }> = ({ items, empty, max = 30 }) => (
+  <ul className="divide-y divide-line">
+    {items.length === 0 && <li className="py-3 text-[13px] text-ink-3">{empty}</li>}
+    {items.slice(0, max).map(e => (
+      <li key={e.id} className="flex items-start gap-3 py-2 text-[13px]">
+        <span className="num text-[11px] text-ink-3 shrink-0 pt-0.5">{e.ts}</span>
+        <Dot tone={e.tone} className="mt-[7px]" />
+        {e.onClick ? <button onClick={e.onClick} className="text-left text-ink-2 hover:text-ink">{e.text}</button> : <span className="text-ink-2">{e.text}</span>}
+      </li>
+    ))}
+  </ul>
+);

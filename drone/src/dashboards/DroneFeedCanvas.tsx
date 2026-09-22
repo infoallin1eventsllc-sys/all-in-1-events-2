@@ -291,16 +291,16 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, width = 640, 
           <div className="absolute top-3 left-8 right-8 flex items-start justify-between">
             <div className="flex items-center gap-2">
               <span className="px-1.5 py-0.5 rounded bg-black/60 font-bold">{drone.id}</span>
-              <span className="px-1.5 py-0.5 rounded bg-black/60 text-slate-300">{drone.model}</span>
+              <span className="hidden sm:inline px-1.5 py-0.5 rounded bg-black/60 text-slate-300">{drone.model}</span>
               <span className={`px-1.5 py-0.5 rounded bg-black/60 font-bold ${thermal ? 'text-rose-300' : drone.sensorMode === 'NIGHT_VISION' ? 'text-lime-300' : 'text-emerald-300'}`}>{MODE_LABEL[drone.sensorMode]}</span>
               <span className="px-1.5 py-0.5 rounded bg-black/60 text-amber-300">{drone.zoom.toFixed(1)}×</span>
             </div>
             <div className="flex items-center gap-2">
-              {!offline && <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/60"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />LIVE · {drone.rttMs} ms</span>}
+              {!offline && <span className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/60"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />LIVE · {drone.rttMs} ms</span>}
               <button onClick={() => setRec(r => !r)} className={`pointer-events-auto flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/60 ${rec ? 'text-rose-300' : 'text-slate-400'}`}>
                 <Circle className={`w-2.5 h-2.5 ${rec ? 'fill-rose-500 text-rose-500 animate-pulse' : ''}`} />{rec ? 'REC' : 'DVR'}
               </button>
-              <span className="px-1.5 py-0.5 rounded bg-black/60 tabular-nums">{clock}</span>
+              <span className="hidden sm:inline px-1.5 py-0.5 rounded bg-black/60 tabular-nums">{clock}</span>
             </div>
           </div>
 
@@ -355,7 +355,7 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, width = 640, 
           )}
           {!offline && isNight && !thermal && drone.sensorMode !== 'NIGHT_VISION' && (
             <div className="absolute left-1/2 top-12 -translate-x-1/2 px-2 py-1 rounded bg-amber-500/20 border border-amber-400/50 text-amber-200 flex items-center gap-1.5">
-              <CrosshairIcon className="w-3 h-3" />NIGHT · EO IMAGE UNUSABLE — SWITCH TO IR
+              <CrosshairIcon className="w-3 h-3" /><span className="hidden sm:inline">NIGHT · EO IMAGE UNUSABLE — </span>SWITCH TO IR
             </div>
           )}
         </div>

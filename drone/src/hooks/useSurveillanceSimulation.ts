@@ -176,10 +176,12 @@ export function useSurveillanceSimulation() {
 
   // Night protocol: on entering night, every airborne payload switches to thermal so moving
   // heat signatures stay visible; on day it returns to RGB. Operators can still override per drone.
-  const isNightRef = useRef(isNight);
+  const isNightRef = useRef<boolean | null>(null);
   useEffect(() => {
     if (isNightRef.current === isNight) return;
+    const firstRun = isNightRef.current === null;
     isNightRef.current = isNight;
+    if (firstRun && !isNight) return; // daylight at load: nothing to switch
     setDrones(prev => prev.map(d => d.status === 'OFFLINE' ? d : ({
       ...d,
       tasks: { ...d.tasks, thermalScan: isNight, nightVision: false },
