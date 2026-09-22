@@ -127,7 +127,7 @@ export const LightShowDashboard: React.FC = () => {
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_336px] gap-5 items-start">
         {/* ---------------- Stage ---------------- */}
         <div className="space-y-3 min-w-0">
-          <div className="rounded-[var(--radius-card)] overflow-hidden border border-line bg-imagery [&>div]:rounded-none [&>div]:border-0 [&>div]:shadow-none">
+          <div className="rounded-[var(--radius-card)] overflow-hidden border border-line bg-imagery">
             <LightShowCanvas3D drones={drones} selectedDroneId={selectedDroneId} onSelectDrone={setSelectedDroneId} showTrajectories={showTrajectories} showGeofence={showGeofence} formationName={formation.name} />
           </div>
 

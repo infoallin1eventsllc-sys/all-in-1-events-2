@@ -1,7 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { Sparkles, RotateCcw } from 'lucide-react';
 import { LightShowDrone } from '../../types/lightShowTypes';
-import { Eye, RotateCw, ZoomIn, ZoomOut, Maximize2, Shield, Sparkles } from 'lucide-react';
+
+/**
+ * The show stage.
+ *
+ * This is the one surface in the product where the imagery is the point: a
+ * client watching the conductor should see what the audience will see. So it
+ * renders like a night sky, not like a debugger — bloomed LED halos, light
+ * trails while formations move, soft reflections on the venue floor, a slow
+ * idle orbit — while staying cheap enough for 500 aircraft on a laptop.
+ *
+ * Everything lives in GPU buffers sized once (CAPACITY); per-frame work is a
+ * buffer update, never an allocation.
+ */
 
 interface LightShowCanvas3DProps {
   drones: LightShowDrone[];
@@ -12,372 +29,359 @@ interface LightShowCanvas3DProps {
   formationName: string;
 }
 
+type Preset = 'AUDIENCE' | 'ISOMETRIC' | 'TOP_DOWN';
+
+const CAPACITY = 512;            // max aircraft the buffers hold
+const TRAIL = 14;                // trail samples per aircraft
+const SHOW_CENTRE = new THREE.Vector3(0, 52, 0);
+
+const PRESETS: Record<Preset, { radius: number; theta: number; phi: number }> = {
+  AUDIENCE: { radius: 135, theta: -Math.PI / 2, phi: Math.PI / 2.25 },
+  ISOMETRIC: { radius: 120, theta: Math.PI / 4, phi: Math.PI / 3.1 },
+  TOP_DOWN: { radius: 125, theta: 0, phi: 0.06 },
+};
+
+// ---- textures, drawn once -------------------------------------------------
+
+/** Radial sprite: hot core, soft skirt. Used for halos and floor glow. */
+function makeGlowSprite(coreStop: number): THREE.CanvasTexture {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const ctx = c.getContext('2d')!;
+  const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(coreStop, 'rgba(255,255,255,0.55)');
+  g.addColorStop(0.6, 'rgba(255,255,255,0.12)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 128, 128);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+
+/** Night sky: near-black zenith to a deep blue horizon band. Mapped on an inverted sphere. */
+function makeSkyTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas'); c.width = 4; c.height = 512;
+  const ctx = c.getContext('2d')!;
+  const g = ctx.createLinearGradient(0, 0, 0, 512);
+  g.addColorStop(0, '#02030a');
+  g.addColorStop(0.45, '#05081a');
+  g.addColorStop(0.62, '#0b1330');
+  g.addColorStop(0.7, '#141c3a');
+  g.addColorStop(1, '#05070f');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 4, 512);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+
+/** The venue floor: dark ground, launch pad grid, audience area, radial fade to black. */
+function makeGroundTexture(): THREE.CanvasTexture {
+  const S = 1024; const c = document.createElement('canvas'); c.width = c.height = S;
+  const ctx = c.getContext('2d')!;
+  ctx.fillStyle = '#070a12'; ctx.fillRect(0, 0, S, S);
+  // Audience area in front of the pad (towards -z, which is the bottom of the texture).
+  ctx.fillStyle = 'rgba(70,60,45,0.16)'; ctx.fillRect(S * 0.22, S * 0.66, S * 0.56, S * 0.22);
+  ctx.strokeStyle = 'rgba(160,140,110,0.14)'; ctx.lineWidth = 2; ctx.strokeRect(S * 0.22, S * 0.66, S * 0.56, S * 0.22);
+  // Stage / show line
+  ctx.strokeStyle = 'rgba(120,140,190,0.22)'; ctx.setLineDash([12, 10]); ctx.beginPath(); ctx.moveTo(S * 0.15, S * 0.62); ctx.lineTo(S * 0.85, S * 0.62); ctx.stroke(); ctx.setLineDash([]);
+  // Launch pad grid — a 20 × 20 cell block centred on the pad.
+  const cell = S / 100 * 3.5, half = 10; // 3.5 m cells in a 400 m texture
+  ctx.strokeStyle = 'rgba(120,150,200,0.10)'; ctx.lineWidth = 1;
+  for (let i = -half; i <= half; i++) {
+    const p = S / 2 + i * cell;
+    ctx.beginPath(); ctx.moveTo(p, S / 2 - half * cell); ctx.lineTo(p, S / 2 + half * cell); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(S / 2 - half * cell, p); ctx.lineTo(S / 2 + half * cell, p); ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(120,150,200,0.25)'; ctx.lineWidth = 2; ctx.strokeRect(S / 2 - half * cell, S / 2 - half * cell, 2 * half * cell, 2 * half * cell);
+  // Radial fade so the floor dissolves into night instead of ending at an edge.
+  const v = ctx.createRadialGradient(S / 2, S / 2, S * 0.18, S / 2, S / 2, S * 0.5);
+  v.addColorStop(0, 'rgba(2,3,8,0)'); v.addColorStop(1, 'rgba(2,3,8,1)');
+  ctx.fillStyle = v; ctx.fillRect(0, 0, S, S);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
+
 export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
-  drones,
-  selectedDroneId,
-  onSelectDrone,
-  showTrajectories,
-  showGeofence,
-  formationName,
+  drones, selectedDroneId, onSelectDrone, showTrajectories, showGeofence, formationName,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const sceneRef = useRef<THREE.Scene | null>(null);
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const [preset, setPreset] = useState<Preset>('ISOMETRIC');
+  const [glow, setGlow] = useState(true);
 
-  // Mesh refs for high-frequency animation updates without rebuilding scene
-  const droneInstancedMeshRef = useRef<THREE.InstancedMesh | null>(null);
-  const glowPointsRef = useRef<THREE.Points | null>(null);
-  const trajectoryLinesGroupRef = useRef<THREE.Group | null>(null);
-  const geofenceMeshRef = useRef<THREE.LineSegments | null>(null);
+  // Everything the render loop touches lives in refs so React renders never rebuild the scene.
+  const scene = useRef<{
+    renderer: THREE.WebGLRenderer; composer: EffectComposer; bloom: UnrealBloomPass; camera: THREE.PerspectiveCamera;
+    cores: THREE.InstancedMesh; halos: THREE.Points; floorGlow: THREE.Points; trails: THREE.LineSegments; targets: THREE.LineSegments; fence: THREE.LineSegments;
+    history: Float32Array; historyHead: number;
+  } | null>(null);
+  const dronesRef = useRef(drones); dronesRef.current = drones;
+  const flagsRef = useRef({ selectedDroneId, showTrajectories, showGeofence, glow });
+  flagsRef.current = { selectedDroneId, showTrajectories, showGeofence, glow };
 
-  // Camera Orbit Interaction state
-  const isDraggingRef = useRef<boolean>(false);
-  const previousMousePositionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-  const cameraOrbitRef = useRef<{ radius: number; theta: number; phi: number; target: THREE.Vector3 }>({
-    radius: 140,
-    theta: Math.PI / 4,
-    phi: Math.PI / 3,
-    target: new THREE.Vector3(0, 55, 0)
-  });
+  // Camera orbit: the target we ease towards, and where we are now.
+  const orbitGoal = useRef({ ...PRESETS.ISOMETRIC });
+  const orbitNow = useRef({ ...PRESETS.ISOMETRIC });
+  const dragging = useRef(false);
+  const lastPointer = useRef({ x: 0, y: 0 });
+  const lastInteraction = useRef(0);
 
-  const [cameraPreset, setCameraPreset] = useState<'AUDIENCE' | 'ISOMETRIC' | 'TOP_DOWN'>('ISOMETRIC');
-
-  // Initialize Three.js Scene
+  // ---- build the scene once ----------------------------------------------
   useEffect(() => {
-    if (!containerRef.current) return;
-    const container = containerRef.current;
-    const width = container.clientWidth;
-    const height = container.clientHeight;
+    const container = containerRef.current; if (!container) return;
+    const w = container.clientWidth || 800, h = container.clientHeight || 520;
 
-    // 1. Scene
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x030712); // Deep night sky (slate-950)
-    scene.fog = new THREE.FogExp2(0x030712, 0.002);
-    sceneRef.current = scene;
-
-    // 2. Camera
-    const camera = new THREE.PerspectiveCamera(50, width / height, 0.5, 1000);
-    cameraRef.current = camera;
-    updateCameraPosition();
-
-    // 3. Renderer with Antialiasing
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
-    renderer.setSize(width, height);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    container.innerHTML = '';
-    container.appendChild(renderer.domElement);
-    rendererRef.current = renderer;
+    renderer.setSize(w, h);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    container.innerHTML = ''; container.appendChild(renderer.domElement);
 
-    // 4. Ground Grid & Runway Launch Markers
-    const gridHelper = new THREE.GridHelper(160, 32, 0x1e293b, 0x0f172a);
-    gridHelper.position.y = 0;
-    scene.add(gridHelper);
+    const s = new THREE.Scene();
+    s.fog = new THREE.FogExp2(0x05070f, 0.0016);
+    const camera = new THREE.PerspectiveCamera(42, w / h, 0.5, 2000);
 
-    // Launch Pad Center Ring
-    const ringGeo = new THREE.RingGeometry(18, 19, 48);
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0x0284c7, side: THREE.DoubleSide, transparent: true, opacity: 0.4 });
-    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
-    ringMesh.rotation.x = Math.PI / 2;
-    ringMesh.position.y = 0.1;
-    scene.add(ringMesh);
-
-    // 5. Geofence Containment Cube Wireframe
-    const geofenceBoxGeo = new THREE.BoxGeometry(100, 110, 100);
-    const geofenceEdges = new THREE.EdgesGeometry(geofenceBoxGeo);
-    const geofenceLineMat = new THREE.LineBasicMaterial({ color: 0x059669, transparent: true, opacity: 0.35 });
-    const geofenceMesh = new THREE.LineSegments(geofenceEdges, geofenceLineMat);
-    geofenceMesh.position.set(0, 55, 0); // Center at 55m altitude
-    scene.add(geofenceMesh);
-    geofenceMeshRef.current = geofenceMesh;
-
-    // 6. Drone Spheres (InstancedMesh for high performance)
-    const sphereGeo = new THREE.SphereGeometry(1.1, 14, 14);
-    const sphereMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const instancedDrones = new THREE.InstancedMesh(sphereGeo, sphereMat, Math.max(100, drones.length));
-    scene.add(instancedDrones);
-    droneInstancedMeshRef.current = instancedDrones;
-
-    // 7. Glowing Halo Point Sprites (Simulating 1,800 Lumen LED Radiance)
-    const haloCount = Math.max(100, drones.length);
-    const haloGeo = new THREE.BufferGeometry();
-    const haloPositions = new Float32Array(haloCount * 3);
-    const haloColors = new Float32Array(haloCount * 3);
-    haloGeo.setAttribute('position', new THREE.BufferAttribute(haloPositions, 3));
-    haloGeo.setAttribute('color', new THREE.BufferAttribute(haloColors, 3));
-
-    // Custom circular glow texture
-    const canvas = document.createElement('canvas');
-    canvas.width = 64;
-    canvas.height = 64;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-      gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-      gradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.8)');
-      gradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.2)');
-      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, 64, 64);
+    // Sky dome + stars
+    const sky = new THREE.Mesh(new THREE.SphereGeometry(900, 32, 24), new THREE.MeshBasicMaterial({ map: makeSkyTexture(), side: THREE.BackSide, fog: false, depthWrite: false }));
+    s.add(sky);
+    const starN = 1400, starPos = new Float32Array(starN * 3), starCol = new Float32Array(starN * 3);
+    for (let i = 0; i < starN; i++) {
+      // Upper hemisphere only, denser near the zenith.
+      const u = Math.random(), v = Math.random();
+      const theta = 2 * Math.PI * u, phi = Math.acos(1 - v * 0.85);
+      starPos[i * 3] = 850 * Math.sin(phi) * Math.cos(theta); starPos[i * 3 + 1] = 850 * Math.cos(phi); starPos[i * 3 + 2] = 850 * Math.sin(phi) * Math.sin(theta);
+      const b = 0.35 + Math.random() * 0.65; const warm = Math.random() < 0.2;
+      starCol[i * 3] = b; starCol[i * 3 + 1] = b * (warm ? 0.9 : 0.97); starCol[i * 3 + 2] = b * (warm ? 0.75 : 1);
     }
-    const glowTexture = new THREE.CanvasTexture(canvas);
+    const starGeo = new THREE.BufferGeometry();
+    starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3)); starGeo.setAttribute('color', new THREE.BufferAttribute(starCol, 3));
+    s.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ size: 1.1, vertexColors: true, transparent: true, opacity: 0.6, sizeAttenuation: false, fog: false, depthWrite: false })));
 
-    const haloMat = new THREE.PointsMaterial({
-      size: 9.0,
-      map: glowTexture,
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      vertexColors: true,
-      depthWrite: false,
-    });
+    // Venue floor
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshBasicMaterial({ map: makeGroundTexture() }));
+    floor.rotation.x = -Math.PI / 2; s.add(floor);
 
-    const glowPoints = new THREE.Points(haloGeo, haloMat);
-    scene.add(glowPoints);
-    glowPointsRef.current = glowPoints;
+    // Geofence: a quiet volume, only when asked for.
+    const fence = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(100, 110, 100)), new THREE.LineBasicMaterial({ color: 0x6b8fe8, transparent: true, opacity: 0.09 }));
+    fence.position.set(0, 55, 0); fence.visible = false; s.add(fence);
 
-    // 8. Trajectory Lines Group
-    const trajectoryGroup = new THREE.Group();
-    scene.add(trajectoryGroup);
-    trajectoryLinesGroupRef.current = trajectoryGroup;
+    // Aircraft cores
+    const cores = new THREE.InstancedMesh(new THREE.SphereGeometry(0.75, 10, 10), new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }), CAPACITY);
+    cores.count = 0; cores.instanceMatrix.setUsage(THREE.DynamicDrawUsage); s.add(cores);
 
-    // Animation Render Loop
-    let animationId: number;
-    const animate = () => {
-      animationId = requestAnimationFrame(animate);
-      if (rendererRef.current && sceneRef.current && cameraRef.current) {
-        rendererRef.current.render(sceneRef.current, cameraRef.current);
-      }
+    // LED halos — the thing bloom grabs.
+    const halo = makeGlowSprite(0.18), soft = makeGlowSprite(0.05);
+    const mkPoints = (size: number, opacity: number, map: THREE.Texture) => {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(CAPACITY * 3), 3).setUsage(THREE.DynamicDrawUsage));
+      g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(CAPACITY * 3), 3).setUsage(THREE.DynamicDrawUsage));
+      g.setDrawRange(0, 0);
+      return new THREE.Points(g, new THREE.PointsMaterial({ size, map, transparent: true, opacity, blending: THREE.AdditiveBlending, vertexColors: true, depthWrite: false, sizeAttenuation: true, toneMapped: false }));
     };
-    animate();
+    const halos = mkPoints(4.6, 0.95, halo); s.add(halos);
+    const floorGlow = mkPoints(40, 0.035, soft); s.add(floorGlow);
 
-    // Resize Handler
-    const handleResize = () => {
-      if (!containerRef.current || !rendererRef.current || !cameraRef.current) return;
-      const w = containerRef.current.clientWidth;
-      const h = containerRef.current.clientHeight;
-      cameraRef.current.aspect = w / h;
-      cameraRef.current.updateProjectionMatrix();
-      rendererRef.current.setSize(w, h);
-    };
+    // Trails: TRAIL-1 segments per aircraft, colour fades with age.
+    const segs = CAPACITY * (TRAIL - 1);
+    const trailGeo = new THREE.BufferGeometry();
+    trailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(segs * 2 * 3), 3).setUsage(THREE.DynamicDrawUsage));
+    trailGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(segs * 2 * 3), 3).setUsage(THREE.DynamicDrawUsage));
+    trailGeo.setDrawRange(0, 0);
+    const trails = new THREE.LineSegments(trailGeo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+    s.add(trails);
 
-    const resizeObserver = new ResizeObserver(handleResize);
-    resizeObserver.observe(container);
+    // Target lines (where each aircraft is heading), one buffer for the whole fleet.
+    const tgtGeo = new THREE.BufferGeometry();
+    tgtGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(CAPACITY * 2 * 3), 3).setUsage(THREE.DynamicDrawUsage));
+    tgtGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(CAPACITY * 2 * 3), 3).setUsage(THREE.DynamicDrawUsage));
+    tgtGeo.setDrawRange(0, 0);
+    const targets = new THREE.LineSegments(tgtGeo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.07, depthWrite: false }));
+    s.add(targets);
 
-    return () => {
-      cancelAnimationFrame(animationId);
-      resizeObserver.disconnect();
-      renderer.dispose();
-      sphereGeo.dispose();
-      sphereMat.dispose();
-      haloGeo.dispose();
-      haloMat.dispose();
-      glowTexture.dispose();
-    };
-  }, []);
+    // Post: bloom on the lights only (threshold keeps the floor and sky dark).
+    const composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(s, camera));
+    const bloom = new UnrealBloomPass(new THREE.Vector2(w, h), 0.6, 0.55, 0.32);
+    composer.addPass(bloom);
+    composer.addPass(new OutputPass());
 
-  // Update Camera helper
-  const updateCameraPosition = () => {
-    if (!cameraRef.current) return;
-    const { radius, theta, phi, target } = cameraOrbitRef.current;
-    const x = target.x + radius * Math.sin(phi) * Math.cos(theta);
-    const y = target.y + radius * Math.cos(phi);
-    const z = target.z + radius * Math.sin(phi) * Math.sin(theta);
-    cameraRef.current.position.set(x, y, z);
-    cameraRef.current.lookAt(target);
-  };
+    scene.current = { renderer, composer, bloom, camera, cores, halos, floorGlow, trails, targets, fence, history: new Float32Array(CAPACITY * TRAIL * 3), historyHead: 0 };
 
-  // Synchronize Drone Positions & Colors into Three.js InstancedMesh & Halos
-  useEffect(() => {
-    if (!droneInstancedMeshRef.current || !glowPointsRef.current || drones.length === 0) return;
+    // ---- render loop --------------------------------------------------------
+    const dummy = new THREE.Object3D(); const col = new THREE.Color();
+    let raf = 0, last = performance.now(), frame = 0;
+    const tick = (now: number) => {
+      raf = requestAnimationFrame(tick);
+      const st = scene.current; if (!st) return;
+      const dt = Math.min(0.1, (now - last) / 1000); last = now; frame++;
+      const list = dronesRef.current; const n = Math.min(list.length, CAPACITY);
+      const { selectedDroneId, showTrajectories, showGeofence, glow } = flagsRef.current;
 
-    const instancedMesh = droneInstancedMeshRef.current;
-    const glowPoints = glowPointsRef.current;
-    const haloPositions = glowPoints.geometry.attributes.position.array as Float32Array;
-    const haloColors = glowPoints.geometry.attributes.color.array as Float32Array;
+      // Camera: ease to the goal; idle orbit after 6 s without input.
+      const g = orbitGoal.current, o = orbitNow.current;
+      if (!dragging.current && now - lastInteraction.current > 6000) g.theta += 0.035 * dt;
+      o.radius += (g.radius - o.radius) * 0.08; o.theta += (g.theta - o.theta) * 0.1; o.phi += (g.phi - o.phi) * 0.08;
+      camera.position.set(
+        SHOW_CENTRE.x + o.radius * Math.sin(o.phi) * Math.cos(o.theta),
+        SHOW_CENTRE.y + o.radius * Math.cos(o.phi),
+        SHOW_CENTRE.z + o.radius * Math.sin(o.phi) * Math.sin(o.theta),
+      );
+      camera.lookAt(SHOW_CENTRE);
 
-    const dummy = new THREE.Object3D();
-    const colorHelper = new THREE.Color();
-
-    for (let i = 0; i < drones.length; i++) {
-      const drone = drones[i];
-      dummy.position.set(drone.position.x, drone.position.y, drone.position.z);
-      
-      // Selected drone is rendered slightly larger
-      const scale = (drone.id === selectedDroneId) ? 1.8 : 1.0;
-      dummy.scale.set(scale, scale, scale);
-      dummy.updateMatrix();
-
-      instancedMesh.setMatrixAt(i, dummy.matrix);
-
-      // Color from RGBW (boosted with W channel luminance)
-      const r = Math.min(1.0, (drone.color.r + drone.color.w * 0.4) / 255);
-      const g = Math.min(1.0, (drone.color.g + drone.color.w * 0.4) / 255);
-      const b = Math.min(1.0, (drone.color.b + drone.color.w * 0.4) / 255);
-
-      colorHelper.setRGB(r, g, b);
-      instancedMesh.setColorAt(i, colorHelper);
-
-      // Update halo position & color
-      haloPositions[i * 3 + 0] = drone.position.x;
-      haloPositions[i * 3 + 1] = drone.position.y;
-      haloPositions[i * 3 + 2] = drone.position.z;
-
-      haloColors[i * 3 + 0] = r;
-      haloColors[i * 3 + 1] = g;
-      haloColors[i * 3 + 2] = b;
-    }
-
-    instancedMesh.instanceMatrix.needsUpdate = true;
-    if (instancedMesh.instanceColor) {
-      instancedMesh.instanceColor.needsUpdate = true;
-    }
-
-    glowPoints.geometry.attributes.position.needsUpdate = true;
-    glowPoints.geometry.attributes.color.needsUpdate = true;
-
-    // Update Geofence visibility
-    if (geofenceMeshRef.current) {
-      geofenceMeshRef.current.visible = showGeofence;
-    }
-
-    // Update Trajectory Vectors
-    if (trajectoryLinesGroupRef.current) {
-      const group = trajectoryLinesGroupRef.current;
-      group.clear();
-
-      if (showTrajectories) {
-        const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.35 });
-        for (let i = 0; i < drones.length; i++) {
-          const d = drones[i];
-          const distSq = (d.targetPosition.x - d.position.x)**2 + (d.targetPosition.y - d.position.y)**2 + (d.targetPosition.z - d.position.z)**2;
-          if (distSq > 1.0) {
-            const lineGeo = new THREE.BufferGeometry().setFromPoints([
-              new THREE.Vector3(d.position.x, d.position.y, d.position.z),
-              new THREE.Vector3(d.targetPosition.x, d.targetPosition.y, d.targetPosition.z)
-            ]);
-            const line = new THREE.Line(lineGeo, lineMat);
-            group.add(line);
+      // Aircraft buffers
+      const hp = st.halos.geometry.attributes.position.array as Float32Array, hc = st.halos.geometry.attributes.color.array as Float32Array;
+      const fp = st.floorGlow.geometry.attributes.position.array as Float32Array, fc = st.floorGlow.geometry.attributes.color.array as Float32Array;
+      const tp = st.targets.geometry.attributes.position.array as Float32Array, tc = st.targets.geometry.attributes.color.array as Float32Array;
+      const sampleTrail = frame % 3 === 0; // ~20 Hz trail sampling
+      if (sampleTrail) st.historyHead = (st.historyHead + 1) % TRAIL;
+      let tgtCount = 0;
+      for (let i = 0; i < n; i++) {
+        const d = list[i]; const p = d.position;
+        // RGBW → RGB with the white channel lifting all three; lights are pure emitters.
+        const r = Math.min(1, (d.color.r + d.color.w * 0.45) / 255), gch = Math.min(1, (d.color.g + d.color.w * 0.45) / 255), b = Math.min(1, (d.color.b + d.color.w * 0.45) / 255);
+        const lit = r + gch + b > 0.05;
+        const sel = d.id === selectedDroneId;
+        dummy.position.set(p.x, p.y, p.z); const sc = sel ? 1.9 : 1; dummy.scale.set(sc, sc, sc); dummy.updateMatrix();
+        st.cores.setMatrixAt(i, dummy.matrix);
+        col.setRGB(lit ? r : 0.06, lit ? gch : 0.07, lit ? b : 0.09); st.cores.setColorAt(i, col);
+        hp[i * 3] = p.x; hp[i * 3 + 1] = p.y; hp[i * 3 + 2] = p.z;
+        hc[i * 3] = r * (sel ? 1.6 : 1); hc[i * 3 + 1] = gch * (sel ? 1.6 : 1); hc[i * 3 + 2] = b * (sel ? 1.6 : 1);
+        // Floor glow fades with altitude — a light 100 m up barely touches the ground.
+        const k = Math.max(0, 1 - p.y / 90) * 0.9;
+        fp[i * 3] = p.x; fp[i * 3 + 1] = 0.3; fp[i * 3 + 2] = p.z;
+        fc[i * 3] = r * k; fc[i * 3 + 1] = gch * k; fc[i * 3 + 2] = b * k;
+        // Trail history ring
+        if (sampleTrail) { const hidx = (i * TRAIL + st.historyHead) * 3; st.history[hidx] = p.x; st.history[hidx + 1] = p.y; st.history[hidx + 2] = p.z; }
+        // Target line
+        if (showTrajectories) {
+          const dx = d.targetPosition.x - p.x, dy = d.targetPosition.y - p.y, dz = d.targetPosition.z - p.z;
+          if (dx * dx + dy * dy + dz * dz > 1) {
+            const o6 = tgtCount * 6;
+            tp[o6] = p.x; tp[o6 + 1] = p.y; tp[o6 + 2] = p.z; tp[o6 + 3] = d.targetPosition.x; tp[o6 + 4] = d.targetPosition.y; tp[o6 + 5] = d.targetPosition.z;
+            tc[o6] = r; tc[o6 + 1] = gch; tc[o6 + 2] = b; tc[o6 + 3] = 0; tc[o6 + 4] = 0; tc[o6 + 5] = 0;
+            tgtCount++;
           }
         }
       }
+      st.cores.count = n; st.cores.instanceMatrix.needsUpdate = true; if (st.cores.instanceColor) st.cores.instanceColor.needsUpdate = true;
+      st.halos.geometry.setDrawRange(0, n); st.halos.geometry.attributes.position.needsUpdate = true; st.halos.geometry.attributes.color.needsUpdate = true;
+      st.floorGlow.geometry.setDrawRange(0, n); st.floorGlow.geometry.attributes.position.needsUpdate = true; st.floorGlow.geometry.attributes.color.needsUpdate = true;
+      st.targets.geometry.setDrawRange(0, tgtCount * 2); st.targets.geometry.attributes.position.needsUpdate = true; st.targets.geometry.attributes.color.needsUpdate = true;
+      st.targets.visible = showTrajectories && tgtCount > 0;
+      st.fence.visible = showGeofence;
+
+      // Trails: rebuild segments from the ring (oldest → newest), fading in.
+      if (sampleTrail) {
+        const lp = st.trails.geometry.attributes.position.array as Float32Array, lc = st.trails.geometry.attributes.color.array as Float32Array;
+        let seg = 0;
+        for (let i = 0; i < n; i++) {
+          const d = list[i];
+          const r = Math.min(1, (d.color.r + d.color.w * 0.45) / 255), gch = Math.min(1, (d.color.g + d.color.w * 0.45) / 255), b = Math.min(1, (d.color.b + d.color.w * 0.45) / 255);
+          for (let k = 0; k < TRAIL - 1; k++) {
+            const a = (st.historyHead + 1 + k) % TRAIL, bIdx = (st.historyHead + 2 + k) % TRAIL;
+            const ai = (i * TRAIL + a) * 3, bi = (i * TRAIL + bIdx) * 3;
+            const o6 = seg * 6;
+            lp[o6] = st.history[ai]; lp[o6 + 1] = st.history[ai + 1]; lp[o6 + 2] = st.history[ai + 2];
+            lp[o6 + 3] = st.history[bi]; lp[o6 + 4] = st.history[bi + 1]; lp[o6 + 5] = st.history[bi + 2];
+            const f0 = (k / (TRAIL - 1)) ** 2 * 0.55, f1 = ((k + 1) / (TRAIL - 1)) ** 2 * 0.55;
+            lc[o6] = r * f0; lc[o6 + 1] = gch * f0; lc[o6 + 2] = b * f0; lc[o6 + 3] = r * f1; lc[o6 + 4] = gch * f1; lc[o6 + 5] = b * f1;
+            seg++;
+          }
+        }
+        st.trails.geometry.setDrawRange(0, seg * 2);
+        st.trails.geometry.attributes.position.needsUpdate = true; st.trails.geometry.attributes.color.needsUpdate = true;
+      }
+
+      st.bloom.enabled = glow;
+      if (glow) st.composer.render(); else st.renderer.render(s, camera);
+    };
+    raf = requestAnimationFrame(tick);
+
+    const ro = new ResizeObserver(() => {
+      const cw = container.clientWidth, ch = container.clientHeight; if (!cw || !ch) return;
+      camera.aspect = cw / ch; camera.updateProjectionMatrix();
+      renderer.setSize(cw, ch); composer.setSize(cw, ch); bloom.setSize(cw, ch);
+    });
+    ro.observe(container);
+
+    return () => {
+      cancelAnimationFrame(raf); ro.disconnect();
+      s.traverse(obj => {
+        const m = obj as THREE.Mesh; if (m.geometry) m.geometry.dispose();
+        const mat = (m as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
+        if (Array.isArray(mat)) mat.forEach(x => x.dispose()); else mat?.dispose();
+      });
+      composer.dispose(); renderer.dispose(); scene.current = null;
+    };
+  }, []);
+
+  // Seed the trail ring so a fresh fleet doesn't draw lines from the origin.
+  useEffect(() => {
+    const st = scene.current; if (!st) return;
+    const n = Math.min(drones.length, CAPACITY);
+    for (let i = 0; i < n; i++) for (let k = 0; k < TRAIL; k++) { const o = (i * TRAIL + k) * 3; st.history[o] = drones[i].position.x; st.history[o + 1] = drones[i].position.y; st.history[o + 2] = drones[i].position.z; }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drones.length]);
+
+  // ---- interaction ---------------------------------------------------------
+  const onPointerDown = (e: React.PointerEvent) => { dragging.current = true; lastPointer.current = { x: e.clientX, y: e.clientY }; lastInteraction.current = performance.now(); (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!dragging.current) return;
+    const dx = e.clientX - lastPointer.current.x, dy = e.clientY - lastPointer.current.y;
+    lastPointer.current = { x: e.clientX, y: e.clientY }; lastInteraction.current = performance.now();
+    const g = orbitGoal.current; g.theta -= dx * 0.006; g.phi = Math.max(0.05, Math.min(Math.PI / 2 - 0.02, g.phi - dy * 0.006));
+  };
+  const onPointerUp = () => { dragging.current = false; lastInteraction.current = performance.now(); };
+  const onWheel = (e: React.WheelEvent) => { lastInteraction.current = performance.now(); orbitGoal.current.radius = Math.max(45, Math.min(320, orbitGoal.current.radius + e.deltaY * 0.15)); };
+  const applyPreset = (p: Preset) => { setPreset(p); orbitGoal.current = { ...PRESETS[p] }; lastInteraction.current = performance.now(); };
+  const onClick = (e: React.MouseEvent) => {
+    // Pick the nearest aircraft to the click in screen space; a miss clears the selection.
+    const st = scene.current; const el = containerRef.current; if (!st || !el) return;
+    const rect = el.getBoundingClientRect();
+    const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1, ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    const v = new THREE.Vector3(); let best: string | null = null, bestD = 0.035;
+    for (const d of drones) {
+      v.set(d.position.x, d.position.y, d.position.z).project(st.camera);
+      const dd = Math.hypot(v.x - nx, v.y - ny);
+      if (dd < bestD) { bestD = dd; best = d.id; }
     }
-  }, [drones, selectedDroneId, showTrajectories, showGeofence]);
-
-  // Mouse Interaction for 3D Orbiting
-  const handleMouseDown = (e: React.MouseEvent) => {
-    isDraggingRef.current = true;
-    previousMousePositionRef.current = { x: e.clientX, y: e.clientY };
+    onSelectDrone(best);
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDraggingRef.current) return;
-    const deltaX = e.clientX - previousMousePositionRef.current.x;
-    const deltaY = e.clientY - previousMousePositionRef.current.y;
-
-    cameraOrbitRef.current.theta -= deltaX * 0.008;
-    cameraOrbitRef.current.phi = Math.max(0.1, Math.min(Math.PI / 2 + 0.1, cameraOrbitRef.current.phi - deltaY * 0.008));
-
-    updateCameraPosition();
-    previousMousePositionRef.current = { x: e.clientX, y: e.clientY };
-  };
-
-  const handleMouseUp = () => {
-    isDraggingRef.current = false;
-  };
-
-  const handleWheel = (e: React.WheelEvent) => {
-    cameraOrbitRef.current.radius = Math.max(30, Math.min(300, cameraOrbitRef.current.radius + e.deltaY * 0.15));
-    updateCameraPosition();
-  };
-
-  const setPresetView = (preset: 'AUDIENCE' | 'ISOMETRIC' | 'TOP_DOWN') => {
-    setCameraPreset(preset);
-    if (preset === 'AUDIENCE') {
-      cameraOrbitRef.current = { radius: 150, theta: -Math.PI / 2, phi: Math.PI / 2.1, target: new THREE.Vector3(0, 60, 0) };
-    } else if (preset === 'ISOMETRIC') {
-      cameraOrbitRef.current = { radius: 140, theta: Math.PI / 4, phi: Math.PI / 3, target: new THREE.Vector3(0, 55, 0) };
-    } else {
-      cameraOrbitRef.current = { radius: 130, theta: 0, phi: 0.05, target: new THREE.Vector3(0, 55, 0) };
-    }
-    updateCameraPosition();
-  };
+  const litCount = drones.reduce((c, d) => c + (d.color.r + d.color.g + d.color.b + d.color.w > 12 ? 1 : 0), 0);
 
   return (
-    <div 
-      id="light-show-canvas-container"
-      className="relative w-full h-[520px] lg:h-[620px] rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 shadow-2xl select-none"
-    >
-      {/* 3D WebGL Canvas Viewport */}
+    <div id="light-show-canvas-container" className="relative w-full h-[520px] lg:h-[620px] bg-imagery select-none overflow-hidden">
       <div
         ref={containerRef}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onWheel={handleWheel}
+        onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
+        onWheel={onWheel} onClick={onClick}
         className="w-full h-full cursor-grab active:cursor-grabbing"
+        role="img" aria-label={`Three-dimensional view of the ${formationName} formation with ${drones.length} aircraft`}
       />
 
-      {/* Top Left Live Formation Indicator Overlay */}
-      <div className="absolute top-4 left-4 flex flex-col gap-1.5 pointer-events-none">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900/90 border border-slate-700/80 backdrop-blur shadow-lg">
-            <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-            <span className="font-mono text-xs font-bold text-slate-100 uppercase tracking-wide">
-              {formationName}
-            </span>
-          </div>
-          <span className="px-2.5 py-1 rounded-lg bg-emerald-950/80 border border-emerald-700 text-[10px] font-mono font-bold text-emerald-300">
-            {drones.length} DRONES SYNCHRONIZED
-          </span>
-        </div>
-        <span className="text-[11px] font-mono text-slate-400 pl-1">
-          Drag to orbit 3D view &bull; Scroll to zoom &bull; Real-Time RGBW Volumetric Rendering
-        </span>
+      {/* What you're looking at */}
+      <div className="absolute top-3 left-3 flex items-center gap-2 pointer-events-none">
+        <span className="rounded-lg bg-black/55 backdrop-blur px-2.5 py-1 text-[12px] font-medium text-white">{formationName}</span>
+        <span className="rounded-lg bg-black/55 backdrop-blur px-2.5 py-1 text-[11px] text-white/75 num">{drones.length} aircraft · {litCount} lit</span>
       </div>
 
-      {/* Top Right Camera Preset View Switcher */}
-      <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800 backdrop-blur shadow-lg">
-        <button
-          onClick={() => setPresetView('AUDIENCE')}
-          className={`px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition-colors ${
-            cameraPreset === 'AUDIENCE' ? 'bg-sky-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-          title="Audience Perspective (Facing North)"
-        >
-          Audience View
+      {/* View controls */}
+      <div className="absolute top-3 right-3 flex items-center gap-1.5">
+        <div role="group" aria-label="Camera" className="inline-flex items-center gap-0.5 rounded-lg bg-black/55 backdrop-blur p-0.5">
+          {([['AUDIENCE', 'Audience', 'From the crowd, facing the show'], ['ISOMETRIC', 'Isometric', 'Three-quarter view'], ['TOP_DOWN', 'Top-down', 'Plan view of the formation']] as [Preset, string, string][]).map(([id, label, title]) => (
+            <button key={id} type="button" title={title} aria-pressed={preset === id} onClick={() => applyPreset(id)}
+              className={`h-6 px-2 rounded-md text-[11px] font-medium transition-colors ${preset === id ? 'bg-white/15 text-white' : 'text-white/65 hover:text-white'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <button type="button" aria-pressed={glow} aria-label={glow ? 'Glow on' : 'Glow off'} title="Glow" onClick={() => setGlow(v => !v)}
+          className={`inline-flex items-center justify-center w-7 h-7 rounded-lg bg-black/55 backdrop-blur transition-colors [&>svg]:w-3.5 [&>svg]:h-3.5 ${glow ? 'text-white' : 'text-white/45 hover:text-white/80'}`}>
+          <Sparkles />
         </button>
-        <button
-          onClick={() => setPresetView('ISOMETRIC')}
-          className={`px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition-colors ${
-            cameraPreset === 'ISOMETRIC' ? 'bg-sky-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-          title="45-Degree 3D Perspective"
-        >
-          Isometric
-        </button>
-        <button
-          onClick={() => setPresetView('TOP_DOWN')}
-          className={`px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition-colors ${
-            cameraPreset === 'TOP_DOWN' ? 'bg-sky-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-          title="Top-Down Airfield Plot"
-        >
-          Top-Down
+        <button type="button" aria-label="Reset view" title="Reset view" onClick={() => applyPreset(preset)}
+          className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-black/55 backdrop-blur text-white/65 hover:text-white transition-colors [&>svg]:w-3.5 [&>svg]:h-3.5">
+          <RotateCcw />
         </button>
       </div>
 
-      {/* Bottom Center Spatial Safety Status */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 px-4 py-2 rounded-xl bg-slate-900/85 border border-slate-800 backdrop-blur pointer-events-none text-xs font-mono">
-        <div className="flex items-center gap-1.5 text-emerald-400">
-          <Shield className="w-3.5 h-3.5" />
-          <span>MIN SEPARATION: <strong>3.2m</strong> (Safety &ge; 2.5m)</span>
-        </div>
-        <span className="text-slate-600">|</span>
-        <span className="text-slate-400">GEOFENCE CUBE: <strong>CONTAINED</strong></span>
-        <span className="text-slate-600">|</span>
-        <span className="text-sky-300">TIMECODE JITTER: <strong>&lt; 0.8 ms</strong></span>
-      </div>
+      <div className="absolute bottom-3 left-3 text-[11px] text-white/45 pointer-events-none">Drag to orbit · scroll to zoom · click an aircraft to select it</div>
     </div>
   );
 };
