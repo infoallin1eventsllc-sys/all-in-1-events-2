@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "python -m http.server 8000",
     "start": "netlify dev",
-    "lint": "echo 'Install ESLint to lint JS files'"
+    "lint": "echo 'Install ESLint to lint JS files'",
+    "build:drone": "cd drone && npm ci --no-audit --no-fund && npm run build && rm -rf node_modules",
+    "dev:drone": "cd drone && npm install && npm run dev"
   },
   "keywords": [
     "events",

@@ -9,7 +9,9 @@
 # - Build settings
 
 [build]
-  command = "echo 'Static site, no build needed'"
+  # The events site is static. The drone command app (drone/) is a Vite build
+  # served under /drone/ — see the redirects below.
+  command = "npm run build:drone"
   publish = "."
 
 # ===== SECURITY HEADERS =====
@@ -41,12 +43,24 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
+# ===== DRONE COMMAND APP =====
+# The cockpit view uses the operator microphone for push-to-talk; allow it only here.
+[[headers]]
+  for = "/drone/*"
+  [headers.values]
+    Permissions-Policy = "camera=(), microphone=(self), geolocation=()"
+
 # ===== REDIRECTS =====
-# No redirects needed for this static site, but here's an example:
-# [[redirects]]
-#   from = "/api/*"
-#   to = "/.netlify/functions/:splat"
-#   status = 200
+# Serve the built drone app (drone/dist) at /drone/ with SPA fallback.
+[[redirects]]
+  from = "/drone"
+  to = "/drone/"
+  status = 301
+
+[[redirects]]
+  from = "/drone/*"
+  to = "/drone/dist/:splat"
+  status = 200
 
 # ===== ENVIRONMENT VARIABLES =====
 # Set ANTHROPIC_API_KEY in the Netlify dashboard:

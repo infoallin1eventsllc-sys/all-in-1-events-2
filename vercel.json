@@ -1,5 +1,5 @@
 {
-  "buildCommand": "echo 'Static site'",
+  "buildCommand": "npm run build:drone",
   "outputDirectory": ".",
   "functions": {
     "vercel/api/*.js": {
@@ -32,9 +32,28 @@
           "value": "camera=(), microphone=(), geolocation=()"
         }
       ]
+    },
+    {
+      "source": "/drone/(.*)",
+      "headers": [
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(self), geolocation=()"
+        }
+      ]
     }
   ],
   "env": {
     "ANTHROPIC_API_KEY": "@anthropic_api_key"
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/drone",
+      "destination": "/drone/dist/index.html"
+    },
+    {
+      "source": "/drone/:path*",
+      "destination": "/drone/dist/:path*"
+    }
+  ]
 }

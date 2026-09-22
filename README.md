@@ -23,6 +23,19 @@ all-in-1-events/
 └── vercel.json             # Vercel config: headers, env vars
 ```
 
+## Drone Command (`drone/`)
+
+Operator dashboards for the All in 1 drone platform — **Light Show**, **Defense**
+(counter-UAS) and **Surveillance** — plus the fleet-coordination engineering views
+behind them. It is a separate Vite/React app that deploys under `/drone/` on this site.
+
+```bash
+npm run dev:drone     # local: http://localhost:3000/drone/
+npm run build:drone   # what Netlify / Vercel run on deploy
+```
+
+See [`drone/README.md`](drone/README.md).
+
 ## Quick Start (Local Demo)
 
 ```bash
