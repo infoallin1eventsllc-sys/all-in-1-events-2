@@ -9,10 +9,14 @@ one build:
 | **Defense** | `src/dashboards/DefenseDashboard.tsx` | Counter-UAS tactical map (terrain, protected asset, engage / warn rings, sensor coverage, threat tracks with trails and effector cones), selected-track card, disruption control (RF jam / GNSS deny / protocol takeover, power, 2.4 / 5.8 / GNSS band gates, pulse burst, sweep, disrupt target / all, auto-engage), threat board, sensor network with live 2.4 / 5.8 GHz spectrum, **EO/IR-1 camera feed** slewed onto the selected track (`EoIrFeedCanvas.tsx`: four motor hot-spots in IR confirm a quad before engaging), event log. |
 | **Surveillance** | `src/dashboards/SurveillanceDashboard.tsx` | **Live gimbal video feed** from the selected airframe (`DroneFeedCanvas.tsx`: EO / IR white-hot / IR ironbow / night vision, moving heat targets with temperature readout, auto-track lock, DVR) with a strip of the other airframes' feeds; **night protocol** (AUTO / DAY / NIGHT) flips every airborne payload to thermal at night. Patrol map (5-waypoint loop, airframes with sensor footprint and altitude tether, detections), fleet list, live telemetry sparklines, power system, flight control (auto-track, illumination, night vision, thermal scan, survivor detect, RTH, gimbal, zoom, autopilot), navigation route-progress chart, detections queue with dispatch, mission map, event log. |
 
-The **Engineering** toggle exposes the views behind the dashboards: tactical airspace
-radar (100–500 unit swarm sim), live cockpit / PTT GCS, 3D light-show studio, the
-software architecture spec, and the fleet telemetry grid, plus the DTLS / TimescaleDB /
-Gazebo SITL / benchmark / radio / FAA-waiver labs.
+**How it works** (`src/dashboards/PlatformView.tsx`) is the client-readable front for
+everything technical: the three products in one line each, the nine architecture
+layers translated into plain sentences (with the real term kept underneath), and a
+safety-and-compliance summary a venue actually asks for. The original engineering
+tooling — tactical airspace radar, live cockpit / PTT GCS, 3D light-show studio, the
+full architecture spec, the fleet telemetry grid, and the DTLS / TimescaleDB / Gazebo
+SITL / benchmark / radio / FAA-waiver labs — sits one click further in, under
+**Engineering detail**, and keeps its dark tooling chrome.
 
 ## Talking to a real aircraft
 

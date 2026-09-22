@@ -19,6 +19,7 @@ import { LightShowDashboard } from './dashboards/LightShowDashboard';
 import { DefenseDashboard } from './dashboards/DefenseDashboard';
 import { SurveillanceDashboard } from './dashboards/SurveillanceDashboard';
 import { LinkButton } from './link/LinkButton';
+import { PlatformView } from './dashboards/PlatformView';
 import { 
   Compass, 
   Layers, 
@@ -47,7 +48,8 @@ import {
 /** Product verticals (operator dashboards) and the engineering views behind them. */
 type VerticalTab = 'LIGHT_SHOW_OPS' | 'DEFENSE_OPS' | 'SURVEILLANCE_OPS';
 type EngineeringTab = 'RADAR' | 'DRONE_OPERATOR' | 'LIGHT_SHOW' | 'ARCHITECTURE' | 'TABLE';
-type ViewTab = VerticalTab | EngineeringTab;
+/** 'PLATFORM' is the client-readable explanation that fronts the engineering views. */
+type ViewTab = VerticalTab | EngineeringTab | 'PLATFORM';
 
 const VERTICALS: { id: VerticalTab; label: string; icon: React.ReactNode }[] = [
   { id: 'LIGHT_SHOW_OPS', label: 'Light show', icon: <Sparkles className="w-3.5 h-3.5" /> },
@@ -60,6 +62,10 @@ const THEME_KEY = 'drone-command-theme';
 export default function App() {
   const [activeTab, setActiveTab] = useState<ViewTab>('LIGHT_SHOW_OPS');
   const isVertical = activeTab === 'LIGHT_SHOW_OPS' || activeTab === 'DEFENSE_OPS' || activeTab === 'SURVEILLANCE_OPS';
+  const isPlatform = activeTab === 'PLATFORM';
+  // Client-facing chrome covers the three dashboards and the "How it works" page;
+  // the deep engineering views keep their original dark tooling look.
+  const isClient = isVertical || isPlatform;
   const [showEngineering, setShowEngineering] = useState<boolean>(false);
   // Light by default (client-facing); dark for night operations. Persisted per browser.
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -141,7 +147,7 @@ export default function App() {
   };
 
   return (
-    <div className={`min-h-screen flex flex-col ${isVertical ? 'bg-bg text-ink' : 'bg-slate-950 text-slate-100'}`}>
+    <div className={`min-h-screen flex flex-col ${isClient ? 'bg-bg text-ink' : 'bg-slate-950 text-slate-100'}`}>
       {/* 1. App bar */}
       <header className="sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur">
         <div className="max-w-[1600px] mx-auto px-5 h-14 flex items-center justify-between gap-4">
@@ -155,7 +161,7 @@ export default function App() {
             </div>
           </div>
 
-          {isVertical ? (
+          {isClient ? (
             <nav id="nav-verticals" className="flex items-center gap-0.5 bg-surface-2 rounded-lg p-0.5 max-w-full overflow-x-auto">
               {VERTICALS.map(v => (
                 <button
@@ -174,10 +180,10 @@ export default function App() {
             </nav>
           ) : (
             <button
-              onClick={() => { setActiveTab('SURVEILLANCE_OPS'); setShowEngineering(false); }}
+              onClick={() => { setActiveTab('PLATFORM'); setShowEngineering(false); }}
               className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] font-medium text-ink-2 hover:text-ink border border-line"
             >
-              <ChevronLeft className="w-4 h-4" />Back to dashboards
+              <ChevronLeft className="w-4 h-4" />Back
             </button>
           )}
 
@@ -191,15 +197,18 @@ export default function App() {
             >
               {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
             </button>
-            {isVertical && (
+            {isClient && (
               <button
                 id="nav-engineering-toggle"
-                onClick={() => { setShowEngineering(true); setActiveTab('RADAR'); }}
-                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium text-ink-2 hover:text-ink border border-line"
-                title="Engineering views: radar, cockpit, 3D studio, architecture, telemetry grid"
+                onClick={() => setActiveTab('PLATFORM')}
+                aria-pressed={isPlatform}
+                className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border transition-colors ${
+                  isPlatform ? 'bg-accent-soft text-accent border-accent/30' : 'text-ink-2 hover:text-ink border-line'
+                }`}
+                title="How the platform works, in plain language — with the engineering detail inside"
               >
                 <Wrench className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Engineering</span>
+                <span className="hidden sm:inline">How it works</span>
               </button>
             )}
           </div>
@@ -207,7 +216,7 @@ export default function App() {
       </header>
 
       {/* Engineering views keep their original dark tooling chrome */}
-      {!isVertical && (
+      {!isClient && (
         <div className="border-b border-slate-800 bg-slate-950 text-slate-100 px-4 lg:px-6 py-3">
           <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
@@ -357,7 +366,7 @@ export default function App() {
       )}
 
       {/* 2. Real-time Telemetry Stats Ribbon (engineering views) */}
-      {!isVertical && (
+      {!isClient && (
         <div className="border-b border-slate-800/80 bg-slate-900/40 px-4 lg:px-6 py-2.5">
           <div className="max-w-7xl mx-auto">
             <TelemetryStats metrics={metrics} topology={topology} />
@@ -366,7 +375,23 @@ export default function App() {
       )}
 
       {/* 3. Main Dynamic Content Area */}
-      <main className={`flex-1 w-full mx-auto flex flex-col gap-6 ${isVertical ? 'max-w-[1600px] px-5 py-5' : 'max-w-7xl p-4 lg:p-6'}`}>
+      <main className={`flex-1 w-full mx-auto flex flex-col gap-6 ${isClient ? 'max-w-[1600px] px-5 py-5' : 'max-w-7xl p-4 lg:p-6'}`}>
+        {/* How it works: the client-readable front for the engineering views */}
+        {isPlatform && (
+          <PlatformView
+            onOpenVertical={setActiveTab}
+            onOpenEngineering={tab => { setShowEngineering(true); setActiveTab(tab); }}
+            onOpenLab={lab => {
+              if (lab === 'SECURITY') setShowSecurityModal(true);
+              else if (lab === 'DATABASE') setShowDatabaseModal(true);
+              else if (lab === 'SITL') setShowSITLModal(true);
+              else if (lab === 'BENCHMARK') setShowBenchmarkModal(true);
+              else if (lab === 'RADIO') setShowWebSerialModal(true);
+              else setShowRegulatoryModal(true);
+            }}
+          />
+        )}
+
         {/* VERTICAL 1: Aerial light show operator dashboard */}
         {activeTab === 'LIGHT_SHOW_OPS' && <LightShowDashboard />}
 
@@ -549,7 +574,7 @@ export default function App() {
       )}
 
       {/* 5. Footer */}
-      <footer className={`mt-auto px-6 py-4 text-center text-[11px] ${isVertical ? 'text-ink-3' : 'border-t border-slate-900 text-slate-500'}`}>
+      <footer className={`mt-auto px-6 py-4 text-center text-[11px] ${isClient ? 'text-ink-3' : 'border-t border-slate-900 text-slate-500'}`}>
         All in 1 Events · Drone Command · Simulated data · FAA Part 107 / BVLOS waiver workflow
       </footer>
     </div>
