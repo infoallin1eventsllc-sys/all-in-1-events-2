@@ -3,14 +3,14 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Drone command dashboards for All in 1 Events: light show, defense (counter-UAS) and surveillance",
+  "description": "Drone command dashboards for All in 1 Events: light show, site survey and surveillance",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "test": "node scripts/mavlink.test.mjs && node scripts/export.test.mjs && node scripts/record.test.mjs"
+    "test": "node scripts/mavlink.test.mjs && node scripts/export.test.mjs && node scripts/record.test.mjs && node scripts/survey.test.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.546.0",

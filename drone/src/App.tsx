@@ -16,7 +16,7 @@ import { LiveDroneCockpitView } from './components/cockpit/LiveDroneCockpitView'
 import { WebSerialRadioBridgeModal } from './components/production/WebSerialRadioBridgeModal';
 import { RegulatoryComplianceModal } from './components/production/RegulatoryComplianceModal';
 import { LightShowDashboard } from './dashboards/LightShowDashboard';
-import { DefenseDashboard } from './dashboards/DefenseDashboard';
+import { SurveyDashboard } from './dashboards/SurveyDashboard';
 import { SurveillanceDashboard } from './dashboards/SurveillanceDashboard';
 import { LinkButton } from './link/LinkButton';
 import { PlatformView } from './dashboards/PlatformView';
@@ -40,7 +40,7 @@ import {
   Usb,
   Scale,
   Video,
-  ShieldAlert,
+  ScanLine,
   Eye,
   Wrench,
   Sun,
@@ -52,14 +52,14 @@ import {
 } from 'lucide-react';
 
 /** Product verticals (operator dashboards) and the engineering views behind them. */
-type VerticalTab = 'LIGHT_SHOW_OPS' | 'DEFENSE_OPS' | 'SURVEILLANCE_OPS';
+type VerticalTab = 'LIGHT_SHOW_OPS' | 'SURVEY_OPS' | 'SURVEILLANCE_OPS';
 type EngineeringTab = 'RADAR' | 'DRONE_OPERATOR' | 'LIGHT_SHOW' | 'ARCHITECTURE' | 'TABLE';
 /** 'PLATFORM' is the client-readable explanation that fronts the engineering views. */
 type ViewTab = VerticalTab | EngineeringTab | 'PLATFORM' | 'RECORDS';
 
 const VERTICALS: { id: VerticalTab; label: string; icon: React.ReactNode }[] = [
   { id: 'LIGHT_SHOW_OPS', label: 'Light show', icon: <Sparkles className="w-3.5 h-3.5" /> },
-  { id: 'DEFENSE_OPS', label: 'Defense', icon: <ShieldAlert className="w-3.5 h-3.5" /> },
+  { id: 'SURVEY_OPS', label: 'Site survey', icon: <ScanLine className="w-3.5 h-3.5" /> },
   { id: 'SURVEILLANCE_OPS', label: 'Surveillance', icon: <Eye className="w-3.5 h-3.5" /> },
 ];
 
@@ -67,7 +67,7 @@ const THEME_KEY = 'drone-command-theme';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ViewTab>('LIGHT_SHOW_OPS');
-  const isVertical = activeTab === 'LIGHT_SHOW_OPS' || activeTab === 'DEFENSE_OPS' || activeTab === 'SURVEILLANCE_OPS';
+  const isVertical = activeTab === 'LIGHT_SHOW_OPS' || activeTab === 'SURVEY_OPS' || activeTab === 'SURVEILLANCE_OPS';
   const isPlatform = activeTab === 'PLATFORM';
   const isRecords = activeTab === 'RECORDS';
   // Client-facing chrome covers the three dashboards and the "How it works" page;
@@ -149,7 +149,7 @@ export default function App() {
       }
       if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === '1') setActiveTab('LIGHT_SHOW_OPS');
-      else if (e.key === '2') setActiveTab('DEFENSE_OPS');
+      else if (e.key === '2') setActiveTab('SURVEY_OPS');
       else if (e.key === '3') setActiveTab('SURVEILLANCE_OPS');
       else if (e.key.toLowerCase() === 'r') setActiveTab('RECORDS');
       else if (e.key.toLowerCase() === 'h') setActiveTab('PLATFORM');
@@ -194,7 +194,7 @@ export default function App() {
             </div>
             <div className="leading-tight min-w-0">
               <div className="text-[13px] font-semibold text-ink truncate">All in 1 · Drone Command</div>
-              <div className="text-[11px] text-ink-3 truncate hidden sm:block">Light show · Defense · Surveillance</div>
+              <div className="text-[11px] text-ink-3 truncate hidden sm:block">Light show · Site survey · Surveillance</div>
             </div>
           </div>
 
@@ -451,8 +451,8 @@ export default function App() {
         {/* VERTICAL 1: Aerial light show operator dashboard */}
         {activeTab === 'LIGHT_SHOW_OPS' && <ErrorBoundary name="Light show"><LightShowDashboard /></ErrorBoundary>}
 
-        {/* VERTICAL 2: Counter-UAS defense dashboard */}
-        {activeTab === 'DEFENSE_OPS' && <ErrorBoundary name="Airspace defense"><DefenseDashboard /></ErrorBoundary>}
+        {/* VERTICAL 2: Site survey — mapping, 3D models and structure inspection */}
+        {activeTab === 'SURVEY_OPS' && <ErrorBoundary name="Site survey"><SurveyDashboard /></ErrorBoundary>}
 
         {/* VERTICAL 3: Surveillance & patrol dashboard */}
         {activeTab === 'SURVEILLANCE_OPS' && <ErrorBoundary name="Surveillance"><SurveillanceDashboard /></ErrorBoundary>}
@@ -641,7 +641,7 @@ export default function App() {
               <button onClick={() => setShowShortcuts(false)} aria-label="Close" className="w-8 h-8 rounded-lg border border-line text-ink-2 hover:text-ink inline-flex items-center justify-center"><X className="w-4 h-4" /></button>
             </div>
             <ul className="mt-3 divide-y divide-line">
-              {[['1', 'Light show'], ['2', 'Airspace defense'], ['3', 'Surveillance'], ['R', 'Flight records'], ['H', 'How it works'], ['Esc', 'Close dialogs and deselect'], ['?', 'This list']].map(([k, v]) => (
+              {[['1', 'Light show'], ['2', 'Site survey'], ['3', 'Surveillance'], ['R', 'Flight records'], ['H', 'How it works'], ['Esc', 'Close dialogs and deselect'], ['?', 'This list']].map(([k, v]) => (
                 <li key={k} className="flex items-center justify-between py-2 text-[13px]">
                   <span className="text-ink-2">{v}</span>
                   <kbd className="num rounded-md border border-line bg-surface-2 px-2 py-0.5 text-[11px] text-ink">{k}</kbd>

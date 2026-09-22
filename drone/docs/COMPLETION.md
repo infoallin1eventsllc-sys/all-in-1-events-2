@@ -1,7 +1,7 @@
 # What "complete" means for Drone Command — and where it stands
 
-One aircraft platform, three products: **light shows**, **counter-UAS defense**,
-**surveillance**. This is the honest state of each layer, what is built in this repo,
+One aircraft platform, three products: **light shows**, **site survey** (mapping,
+3D models, inspection), **surveillance**. This is the honest state of each layer, what is built in this repo,
 what needs hardware in your hands, and what needs a permit rather than code.
 
 ## Status
@@ -16,20 +16,22 @@ what needs hardware in your hands, and what needs a permit rather than code.
 | Multi-aircraft on one radio (routing by MAVLink system id) | ✅ built | link → Surveillance aircraft slots |
 | Real video: capture device (HDMI stick / USB cam) and WebRTC from the aircraft | ✅ built both ends | `src/link/useVideoSource.ts`, `hardware/companion-pi/video` |
 | Bluetooth bridge firmware for the aircraft | ✅ built | `hardware/esp32-ble-bridge` |
-| Remote ID receiver (the legal counter-drone sensor) + dashboard ingest | ✅ built both ends, decoder unit-tested | `hardware/companion-pi/remoteid`, Defense → Sensors |
-| Defense legal posture: detect-and-alert; effectors gated to authorized integrators | ✅ built | Defense action bar |
+| Site survey: camera maths, grid / crosshatch / orbit plans, coverage grid, re-fly of weak patches | ✅ built, unit-tested | `src/survey`, `npm test` |
+| Survey mission upload (camera trigger by distance, gimbal, ROI) over MAVLink | ✅ built, encoder unit-tested | Site survey → Upload |
+| Survey package: QGC plan, Mission Planner waypoints, geotags, ODM geo.txt, coverage | ✅ built, unit-tested | Site survey → Export package |
+| Remote ID receiver | ✅ built, standalone | `hardware/companion-pi/remoteid` (no dashboard since Defense was retired) |
 | Light-show package export (CSV per aircraft + manifest, Skybrush/Blender import) | ✅ built | Light show → Cues → Export |
 | CI: typecheck, codec tests, build on every push | ✅ built | `.github/workflows/drone.yml` |
 | Flight recorder: every session recorded, browsable, exportable, printable | ✅ built, unit-tested | `src/record`, Records tab |
 | Crash isolation: one view failing cannot take down the console | ✅ built | `src/dashboards/ErrorBoundary.tsx` |
 | Keyboard operation, visible focus, reduced motion, print stylesheet | ✅ built | `src/index.css`, App shortcuts |
 | Offline reload at a venue with no signal | ✅ built | `public/sw.js` |
-| Effector authorisation: named, session-scoped, expiring, recorded | ✅ built | Defense → Sensors |
 | Deploy under `/drone/` on the events site | ✅ wired, not yet deployed by you | `netlify.toml`, `vercel.json` |
 | Bench test against a real flight controller | ⏳ needs hardware | see BOM |
 | Video from the aircraft in the field | ⏳ needs companion Pi + data link | `hardware/companion-pi/README.md` |
 | Light-show flight (per-aircraft trajectory upload, LED control, RTK, time sync) | ⏳ needs show-control stack | see below |
-| RF-spectrum and radar sensors for Defense | ⏳ needs SDR/radar hardware | see below |
+| Photogrammetry processing (orthomosaic, 3D mesh) | ⏳ external tool | WebODM / Pix4D / DroneDeploy, fed by the package |
+| Real camera feedback in coverage (CAMERA_FEEDBACK) | ⏳ needs a mapping camera on the bench | coverage is estimated from distance until then |
 | Operator accounts and server-side audit trail | ⏳ not started | needs a backend; the local recorder is the interim record |
 | FAA waivers, insurance, venue agreements | ⏳ paperwork | see Regulatory |
 
@@ -41,10 +43,11 @@ what needs hardware in your hands, and what needs a permit rather than code.
 | Holybro SiK 915 MHz telemetry radio pair | USB radio path, km range | $60 |
 | ESP32 DevKit V1 | Bluetooth bridge | $8 |
 | Raspberry Pi 4 (4 GB) + Camera Module 3 + 5 V BEC | companion: WebRTC video | $110 |
-| Raspberry Pi 4 + BLE 5 dongle (or a second Pi) | venue Remote ID receiver | $75 |
+| Seagull #MAP2 or a PWM shutter cable + mapping camera | autopilot-triggered photos on the Pixhawk path | $60 + camera |
 | USB HDMI capture stick | video path with no companion (works with DJI too) | $20 |
 | ELRS or Wi-Fi 5.8 GHz bridge (Ubiquiti NanoStation pair) | air-side IP link for video | $120 |
-| A DJI Mini (any Remote ID drone) | to test Defense detection for real | you may already have one |
+| DJI Mavic 3 Enterprise | the turnkey mapping aircraft (mechanical shutter, RTK option) | $3,000–4,500 |
+| WebODM on any PC with 16 GB RAM, or a Pix4D / DroneDeploy seat | processing | free / $150–350 per month |
 
 A complete surveillance airframe on this controller (frame, motors, ESCs, props,
 batteries, gimbal camera) is another $800–2,500 depending on payload; a thermal
@@ -60,15 +63,19 @@ payload (FLIR Boson / Hadron) is $1,500–4,000.
 4. Video: Pi + camera on the aircraft, `a1-video.service`, **video source → WebRTC**.
    Thermal payload on a second streamer port.
 
-### Defense — real detection today, legal by design
-1. Venue Pi with `a1-remoteid.service` → **Sensors → Remote ID receiver**.
-   Every drone sold in the US since 2024 broadcasts Remote ID; you will see the
-   aircraft *and its operator's position*.
-2. Add RF-spectrum sensing later (HackRF / RTL-SDR + `dronesniffer`-class software
-   publishing to the same WebSocket shape) for drones with Remote ID disabled.
-3. Effectors: **not for a private company** (see Regulatory). The dashboard ships
-   in detect-and-alert posture; the effector bar only appears when an authorized
-   integrator flips the flag in Sensors.
+### Site survey — flies today, processes elsewhere
+1. Plan in the dashboard: pick Map, 3D model or Inspection; the camera maths sets
+   height, spacing and speed. The flight time says how many batteries to bring.
+2. Pixhawk path: mapping camera on a shutter cable, **Upload to aircraft** sends the
+   survey with `DO_SET_CAM_TRIGG_DIST`, and the autopilot fires the camera by distance.
+   DJI path: enter the same height, overlaps and speed from the Plan tab in DJI Pilot 2
+   or DroneDeploy — DJI aircraft are not reachable over MAVLink.
+3. After landing: **Export package**, copy the SD card, drop both into WebODM (free)
+   or Pix4D. A 13 ha venue at 1.6 cm/px is 1–3 hours of processing on a desktop.
+4. Before leaving the venue: the Coverage tab flags anything seen by fewer than five
+   photos; **Re-fly weak patches** fixes it in minutes instead of a return trip.
+5. Add RTK (Mavic 3E RTK module or a Here3+ on the Pixhawk) when a client needs
+   survey-grade accuracy (±3 cm) rather than map-grade (±1–2 m).
 
 ### Light show — conductor built, flight stack to integrate
 The industry flies shows with a dedicated stack: **Skybrush** (open source: Skybrush
@@ -88,10 +95,10 @@ hardware, this dashboard as the front of house.
   packet. Skybrush/Verge operators often hold these already.
 - **Surveillance over people / BVLOS**: 107.39 and, if beyond line of sight,
   107.31 waivers or Part 108 once final.
-- **Counter-UAS**: receiving Remote ID is legal for anyone. Jamming, spoofing,
-  hacking or downing an aircraft is a federal crime for anyone but a handful of
-  federal agencies (18 U.S.C. 32, 47 U.S.C. 302a/333). Sell *detection and
-  response coordination* to venues; refer mitigation to law enforcement.
+- **Mapping and inspection**: ordinary Part 107 work — no waiver for a daytime
+  survey inside line of sight. Over a crowd needs 107.39; survey before gates open.
+  Maps sold as *survey-grade* for boundaries or engineering may need a licensed
+  surveyor's sign-off in some states; sell *site planning maps* otherwise.
 - **Insurance**: aviation liability, typically $1–5M per occurrence for events.
 
 ## Next engineering steps, in order
@@ -104,6 +111,6 @@ hardware, this dashboard as the front of house.
    captures every arm, command and authorisation locally and exports it; what is
    missing is accounts, roles, and syncing those records off the device so they
    cannot be cleared by whoever is holding the laptop.
-5. Remote ID receiver at one venue for a month; tune the alert thresholds on real
-   traffic.
+5. Fly one real survey with a mapping camera and compare the in-flight coverage
+   estimate with the processing software's quality report; wire CAMERA_FEEDBACK.
 6. Skybrush integration for the light-show flight stack.

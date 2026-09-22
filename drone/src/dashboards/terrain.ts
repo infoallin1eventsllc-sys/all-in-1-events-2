@@ -18,14 +18,6 @@ export interface TerrainPalette {
   ridge: [number, number, number];
 }
 
-export const TERRAIN_DEFENSE: TerrainPalette = {
-  base: '#07090f',
-  low: [14, 30, 34],
-  high: [44, 92, 82],
-  contour: 'rgba(120, 200, 170, 0.10)',
-  ridge: [255, 120, 90],
-};
-
 export const TERRAIN_SURVEILLANCE: TerrainPalette = {
   base: '#070b0c',
   low: [10, 24, 26],

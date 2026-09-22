@@ -6,7 +6,7 @@ one build:
 | Tab | Dashboard | What the operator sees |
 | --- | --- | --- |
 | **Light Show** | `src/dashboards/LightShowDashboard.tsx` | Three.js 3D stage, show timeline with cue markers, formation rack, fleet sync / timecode jitter, airfield wind, pre-flight gates (battery, RTK, clock lock, wind, deviation) that gate the ARM button, watch list of highest-deviation airframes, ABORT. |
-| **Defense** | `src/dashboards/DefenseDashboard.tsx` | Counter-UAS tactical map (terrain, protected asset, engage / warn rings, sensor coverage, threat tracks with trails and effector cones), selected-track card, disruption control (RF jam / GNSS deny / protocol takeover, power, 2.4 / 5.8 / GNSS band gates, pulse burst, sweep, disrupt target / all, auto-engage), threat board, sensor network with live 2.4 / 5.8 GHz spectrum, **EO/IR-1 camera feed** slewed onto the selected track (`EoIrFeedCanvas.tsx`: four motor hot-spots in IR confirm a quad before engaging), event log. |
+| **Site survey** | `src/dashboards/SurveyDashboard.tsx` | Mapping and inspection of a venue. Pick the product — **Map** (orthomosaic, nadir grid), **3D model** (crosshatch, camera tilted 25°) or **Inspection** (36-angle orbit of one structure) — and the plan follows from the camera maths: ground detail (cm/px), line spacing, photo spacing, speed limit, flight time and batteries. A **3D stage** (`components/survey/SurveyScanCanvas3D.tsx`) shows the venue developing under the aircraft as photos are accepted, with its camera frustum and footprint; the **Overlap** layer is the in-flight quality report (5+ photos per point is good). Plan view picture-in-picture, gusts that blur photos, automatic battery-swap-and-resume, **Re-fly weak patches**, and a **survey package** export. |
 | **Surveillance** | `src/dashboards/SurveillanceDashboard.tsx` | **Live gimbal video feed** from the selected airframe (`DroneFeedCanvas.tsx`: EO / IR white-hot / IR ironbow / night vision, moving heat targets with temperature readout, auto-track lock, DVR) with a strip of the other airframes' feeds; **night protocol** (AUTO / DAY / NIGHT) flips every airborne payload to thermal at night. Patrol map (5-waypoint loop, airframes with sensor footprint and altitude tether, detections), fleet list, live telemetry sparklines, power system, flight control (auto-track, illumination, night vision, thermal scan, survivor detect, RTH, gimbal, zoom, autopilot), navigation route-progress chart, detections queue with dispatch, mission map, event log. |
 
 **How it works** (`src/dashboards/PlatformView.tsx`) is the client-readable front for
@@ -58,17 +58,30 @@ works with DJI aircraft too) or to **WebRTC from the aircraft's companion comput
 | --- | --- |
 | `hardware/esp32-ble-bridge/` | Arduino sketch + wiring: MAVLink TELEM port → Bluetooth LE (Nordic UART) |
 | `hardware/companion-pi/video/` | aiortc WebRTC streamer for the aircraft's camera(s) |
-| `hardware/companion-pi/remoteid/` | ASTM F3411 Remote ID receiver → WebSocket, the legal counter-drone sensor |
+| `hardware/companion-pi/remoteid/` | ASTM F3411 Remote ID receiver → WebSocket. Standalone since the Defense dashboard was retired (see below). |
 | `hardware/companion-pi/systemd/` | services for both |
 
-## Defense on real data, legally
+## Site survey on a real aircraft
 
-**Sensors → Remote ID receiver** connects to the venue Pi and plots every Remote ID
-broadcast — the aircraft *and the operator's position* — relative to the **venue
-position** you set. The action bar's default posture is **detect & alert**: mark
-priority, notify security, export the track log. Effector controls (jam / GNSS deny /
-takeover) are a federal crime for anyone but a few US agencies and stay hidden unless
-an authorized integrator enables them in Sensors; every effector command is logged.
+The plan is a real mission. **Upload to aircraft** (or **Upload & start** once
+telemetry is live) sends it over the same MAVLink link as everything else:
+`NAV_TAKEOFF` → `DO_CHANGE_SPEED` → `DO_MOUNT_CONTROL` (gimbal pitch) → for every
+line a waypoint, `DO_SET_CAM_TRIGG_DIST` on (one photo now, then every *n* metres),
+the end waypoint, trigger off — so no photos are wasted in the turns — and `RTL`.
+An inspection orbit uses `DO_SET_ROI_LOCATION` to keep the camera on the structure.
+The autopilot fires the camera; the dashboard follows the telemetry and estimates
+the coverage from distance flown in AUTO at survey height.
+
+**Export package** writes what the next tools need: `mission.plan`
+(QGroundControl), `mission.waypoints` (Mission Planner), `geotags.csv` and `geo.txt`
+(Pix4D / WebODM, rejected frames flagged), `coverage.csv` (views per 5 m cell) and a
+manifest. The photos stay on the SD card; processing runs in WebODM, Pix4D,
+DroneDeploy or Metashape. The planning maths, mission and package are unit-tested
+(`scripts/survey.test.mjs`).
+
+The Defense (counter-UAS) dashboard was retired in favour of Site survey. Flight
+records made with it still open in Records; the Remote ID receiver in `hardware/`
+still works on its own and can be brought back as an airspace-awareness panel.
 
 ## Light show handoff
 
@@ -109,7 +122,7 @@ Every dashboard runs against a client-side simulation so it can be exercised wit
 fleet on the ground:
 
 - `src/hooks/useLightShowSimulation.ts` — formations, transitions, conductor clock.
-- `src/hooks/useDefenseSimulation.ts` — threat tracks, sensors, effectors, spectrum.
+- `src/hooks/useSurveyMission.ts` — survey flight: capture by distance, coverage grid, gusts and blur, battery swaps.
 - `src/hooks/useSurveillanceSimulation.ts` — patrol route, telemetry, power, detections.
 
 The shapes those hooks return are the contract for the real feeds (MAVLink telemetry,

@@ -31,6 +31,12 @@ assert.equal(g.msgId, 86); assert.equal(g.payload.getInt32(4, true), 337748940);
 const mi = p.push(m.encodeMissionItemInt(1, { lat: 33.77, lon: -118.4, altRelM: 60, holdS: 8 }, 1))[0];
 assert.equal(mi.msgId, 73); assert.equal(mi.payload.getUint16(28, true), 1); assert.equal(mi.payload.getUint16(30, true), 16);
 assert.equal(mi.payload.getFloat32(0, true), 8); assert.equal(mi.payload.getFloat32(24, true), 60); assert.equal(mi.payload.getUint8(35), 1);
+// DO_ commands carry param1-4 and MAV_FRAME_MISSION (survey camera trigger every 15.8 m, one photo now)
+const ct = p.push(m.encodeMissionItemInt(3, { lat: 0, lon: 0, altRelM: 0, command: 206, params: [15.8, 0, 1, 0], frame: 2 }))[0];
+assert.equal(ct.payload.getUint16(30, true), 206); assert.equal(ct.payload.getUint8(34), 2);
+assert.ok(Math.abs(ct.payload.getFloat32(0, true) - 15.8) < 1e-5); assert.equal(ct.payload.getFloat32(8, true), 1); assert.equal(ct.payload.getFloat32(12, true), 0);
+// Waypoints keep frame 6 and yaw NaN (unchanged)
+assert.equal(mi.payload.getUint8(34), 6); assert.ok(Number.isNaN(mi.payload.getFloat32(12, true)));
 const mc = p.push(m.encodeMissionCount(6))[0]; assert.equal(mc.msgId, 44); assert.equal(mc.payload.getUint16(0, true), 6);
 // Mode + arm
 const md = p.push(m.encodeSetMode(m.COPTER_MODE.GUIDED))[0]; assert.equal(md.payload.getUint16(28, true), 176); assert.equal(md.payload.getFloat32(4, true), 4);

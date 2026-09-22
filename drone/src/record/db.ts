@@ -14,7 +14,8 @@
 const DB_NAME = 'a1-drone-recorder';
 const DB_VERSION = 1;
 
-export type Vertical = 'SURVEILLANCE' | 'DEFENSE' | 'LIGHT_SHOW';
+/** DEFENSE is retired; kept so sessions recorded before then still open. */
+export type Vertical = 'SURVEILLANCE' | 'SURVEY' | 'LIGHT_SHOW' | 'DEFENSE';
 export type LinkSource = 'SIMULATION' | 'BLUETOOTH' | 'SERIAL';
 
 export interface FlightSession {

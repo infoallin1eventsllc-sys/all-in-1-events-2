@@ -26,7 +26,7 @@ Nothing else on the page. Logs go in an *Activity* tab; labs and deep tools go b
 | `ok` / `warn` / `bad` | 700-weight greens/ambers/reds | 400-weight | status only, always with a dot or label |
 | `imagery` | #0b0f14 | same | behind video, maps, 3D — always dark |
 
-Vertical accents: light show `#5b5bd6`, defense `#c2410c`, surveillance `#0f766e` (set via `data-accent` on the dashboard root; dark variants in the same file). Status colours are never reused for series or decoration.
+Vertical accents: light show `#5b5bd6`, site survey `#c2410c`, surveillance `#0f766e` (set via `data-accent` on the dashboard root; dark variants in the same file). Status colours are never reused for series or decoration.
 
 ## Type
 

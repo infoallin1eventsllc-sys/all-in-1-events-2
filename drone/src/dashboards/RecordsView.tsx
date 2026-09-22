@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Download, Printer, Trash2, FileJson, Plane, ShieldAlert, Sparkles, Eye, HardDriveDownload } from 'lucide-react';
+import { Download, Printer, Trash2, FileJson, Plane, ShieldAlert, Sparkles, Eye, HardDriveDownload, ScanLine } from 'lucide-react';
 import { recordDb, type FlightEvent, type FlightSample, type FlightSession } from '../record/db';
 import { exportSessionCsv, exportSessionJson, recorder, summarise } from '../record/recorder';
 import { Headline, Card, Section, Divider, Stat, Chip, Dot, ToolButton, Activity, useAccentHex, formatClock, type Tone } from './ui';
@@ -13,7 +13,8 @@ import { Headline, Card, Section, Divider, Stat, Chip, Dot, ToolButton, Activity
 
 const VERTICAL_META: Record<FlightSession['vertical'], { label: string; icon: React.ReactNode }> = {
   SURVEILLANCE: { label: 'Surveillance', icon: <Eye /> },
-  DEFENSE: { label: 'Airspace defense', icon: <ShieldAlert /> },
+  SURVEY: { label: 'Site survey', icon: <ScanLine /> },
+  DEFENSE: { label: 'Airspace defense (retired)', icon: <ShieldAlert /> },
   LIGHT_SHOW: { label: 'Light show', icon: <Sparkles /> },
 };
 

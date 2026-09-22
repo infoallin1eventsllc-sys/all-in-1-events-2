@@ -25,8 +25,8 @@ all-in-1-events/
 
 ## Drone Command (`drone/`)
 
-Operator dashboards for the All in 1 drone platform — **Light Show**, **Defense**
-(counter-UAS) and **Surveillance** — plus the fleet-coordination engineering views
+Operator dashboards for the All in 1 drone platform — **Light Show**, **Site
+survey** (mapping, 3D models, inspection) and **Surveillance** — plus the fleet-coordination engineering views
 behind them, and a Bluetooth / USB-radio link to real PX4 / ArduPilot aircraft over
 MAVLink. It is a separate Vite/React app that deploys under `/drone/` on this site.
 

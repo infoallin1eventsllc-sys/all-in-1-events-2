@@ -61,10 +61,10 @@
 
 /* Vertical accents — applied on each dashboard root. */
 [data-accent="lightshow"] { --color-accent: #5b5bd6; --color-accent-soft: #ecebfb; }
-[data-accent="defense"]   { --color-accent: #c2410c; --color-accent-soft: #fdeee4; }
+[data-accent="survey"]    { --color-accent: #c2410c; --color-accent-soft: #fdeee4; }
 [data-accent="surveillance"] { --color-accent: #0f766e; --color-accent-soft: #e3f4f1; }
 [data-theme="dark"] [data-accent="lightshow"] { --color-accent: #8b8bff; --color-accent-soft: #1d1d3a; }
-[data-theme="dark"] [data-accent="defense"]   { --color-accent: #fb923c; --color-accent-soft: #33200f; }
+[data-theme="dark"] [data-accent="survey"]    { --color-accent: #fb923c; --color-accent-soft: #33200f; }
 [data-theme="dark"] [data-accent="surveillance"] { --color-accent: #2dd4bf; --color-accent-soft: #0f2a27; }
 
 html { color-scheme: light; }

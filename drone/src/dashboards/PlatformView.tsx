@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Sparkles, ShieldAlert, Eye, Users, Radio, Route, Brain, LifeBuoy, Lock, Database, FlaskConical, Boxes,
+  Sparkles, ScanLine, Eye, Users, Radio, Route, Brain, LifeBuoy, Lock, Database, FlaskConical, Boxes,
   ChevronRight, FileText, Video, Layers, Radar, Scale, Usb, Cpu,
 } from 'lucide-react';
 import { Headline, Card, Section, Divider, Stat, Chip, Dot, ToolButton } from './ui';
@@ -20,12 +20,12 @@ interface Props {
   /** Opens one of the engineering lab modals. */
   onOpenLab: (lab: 'SECURITY' | 'DATABASE' | 'SITL' | 'BENCHMARK' | 'RADIO' | 'WAIVER') => void;
   /** Jumps to a product dashboard. */
-  onOpenVertical: (v: 'LIGHT_SHOW_OPS' | 'DEFENSE_OPS' | 'SURVEILLANCE_OPS') => void;
+  onOpenVertical: (v: 'LIGHT_SHOW_OPS' | 'SURVEY_OPS' | 'SURVEILLANCE_OPS') => void;
 }
 
 const PRODUCTS = [
   { id: 'LIGHT_SHOW_OPS' as const, icon: <Sparkles />, name: 'Light show', line: 'Hundreds of aircraft flying one choreographed piece over your venue, to the second.', detail: 'Formations, a show timeline, and a launch-to-landing safety checklist.' },
-  { id: 'DEFENSE_OPS' as const, icon: <ShieldAlert />, name: 'Airspace defense', line: 'We see every drone over your event — and where its pilot is standing.', detail: 'Detection, classification and a record you can hand to law enforcement.' },
+  { id: 'SURVEY_OPS' as const, icon: <ScanLine />, name: 'Site survey', line: 'A measurable map and 3D model of your venue, flown in under half an hour.', detail: 'Plan the layout before load-in, measure for permits and insurers, inspect a stage without a lift.' },
   { id: 'SURVEILLANCE_OPS' as const, icon: <Eye className="w-5 h-5" />, name: 'Surveillance', line: 'A patrol that watches the perimeter all night and flags what moves.', detail: 'Live camera, thermal after dark, and an automatic route around the site.' },
 ];
 

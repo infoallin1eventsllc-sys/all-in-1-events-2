@@ -233,7 +233,11 @@ export function encodeGotoGlobal(lat: number, lon: number, altRelM: number, targ
 
 // ---- Mission protocol ------------------------------------------------------
 
-export interface MissionItem { lat: number; lon: number; altRelM: number; holdS?: number; command?: number; }
+/**
+ * One mission item. Waypoints need only lat/lon/alt (and an optional hold); DO_
+ * commands pass `params` (param1–4) and `frame` 2 (MAV_FRAME_MISSION).
+ */
+export interface MissionItem { lat: number; lon: number; altRelM: number; holdS?: number; command?: number; params?: [number, number, number, number]; frame?: number }
 
 export function encodeMissionCount(count: number, targetSys = 1, targetComp = 1): Uint8Array {
   const p = new Uint8Array(5); const v = new DataView(p.buffer);
@@ -247,10 +251,11 @@ export function encodeMissionClearAll(targetSys = 1, targetComp = 1): Uint8Array
 /** MISSION_ITEM_INT; seq 0 is the home item ArduPilot expects, so callers offset by one. */
 export function encodeMissionItemInt(seq: number, item: MissionItem, current = 0, targetSys = 1, targetComp = 1): Uint8Array {
   const p = new Uint8Array(38); const v = new DataView(p.buffer);
-  v.setFloat32(0, item.holdS ?? 0, true); v.setFloat32(4, 0, true); v.setFloat32(8, 0, true); v.setFloat32(12, NaN, true);
+  const pr = item.params;
+  v.setFloat32(0, pr ? pr[0] : item.holdS ?? 0, true); v.setFloat32(4, pr ? pr[1] : 0, true); v.setFloat32(8, pr ? pr[2] : 0, true); v.setFloat32(12, pr ? pr[3] : NaN, true);
   v.setInt32(16, Math.round(item.lat * 1e7), true); v.setInt32(20, Math.round(item.lon * 1e7), true); v.setFloat32(24, item.altRelM, true);
   v.setUint16(28, seq, true); v.setUint16(30, item.command ?? MAV_CMD.NAV_WAYPOINT, true);
-  p[32] = targetSys; p[33] = targetComp; p[34] = MAV_FRAME_GLOBAL_RELATIVE_ALT_INT; p[35] = current; p[36] = 1; p[37] = 0;
+  p[32] = targetSys; p[33] = targetComp; p[34] = item.frame === 2 ? 2 : MAV_FRAME_GLOBAL_RELATIVE_ALT_INT; p[35] = current; p[36] = 1; p[37] = 0;
   return frame(73, p);
 }
 export function encodeMissionAck(type = 0, targetSys = 1, targetComp = 1): Uint8Array {
