@@ -5,6 +5,7 @@ import {
 import { useDefenseSimulation, type Threat, type EffectorType, type ThreatClass } from '../hooks/useDefenseSimulation';
 import { DefenseMapCanvas } from './DefenseMapCanvas';
 import { EoIrFeedCanvas } from './EoIrFeedCanvas';
+import { useRecorder, useRecordedEvents } from '../record/useRecorder';
 import { Headline, Card, Section, Divider, Tabs, Stat, Row, Chip, Dot, Meter, ToolButton, IconButton, Toggle, Segmented, Activity, useAccentHex, TONE_HEX, type Tone } from './ui';
 
 const LEVEL_TONE: Record<Threat['level'], Tone> = { LOW: 'neutral', MEDIUM: 'warn', HIGH: 'warn', CRITICAL: 'bad' };
@@ -43,6 +44,22 @@ export const DefenseDashboard: React.FC = () => {
   const [ridUrl, setRidUrl] = useState(sim.remoteId.url);
   const [venueLat, setVenueLat] = useState(sim.venue ? String(sim.venue.lat) : '');
   const [venueLon, setVenueLon] = useState(sim.venue ? String(sim.venue.lon) : '');
+  const [authName, setAuthName] = useState('');
+
+  // Flight record: an airspace watch is evidence. Track positions at 1 Hz plus
+  // every detection, authorisation and effector action from the event log.
+  useRecorder('DEFENSE', 'Airspace watch · venue perimeter', sim.remoteId.status === 'ON' ? 'SERIAL' : 'SIMULATION', () =>
+    threats.filter(t => t.status === 'TRACKING' || t.status === 'DISRUPTING').map(t => ({
+      t: Date.now(), aircraft: t.id,
+      lat: t.live?.lat, lon: t.live?.lon,
+      altM: t.altitudeM, speedMps: t.speedMps, headingDeg: (Math.atan2(t.vy, t.vx) * 180) / Math.PI + 90, batteryPct: 100,
+      extra: {
+        rangeM: Math.round(sim.rangeM(t)), level: t.level, status: t.status, rssiDbm: Math.round(t.rssiDbm),
+        source: t.live ? 'REMOTE_ID' : 'SIMULATED', ...(t.live?.uasId ? { uasId: t.live.uasId } : {}),
+        ...(t.operator ? { operatorLat: t.operator.lat, operatorLon: t.operator.lon } : {}),
+      },
+    })));
+  useRecordedEvents(events, 'AIRSPACE');
 
   const active = useMemo(
     () => threats.filter(t => t.status === 'TRACKING' || t.status === 'DISRUPTING').sort((a, b) => Number(b.priority) - Number(a.priority) || sim.rangeM(a) - sim.rangeM(b)),
@@ -251,7 +268,24 @@ export const DefenseDashboard: React.FC = () => {
                     <ShieldAlert className="w-4 h-4 shrink-0 text-ink-3" />
                     <span>Jamming, GNSS denial or taking over an aircraft is a federal crime for anyone but a few US federal agencies (18 U.S.C. 32, 47 U.S.C. 333). Enable only as an authorized integrator on a government contract. Every effector command is logged.</span>
                   </div>
-                  <div className="mt-2"><Toggle on={sim.effectorsAuthorized} onChange={sim.setEffectorsAuthorized} label="I am an authorized effector integrator" description="Reveals the effector bar and auto-engage" /></div>
+                  {sim.effectorsAuthorized ? (
+                    <div className="mt-2 rounded-lg border border-bad/30 bg-bad-soft px-3 py-2">
+                      <div className="text-[12px] text-bad font-medium">Authorised by {sim.effectorAuth?.operator}</div>
+                      <div className="num text-[11px] text-ink-2 mt-0.5">Expires {sim.effectorAuth ? new Date(sim.effectorAuth.until).toLocaleTimeString() : ''} · or when this tab closes</div>
+                      <ToolButton size="sm" label="Revoke now" className="mt-2" onClick={sim.revokeEffectors} />
+                    </div>
+                  ) : (
+                    <div className="mt-2">
+                      <label htmlFor="effector-operator" className="block text-[11px] text-ink-3">Name and credential of the authorising operator</label>
+                      <div className="mt-1 flex gap-1.5">
+                        <input id="effector-operator" value={authName} onChange={e => setAuthName(e.target.value)} placeholder="e.g. J. Rivera, contract 47-A"
+                          className="flex-1 min-w-0 rounded-md border border-line bg-surface px-2 py-1 text-[12px] text-ink" />
+                        <ToolButton size="sm" danger label="Authorise" disabled={authName.trim().length < 4}
+                          onClick={() => { sim.authorizeEffectors(authName.trim()); setAuthName(''); }} />
+                      </div>
+                      <p className="mt-1 text-[11px] text-ink-3">Lasts 4 hours, ends when this tab closes, and is written into the flight record.</p>
+                    </div>
+                  )}
                 </Section>
                 <Divider />
                 <Section title="RF spectrum" right="simulated until an SDR is attached">

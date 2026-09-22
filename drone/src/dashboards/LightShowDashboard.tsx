@@ -10,6 +10,8 @@ import { LaunchPadProvisioningModal } from '../components/production/LaunchPadPr
 import { RegulatoryComplianceModal } from '../components/production/RegulatoryComplianceModal';
 import { Headline, Card, Section, Divider, Tabs, Stat, Row, Chip, Dot, Meter, Sparkline, ToolButton, IconButton, Toggle, Segmented, useAccentHex, type Tone } from './ui';
 import type { LightShowDrone } from '../types/lightShowTypes';
+import { useRecorder } from '../record/useRecorder';
+import { recorder } from '../record/recorder';
 
 type RailTab = 'CUES' | 'FLEET' | 'PREFLIGHT';
 
@@ -55,8 +57,39 @@ export const LightShowDashboard: React.FC = () => {
     return () => clearInterval(t);
   }, [cs.clockJitterMs]);
 
+  // Flight record: a show is the case an insurer reads afterwards. Sample the
+  // fleet each second and log every state change the conductor makes.
+  useRecorder('LIGHT_SHOW', `Show · ${droneCount} aircraft`, 'SIMULATION', () =>
+    drones.slice(0, 40).map(d => ({   // a representative sample; 500 rows/s would be noise
+      t: Date.now(), aircraft: d.id,
+      altM: d.position.y, speedMps: Math.hypot(d.velocity.x, d.velocity.y, d.velocity.z), headingDeg: 0, batteryPct: d.battery,
+      extra: { status: d.status, deviationM: Number(d.deviationMeters.toFixed(2)), sats: d.gpsSatellites, syncMs: Number(d.syncOffsetMs.toFixed(2)) },
+    })));
+
+  const lastStatus = useRef(cs.status);
+  useEffect(() => {
+    if (lastStatus.current === cs.status) return;
+    const from = lastStatus.current; lastStatus.current = cs.status;
+    const severity = cs.status === 'ABORTING' ? 'CRITICAL' : cs.status === 'RUNNING' || cs.status === 'ARMED' ? 'WARNING' : 'INFO';
+    recorder.event('SHOW', severity, `Show ${from.toLowerCase().replace('_', ' ')} → ${cs.status.toLowerCase().replace('_', ' ')} at T+${cs.currentTimeSec.toFixed(1)}s`);
+  }, [cs.status, cs.currentTimeSec]);
+
+  const lastCue = useRef(-1);
+  useEffect(() => {
+    if (lastCue.current === cs.activeFormationIndex) return;
+    lastCue.current = cs.activeFormationIndex;
+    recorder.event('SHOW', 'INFO', `Cue ${cs.activeFormationIndex + 1}: ${SHOW_FORMATIONS[cs.activeFormationIndex]?.name ?? '—'}`);
+  }, [cs.activeFormationIndex]);
+
   const gates = useShowGates(drones, wind.mps, cs.clockJitterMs);
   const allGatesPass = gates.every(g => g.ok);
+  const lastGate = useRef(true);
+  useEffect(() => {
+    if (lastGate.current === allGatesPass) return;
+    lastGate.current = allGatesPass;
+    const failed = gates.filter(g => !g.ok).map(g => g.label).join('; ');
+    recorder.event('PREFLIGHT', allGatesPass ? 'SUCCESS' : 'WARNING', allGatesPass ? 'Pre-flight gates all pass' : `Pre-flight hold: ${failed}`);
+  }, [allGatesPass, gates]);
   const formation = SHOW_FORMATIONS[cs.activeFormationIndex] || SHOW_FORMATIONS[0];
   const fleet = useMemo(() => {
     const n = drones.length || 1;

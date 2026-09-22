@@ -185,11 +185,11 @@ export const Sparkline: React.FC<{ data: number[]; color: string; height?: numbe
 // ---------------------------------------------------------------------------
 
 interface ToolButtonProps {
-  icon?: React.ReactNode; label: string; onClick?: () => void; active?: boolean; primary?: boolean; danger?: boolean; disabled?: boolean; title?: string; id?: string; size?: 'sm' | 'md';
+  icon?: React.ReactNode; label: string; onClick?: () => void; active?: boolean; primary?: boolean; danger?: boolean; disabled?: boolean; title?: string; id?: string; size?: 'sm' | 'md'; className?: string;
 }
 
 /** Toolbar button. Ghost by default; `primary` is the one action that matters; `danger` is destructive. */
-export const ToolButton: React.FC<ToolButtonProps> = ({ icon, label, onClick, active, primary, danger, disabled, title, id, size = 'md' }) => {
+export const ToolButton: React.FC<ToolButtonProps> = ({ icon, label, onClick, active, primary, danger, disabled, title, id, size = 'md', className = '' }) => {
   const base = size === 'sm' ? 'h-8 px-2.5 text-[12px]' : 'h-9 px-3 text-[13px]';
   const look = danger
     ? 'bg-bad text-white hover:opacity-90'
@@ -200,7 +200,7 @@ export const ToolButton: React.FC<ToolButtonProps> = ({ icon, label, onClick, ac
     : 'bg-surface text-ink-2 border border-line hover:text-ink hover:border-line-2';
   return (
     <button id={id} type="button" onClick={onClick} disabled={disabled} title={title} aria-pressed={active}
-      className={`inline-flex items-center gap-1.5 rounded-lg font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed [&>svg]:w-4 [&>svg]:h-4 ${base} ${look}`}>
+      className={`inline-flex items-center gap-1.5 rounded-lg font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed [&>svg]:w-4 [&>svg]:h-4 ${base} ${look} ${className}`}>
       {icon}{label}
     </button>
   );

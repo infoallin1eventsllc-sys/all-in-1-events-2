@@ -20,12 +20,17 @@ what needs hardware in your hands, and what needs a permit rather than code.
 | Defense legal posture: detect-and-alert; effectors gated to authorized integrators | ✅ built | Defense action bar |
 | Light-show package export (CSV per aircraft + manifest, Skybrush/Blender import) | ✅ built | Light show → Cues → Export |
 | CI: typecheck, codec tests, build on every push | ✅ built | `.github/workflows/drone.yml` |
+| Flight recorder: every session recorded, browsable, exportable, printable | ✅ built, unit-tested | `src/record`, Records tab |
+| Crash isolation: one view failing cannot take down the console | ✅ built | `src/dashboards/ErrorBoundary.tsx` |
+| Keyboard operation, visible focus, reduced motion, print stylesheet | ✅ built | `src/index.css`, App shortcuts |
+| Offline reload at a venue with no signal | ✅ built | `public/sw.js` |
+| Effector authorisation: named, session-scoped, expiring, recorded | ✅ built | Defense → Sensors |
 | Deploy under `/drone/` on the events site | ✅ wired, not yet deployed by you | `netlify.toml`, `vercel.json` |
 | Bench test against a real flight controller | ⏳ needs hardware | see BOM |
 | Video from the aircraft in the field | ⏳ needs companion Pi + data link | `hardware/companion-pi/README.md` |
 | Light-show flight (per-aircraft trajectory upload, LED control, RTK, time sync) | ⏳ needs show-control stack | see below |
 | RF-spectrum and radar sensors for Defense | ⏳ needs SDR/radar hardware | see below |
-| Operator accounts, audit log, multi-tenant | ⏳ not started | needed before a customer logs in |
+| Operator accounts and server-side audit trail | ⏳ not started | needs a backend; the local recorder is the interim record |
 | FAA waivers, insurance, venue agreements | ⏳ paperwork | see Regulatory |
 
 ## Bill of materials to bench-test everything (~$700 without an airframe)
@@ -95,7 +100,10 @@ hardware, this dashboard as the front of house.
    says differently than the spec.
 2. Deploy `/drone/` and test Bluetooth + Serial from the real HTTPS origin.
 3. Companion Pi video in the field; add a TURN server for LTE links.
-4. Operator login + audit log (every arm, command and effector flag change).
+4. Operator login and a server-side audit trail. The flight recorder already
+   captures every arm, command and authorisation locally and exports it; what is
+   missing is accounts, roles, and syncing those records off the device so they
+   cannot be cleared by whoever is holding the laptop.
 5. Remote ID receiver at one venue for a month; tune the alert thresholds on real
    traffic.
 6. Skybrush integration for the light-show flight stack.

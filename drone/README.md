@@ -76,6 +76,28 @@ an authorized integrator enables them in Sensors; every effector command is logg
 (`Time [msec],x,y,z,Red,Green,Blue`, z up) and a manifest — the format Skybrush
 Studio / Blender and Verge Aero import. The show-control stack flies it.
 
+## Flight records
+
+Every dashboard run is recorded — position and telemetry sampled each second, plus
+every command, detection, alert and authorisation — into the browser's IndexedDB.
+The **Records** tab (or `r`) browses them, and each one exports as CSV or JSON or
+prints as a one-page report for an insurer, a venue or an investigator. Sessions
+where nothing happened are discarded; the last 50 are kept. A session is labelled
+**Sim** or **Live** so a simulated run can never be mistaken for a flight.
+
+## Operating details
+
+- **Keyboard**: `1` `2` `3` switch verticals, `r` records, `h` how it works, `Esc`
+  closes dialogs, `?` lists the shortcuts.
+- **Crash isolation**: each view is wrapped in an error boundary, so a failing
+  canvas is contained instead of white-screening the console mid-show. The failure
+  is written into the flight record.
+- **Offline**: a service worker caches the console, so a reload at a venue with no
+  signal still opens. Flight commands never depend on it — they go over Bluetooth
+  or the radio.
+- **Accessibility**: visible focus rings, a skip link, `prefers-reduced-motion`
+  support, and a print stylesheet for the report.
+
 ## Where this stands
 
 [`docs/COMPLETION.md`](docs/COMPLETION.md): what's built, what needs hardware, the

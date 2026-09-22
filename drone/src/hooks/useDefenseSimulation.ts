@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { recorder } from '../record/recorder';
 
 /**
  * Counter-UAS (defense) simulation.
@@ -174,7 +175,29 @@ export function useDefenseSimulation() {
    * agencies. They stay hidden until an authorized integrator enables them; the product
    * posture is detect → locate the operator → alert.
    */
-  const [effectorsAuthorized, setEffectorsAuthorized] = useState<boolean>(() => { try { return localStorage.getItem('a1-effectors') === '1'; } catch { return false; } });
+  /**
+   * Authorisation is deliberately weak to grant and easy to lose: it lives in
+   * sessionStorage (gone when the tab closes), expires on its own, and is written
+   * into the flight record when it changes. A persisted boolean in localStorage
+   * would have meant one careless click authorised every future session on that
+   * machine — the wrong default for a control that is a federal crime to misuse.
+   */
+  const [effectorAuth, setEffectorAuth] = useState<{ until: number; operator: string } | null>(() => {
+    try {
+      const raw = sessionStorage.getItem('a1-effector-auth');
+      const parsed = raw ? JSON.parse(raw) as { until: number; operator: string } : null;
+      return parsed && parsed.until > Date.now() ? parsed : null;
+    } catch { return null; }
+  });
+  const effectorsAuthorized = !!effectorAuth && effectorAuth.until > Date.now();
+  // Expire it in place so the UI locks itself without a reload.
+  useEffect(() => {
+    if (!effectorAuth) return;
+    const ms = effectorAuth.until - Date.now();
+    if (ms <= 0) { setEffectorAuth(null); return; }
+    const t = setTimeout(() => setEffectorAuth(null), ms);
+    return () => clearTimeout(t);
+  }, [effectorAuth]);
 
   const threatsRef = useRef(threats);
   const disruptionRef = useRef(disruption);
@@ -190,7 +213,10 @@ export function useDefenseSimulation() {
   // ---- Operator actions -------------------------------------------------
   const effectorsRef = useRef(effectorsAuthorized);
   useEffect(() => { effectorsRef.current = effectorsAuthorized; }, [effectorsAuthorized]);
-  const refuse = useCallback(() => log('CRITICAL', 'Effector command refused: not authorized. Posture is detect and alert; notify law enforcement.'), [log]);
+  const refuse = useCallback(() => {
+    log('CRITICAL', 'Effector command refused: not authorized. Posture is detect and alert; notify law enforcement.');
+    recorder.event('AUTHORISATION', 'CRITICAL', 'Effector command refused — not authorised');
+  }, [log]);
 
   const disruptTarget = useCallback((id: string) => {
     if (!effectorsRef.current) { refuse(); return; }
@@ -260,11 +286,23 @@ export function useDefenseSimulation() {
     );
   }, [setVenue, log]);
 
-  const setEffectorsAuthorizedPersist = useCallback((on: boolean) => {
-    setEffectorsAuthorized(on);
-    try { localStorage.setItem('a1-effectors', on ? '1' : '0'); } catch { /* ignore */ }
-    log(on ? 'CRITICAL' : 'INFO', on ? 'Effector integration enabled by an authorized integrator. Every effector command is logged.' : 'Effectors disabled. Detect-and-alert posture.');
-    if (!on) { setDisruption(d => ({ ...d, autoEngage: false, sweepActive: false, targetId: null })); setThreats(prev => prev.map(t => (t.status === 'DISRUPTING' ? { ...t, status: 'TRACKING', disruptProgress: 0 } : t))); }
+  const AUTH_HOURS = 4;
+  /** `operator` identifies who accepted responsibility; it goes in the record. */
+  const authorizeEffectors = useCallback((operator: string) => {
+    const auth = { until: Date.now() + AUTH_HOURS * 3600_000, operator };
+    setEffectorAuth(auth);
+    try { sessionStorage.setItem('a1-effector-auth', JSON.stringify(auth)); } catch { /* ignore */ }
+    log('CRITICAL', `Effector integration enabled by ${operator}. Expires in ${AUTH_HOURS} h or when this tab closes. Every effector command is logged.`);
+    recorder.event('AUTHORISATION', 'CRITICAL', `Effectors authorised by ${operator} until ${new Date(auth.until).toISOString()}`);
+  }, [log]);
+
+  const revokeEffectors = useCallback(() => {
+    setEffectorAuth(null);
+    try { sessionStorage.removeItem('a1-effector-auth'); } catch { /* ignore */ }
+    log('INFO', 'Effectors disabled. Detect-and-alert posture.');
+    recorder.event('AUTHORISATION', 'INFO', 'Effector authorisation revoked');
+    setDisruption(d => ({ ...d, autoEngage: false, sweepActive: false, targetId: null }));
+    setThreats(prev => prev.map(t => (t.status === 'DISRUPTING' ? { ...t, status: 'TRACKING', disruptProgress: 0 } : t)));
   }, [log]);
 
   const notifySecurity = useCallback((id?: string) => {
@@ -467,6 +505,6 @@ export function useDefenseSimulation() {
     rangeM,
     // Real sensor + posture
     remoteId, connectRemoteId, disconnectRemoteId, venue, setVenue, useMyLocation,
-    effectorsAuthorized, setEffectorsAuthorized: setEffectorsAuthorizedPersist, notifySecurity, exportTrackLog,
+    effectorsAuthorized, effectorAuth, authorizeEffectors, revokeEffectors, notifySecurity, exportTrackLog,
   };
 }

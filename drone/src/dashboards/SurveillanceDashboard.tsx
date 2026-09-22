@@ -2,11 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Crosshair, Sun, Moon, Flame, UserSearch, Home, ChevronUp, ChevronDown, ZoomIn, ZoomOut, Map as MapIcon, Video, Maximize2, Clock3, SunMedium, MoonStar, Upload, Cable, Cpu, Globe,
 } from 'lucide-react';
-import { useSurveillanceSimulation, WAYPOINTS, type PatrolDrone, type Detection } from '../hooks/useSurveillanceSimulation';
+import { useSurveillanceSimulation, WAYPOINTS, SITE, type PatrolDrone, type Detection } from '../hooks/useSurveillanceSimulation';
 import { SurveillanceMapCanvas } from './SurveillanceMapCanvas';
 import { DroneFeedCanvas } from './DroneFeedCanvas';
 import { useAircraftLink } from '../link/useAircraftLink';
 import { useVideoSource, type VideoSource } from '../link/useVideoSource';
+import { useRecorder, useRecordedEvents } from '../record/useRecorder';
 import {
   Headline, Card, Section, Divider, Tabs, Stat, Row, Chip, Dot, Meter, Sparkline, ToolButton, IconButton, Toggle, Segmented, Activity, formatClock, useAccentHex, type Tone,
 } from './ui';
@@ -49,6 +50,19 @@ export const SurveillanceDashboard: React.FC = () => {
     if (items.some(x => !x)) return;
     link.uploadMission(items as { lat: number; lon: number; altRelM: number; holdS: number }[], true).catch(() => {});
   };
+
+  // Flight record: one session per patrol, sampled at 1 Hz, with the dashboard's
+  // own event log mirrored in so every command and detection is in the record.
+  const linkSource = link.status === 'CONNECTED' ? link.transport : 'SIMULATION';
+  useRecorder('SURVEILLANCE', `Patrol · ${SITE.name}`, linkSource, () =>
+    drones.filter(x => x.status !== 'OFFLINE').map(x => ({
+      t: Date.now(), aircraft: x.id,
+      lat: liveIds.includes(x.id) ? link.vehicles[liveSysIds[liveIds.indexOf(x.id)]]?.lat : undefined,
+      lon: liveIds.includes(x.id) ? link.vehicles[liveSysIds[liveIds.indexOf(x.id)]]?.lon : undefined,
+      altM: x.altM, speedMps: x.groundSpeedMps, headingDeg: x.headingDeg, batteryPct: x.battery,
+      extra: { status: x.status, sensor: x.sensorMode, autopilot: x.autopilot, signalPct: Math.round(x.signalPct) },
+    })));
+  useRecordedEvents(events, 'PATROL');
 
   // Video: synthetic by default; a capture device or the companion computer's WebRTC stream when chosen.
   const [videoSource, setVideoSource] = useState<VideoSource>({ kind: 'SIM' });

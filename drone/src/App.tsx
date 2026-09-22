@@ -20,6 +20,9 @@ import { DefenseDashboard } from './dashboards/DefenseDashboard';
 import { SurveillanceDashboard } from './dashboards/SurveillanceDashboard';
 import { LinkButton } from './link/LinkButton';
 import { PlatformView } from './dashboards/PlatformView';
+import { RecordsView } from './dashboards/RecordsView';
+import { ErrorBoundary } from './dashboards/ErrorBoundary';
+import { recorder } from './record/recorder';
 import { 
   Compass, 
   Layers, 
@@ -42,14 +45,17 @@ import {
   Wrench,
   Sun,
   Moon,
-  ChevronLeft
+  ChevronLeft,
+  Archive,
+  Keyboard,
+  X
 } from 'lucide-react';
 
 /** Product verticals (operator dashboards) and the engineering views behind them. */
 type VerticalTab = 'LIGHT_SHOW_OPS' | 'DEFENSE_OPS' | 'SURVEILLANCE_OPS';
 type EngineeringTab = 'RADAR' | 'DRONE_OPERATOR' | 'LIGHT_SHOW' | 'ARCHITECTURE' | 'TABLE';
 /** 'PLATFORM' is the client-readable explanation that fronts the engineering views. */
-type ViewTab = VerticalTab | EngineeringTab | 'PLATFORM';
+type ViewTab = VerticalTab | EngineeringTab | 'PLATFORM' | 'RECORDS';
 
 const VERTICALS: { id: VerticalTab; label: string; icon: React.ReactNode }[] = [
   { id: 'LIGHT_SHOW_OPS', label: 'Light show', icon: <Sparkles className="w-3.5 h-3.5" /> },
@@ -63,9 +69,11 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<ViewTab>('LIGHT_SHOW_OPS');
   const isVertical = activeTab === 'LIGHT_SHOW_OPS' || activeTab === 'DEFENSE_OPS' || activeTab === 'SURVEILLANCE_OPS';
   const isPlatform = activeTab === 'PLATFORM';
+  const isRecords = activeTab === 'RECORDS';
   // Client-facing chrome covers the three dashboards and the "How it works" page;
   // the deep engineering views keep their original dark tooling look.
-  const isClient = isVertical || isPlatform;
+  const isClient = isVertical || isPlatform || isRecords;
+  const [showShortcuts, setShowShortcuts] = useState<boolean>(false);
   const [showEngineering, setShowEngineering] = useState<boolean>(false);
   // Light by default (client-facing); dark for night operations. Persisted per browser.
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -75,6 +83,7 @@ export default function App() {
     document.documentElement.dataset.theme = theme;
     try { localStorage.setItem(THEME_KEY, theme); } catch { /* private mode */ }
   }, [theme]);
+
   const [showBenchmarkModal, setShowBenchmarkModal] = useState<boolean>(false);
   const [showSecurityModal, setShowSecurityModal] = useState<boolean>(false);
   const [showDatabaseModal, setShowDatabaseModal] = useState<boolean>(false);
@@ -123,6 +132,32 @@ export default function App() {
   } = useSwarmSimulation(100);
 
   const selectedDrone = drones.find(d => d.id === selectedDroneId) || null;
+
+  // Operator keyboard shortcuts. An operator wearing gloves on a trackpad in the
+  // dark should not have to hunt for a tab. Ignored while typing in a field.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      const typing = !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+      if (e.key === 'Escape') {
+        // Close whatever is open, outermost last.
+        setShowShortcuts(false);
+        setShowBenchmarkModal(false); setShowSecurityModal(false); setShowDatabaseModal(false);
+        setShowSITLModal(false); setShowWebSerialModal(false); setShowRegulatoryModal(false);
+        setSelectedDroneId(null);
+        return;
+      }
+      if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === '1') setActiveTab('LIGHT_SHOW_OPS');
+      else if (e.key === '2') setActiveTab('DEFENSE_OPS');
+      else if (e.key === '3') setActiveTab('SURVEILLANCE_OPS');
+      else if (e.key.toLowerCase() === 'r') setActiveTab('RECORDS');
+      else if (e.key.toLowerCase() === 'h') setActiveTab('PLATFORM');
+      else if (e.key === '?') setShowShortcuts(v => !v);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [setSelectedDroneId]);
   const selectedTask = selectedDrone?.assignedTaskId 
     ? tasks.find(t => t.id === selectedDrone.assignedTaskId)
     : undefined;
@@ -148,6 +183,8 @@ export default function App() {
 
   return (
     <div className={`min-h-screen flex flex-col ${isClient ? 'bg-bg text-ink' : 'bg-slate-950 text-slate-100'}`}>
+      <a href="#main" className="skip-link">Skip to content</a>
+
       {/* 1. App bar */}
       <header className="sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur">
         <div className="max-w-[1600px] mx-auto px-5 h-14 flex items-center justify-between gap-4">
@@ -189,6 +226,20 @@ export default function App() {
 
           <div className="flex items-center gap-2">
             <LinkButton />
+            {isClient && (
+              <button
+                id="nav-records"
+                onClick={() => setActiveTab('RECORDS')}
+                aria-pressed={isRecords}
+                className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border transition-colors ${
+                  isRecords ? 'bg-accent-soft text-accent border-accent/30' : 'text-ink-2 hover:text-ink border-line'
+                }`}
+                title="Flight records — every session, exportable (r)"
+              >
+                <Archive className="w-3.5 h-3.5" />
+                <span className="hidden lg:inline">Records</span>
+              </button>
+            )}
             <button
               onClick={() => setTheme(t => (t === 'light' ? 'dark' : 'light'))}
               aria-label={theme === 'light' ? 'Switch to dark (night ops)' : 'Switch to light'}
@@ -375,7 +426,12 @@ export default function App() {
       )}
 
       {/* 3. Main Dynamic Content Area */}
-      <main className={`flex-1 w-full mx-auto flex flex-col gap-6 ${isClient ? 'max-w-[1600px] px-5 py-5' : 'max-w-7xl p-4 lg:p-6'}`}>
+      <main id="main" className={`flex-1 w-full mx-auto flex flex-col gap-6 ${isClient ? 'max-w-[1600px] px-5 py-5' : 'max-w-7xl p-4 lg:p-6'}`}>
+        {/* Flight records */}
+        {isRecords && (
+          <ErrorBoundary name="Flight records"><RecordsView /></ErrorBoundary>
+        )}
+
         {/* How it works: the client-readable front for the engineering views */}
         {isPlatform && (
           <PlatformView
@@ -393,13 +449,13 @@ export default function App() {
         )}
 
         {/* VERTICAL 1: Aerial light show operator dashboard */}
-        {activeTab === 'LIGHT_SHOW_OPS' && <LightShowDashboard />}
+        {activeTab === 'LIGHT_SHOW_OPS' && <ErrorBoundary name="Light show"><LightShowDashboard /></ErrorBoundary>}
 
         {/* VERTICAL 2: Counter-UAS defense dashboard */}
-        {activeTab === 'DEFENSE_OPS' && <DefenseDashboard />}
+        {activeTab === 'DEFENSE_OPS' && <ErrorBoundary name="Airspace defense"><DefenseDashboard /></ErrorBoundary>}
 
         {/* VERTICAL 3: Surveillance & patrol dashboard */}
-        {activeTab === 'SURVEILLANCE_OPS' && <SurveillanceDashboard />}
+        {activeTab === 'SURVEILLANCE_OPS' && <ErrorBoundary name="Surveillance"><SurveillanceDashboard /></ErrorBoundary>}
 
         {/* VIEW 1: Tactical Airspace Radar */}
         {activeTab === 'RADAR' && (
@@ -574,8 +630,31 @@ export default function App() {
       )}
 
       {/* 5. Footer */}
+      {/* Keyboard shortcuts */}
+      {showShortcuts && (
+        <div role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 print:hidden"
+          onClick={() => setShowShortcuts(false)}>
+          <div onClick={e => e.stopPropagation()} className="w-full max-w-sm rounded-[var(--radius-card)] border border-line bg-surface p-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <h2 className="text-[15px] font-semibold text-ink flex items-center gap-2"><Keyboard className="w-4 h-4 text-ink-3" />Keyboard shortcuts</h2>
+              <button onClick={() => setShowShortcuts(false)} aria-label="Close" className="w-8 h-8 rounded-lg border border-line text-ink-2 hover:text-ink inline-flex items-center justify-center"><X className="w-4 h-4" /></button>
+            </div>
+            <ul className="mt-3 divide-y divide-line">
+              {[['1', 'Light show'], ['2', 'Airspace defense'], ['3', 'Surveillance'], ['R', 'Flight records'], ['H', 'How it works'], ['Esc', 'Close dialogs and deselect'], ['?', 'This list']].map(([k, v]) => (
+                <li key={k} className="flex items-center justify-between py-2 text-[13px]">
+                  <span className="text-ink-2">{v}</span>
+                  <kbd className="num rounded-md border border-line bg-surface-2 px-2 py-0.5 text-[11px] text-ink">{k}</kbd>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
       <footer className={`mt-auto px-6 py-4 text-center text-[11px] ${isClient ? 'text-ink-3' : 'border-t border-slate-900 text-slate-500'}`}>
-        All in 1 Events · Drone Command · Simulated data · FAA Part 107 / BVLOS waiver workflow
+        All in 1 Events · Drone Command · FAA Part 107 / BVLOS waiver workflow ·{' '}
+        <button onClick={() => setShowShortcuts(true)} className="underline hover:text-ink-2">Keyboard shortcuts</button>
       </footer>
     </div>
   );

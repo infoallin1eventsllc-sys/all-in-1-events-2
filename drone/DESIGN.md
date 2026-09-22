@@ -45,3 +45,30 @@ Headline 22/600 · section 13/600 · body 13 · label 11 muted · stat 18–28/6
 - Every number has a unit or a label next to it.
 - A control that acts on the selected thing lives in the action bar; a control that changes what you're looking at lives on the imagery.
 - Phone width: rail stacks below the stage; PiP hides; HUD thins.
+
+## Layering technical depth
+
+A client and an engineer read the same system differently, so depth is layered
+rather than split into two products:
+
+1. **Plain sentence first.** "Two aircraft cannot occupy the same space."
+2. **The real term underneath, muted.** "4D corridor deconfliction and ORCA
+   avoidance at 50 Hz · layer 03" — an engineer still recognises it; a client
+   can skip it.
+3. **The full tooling one click further in**, clearly labelled for engineers,
+   keeping its own dense chrome.
+
+Never delete the depth to make something readable, and never lead with it.
+See `src/dashboards/PlatformView.tsx`.
+
+## Operator accessibility
+
+An operator works at night, for hours, sometimes one-handed. Non-negotiable:
+
+- Every action reachable by keyboard; single-key shortcuts for the destinations
+  (`1` `2` `3`, `r`, `h`, `Esc`, `?`).
+- A visible focus ring (`:focus-visible`, accent, 2px) — never `outline: none`.
+- `prefers-reduced-motion` disables the pulses and transitions.
+- Status is never colour alone: a dot, a word, or both.
+- Anything meant to leave the building has a print stylesheet.
+- A view that throws is isolated by an error boundary, never a white screen.
