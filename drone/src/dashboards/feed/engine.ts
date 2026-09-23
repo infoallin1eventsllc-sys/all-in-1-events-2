@@ -36,7 +36,7 @@ const POST_FRAG = `
 precision highp float;
 uniform sampler2D tDiffuse; uniform vec2 uvScale; uniform vec2 texel; uniform vec2 res;
 uniform int mode; uniform float time; uniform float gain; uniform float display;
-uniform float grade; uniform vec2 sunPos; uniform float flare;
+uniform float grade; uniform vec2 sunPos; uniform float flare; uniform float warm; uniform float fade;
 varying vec2 vUv;
 float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 float lum(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
@@ -65,11 +65,15 @@ void main() {
     float l = lum(c);
     c = mix(vec3(l), c, mode == 0 ? 1.08 : 0.75);
     if (grade > 0.5) {
-      // The feature grade: teal in the shadows, warmth in the highlights, a filmic S-curve, lifted blacks.
-      c = mix(c, c * vec3(0.82, 1.0, 1.18), (1.0 - l) * 0.55);
-      c = mix(c, c * vec3(1.14, 1.0, 0.84), l * 0.5);
-      c = mix(c, c * c * (3.0 - 2.0 * c), 0.55);
-      c = c * 0.96 + 0.02;
+      // The film grade. By day: natural, a little contrast, clean blacks. Golden hour: teal shadows, warm
+      // highlights. Blue hour: saturated indigo shadows against the orange floodlights.
+      float g = clamp(warm, 0.0, 1.0), b = clamp(-warm, 0.0, 1.0);
+      c = mix(c, c * vec3(0.82, 1.0, 1.18), (1.0 - l) * 0.55 * g + (1.0 - l) * 0.35 * b);
+      c = mix(c, c * vec3(1.14, 1.0, 0.84), l * 0.5 * g);
+      c = mix(c, c * vec3(0.9, 0.95, 1.25), (1.0 - l) * 0.4 * b);
+      c = mix(vec3(l), c, 1.0 + 0.25 * b);
+      c = mix(c, c * c * (3.0 - 2.0 * c), 0.35 + 0.2 * g);
+      c = c * 0.98 + 0.012 * g;
       // Lens flare when the sun is in frame and not behind a tower: an anamorphic streak, a halo and a ghost.
       if (flare > 0.0) {
         vec2 d = (vUv - sunPos) * vec2(1.0, 0.5625);
@@ -80,8 +84,8 @@ void main() {
         float ghost = exp(-length(gd) * 28.0) * 0.6 + exp(-length(gd * 0.5) * 30.0) * 0.25;
         c += vis * (streak * 0.3 * vec3(1.0, 0.72, 0.5) + halo * 0.22 * vec3(1.0, 0.8, 0.6) + ghost * 0.3 * vec3(0.45, 0.75, 1.0));
       }
-      c += n * 0.035;
-      col = c * mix(1.0, vig, 0.75);
+      c += n * (0.012 + 0.02 * g);
+      col = c * mix(1.0, vig, 0.35 + 0.35 * g) * fade;
     } else {
       c += n * (mode == 0 ? 0.014 : 0.06);
       col = c * mix(1.0, vig, 0.55);
@@ -148,7 +152,7 @@ class Engine {
       uniforms: {
         tDiffuse: { value: this.rt.texture }, uvScale: { value: new THREE.Vector2(1, 1) }, texel: { value: new THREE.Vector2(1 / FEED_W, 1 / FEED_H) },
         res: { value: new THREE.Vector2(FEED_W, FEED_H) }, mode: { value: 0 }, time: { value: 0 }, gain: { value: 1 }, display: { value: 0 },
-        grade: { value: 0 }, sunPos: { value: new THREE.Vector2(-10, -10) }, flare: { value: 0 },
+        grade: { value: 0 }, sunPos: { value: new THREE.Vector2(-10, -10) }, flare: { value: 0 }, warm: { value: 0 }, fade: { value: 1 },
       },
     });
     this.postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.post));
@@ -272,7 +276,7 @@ class Engine {
     u.time.value = time;
     u.mode.value = thermal ? (d.sensorMode === 'THERMAL_WHITE_HOT' ? 2 : 3) : nv ? 4 : night ? 1 : 0;
     u.gain.value = nv ? (night ? 4.2 : 1.1) : night ? 2.2 : 1;
-    u.grade.value = 0; u.flare.value = 0;
+    u.grade.value = 0; u.flare.value = 0; u.fade.value = 1;
     this.renderer.setRenderTarget(null);
     this.renderer.setViewport(0, 0, w, h);
     this.renderer.render(this.postScene, this.postCam);
@@ -296,11 +300,12 @@ class Engine {
     const thermal = d.sensorMode === 'THERMAL_WHITE_HOT' || d.sensorMode === 'THERMAL_IRONBOW';
     const nv = d.sensorMode === 'NIGHT_VISION';
     const look: Look = thermal ? (night ? 'IR_NIGHT' : 'IR_DAY') : night ? 'NIGHT' : 'DAY';
-    sf.applyLook(look);
-    // Each aircraft flies the take from its own point along it.
+    // Each aircraft plays the reel from its own point in it.
     const seed = [...d.id].reduce((a, c) => a + c.charCodeAt(0), 0);
-    const sun = sf.pose(this.cam, time + (seed % 7) * 41, d.zoom, this.sfSeen ? 0 : dt);
-    this.sfSeen = true;
+    const at = time + (seed % 7) * 41;
+    sf.applyLook(look, sf.shotAt(at).shot.mood);
+    const { sun, fade, mood } = sf.pose(this.cam, at, d.zoom);
+    this.sfSeen = true; void dt;
     this.rt.viewport.set(0, 0, w, h);
     this.renderer.setRenderTarget(this.rt);
     this.renderer.render(sf.scene, this.cam);
@@ -311,7 +316,9 @@ class Engine {
     u.mode.value = thermal ? (d.sensorMode === 'THERMAL_WHITE_HOT' ? 2 : 3) : nv ? 4 : night ? 1 : 0;
     u.gain.value = nv ? (night ? 3.2 : 1.1) : night ? 1.35 : 1.05;
     u.grade.value = thermal || nv ? 0 : 1;
-    u.flare.value = sun && !night ? 1 : 0;
+    u.warm.value = mood === 'GOLDEN' ? 1 : mood === 'BLUE' ? -1 : 0;
+    u.flare.value = sun && mood === 'GOLDEN' ? 1 : 0;
+    u.fade.value = thermal || nv ? 1 : fade;
     if (sun) u.sunPos.value.copy(sun); else u.sunPos.value.set(-10, -10);
     this.renderer.setRenderTarget(null);
     this.renderer.setViewport(0, 0, w, h);

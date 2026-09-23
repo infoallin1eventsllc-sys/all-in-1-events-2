@@ -226,7 +226,7 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = fal
             <div className="absolute bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] text-slate-300/70">Recorded flight · {clip.title} · {clip.by} · Pexels</div>
           )}
           {!useFootage && !videoStream && !offline && simWorld === 'SF' && (
-            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] text-slate-300/70">San Francisco at dusk · the opening take, rendered live</div>
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] text-slate-300/70">San Francisco, California · aerial tour, rendered live</div>
           )}
           {!offline && !videoStream && !useFootage && isNight && !thermal && drone.sensorMode !== 'NIGHT_VISION' && (
             <div className="absolute left-1/2 top-12 -translate-x-1/2 px-2 py-1 rounded bg-amber-500/20 border border-amber-400/50 text-amber-200 flex items-center gap-1.5">
