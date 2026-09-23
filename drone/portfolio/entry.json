@@ -1,0 +1,16 @@
+{
+  "id": "p-drone-command",
+  "title": "All in 1 Drone Command",
+  "category": "dashboards",
+  "categoryLabel": "Operations Console",
+  "client": "All in 1 Events",
+  "year": "2026",
+  "image": "https://allin1events.com/drone/demo/cover.jpg",
+  "summary": "One console for drone light shows, site surveys and overnight security, with live aircraft health that names the failing part. Runs on laptop, tablet or phone and flies real ArduPilot and PX4 aircraft.",
+  "highlights": [
+    "Live 3D show conductor for 100–500 aircraft",
+    "Aircraft health that names the failing part",
+    "Tamper-evident flight records"
+  ],
+  "liveUrl": "https://allin1events.com/drone/?tour"
+}
