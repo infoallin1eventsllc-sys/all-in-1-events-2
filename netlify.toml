@@ -45,10 +45,14 @@
 
 # ===== DRONE COMMAND APP =====
 # The cockpit view uses the operator microphone for push-to-talk; allow it only here.
+# Its own Content-Security-Policy: the patrol feed streams recorded drone footage
+# from Pexels (media-src), and the console talks to Supabase, the relay and the
+# companion computer on the local network (connect-src).
 [[headers]]
   for = "/drone/*"
   [headers.values]
-    Permissions-Policy = "camera=(), microphone=(self), geolocation=()"
+    Permissions-Policy = "camera=(self), microphone=(self), geolocation=()"
+    Content-Security-Policy = "default-src 'self'; img-src 'self' data: blob:; media-src 'self' blob: https://www.pexels.com https://videos.pexels.com https://player.vimeo.com https://*.vimeocdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self'; worker-src 'self' blob:; connect-src 'self' https://api.pexels.com https://*.supabase.co wss://*.supabase.co ws: wss: http://192.168.0.0/16 http://10.0.0.0/8 http://172.16.0.0/12"
 
 # ===== REDIRECTS =====
 # Serve the built drone app (drone/dist) at /drone/ with SPA fallback.
