@@ -83,6 +83,12 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = fal
     misses.current++;
     if (misses.current >= clips.length) setFailed(true); else setClipIdx(i => i + 1);
   };
+  // Watchdog: a request that hangs (blocked, no reply) never raises an error, so give each source 10 s to start.
+  useEffect(() => {
+    if (!useFootage || !src || playing) return;
+    const id = setTimeout(() => { if (!clipRef.current || clipRef.current.readyState < 3) nextSource(); }, 10000);
+    return () => clearTimeout(id);
+  }, [useFootage, src, playing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -127,7 +133,7 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = fal
         <div aria-hidden className="absolute inset-0 pointer-events-none" style={{ backgroundImage: GRAIN, opacity: drone.sensorMode === 'NIGHT_VISION' ? 0.28 : 0.16, mixBlendMode: 'overlay' }} />
       )}
       {useFootage && !glVideo && !playing && !offline && (
-        <div className="absolute inset-0 flex items-center justify-center text-[11px] text-slate-400 bg-black/60">Buffering</div>
+        <div className="absolute inset-0 flex items-center justify-center text-[11px] text-slate-400 bg-black/60">Loading footage · {clip?.title}</div>
       )}
       {(!useFootage || glVideo) && !videoStream && <canvas ref={canvasRef} width={width} height={height} className="w-full h-full block" aria-label={`Live feed from ${drone.id}`} role="img" />}
       {noGl && !videoStream && !useFootage && (
