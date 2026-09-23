@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Download, Printer, Trash2, FileJson, Plane, ShieldAlert, Sparkles, Eye, HardDriveDownload, ScanLine } from 'lucide-react';
+import { Download, Printer, Trash2, FileJson, ShieldAlert, Sparkles, Eye, HardDriveDownload, ScanLine } from 'lucide-react';
 import { recordDb, type FlightEvent, type FlightSample, type FlightSession } from '../record/db';
 import { exportSessionCsv, exportSessionJson, recorder, summarise } from '../record/recorder';
 import { verify, type ChainCheck } from '../record/chain';
 import * as sync from '../sync/sync';
-import { Headline, Card, Section, Divider, Stat, Chip, Dot, ToolButton, Activity, useAccentHex, formatClock, type Tone } from './ui';
+import { Headline, Card, Section, Divider, Stat, Chip, ToolButton, Activity, useAccentHex, formatClock, type Tone } from './ui';
 
 /**
  * Flight records — the evidence trail.

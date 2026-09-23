@@ -3,7 +3,7 @@ import {
   Sparkles, ScanLine, Eye, Users, Radio, Route, Brain, LifeBuoy, Lock, Database, FlaskConical, Boxes,
   ChevronRight, FileText, Video, Layers, Radar, Scale, Usb, Cpu,
 } from 'lucide-react';
-import { Headline, Card, Section, Divider, Stat, Chip, Dot, ToolButton } from './ui';
+import { Headline, Card, Section, Divider, Chip, Dot, ToolButton } from './ui';
 
 /**
  * "How it works" — the client-facing explanation of the platform.

@@ -1,16 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Radio, 
   Usb, 
   Wifi, 
   Activity, 
-  AlertTriangle, 
-  CheckCircle2, 
   Play, 
   Square, 
-  RefreshCw, 
   X, 
-  Sliders, 
   Zap, 
   Cpu, 
   Terminal,
@@ -43,14 +38,13 @@ interface WebSerialRadioBridgeModalProps {
 }
 
 export const WebSerialRadioBridgeModal: React.FC<WebSerialRadioBridgeModalProps> = ({ onClose }) => {
-  const [supported, setSupported] = useState<boolean>(true);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isSimulatedStream, setIsSimulatedStream] = useState<boolean>(false);
   const [baudRate, setBaudRate] = useState<number>(115200);
   const [radioProtocol, setRadioProtocol] = useState<'SX1280_LORA' | 'SIK_TELEMETRY' | 'ESP_NOW' | 'MAVLINK_V2'>('SX1280_LORA');
   const [packetsReceived, setPacketsReceived] = useState<number>(0);
   const [packetsSent, setPacketsSent] = useState<number>(0);
-  const [packetLossRate, setPacketLossRate] = useState<number>(0.04);
+  const [packetLossRate] = useState<number>(0.04);
   const [recentPackets, setRecentPackets] = useState<TelemetryPacketDecoded[]>([]);
   const [serialLogs, setSerialLogs] = useState<string[]>([
     '[INIT] WebSerial Radio Bridge driver initialized.',
@@ -63,7 +57,6 @@ export const WebSerialRadioBridgeModal: React.FC<WebSerialRadioBridgeModalProps>
 
   useEffect(() => {
     if (!('serial' in navigator)) {
-      setSupported(false);
       setSerialLogs(prev => [
         ...prev,
         '[WARN] WebSerial API not natively detected in this browser sandbox. Simulated Hardware RF Interface available.',

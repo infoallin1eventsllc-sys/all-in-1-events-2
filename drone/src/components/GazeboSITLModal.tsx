@@ -3,13 +3,6 @@ import {
   X, 
   Laptop, 
   Wind, 
-  Cpu, 
-  Layers, 
-  Sliders, 
-  Activity, 
-  Radio, 
-  AlertCircle, 
-  CheckCircle,
   Copy,
   Check
 } from 'lucide-react';

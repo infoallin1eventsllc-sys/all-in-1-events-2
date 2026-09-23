@@ -8,7 +8,6 @@ interface ArtificialHorizonProps {
 
 export const ArtificialHorizon: React.FC<ArtificialHorizonProps> = ({
   telemetry,
-  showGrid = true,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 

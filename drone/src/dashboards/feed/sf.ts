@@ -33,7 +33,7 @@ const MOOD_K: Record<Mood, number> = { DAY: 0, GOLDEN: 1, BLUE: 2 };
 /** What the engine needs from a shot: the sun on screen for the flare, the fade to black, the mood for the grade. */
 export interface ShotState { sun: THREE.Vector2 | null; fade: number; mood: Mood }
 
-interface Shot { dur: number; mood: Mood; fov?: number; pose: (t: number, u: number, o: { pos: THREE.Vector3; look: THREE.Vector3; roll: number }, w: SanFrancisco) => void }
+interface Shot { dur: number; mood: Mood; fov?: number; pose: (_t: number, u: number, o: { pos: THREE.Vector3; look: THREE.Vector3; roll: number }, w: SanFrancisco) => void }
 const ease = (u: number) => u * u * (3 - 2 * u);
 
 // ---- Lie of the land -----------------------------------------------------------
@@ -86,7 +86,6 @@ export function sfHeight(x: number, z: number) {
 }
 
 // ---- Structures ---------------------------------------------------------------------
-interface Tower { x: number; z: number; w: number; d: number; h: number; style: T.FacadeStyle }
 function mulberry(a: number) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const BLOCK = 110, STREET = 14;
 
@@ -112,7 +111,6 @@ export class SanFrancisco {
   private carLights: THREE.InstancedMesh;
   private carPaths: { pts: THREE.Vector3[]; len: number }[] = [];
   private t = 0;
-  private night = false;
   private sunDisc: THREE.Sprite;
   private gndMat!: THREE.MeshLambertMaterial;
   private ggMat!: THREE.MeshStandardMaterial;
@@ -676,26 +674,26 @@ export class SanFrancisco {
       (t: number, u: number, o: { pos: THREE.Vector3; look: THREE.Vector3 }) => { const a = a0 + (a1 - a0) * u, r = r0 + (r1 - r0) * u; o.pos.set(c.x + Math.cos(a) * r, h0 + (h1 - h0) * u, c.z + Math.sin(a) * r); o.look.set(c.x, lookH, c.z); void t; };
     return [
       // Daylight
-      { dur: 7, mood: 'DAY', fov: 34, pose: (t, u, o) => { o.pos.copy(lerp(V3(-3230, 120, -2030), V3(-3420, 110, -2330), ease(u))); o.look.copy(GG_N).setY(190); } },                    // along the cables to the north tower
-      { dur: 5, mood: 'DAY', fov: 36, pose: (t, u, o) => { o.pos.set(SALES.x - 60 + u * 30, 620 - u * 60, SALES.z - 40); o.look.set(SALES.x - 60 + u * 30, 0, SALES.z - 39); o.roll = 0.3 + u * 0.25; } },    // straight down on the Salesforce Tower and its shadow, slowly turning
-      { dur: 8, mood: 'DAY', fov: 40, pose: (t, u, o) => { o.pos.copy(lerp(V3(760, 430, 1050), V3(640, 400, 320), u)); o.look.copy(lerp(V3(200, 140, -200), V3(120, 160, -320), u)); } },   // high over the Bay Bridge, fog on the towers
-      { dur: 6, mood: 'DAY', fov: 36, pose: (t, u, o) => { o.pos.copy(lerp(V3(-760, 150, -1010), V3(-520, 160, -830), u)); o.look.copy(TRANS).setY(150); } },                            // North Beach toward the Pyramid
-      { dur: 5, mood: 'DAY', fov: 36, pose: (t, u, o) => { o.pos.copy(lerp(V3(-800, 210, -1520), V3(-680, 200, -1470), u)); o.look.copy(COIT).setY(115); } },                             // Coit Tower
-      { dur: 5, mood: 'DAY', fov: 40, pose: (t, u, o) => { o.pos.set(-1080 + u * 20, 330 - u * 80, -1131); o.look.set(-1080 + u * 20, 0, -1130); o.roll = 0.2; } },                     // Lombard, straight down, descending
-      { dur: 7, mood: 'DAY', fov: 36, pose: (t, u, o) => { o.pos.copy(lerp(V3(760, 320, 950), V3(470, 130, 330), ease(u))); o.look.copy(FERRY).setY(30); } },                             // down the piers to the Embarcadero
-      { dur: 7, mood: 'DAY', fov: 34, pose: (t, u, o) => { o.pos.copy(lerp(V3(1520, 125, -150), V3(820, 115, -60), u)); o.look.copy(lerp(V3(600, 100, -330), V3(250, 130, -350), u)); } },   // along the Bay Bridge, the city through the trusses
-      { dur: 7, mood: 'DAY', fov: 34, pose: (t, u, o, w) => { const b = w.boat.position; o.pos.set(b.x + 20, 160, b.z + 30); o.look.copy(lerp(b.clone(), V3(60, 160, -420), ease(Math.max(0, (u - 0.45) / 0.55)))); } },   // the speedboat, then up to the skyline
-      { dur: 7, mood: 'DAY', fov: 36, pose: (t, u, o) => { o.pos.copy(lerp(V3(-420, 150, 125), V3(-140, 115, 75), ease(u))); o.look.copy(FERRY).setY(40); } },   // down Market Street to the Ferry Building
+      { dur: 7, mood: 'DAY', fov: 34, pose: (_t, u, o) => { o.pos.copy(lerp(V3(-3230, 120, -2030), V3(-3420, 110, -2330), ease(u))); o.look.copy(GG_N).setY(190); } },                    // along the cables to the north tower
+      { dur: 5, mood: 'DAY', fov: 36, pose: (_t, u, o) => { o.pos.set(SALES.x - 60 + u * 30, 620 - u * 60, SALES.z - 40); o.look.set(SALES.x - 60 + u * 30, 0, SALES.z - 39); o.roll = 0.3 + u * 0.25; } },    // straight down on the Salesforce Tower and its shadow, slowly turning
+      { dur: 8, mood: 'DAY', fov: 40, pose: (_t, u, o) => { o.pos.copy(lerp(V3(760, 430, 1050), V3(640, 400, 320), u)); o.look.copy(lerp(V3(200, 140, -200), V3(120, 160, -320), u)); } },   // high over the Bay Bridge, fog on the towers
+      { dur: 6, mood: 'DAY', fov: 36, pose: (_t, u, o) => { o.pos.copy(lerp(V3(-760, 150, -1010), V3(-520, 160, -830), u)); o.look.copy(TRANS).setY(150); } },                            // North Beach toward the Pyramid
+      { dur: 5, mood: 'DAY', fov: 36, pose: (_t, u, o) => { o.pos.copy(lerp(V3(-800, 210, -1520), V3(-680, 200, -1470), u)); o.look.copy(COIT).setY(115); } },                             // Coit Tower
+      { dur: 5, mood: 'DAY', fov: 40, pose: (_t, u, o) => { o.pos.set(-1080 + u * 20, 330 - u * 80, -1131); o.look.set(-1080 + u * 20, 0, -1130); o.roll = 0.2; } },                     // Lombard, straight down, descending
+      { dur: 7, mood: 'DAY', fov: 36, pose: (_t, u, o) => { o.pos.copy(lerp(V3(760, 320, 950), V3(470, 130, 330), ease(u))); o.look.copy(FERRY).setY(30); } },                             // down the piers to the Embarcadero
+      { dur: 7, mood: 'DAY', fov: 34, pose: (_t, u, o) => { o.pos.copy(lerp(V3(1520, 125, -150), V3(820, 115, -60), u)); o.look.copy(lerp(V3(600, 100, -330), V3(250, 130, -350), u)); } },   // along the Bay Bridge, the city through the trusses
+      { dur: 7, mood: 'DAY', fov: 34, pose: (_t, u, o, w) => { const b = w.boat.position; o.pos.set(b.x + 20, 160, b.z + 30); o.look.copy(lerp(b.clone(), V3(60, 160, -420), ease(Math.max(0, (u - 0.45) / 0.55)))); } },   // the speedboat, then up to the skyline
+      { dur: 7, mood: 'DAY', fov: 36, pose: (_t, u, o) => { o.pos.copy(lerp(V3(-420, 150, 125), V3(-140, 115, 75), ease(u))); o.look.copy(FERRY).setY(40); } },   // down Market Street to the Ferry Building
       { dur: 7, mood: 'DAY', fov: 36, pose: orbit(ORACLE, 300, 200, 230, 150, 0.4, 1.9, 40) },                                                                                            // Oracle Park, descending orbit
-      { dur: 6, mood: 'DAY', fov: 34, pose: (t, u, o) => { o.pos.copy(lerp(V3(-1560, 190, -1380), V3(-1360, 180, -1430), u)); o.look.copy(lerp(WHEEL.clone().setY(60), ALC.clone().setY(30), ease(Math.max(0, (u - 0.5) / 0.5)))); } },   // the Wharf, then Alcatraz
+      { dur: 6, mood: 'DAY', fov: 34, pose: (_t, u, o) => { o.pos.copy(lerp(V3(-1560, 190, -1380), V3(-1360, 180, -1430), u)); o.look.copy(lerp(WHEEL.clone().setY(60), ALC.clone().setY(30), ease(Math.max(0, (u - 0.5) / 0.5)))); } },   // the Wharf, then Alcatraz
       // Golden hour
-      { dur: 8, mood: 'GOLDEN', fov: 16, pose: (t, u, o, w) => { const s = w.ship.position; o.pos.set(s.x + 950, 300, s.z + 520); o.look.set(s.x - u * 120, 15, s.z); } },              // the container ship in the fog, long lens
+      { dur: 8, mood: 'GOLDEN', fov: 16, pose: (_t, u, o, w) => { const s = w.ship.position; o.pos.set(s.x + 950, 300, s.z + 520); o.look.set(s.x - u * 120, 15, s.z); } },              // the container ship in the fog, long lens
       { dur: 8, mood: 'GOLDEN', fov: 34, pose: orbit(GG_S, 330, 300, 210, 190, 2.4, 3.9, 150) },                                                                                         // round the south tower
-      { dur: 5, mood: 'GOLDEN', fov: 34, pose: (t, u, o) => { const p = lerp(GG_S, GG_MID, 0.3 + u * 0.4); o.pos.set(p.x, 240, p.z); o.look.set(p.x, 0, p.z + 1); o.roll = -0.5; } },   // straight down across the lanes
-      { dur: 8, mood: 'GOLDEN', fov: 42, pose: (t, u, o) => { o.pos.copy(lerp(V3(-4200, 420, -3350), V3(-4900, 440, -3450), u)); o.look.copy(lerp(V3(-5600, 30, -2500), V3(-6300, 20, -2600), u)); } },   // over the headlands to the ocean and the sunset   // along the headlands' cliffs to the sunset
+      { dur: 5, mood: 'GOLDEN', fov: 34, pose: (_t, u, o) => { const p = lerp(GG_S, GG_MID, 0.3 + u * 0.4); o.pos.set(p.x, 240, p.z); o.look.set(p.x, 0, p.z + 1); o.roll = -0.5; } },   // straight down across the lanes
+      { dur: 8, mood: 'GOLDEN', fov: 42, pose: (_t, u, o) => { o.pos.copy(lerp(V3(-4200, 420, -3350), V3(-4900, 440, -3450), u)); o.look.copy(lerp(V3(-5600, 30, -2500), V3(-6300, 20, -2600), u)); } },   // over the headlands to the ocean and the sunset   // along the headlands' cliffs to the sunset
       // Blue hour
       { dur: 9, mood: 'BLUE', fov: 34, pose: orbit(GG_N, 400, 360, 180, 165, 0.2, 1.5, 140) },                                                                                            // the north tower floodlit
-      { dur: 8, mood: 'BLUE', fov: 40, pose: (t, u, o) => { o.pos.set(-3150, 260, -2750); o.look.copy(lerp(V3(-4300, 200, -3300), V3(-200, 120, -500), ease(u))); } },                    // the headlands to the glowing city, fade out
+      { dur: 8, mood: 'BLUE', fov: 40, pose: (_t, u, o) => { o.pos.set(-3150, 260, -2750); o.look.copy(lerp(V3(-4300, 200, -3300), V3(-200, 120, -500), ease(u))); } },                    // the headlands to the glowing city, fade out
     ];
   }
 
@@ -760,25 +758,7 @@ export class SanFrancisco {
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
   }
 
-  /** Soft cloud for the fog banks (kept for the Ferris wheel's lights and future use). */
-  private static fogTexture() {
-    const c = document.createElement('canvas'); c.width = 256; c.height = 128;
-    const g = c.getContext('2d')!;
-    const r = mulberry(13);
-    for (let i = 0; i < 60; i++) {
-      const x = 30 + r() * 196, y = 20 + r() * 88, rad = 20 + r() * 40;
-      const gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, 'rgba(255,255,255,0.22)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
-      g.fillStyle = gr; g.fillRect(0, 0, 256, 128);
-    }
-    // Fade to nothing at the edges so no bank ever shows a straight side.
-    const img = g.getImageData(0, 0, 256, 128), d = img.data;
-    for (let y = 0; y < 128; y++) for (let x = 0; x < 256; x++) {
-      const ex = 1 - Math.pow(Math.abs(x - 128) / 128, 2), ey = 1 - Math.pow(Math.abs(y - 64) / 64, 2);
-      d[(y * 256 + x) * 4 + 3] *= Math.pow(Math.max(0, ex * ey), 1.6);
-    }
-    g.putImageData(img, 0, 0);
-    const t = new THREE.CanvasTexture(c); return t;
-  }
+
 
   /** The street map painted onto the ground: blocks, streets and the shores. Emissive pass draws the street lighting. */
   private paintMap(size: number, emissive: boolean): HTMLCanvasElement {
@@ -951,7 +931,7 @@ export class SanFrancisco {
   applyLook(look: Look, mood: Mood) {
     const ir = look === 'IR_DAY' || look === 'IR_NIGHT';
     const night = look === 'NIGHT' || look === 'IR_NIGHT';
-    this.night = night; this.forcedNight = night;
+    this.forcedNight = night;
     if (night) mood = 'BLUE';
     this.mood = mood;
     const day = mood === 'DAY', golden = mood === 'GOLDEN', blue = mood === 'BLUE';

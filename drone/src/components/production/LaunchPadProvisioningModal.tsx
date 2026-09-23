@@ -4,7 +4,6 @@ import {
   CheckCircle2, 
   XCircle, 
   AlertCircle, 
-  Play, 
   Compass, 
   BatteryCharging, 
   Radio, 
@@ -12,7 +11,6 @@ import {
   X, 
   RefreshCw,
   Layers,
-  Sparkles,
   Search
 } from 'lucide-react';
 

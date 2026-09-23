@@ -6,13 +6,9 @@ import {
   Layers, 
   Zap, 
   Clock, 
-  CheckCircle, 
   Copy, 
   Check, 
-  Play,
-  Search,
-  Filter
-} from 'lucide-react';
+  Play} from 'lucide-react';
 import { DatabaseEngineType, DatabaseMetrics } from '../types';
 
 interface DatabaseArchitectureModalProps {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Check, BarChart2, Radio, Zap, Shield, Cpu } from 'lucide-react';
+import { X, BarChart2, Zap} from 'lucide-react';
 
 interface ProtocolBenchmarkModalProps {
   onClose: () => void;

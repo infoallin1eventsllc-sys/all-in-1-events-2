@@ -237,7 +237,7 @@ export const SHOW_FORMATIONS: ShowFormation[] = [
       const out: Pt[] = [];
       const beat = (t * 1.05) % 1, pulse = Math.exp(-Math.pow((beat - 0.1) * 9, 2)) + 0.6 * Math.exp(-Math.pow((beat - 0.35) * 9, 2));
       const S = 1.55 * (1 + pulse * 0.1), sway = Math.sin(t * 0.4) * 0.3;
-      const outline = Math.floor(count * 0.5), inner = count - outline;
+      const outline = Math.floor(count * 0.5);
       // Classic heart curve, ~±16 wide, -17..+13 tall; scaled to ~50 m across.
       const heart2 = (u: number) => { const a = u * TAU; return { x: 16 * Math.pow(Math.sin(a), 3), y: 13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a) }; };
       for (let i = 0; i < count; i++) {

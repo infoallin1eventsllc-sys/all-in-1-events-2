@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Clock, Radio, Activity, Zap, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, Clock, Radio, Activity} from 'lucide-react';
 
 interface SyncPrecisionModalProps {
   droneCount: number;

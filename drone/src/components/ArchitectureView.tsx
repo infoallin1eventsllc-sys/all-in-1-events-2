@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { ARCHITECTURE_LAYERS } from '../data/architectureContent';
-import { ArchitectureLayer } from '../types';
-import { Cpu, Radio, Compass, Shield, AlertTriangle, Layers, ChevronRight, CheckCircle, XCircle, Copy, Check, Lock, Database, Laptop } from 'lucide-react';
+import { Cpu, Radio, Compass, Shield, AlertTriangle, Layers, ChevronRight, CheckCircle, Copy, Check, Lock, Database, Laptop } from 'lucide-react';
 
 export const ArchitectureView: React.FC = () => {
   const [selectedLayerId, setSelectedLayerId] = useState<string>('fleet-management');

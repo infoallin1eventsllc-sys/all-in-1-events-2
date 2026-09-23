@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LIGHT_SHOW_ARCHITECTURE, LightShowArchitectureSection } from '../../data/lightShowArchitecture';
+import { LIGHT_SHOW_ARCHITECTURE} from '../../data/lightShowArchitecture';
 import { 
   Sparkles, 
   Layers, 

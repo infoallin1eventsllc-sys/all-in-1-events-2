@@ -6,13 +6,6 @@ import { AudioControls } from './AudioControls';
 import { cockpitAudio } from '../../utils/cockpitSoundEngine';
 import { 
   Radio, 
-  ShieldCheck, 
-  Wifi, 
-  Layers, 
-  Volume2, 
-  Video, 
-  Info, 
-  AlertOctagon,
   Terminal,
   Cpu
 } from 'lucide-react';

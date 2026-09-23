@@ -4,16 +4,11 @@ import {
   Wifi, 
   WifiOff, 
   Battery, 
-  BatteryCharging, 
   Navigation, 
   ShieldAlert, 
   Gauge, 
-  Compass, 
   Activity, 
-  MapPin, 
-  Cpu, 
-  Radio
-} from 'lucide-react';
+  MapPin} from 'lucide-react';
 
 interface TelemetryPanelProps {
   telemetry: TelemetryState;

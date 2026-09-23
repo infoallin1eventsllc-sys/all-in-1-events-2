@@ -2,21 +2,11 @@ import React, { useRef, useEffect, useState } from 'react';
 import { TelemetryState, AudioStreamState } from '../../types/droneCockpitTypes';
 import { ArtificialHorizon } from './ArtificialHorizon';
 import { 
-  Camera, 
   Maximize2, 
   Minimize2, 
-  Layers, 
-  Eye, 
   Crosshair, 
   Radio, 
-  ShieldAlert, 
   VideoOff, 
-  Flame, 
-  Sun,
-  Grid,
-  Circle,
-  ZoomIn,
-  ZoomOut,
   RotateCcw
 } from 'lucide-react';
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Layers, CheckCircle2, AlertTriangle, ArrowRight, Download, Upload, Cpu, ShieldCheck } from 'lucide-react';
+import { X, Layers, ArrowRight, Download, Cpu, ShieldCheck } from 'lucide-react';
 import { SHOW_FORMATIONS } from '../../data/lightShowFormations';
 import { SafetyValidationReport } from '../../types/lightShowTypes';
 
@@ -19,7 +19,7 @@ export const ChoreographyEngineModal: React.FC<ChoreographyEngineModalProps> = (
   const [sourceIndex, setSourceIndex] = useState<number>(currentFormationIndex);
   const [targetIndex, setTargetIndex] = useState<number>((currentFormationIndex + 1) % SHOW_FORMATIONS.length);
   const [altitudeTieringEnabled, setAltitudeTieringEnabled] = useState<boolean>(true);
-  const [maxVelocityLimit, setMaxVelocityLimit] = useState<number>(4.5);
+  const [maxVelocityLimit] = useState<number>(4.5);
 
   const sourceFormation = SHOW_FORMATIONS[sourceIndex];
   const targetFormation = SHOW_FORMATIONS[targetIndex];

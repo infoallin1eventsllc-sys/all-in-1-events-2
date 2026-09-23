@@ -7,11 +7,7 @@ import {
   Unlock, 
   Key, 
   Radio, 
-  AlertTriangle, 
-  CheckCircle, 
   Cpu, 
-  FileCode, 
-  RefreshCw,
   Copy,
   Check
 } from 'lucide-react';

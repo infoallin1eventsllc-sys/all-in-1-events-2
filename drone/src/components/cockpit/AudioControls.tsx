@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect} from 'react';
 import { AudioStreamState } from '../../types/droneCockpitTypes';
 import { cockpitAudio } from '../../utils/cockpitSoundEngine';
 import { 
@@ -9,12 +9,7 @@ import {
   Radio, 
   Megaphone, 
   AlertTriangle, 
-  Sliders, 
-  Disc3,
-  Flame,
-  BellRing,
-  Sparkles
-} from 'lucide-react';
+  BellRing} from 'lucide-react';
 
 interface AudioControlsProps {
   audioState: AudioStreamState;
@@ -30,12 +25,11 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
   audioState,
   onTogglePtt,
   onToggleOpenMic,
-  onSetGain,
   onToggleDownlinkMute,
   onSetDownlinkVolume,
   onTriggerSiren,
 }) => {
-  const [isSpacePressed, setIsSpacePressed] = useState<boolean>(false);
+  const [, setIsSpacePressed] = useState<boolean>(false);   // held for the key handlers below
   const [usingRealMic, setUsingRealMic] = useState<boolean>(false);
 
   // Sync ambient rotor noise with downlink state

@@ -1,6 +1,6 @@
 import React from 'react';
 import { NetworkTopology } from '../types';
-import { Play, Pause, FastForward, RotateCcw, AlertOctagon, BatteryWarning, WifiOff, Compass, Shield, Radio, Sparkles, Lock, Database, Laptop } from 'lucide-react';
+import { Play, Pause, RotateCcw, AlertOctagon, BatteryWarning, WifiOff, Compass, Shield, Radio, Sparkles, Lock, Database, Laptop } from 'lucide-react';
 import { GroundStationTower } from '../hooks/useSwarmSimulation';
 
 interface FleetControlsProps {

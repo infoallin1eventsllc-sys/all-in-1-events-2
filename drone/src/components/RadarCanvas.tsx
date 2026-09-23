@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { DroneState, Task, NetworkTopology } from '../types';
 import { GroundStationTower, CHARGING_HUBS } from '../hooks/useSwarmSimulation';
-import { Layers, Radio, Eye, Crosshair, Plus, Zap, ShieldAlert } from 'lucide-react';
+import { Layers, Radio, Eye, Crosshair, Plus, ShieldAlert } from 'lucide-react';
 
 interface RadarCanvasProps {
   drones: DroneState[];
@@ -29,7 +29,7 @@ export const RadarCanvas: React.FC<RadarCanvasProps> = ({
   const [showGcsCoverage, setShowGcsCoverage] = useState<boolean>(true);
   const [showFlightCorridors, setShowFlightCorridors] = useState<boolean>(true);
   const [showSafetyBubbles, setShowSafetyBubbles] = useState<boolean>(true);
-  const [showAltitudeHeatmap, setShowAltitudeHeatmap] = useState<boolean>(false);
+  const [showAltitudeHeatmap] = useState<boolean>(false);
   const [clickToSpawnMode, setClickToSpawnMode] = useState<boolean>(false);
 
   // Mouse hover state for coordinate crosshairs

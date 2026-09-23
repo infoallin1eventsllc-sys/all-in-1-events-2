@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { DroneState, DroneStatus } from '../types';
-import { Search, Filter, Battery, Navigation, Radio, ExternalLink } from 'lucide-react';
+import { DroneState} from '../types';
+import { Search, Filter, Battery, Radio, ExternalLink } from 'lucide-react';
 
 interface FleetTableProps {
   drones: DroneState[];

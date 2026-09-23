@@ -1,18 +1,10 @@
 import React, { useState } from 'react';
 import { 
-  ShieldAlert, 
-  FileCheck, 
   Download, 
   CheckCircle2, 
-  AlertTriangle, 
   X, 
-  Layers, 
   FileText, 
-  Scale, 
-  Compass, 
-  Zap,
-  Printer
-} from 'lucide-react';
+  Scale} from 'lucide-react';
 
 interface RegulatoryComplianceModalProps {
   droneCount: number;
@@ -23,8 +15,8 @@ export const RegulatoryComplianceModal: React.FC<RegulatoryComplianceModalProps>
   const [jurisdiction, setJurisdiction] = useState<'FAA_PART_107' | 'EASA_SORA'>('FAA_PART_107');
   const [maxAltitudeAglMeters, setMaxAltitudeAglMeters] = useState<number>(120); // 120m / 400ft AGL
   const [airframeMassKg, setAirframeMassKg] = useState<number>(0.48); // 480g light show drone
-  const [terminalVelocityMs, setTerminalVelocityMs] = useState<number>(16.5);
-  const [containmentMarginMeters, setContainmentMarginMeters] = useState<number>(45);
+  const [terminalVelocityMs] = useState<number>(16.5);
+  const [containmentMarginMeters] = useState<number>(45);
 
   // Kinetic energy calculation: E = 0.5 * m * v^2
   const kineticEnergyJoules = Math.round(0.5 * airframeMassKg * Math.pow(terminalVelocityMs, 2));

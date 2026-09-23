@@ -159,7 +159,6 @@ class Engine {
   private snow: HTMLCanvasElement;
   private videoTex = new WeakMap<HTMLVideoElement, THREE.VideoTexture>();
   private sf: SanFrancisco | null = null;
-  private sfSeen = false;
   private sfRt: THREE.WebGLRenderTarget | null = null;
   private sfDepth: THREE.WebGLRenderTarget | null = null;
   private depthMat = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
@@ -217,7 +216,6 @@ class Engine {
     if (this.slow > 1 / 32 && this.level < LEVELS.length - 1 && this.settled > 90) { this.level++; this.settled = 0; }
     else if (this.slow < 1 / 56 && this.level > 0 && this.settled > 600) { this.level--; this.settled = 0; }
     this.city.update(dt);
-    this.sfSeen = false;
     for (const v of this.views) if (v.world === 'SF' && !v.video) { const sf = this.sfWorld(); sf.update(dt); sf.setDetail(this.level); break; }
     const moved = new Set<string>();
     for (const v of this.views) {
@@ -344,7 +342,7 @@ class Engine {
     const at = time + (seed % 7) * 41;
     sf.applyLook(look, sf.shotAt(at).shot.mood);
     const { sun, fade, mood } = sf.pose(this.cam, at, d.zoom);
-    this.sfSeen = true; void dt;
+    void dt;
     if (!this.sfRt) {
       this.sfRt = new THREE.WebGLRenderTarget(FEED_W, FEED_H, { samples: 4, type: THREE.HalfFloatType });
       this.sfDepth = new THREE.WebGLRenderTarget(FEED_W, FEED_H, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });

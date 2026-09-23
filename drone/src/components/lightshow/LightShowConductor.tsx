@@ -3,18 +3,9 @@ import {
   Play, 
   Pause, 
   RotateCcw, 
-  FastForward, 
   AlertOctagon, 
   ShieldCheck, 
-  Sparkles, 
-  Clock, 
-  Radio, 
-  Layers, 
-  Zap, 
-  Sliders,
-  CheckCircle,
-  AlertTriangle
-} from 'lucide-react';
+  Sparkles} from 'lucide-react';
 import { SHOW_FORMATIONS } from '../../data/lightShowFormations';
 import { ShowConductorState } from '../../types/lightShowTypes';
 
@@ -55,8 +46,6 @@ export const LightShowConductor: React.FC<LightShowConductorProps> = ({
     const ms = Math.floor((secs % 1) * 1000);
     return `${String(mins).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
   };
-
-  const progressPct = (conductorState.currentTimeSec / conductorState.totalDurationSec) * 100;
 
   return (
     <div 

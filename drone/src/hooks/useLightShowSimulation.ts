@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { LightShowDrone, ShowConductorState, Vector3D, ColorRGBW } from '../types/lightShowTypes';
+import { LightShowDrone, ShowConductorState, Vector3D} from '../types/lightShowTypes';
 import { SHOW_FORMATIONS, CUE_STARTS, SHOW_TOTAL_SECONDS } from '../data/lightShowFormations';
 
 /** `airborne`: start with the fleet already in the first formation (the Overview hero), not on the pads. */

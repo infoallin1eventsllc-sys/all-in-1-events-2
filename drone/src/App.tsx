@@ -29,17 +29,12 @@ import { useHealth } from './diagnostics/useHealth';
 import { InstallButton } from './dashboards/InstallButton';
 import { OperatorMenu } from './operator/OperatorMenu';
 import { ErrorBoundary } from './dashboards/ErrorBoundary';
-import { recorder } from './record/recorder';
 import { 
   Compass, 
   Layers, 
   Radio, 
   BarChart2, 
   FileText, 
-  ShieldCheck, 
-  Play, 
-  Pause,
-  RotateCcw,
   Sparkles,
   Lock,
   Database,
@@ -96,7 +91,6 @@ export default function App() {
   // A new screen starts at the top, not wherever the last one was scrolled to.
   useEffect(() => { window.scrollTo({ top: 0 }); }, [activeTab]);
   const [showShortcuts, setShowShortcuts] = useState<boolean>(false);
-  const [showEngineering, setShowEngineering] = useState<boolean>(false);
   // Light by default (client-facing); dark for night operations. Persisted per browser.
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     try { return (localStorage.getItem(THEME_KEY) as 'light' | 'dark') || 'light'; } catch { return 'light'; }
@@ -243,7 +237,7 @@ export default function App() {
             </nav>
           ) : (
             <button
-              onClick={() => { setActiveTab('PLATFORM'); setShowEngineering(false); }}
+              onClick={() => setActiveTab('PLATFORM')}
               className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[13px] font-medium text-ink-2 hover:text-ink border border-line"
             >
               <ChevronLeft className="w-4 h-4" />Back
@@ -524,7 +518,7 @@ export default function App() {
         {isPlatform && (
           <PlatformView
             onOpenVertical={setActiveTab}
-            onOpenEngineering={tab => { setShowEngineering(true); setActiveTab(tab); }}
+            onOpenEngineering={tab => setActiveTab(tab)}
             onOpenLab={lab => {
               if (lab === 'SECURITY') setShowSecurityModal(true);
               else if (lab === 'DATABASE') setShowDatabaseModal(true);

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AlertEvent, Task } from '../types';
-import { ShieldCheck, AlertTriangle, AlertOctagon, Info, CheckCircle2, Clock, ListFilter } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, AlertOctagon, Info, CheckCircle2} from 'lucide-react';
 
 interface EventLogPanelProps {
   alerts: AlertEvent[];

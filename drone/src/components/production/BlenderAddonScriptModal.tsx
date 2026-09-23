@@ -4,13 +4,10 @@ import {
   Download, 
   Copy, 
   Check, 
-  Layers, 
   Terminal, 
   Cpu, 
   X,
-  Sparkles,
-  ExternalLink
-} from 'lucide-react';
+  Sparkles} from 'lucide-react';
 
 const BLENDER_ADDON_PYTHON = `"""
 Blender 4.x Drone Light Show Exporter Addon

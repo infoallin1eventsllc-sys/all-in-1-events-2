@@ -1,6 +1,6 @@
 import React from 'react';
 import { DroneState, Task } from '../types';
-import { X, Battery, Radio, Shield, Navigation, AlertTriangle, Compass, CheckCircle2, RotateCcw, Cpu } from 'lucide-react';
+import { X, Battery, Radio, Shield, Navigation, AlertTriangle, CheckCircle2, RotateCcw, Cpu } from 'lucide-react';
 
 interface DroneDetailModalProps {
   drone: DroneState | null;
