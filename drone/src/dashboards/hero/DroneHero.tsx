@@ -164,7 +164,7 @@ export const DroneHero: React.FC<{ className?: string }> = ({ className = '' }) 
     const pmrem = new THREE.PMREMGenerator(renderer);
     scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
     scene.environmentIntensity = 0.55;
-    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 0.5, 120);
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 0.5, 1500);
 
     // Backdrop: deep navy glow falling to black, outside the fog.
     const back = new THREE.Mesh(new THREE.PlaneGeometry(900, 700), new THREE.ShaderMaterial({
