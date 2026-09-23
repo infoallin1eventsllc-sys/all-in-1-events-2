@@ -38,6 +38,7 @@ precision highp float;
 uniform sampler2D tDiffuse; uniform vec2 uvScale; uniform vec2 uvOffset; uniform vec2 uvMax; uniform float uvRot; uniform vec2 texel; uniform vec2 res;
 uniform int mode; uniform float time; uniform float gain; uniform float display;
 uniform float grade; uniform vec2 sunPos; uniform float flare; uniform float warm; uniform float fade;
+uniform sampler2D tDepth; uniform float ao; uniform float camNear; uniform float camFar; uniform mat4 invProj; uniform mat4 proj;
 varying vec2 vUv;
 float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 float lum(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
@@ -51,6 +52,32 @@ vec3 ironbow(float t) {
   return mix(c4, c5, (t - 0.9) / 0.1);
 }
 vec3 tex(vec2 uv) { return texture2D(tDiffuse, clamp(uv, texel * 0.5, uvMax - texel * 0.5)).rgb; }
+// Screen-space ambient occlusion from the depth buffer: contact shadow where buildings meet the street and each other.
+const vec4 UnpackFactors = (255.0 / 256.0) / vec4(256.0 * 256.0 * 256.0, 256.0 * 256.0, 256.0, 1.0);
+vec3 viewPos(vec2 uv) {
+  float d = dot(texture2D(tDepth, clamp(uv, texel * 0.5, uvMax - texel * 0.5)), UnpackFactors);
+  vec4 c = invProj * vec4(uv / uvMax * 2.0 - 1.0, d * 2.0 - 1.0, 1.0);
+  return c.xyz / c.w;
+}
+float occlusion(vec2 uv) {
+  vec3 p = viewPos(uv);
+  if (-p.z > camFar * 0.6) return 0.0;
+  vec3 n = normalize(cross(dFdx(p), dFdy(p)));
+  float r = 14.0;                                        // metres
+  float ang = hash(floor(vUv * res * 0.5)) * 6.2832, occ = 0.0;   // a fixed pattern: no shimmer between frames
+  vec3 t = normalize(cross(n, abs(n.y) < 0.9 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0))), b = cross(n, t);
+  for (int i = 0; i < 12; i++) {
+    float a = ang + float(i) * 0.5236, k = (float(i) + 0.5) / 12.0;
+    float rr = r * sqrt(k);
+    vec3 s = p + (t * cos(a) + b * sin(a)) * rr * 0.85 + n * rr * (0.35 + 0.4 * k);
+    vec4 q = proj * vec4(s, 1.0); vec2 suv = (q.xy / q.w * 0.5 + 0.5) * uvMax;
+    if (suv.x < 0.0 || suv.x > uvMax.x || suv.y < 0.0 || suv.y > uvMax.y) continue;
+    float sz = viewPos(suv).z;
+    float dz = sz - s.z;                                  // > 0: the scene is in front of the sample
+    occ += step(0.4, dz) * smoothstep(r * 3.0, 0.0, dz);
+  }
+  return occ / 12.0;
+}
 void main() {
   // The view: a window of the source (offset, scale), turned about its centre by uvRot (the camera's roll).
   vec2 pr = vUv - 0.5; float asp = res.x / res.y;
@@ -63,6 +90,7 @@ void main() {
   vec3 col;
   if (mode <= 1) {
     vec3 c = tex(uv) * gain;
+    if (ao > 0.5) c *= 1.0 - occlusion(uv) * 0.6;
     vec3 bl = (tex(uv + dx) + tex(uv - dx) + tex(uv + dy) + tex(uv - dy)) * 0.25 * gain;
     c = max(c + (c - bl) * 0.45, 0.0);           // the camera's own sharpening
     c = display > 0.5 ? clamp(c, 0.0, 1.0) : pow(aces(c), vec3(1.0 / 2.2));
@@ -88,10 +116,10 @@ void main() {
         float ghost = exp(-length(gd) * 28.0) * 0.6 + exp(-length(gd * 0.5) * 30.0) * 0.25;
         c += vis * (streak * 0.3 * vec3(1.0, 0.72, 0.5) + halo * 0.22 * vec3(1.0, 0.8, 0.6) + ghost * 0.3 * vec3(0.45, 0.75, 1.0));
       }
-      c += n * (0.012 + 0.02 * g);
+      c += n * 0.004;                                  // a whisper of grain, no more: the picture stays clean
       col = c * mix(1.0, vig, 0.35 + 0.35 * g) * fade;
     } else {
-      c += n * (mode == 0 ? 0.014 : 0.06);
+      c += n * (mode == 0 ? 0.005 : 0.03);
       col = c * mix(1.0, vig, 0.55);
     }
   } else if (mode <= 3) {
@@ -132,6 +160,9 @@ class Engine {
   private videoTex = new WeakMap<HTMLVideoElement, THREE.VideoTexture>();
   private sf: SanFrancisco | null = null;
   private sfSeen = false;
+  private sfRt: THREE.WebGLRenderTarget | null = null;
+  private sfDepth: THREE.WebGLRenderTarget | null = null;
+  private depthMat = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
   private raf = 0; private last = 0; private frame = 0;
   private level = 0; private slow = 1 / 60; private settled = 0;
 
@@ -157,6 +188,7 @@ class Engine {
         tDiffuse: { value: this.rt.texture }, uvScale: { value: new THREE.Vector2(1, 1) }, uvOffset: { value: new THREE.Vector2(0, 0) }, uvMax: { value: new THREE.Vector2(1, 1) }, uvRot: { value: 0 }, texel: { value: new THREE.Vector2(1 / FEED_W, 1 / FEED_H) },
         res: { value: new THREE.Vector2(FEED_W, FEED_H) }, mode: { value: 0 }, time: { value: 0 }, gain: { value: 1 }, display: { value: 0 },
         grade: { value: 0 }, sunPos: { value: new THREE.Vector2(-10, -10) }, flare: { value: 0 }, warm: { value: 0 }, fade: { value: 1 },
+        tDepth: { value: null }, ao: { value: 0 }, camNear: { value: 1 }, camFar: { value: 900 }, invProj: { value: new THREE.Matrix4() }, proj: { value: new THREE.Matrix4() },
       },
     });
     this.postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.post));
@@ -227,7 +259,7 @@ class Engine {
     const look: Look = thermal ? (night ? 'IR_NIGHT' : 'IR_DAY') : night ? 'NIGHT' : 'DAY';
 
     // Camera: the gimbal's pitch and the airframe's heading, with a little stabiliser residual.
-    const shake = 0.0016;
+    const shake = 0.0003;                                  // a gimbal's residual, barely there
     const hd = (d.headingDeg * Math.PI) / 180 + Math.sin(time * 2.3 + p.x) * shake;
     const pitch = (Math.min(89, Math.max(4, -d.gimbalPitchDeg)) * Math.PI) / 180 + Math.sin(time * 3.1) * shake;
     const alt = Math.max(3, d.altM);
@@ -313,10 +345,30 @@ class Engine {
     sf.applyLook(look, sf.shotAt(at).shot.mood);
     const { sun, fade, mood } = sf.pose(this.cam, at, d.zoom);
     this.sfSeen = true; void dt;
-    this.rt.viewport.set(0, 0, w, h);
-    this.renderer.setRenderTarget(this.rt);
+    if (!this.sfRt) {
+      this.sfRt = new THREE.WebGLRenderTarget(FEED_W, FEED_H, { samples: 4, type: THREE.HalfFloatType });
+      this.sfDepth = new THREE.WebGLRenderTarget(FEED_W, FEED_H, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
+    }
+    // Depth prepass for the ambient occlusion: solid geometry only, at half resolution.
+    if (!v.compact) {
+      sf.solidOnly(true);
+      sf.scene.overrideMaterial = this.depthMat;
+      this.sfDepth!.viewport.set(0, 0, w, h);
+      this.renderer.setRenderTarget(this.sfDepth);
+      this.renderer.setClearColor(0xffffff, 1);
+      this.renderer.clear();
+      this.renderer.render(sf.scene, this.cam);
+      sf.scene.overrideMaterial = null;
+      sf.solidOnly(false);
+    }
+    this.sfRt.viewport.set(0, 0, w, h);
+    this.renderer.setRenderTarget(this.sfRt);
+    this.renderer.setClearColor(0x000000, 1);
     this.renderer.render(sf.scene, this.cam);
     const u = this.post.uniforms;
+    u.tDiffuse.value = this.sfRt.texture; u.tDepth.value = this.sfDepth!.texture;
+    u.ao.value = v.compact ? 0 : 1; u.camNear.value = this.cam.near; u.camFar.value = this.cam.far;
+    u.invProj.value.copy(this.cam.projectionMatrixInverse); u.proj.value.copy(this.cam.projectionMatrix);
     u.uvScale.value.set(w / FEED_W, h / FEED_H); u.uvMax.value.copy(u.uvScale.value); u.uvOffset.value.set(0, 0); u.uvRot.value = 0;
     u.res.value.set(w, h);
     u.time.value = time;
@@ -330,6 +382,7 @@ class Engine {
     this.renderer.setRenderTarget(null);
     this.renderer.setViewport(0, 0, w, h);
     this.renderer.render(this.postScene, this.postCam);
+    u.tDiffuse.value = this.rt.texture; u.ao.value = 0;
     const ctx = v.canvas.getContext('2d');
     if (ctx) ctx.drawImage(this.renderer.domElement, 0, FEED_H - h, w, h, 0, 0, v.canvas.width, v.canvas.height);
     if (v.onLock) v.onLock(d.tasks.autoTrack || d.tasks.survivorDetect || thermal ? this.lock(v, { x: this.cam.position.x, z: this.cam.position.z }, sf) : null);

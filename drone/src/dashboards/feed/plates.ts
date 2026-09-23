@@ -86,7 +86,7 @@ class Plates {
     let sw = z, sh = z;
     if (aspect > imgAspect) sh = (z * imgAspect) / aspect; else sw = (z * aspect) / imgAspect;
     // Stabiliser residual: a slow, small wander, as a gimbal leaves in real footage.
-    const wob = 0.0016 * z;
+    const wob = 0.0003 * z;
     let cx = cx0 + (cx1 - cx0) * e + Math.sin(time * 0.71 + i) * wob, cy = cy0 + (cy1 - cy0) * e + Math.sin(time * 0.53 + i * 2.1) * wob;
     // Keep the view (with room for its roll) inside the still.
     const roll = s.move.roll ? s.move.roll[0] + (s.move.roll[1] - s.move.roll[0]) * e : 0;

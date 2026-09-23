@@ -61,11 +61,27 @@ function landMask(x: number, z: number) {
   for (const [cx, cz, r, h] of ISLANDS) isl = Math.max(isl, sstep(0.25, 0.6, gauss(x, z, cx, cz, r, h) / h));
   return Math.max(city, marin, isl);
 }
+const vhash = (x: number, z: number) => { const v = Math.sin(x * 127.1 + z * 311.7) * 43758.5453; return v - Math.floor(v); };
+function vnoise(x: number, z: number) {
+  const ix = Math.floor(x), iz = Math.floor(z), fx = x - ix, fz = z - iz, ux = fx * fx * (3 - 2 * fx), uz = fz * fz * (3 - 2 * fz);
+  const a = vhash(ix, iz), b = vhash(ix + 1, iz), c = vhash(ix, iz + 1), d = vhash(ix + 1, iz + 1);
+  return a + (b - a) * ux + (c - a) * uz + (a - b - c + d) * ux * uz;
+}
+/** Ridges and gullies on the open hills: ridged noise, three octaves, folded so the crests are sharp. */
+function relief(x: number, z: number) {
+  let r = 0, amp = 1, f = 1 / 520;
+  for (let o = 0; o < 3; o++) { r += amp * (1 - Math.abs(vnoise(x * f + 7.3, z * f + 2.1) * 2 - 1)); amp *= 0.5; f *= 2.1; }
+  return r / 1.75;
+}
 export function sfHeight(x: number, z: number) {
   let h = 0;
   for (const g of HILLS) h += gauss(x, z, ...g);
   for (const g of MARIN) h += gauss(x, z, ...g);
   for (const g of ISLANDS) h += gauss(x, z, ...g);
+  // The city sits on the smooth hills; outside the street grid the land is rougher, more so the higher it is.
+  const open = 1 - sstep(-2900, -2500, x) * sstep(-1700, -1400, z) * (1 - sstep(400, 700, z)) * (1 - sstep(400, 700, x));
+  const shore = landMask(x, z);
+  h += open * relief(x, z) * (4 + h * 0.06) * shore * shore;
   return landMask(x, z) * (4 + h);
 }
 
@@ -142,6 +158,12 @@ export class SanFrancisco {
           vec3 sunC = pick(vec3(1.0, 0.98, 0.94), vec3(1.0, 0.6, 0.3), vec3(0.5, 0.55, 0.8));
           float glow = pick(vec3(pow(s, 300.0) * 2.0 + pow(s, 10.0) * 0.05), vec3(pow(s, 6.0) * 0.12 + pow(s, 120.0) * 1.2), vec3(pow(s, 40.0) * 0.1)).x;
           col += sunC * glow;
+          // Thin cirrus high in the day sky, streaked with the wind.
+          float day = 1.0 - clamp(mood, 0.0, 1.0);
+          vec2 cp = vec2(d.x / max(d.y, 0.08), d.z / max(d.y, 0.08));
+          float cir = 0.0; { vec2 p = cp * 0.9 + vec2(11.0, 3.0); float amp = 0.5; for (int i = 0; i < 4; i++) { cir += amp * (hash(floor(p * vec2(6.0, 1.3))) ); p = p * 2.1 + 3.7; amp *= 0.5; } }
+          cir = smoothstep(0.62, 0.9, cir) * smoothstep(0.03, 0.25, d.y) * (1.0 - smoothstep(0.5, 0.9, d.y));
+          col = mix(col, vec3(0.92, 0.94, 0.97), cir * 0.55 * day);
           float b = clamp(mood - 1.0, 0.0, 1.0);
           float star = step(0.9985, hash(floor(d.xz * 900.0 / max(d.y, 0.05)))) * y * b;
           col += star * 0.6;
@@ -337,6 +359,7 @@ export class SanFrancisco {
           if (hr() < 0.04) continue;                                                  // a gap: a driveway or a garden
           const px = sx + dx * (k + 0.5) * LOT, pz = sz + dz * (k + 0.5) * LOT;
           if (landMask(px, pz) < 0.97 || landMask(px + dz * 20, pz - dx * 20) < 0.97 || marketDist(px, pz) < 30) continue;
+          if (px > -1175 && px < -985 && pz > -1162 && pz < -1103) continue;      // Lombard's block: the switchbacks and their beds
           const d = 17 + hr() * 7, floors = hr() < 0.18 ? 2 : hr() < 0.7 ? 3 : 4;
           let base = Infinity; for (const [ox, oz] of [[0, 0], [dz * 3.5, -dx * 3.5], [-dz * 3.5, dx * 3.5]]) base = Math.min(base, sfHeight(px + ox, pz + oz));
           lots.push({ x: px, z: pz, ry, w: LOT - 0.05, d, h: floors * 3.3 + 1.4 + (sfHeight(px, pz) - base), base: base - 0.6, c: PALETTE[Math.floor(hr() * PALETTE.length)], bay: hr() < 0.85 });
@@ -360,7 +383,10 @@ export class SanFrancisco {
         bays.setMatrixAt(bi, m4.compose(p3, q, sc)); bays.setColorAt(bi, col.set(l.c)); bi++;
       }
     });
-    for (const m of [houses, bays]) { m.castShadow = m.receiveShadow = true; this.scene.add(m); this.irSwap.push({ mesh: m, eo: m.material as unknown as THREE.Material, ir: new THREE.MeshLambertMaterial({ color: 0x8c8c8c }) }); }
+    // Cornices: a white ledge across the top of every front, throwing its own shadow line.
+    const cornices = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0.5), new THREE.MeshStandardMaterial({ color: 0xf2efe8, roughness: 0.8 }), lots.length);
+    lots.forEach((l, i) => { q.setFromAxisAngle(up, l.ry); p3.set(l.x, l.base + l.h - 0.9, l.z); sc.set(l.w + 0.3, 0.9, 0.9); cornices.setMatrixAt(i, m4.compose(p3, q, sc)); });
+    for (const m of [houses, bays, cornices]) { m.castShadow = m.receiveShadow = true; this.scene.add(m); this.irSwap.push({ mesh: m, eo: m.material as unknown as THREE.Material, ir: new THREE.MeshLambertMaterial({ color: 0x8c8c8c }) }); }
 
     // Trees on the hills and in the Presidio and Marin.
     const treeGeo = new THREE.IcosahedronGeometry(1, 1).scale(4, 2.2, 4).translate(0, 1.2, 0);     // low rounded scrub and cypress clumps
@@ -374,7 +400,7 @@ export class SanFrancisco {
       treesAt.push([x, z]);
     }
     const tm = new THREE.InstancedMesh(treeGeo, treeMat, treesAt.length); tm.castShadow = true;
-    treesAt.forEach(([x, z], i) => { p3.set(x, sfHeight(x, z) - 1.2, z); const k = 0.8 + tr() * 2.2; sc.set(k * (0.7 + tr() * 0.8), k * (0.5 + tr() * 0.7), k * (0.7 + tr() * 0.8)); q.setFromAxisAngle(up, tr() * 6.28); tm.setMatrixAt(i, m4.compose(p3, q, sc)); tm.setColorAt(i, col.setRGB(0.16 + tr() * 0.08, 0.22 + tr() * 0.08, 0.12 + tr() * 0.05, THREE.SRGBColorSpace)); });
+    treesAt.forEach(([x, z], i) => { p3.set(x, sfHeight(x, z) - 1.2, z); const k = 0.6 + tr() * 1.3; sc.set(k * (0.7 + tr() * 0.8), k * (0.5 + tr() * 0.7), k * (0.7 + tr() * 0.8)); q.setFromAxisAngle(up, tr() * 6.28); tm.setMatrixAt(i, m4.compose(p3, q, sc)); tm.setColorAt(i, col.setRGB(0.24 + tr() * 0.1, 0.3 + tr() * 0.1, 0.16 + tr() * 0.06, THREE.SRGBColorSpace)); });
     this.scene.add(tm);
     this.irSwap.push({ mesh: tm, eo: treeMat, ir: new THREE.MeshLambertMaterial({ color: 0x5a5a5a }) });
 
@@ -409,7 +435,7 @@ export class SanFrancisco {
     // The Embarcadero's palm-lined light strip and the far shores.
     for (let z = 400; z > -1500; z -= 18) { const x = shoreX(z) - 14; lamp(x, z, 0.6); }
     for (let x = -1500; x > -3400; x -= 22) lamp(x, shoreZ(x) + 40, 0.9);
-    for (let i = 0; i < 900; i++) { const x = -1700 - lr() * 3200, z = -2950 - lr() * 1800; if (landMask(x, z) > 0.95) lamp(x, z, 0.9); }
+    for (let i = 0; i < 260; i++) { const x = -2300 - lr() * 900, z = -2960 - lr() * 260; if (landMask(x, z) > 0.95 && sfHeight(x, z) < 40) lamp(x, z, 0.9); }
     const lg = new THREE.BufferGeometry();
     lg.setAttribute('position', new THREE.Float32BufferAttribute(lp, 3)); lg.setAttribute('color', new THREE.Float32BufferAttribute(lc, 3));
     this.lightMat = new THREE.PointsMaterial({ map: glow, size: 9, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true, opacity: 0.9 });
@@ -446,6 +472,28 @@ export class SanFrancisco {
         float n2(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h2(i), h2(i + vec2(1, 0)), f.x), mix(h2(i + vec2(0, 1)), h2(i + vec2(1, 1)), f.x), f.y); }
         float fbm(vec2 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 4; i++) { s += a * n2(p); p = p * 2.03 + vec2(1.7, 9.2); a *= 0.5; } return s; }
         float band(float y, float lo, float hi, float soft){ return smoothstep(lo, lo + soft, y) * (1.0 - smoothstep(hi - soft, hi, y)); }
+        // The lie of the land under the fog (the same hills as sfHeight, without the fine relief).
+        float ground(vec2 p){
+          float gh = 0.0;
+          gh += 95.0 * exp(-((p.x - (-800.0)) * (p.x - (-800.0)) + (p.y - (-750.0)) * (p.y - (-750.0))) / (380.0 * 380.0));
+          gh += 85.0 * exp(-((p.x - (-1150.0)) * (p.x - (-1150.0)) + (p.y - (-1200.0)) * (p.y - (-1200.0))) / (320.0 * 320.0));
+          gh += 78.0 * exp(-((p.x - (-450.0)) * (p.x - (-450.0)) + (p.y - (-1250.0)) * (p.y - (-1250.0))) / (180.0 * 180.0));
+          gh += 110.0 * exp(-((p.x - (-2100.0)) * (p.x - (-2100.0)) + (p.y - (-900.0)) * (p.y - (-900.0))) / (700.0 * 700.0));
+          gh += 270.0 * exp(-((p.x - (-3000.0)) * (p.x - (-3000.0)) + (p.y - (900.0)) * (p.y - (900.0))) / (800.0 * 800.0));
+          gh += 80.0 * exp(-((p.x - (-400.0)) * (p.x - (-400.0)) + (p.y - (1500.0)) * (p.y - (1500.0))) / (500.0 * 500.0));
+          gh += 70.0 * exp(-((p.x - (-1800.0)) * (p.x - (-1800.0)) + (p.y - (300.0)) * (p.y - (300.0))) / (500.0 * 500.0));
+          gh += 200.0 * exp(-((p.x - (-3400.0)) * (p.x - (-3400.0)) + (p.y - (-4000.0)) * (p.y - (-4000.0))) / (1300.0 * 1300.0));
+          gh += 170.0 * exp(-((p.x - (-4700.0)) * (p.x - (-4700.0)) + (p.y - (-3500.0)) * (p.y - (-3500.0))) / (1000.0 * 1000.0));
+          gh += 150.0 * exp(-((p.x - (-2500.0)) * (p.x - (-2500.0)) + (p.y - (-4400.0)) * (p.y - (-4400.0))) / (900.0 * 900.0));
+          gh += 190.0 * exp(-((p.x - (-5600.0)) * (p.x - (-5600.0)) + (p.y - (-4200.0)) * (p.y - (-4200.0))) / (1200.0 * 1200.0));
+          gh += 26.0 * exp(-((p.x - (-900.0)) * (p.x - (-900.0)) + (p.y - (-2600.0)) * (p.y - (-2600.0))) / (150.0 * 150.0));
+          gh += 90.0 * exp(-((p.x - (-1900.0)) * (p.x - (-1900.0)) + (p.y - (-4000.0)) * (p.y - (-4000.0))) / (520.0 * 520.0));
+          gh += 90.0 * exp(-((p.x - (2000.0)) * (p.x - (2000.0)) + (p.y - (-430.0)) * (p.y - (-430.0))) / (260.0 * 260.0));
+          float city = smoothstep(-40.0, 80.0, min(350.0 + 0.18 * p.y - p.x, p.y - (-1450.0 + 0.1 * p.x)));
+          float marin = smoothstep(0.0, 220.0, -2900.0 - p.y) * smoothstep(-1800.0, -2600.0, p.x);
+          float land = max(city, marin);
+          return land * (4.0 + gh);
+        }
         void main(){
           vec2 wind = vec2(time * 6.0, time * 1.5);
           float y = vW.y;
@@ -453,17 +501,18 @@ export class SanFrancisco {
           float gate = smoothstep(-1500.0, -2800.0, vW.x) * smoothstep(-1300.0, -2000.0, vW.z) * smoothstep(-3900.0, -3100.0, vW.z);
           gate *= band(y, 8.0, 150.0 - 60.0 * smoothstep(-3000.0, -1800.0, vW.x), 40.0);
           // The marine layer over downtown, by day only.
-          float marine = smoothstep(-1100.0, -500.0, vW.x) * smoothstep(900.0, 400.0, vW.x) * smoothstep(-1300.0, -700.0, vW.z) * smoothstep(900.0, 300.0, vW.z);
+          float marine = smoothstep(-700.0, -300.0, vW.x) * smoothstep(900.0, 400.0, vW.x) * smoothstep(-1300.0, -700.0, vW.z) * smoothstep(900.0, 300.0, vW.z);
           marine *= band(y, 140.0, 215.0, 25.0) * step(mood, 0.5);
           float n = fbm((vW.xz + wind) * 0.0032 + y * 0.004);
           float d = gate * smoothstep(0.38, 0.72, n) + marine * smoothstep(0.52, 0.8, n) * 0.8;
           // Distance softens every slice into the haze; up close it thins so the camera passes through.
           float dist = length(vW - cameraPosition);
           d *= smoothstep(20.0, 160.0, dist);
+          d *= smoothstep(0.0, 45.0, y - ground(vW.xz));                // fog lies on the land, never cut by it
           float a = clamp(d * 0.22, 0.0, 0.5);
           // Lit from the sun on top, cooler in the body.
           float top = smoothstep(0.45, 0.85, n);
-          float bright = mood < 0.5 ? 1.55 : (mood < 1.5 ? 1.15 : 0.55);
+          float bright = mood < 0.5 ? 1.9 : (mood < 1.5 ? 1.2 : 0.55);
           vec3 lit = fogCol * bright * (0.85 + 0.35 * top * clamp(sunDir.y * 2.0 + 0.3, 0.0, 1.0));
           gl_FragColor = vec4(lit, a);
           #include <colorspace_fragment>
@@ -479,16 +528,32 @@ export class SanFrancisco {
     // A container ship making for the Gate, a speedboat on the Bay with its wake, the Wharf's Ferris wheel.
     this.ship = new THREE.Group();
     {
-      const hull = new THREE.Mesh(new THREE.BoxGeometry(300, 18, 42).translate(0, 9, 0), new THREE.MeshLambertMaterial({ color: 0x1f5a3a }));
-      const bow = new THREE.Mesh(new THREE.ConeGeometry(21, 40, 4).rotateZ(-Math.PI / 2).rotateX(Math.PI / 4).scale(1, 0.45, 1).translate(170, 9, 0), hull.material);
-      const house = new THREE.Mesh(new THREE.BoxGeometry(22, 30, 36).translate(-120, 33, 0), new THREE.MeshLambertMaterial({ color: 0xe8e8e4 }));
-      this.ship.add(hull, bow, house);
-      const cr = mulberry(21), cols = [0x2a6f4e, 0xb03a2e, 0x2b4f8f, 0xc9963a, 0x7a7d82, 0x1f5a3a];
-      for (let r = -3; r <= 2; r++) for (let c = 0; c < 4; c++) for (let l = 0; l < 3; l++) {
-        if (cr() < 0.15) continue;
-        const box = new THREE.Mesh(new THREE.BoxGeometry(38, 8, 9), new THREE.MeshLambertMaterial({ color: cols[Math.floor(cr() * cols.length)] }));
-        box.position.set(-100 + r * 42, 22 + l * 8.5, -15 + c * 10); this.ship.add(box);
+      // Hull: a plan-view outline (fine bow, square stern) extruded, with a dark boot top and a red underbody line.
+      const outline = new THREE.Shape();
+      outline.moveTo(-150, -21); outline.lineTo(110, -21); outline.quadraticCurveTo(160, -16, 178, 0); outline.quadraticCurveTo(160, 16, 110, 21); outline.lineTo(-150, 21); outline.lineTo(-150, -21);
+      const hullGeo = new THREE.ExtrudeGeometry(outline, { depth: 18, bevelEnabled: false }).rotateX(-Math.PI / 2).translate(0, 0, 0);
+      const hull = new THREE.Mesh(hullGeo, new THREE.MeshStandardMaterial({ color: 0x1f5a3a, roughness: 0.6, metalness: 0.2 }));
+      const boot = new THREE.Mesh(new THREE.ExtrudeGeometry(outline, { depth: 2.2, bevelEnabled: false }).rotateX(-Math.PI / 2).scale(1.004, 1, 1.02), new THREE.MeshStandardMaterial({ color: 0x8a2a24, roughness: 0.8 }));
+      boot.position.y = -1;
+      const deckTop = new THREE.Mesh(new THREE.ExtrudeGeometry(outline, { depth: 0.6, bevelEnabled: false }).rotateX(-Math.PI / 2).scale(0.99, 1, 0.94), new THREE.MeshStandardMaterial({ color: 0x9a3b30, roughness: 0.9 }));
+      deckTop.position.y = 18;
+      const house = new THREE.Mesh(new THREE.BoxGeometry(20, 30, 38).translate(-122, 33, 0), new THREE.MeshStandardMaterial({ color: 0xe8e8e4, roughness: 0.6, emissive: 0xffe0b0, emissiveIntensity: 0.15 }));
+      const bridgeWing = new THREE.Mesh(new THREE.BoxGeometry(12, 4, 48).translate(-122, 46, 0), house.material);
+      const funnel = new THREE.Mesh(new THREE.BoxGeometry(9, 14, 7).translate(-140, 30, 0), new THREE.MeshStandardMaterial({ color: 0x2a6f4e, roughness: 0.7 }));
+      const bowWave = new THREE.Mesh(new THREE.PlaneGeometry(60, 30).rotateX(-Math.PI / 2).translate(165, 0.5, 0), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, depthWrite: false }));
+      const wakeS = new THREE.Mesh(new THREE.PlaneGeometry(420, 60).rotateX(-Math.PI / 2).translate(-350, 0.4, 0), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.18, depthWrite: false }));
+      this.ship.add(hull, boot, deckTop, house, bridgeWing, funnel, bowWave, wakeS);
+      for (const m of [hull, house, bridgeWing, funnel]) m.castShadow = m.receiveShadow = true;
+      const cr = mulberry(21), cols = [0x2a6f4e, 0xb03a2e, 0x2b4f8f, 0xc9963a, 0x7a7d82, 0x1f5a3a, 0xd8d8d4, 0x8a4a2a];
+      const boxG = new THREE.BoxGeometry(12, 2.6, 2.4), boxM = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7, metalness: 0.15 });
+      const stacks = new THREE.InstancedMesh(boxG, boxM, 7 * 20 * 6);
+      const m4s = new THREE.Matrix4(), qs = new THREE.Quaternion(), ss = new THREE.Vector3(1, 1, 1), ps = new THREE.Vector3(), cs = new THREE.Color();
+      let n = 0;
+      for (let bay = 0; bay < 20; bay++) for (let row = 0; row < 7; row++) {
+        const tiers = 2 + Math.floor(cr() * 5);
+        for (let t = 0; t < tiers; t++) { ps.set(-100 + bay * 12.4, 19.5 + t * 2.7, -15 + row * 5); stacks.setMatrixAt(n, m4s.compose(ps, qs, ss)); stacks.setColorAt(n, cs.set(cols[Math.floor(cr() * cols.length)])); n++; }
       }
+      stacks.count = n; stacks.castShadow = stacks.receiveShadow = true; this.ship.add(stacks);
       this.scene.add(this.ship);
     }
     this.boat = new THREE.Group();
@@ -534,6 +599,68 @@ export class SanFrancisco {
       this.scene.add(arena, roof);
     }
 
+    // Lombard Street: the brick switchbacks down Russian Hill, hedged and planted, with cars picking their way down.
+    {
+      const road = new Geo(), beds = new Geo();
+      const pts: [number, number][] = [];
+      for (let i = 0; i <= 8; i++) pts.push([-1160 + i * 20, i % 2 ? -1112 : -1150]);
+      for (let i = 0; i + 1 < pts.length; i++) {
+        const [ax, az] = pts[i], [bx, bz] = pts[i + 1], n = 12;
+        for (let k = 0; k < n; k++) {
+          const x0 = ax + ((bx - ax) * k) / n, z0 = az + ((bz - az) * k) / n, x1 = ax + ((bx - ax) * (k + 1)) / n, z1 = az + ((bz - az) * (k + 1)) / n;
+          const dx = x1 - x0, dz = z1 - z0, l = Math.hypot(dx, dz), nx = -dz / l * 3.2, nz = dx / l * 3.2;
+          const y0 = sfHeight(x0, z0) + 0.3, y1 = sfHeight(x1, z1) + 0.3;
+          road.quad([x0 - nx, y0, z0 - nz], [x1 - x0, y1 - y0, z1 - z0], [nx * 2, 0, nz * 2], [0, 0, 1, 0, 1, 1, 0, 1], [0.26, 0.13, 0.09]);
+        }
+      }
+      for (let i = 0; i < 8; i++) {
+        const x0 = -1160 + i * 20 + 5, z0 = -1144, y = sfHeight(x0 + 4, z0 + 13);
+        beds.box(x0, z0, x0 + 9, z0 + 26, y - 1.5, y + 1.1, [0.09, 0.19, 0.08]);
+        for (let k = 0; k < 5; k++) { const fx = x0 + 1 + (k * 1.7) % 7, fz = z0 + 2 + k * 4.6; beds.box(fx, fz, fx + 1.4, fz + 1.4, y + 1.1, y + 1.5, i % 2 ? [0.55, 0.22, 0.36] : [0.6, 0.42, 0.55]); }
+      }
+      const roadMesh = new THREE.Mesh(road.geometry(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, side: THREE.DoubleSide })); roadMesh.receiveShadow = true;
+      const bedMesh = new THREE.Mesh(beds.geometry(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 })); bedMesh.castShadow = bedMesh.receiveShadow = true;
+      this.scene.add(roadMesh, bedMesh);
+      this.carPaths.push({ pts: pts.map(([x, z]) => new THREE.Vector3(x, sfHeight(x, z) + 0.9, z)), len: pts.reduce((a, p, i) => i ? a + Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]) : 0, 0) });
+    }
+
+    // Parked cars and street trees along the hill streets: what a drone sees from above a neighbourhood.
+    {
+      const pr = mulberry(23);
+      const carColors = [0xe8e8e6, 0xd0d2d6, 0x2a2b2e, 0x8a8d92, 0x9b2c2c, 0x2c4a8a, 0x5a5e63, 0xf2f2f0, 0x3a3a3c, 0xb8bcc2];
+      const spots: { x: number; z: number; ry: number; c: number }[] = [], treesXZ: [number, number][] = [];
+      for (let bx = -24; bx <= 2; bx++) for (let bz = -14; bz <= 12; bz++) {
+        const X = bx * BLOCK, Z = bz * BLOCK, cx = X + BLOCK / 2, cz = Z + BLOCK / 2;
+        if (inDowntown(cx, cz) || landMask(cx, cz) < 0.5) continue;
+        if (Math.hypot(cx - 380, cz - 750) < 220 || Math.hypot(cx - 430, cz - 1150) < 160 || Math.hypot(cx + 450, cz + 1250) < 120) continue;
+        for (let s = 6; s < BLOCK - 6; s += 8) {
+          for (const [x, z, ry] of [[X + s, Z + 8.5, Math.PI / 2], [X + s, Z + BLOCK - 8.5, Math.PI / 2], [X + 8.5, Z + s, 0], [X + BLOCK - 8.5, Z + s, 0]] as [number, number, number][]) {
+            if (landMask(x, z) < 0.97 || marketDist(x, z) < 20) continue;
+            if (pr() < 0.42) spots.push({ x, z, ry, c: carColors[Math.floor(pr() * carColors.length)] });
+          }
+        }
+        for (let s = 14; s < BLOCK - 10; s += 22) {
+          for (const [x, z] of [[X + s, Z + 11.2], [X + s, Z + BLOCK - 11.2], [X + 11.2, Z + s], [X + BLOCK - 11.2, Z + s]] as [number, number][]) {
+            if (landMask(x, z) < 0.97 || marketDist(x, z) < 20 || pr() > 0.45) continue;
+            treesXZ.push([x, z]);
+          }
+        }
+      }
+      const carG = new THREE.BoxGeometry(4.4, 1.45, 1.8).translate(0, 0.72, 0);
+      const carM = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35, metalness: 0.4 });
+      const parked = new THREE.InstancedMesh(carG, carM, spots.length);
+      const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(1, 1, 1), p3 = new THREE.Vector3(), col = new THREE.Color(), up = new THREE.Vector3(0, 1, 0);
+      spots.forEach((c, i) => { q.setFromAxisAngle(up, c.ry); p3.set(c.x, sfHeight(c.x, c.z) - 0.2, c.z); parked.setMatrixAt(i, m4.compose(p3, q, sc)); parked.setColorAt(i, col.set(c.c)); });
+      parked.castShadow = true; this.scene.add(parked);
+      this.irSwap.push({ mesh: parked, eo: carM, ir: new THREE.MeshLambertMaterial({ color: 0xb0b0b0 }) });
+      const stG = mergeGeometries([new THREE.CylinderGeometry(0.18, 0.22, 3.2, 5).translate(0, 1.6, 0).toNonIndexed(), new THREE.IcosahedronGeometry(2.6, 1).scale(1, 0.9, 1).translate(0, 4.6, 0)])!;
+      const stM = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 });
+      const st = new THREE.InstancedMesh(stG, stM, treesXZ.length);
+      treesXZ.forEach(([x, z], i) => { p3.set(x, sfHeight(x, z) - 0.3, z); sc.setScalar(0.8 + pr() * 0.5); q.setFromAxisAngle(up, pr() * 6.28); st.setMatrixAt(i, m4.compose(p3, q, sc)); st.setColorAt(i, col.setRGB(0.18 + pr() * 0.1, 0.3 + pr() * 0.12, 0.12 + pr() * 0.06, THREE.SRGBColorSpace)); });
+      st.castShadow = true; this.scene.add(st);
+      this.irSwap.push({ mesh: st, eo: stM, ir: new THREE.MeshLambertMaterial({ color: 0x5a5a5a }) });
+    }
+
     this.shots = SanFrancisco.shotList();
     this.total = this.shots.reduce((a, sh) => a + sh.dur, 0);
 
@@ -565,7 +692,7 @@ export class SanFrancisco {
       { dur: 8, mood: 'GOLDEN', fov: 16, pose: (t, u, o, w) => { const s = w.ship.position; o.pos.set(s.x + 950, 300, s.z + 520); o.look.set(s.x - u * 120, 15, s.z); } },              // the container ship in the fog, long lens
       { dur: 8, mood: 'GOLDEN', fov: 34, pose: orbit(GG_S, 330, 300, 210, 190, 2.4, 3.9, 150) },                                                                                         // round the south tower
       { dur: 5, mood: 'GOLDEN', fov: 34, pose: (t, u, o) => { const p = lerp(GG_S, GG_MID, 0.3 + u * 0.4); o.pos.set(p.x, 240, p.z); o.look.set(p.x, 0, p.z + 1); o.roll = -0.5; } },   // straight down across the lanes
-      { dur: 8, mood: 'GOLDEN', fov: 40, pose: (t, u, o) => { o.pos.copy(lerp(V3(-3400, 360, -3250), V3(-4300, 370, -3400), u)); o.look.copy(lerp(V3(-4700, 120, -3050), V3(-5400, 100, -3200), u)); } },   // the Marin coast at sunset
+      { dur: 8, mood: 'GOLDEN', fov: 42, pose: (t, u, o) => { o.pos.copy(lerp(V3(-4200, 420, -3350), V3(-4900, 440, -3450), u)); o.look.copy(lerp(V3(-5600, 30, -2500), V3(-6300, 20, -2600), u)); } },   // over the headlands to the ocean and the sunset   // along the headlands' cliffs to the sunset
       // Blue hour
       { dur: 9, mood: 'BLUE', fov: 34, pose: orbit(GG_N, 400, 360, 180, 165, 0.2, 1.5, 140) },                                                                                            // the north tower floodlit
       { dur: 8, mood: 'BLUE', fov: 40, pose: (t, u, o) => { o.pos.set(-3150, 260, -2750); o.look.copy(lerp(V3(-4300, 200, -3300), V3(-200, 120, -500), ease(u))); } },                    // the headlands to the glowing city, fade out
@@ -667,9 +794,10 @@ export class SanFrancisco {
         if (m < 0.05) continue;
         const h = sfHeight(x, z);
         const city = x > -2700 && z > -1600 && z < 600 && x < 400;
-        const r = city ? 104 : 104 + h * 0.05, gg = city ? 97 : 98 + h * 0.03, b = city ? 88 : 62;
+        const scrub = city ? 0 : vnoise(x / 140 + 3.1, z / 140 + 9.7), rock = city ? 0 : Math.max(0, vnoise(x / 60, z / 60) - 0.72) * 3;
+        const r = city ? 104 : 104 + h * 0.05 - scrub * 34 + rock * 40, gg = city ? 97 : 98 + h * 0.03 - scrub * 26 + rock * 36, b = city ? 88 : 62 - scrub * 22 + rock * 34;
         const hash = ((i * 7 + j * 13) % 17) / 17 * 10 - 5;
-        for (let jj = 0; jj < step; jj++) for (let ii = 0; ii < step; ii++) { const o = ((j + jj) * W + i + ii) * 4; d[o] = (r + hash) * m + 19 * (1 - m); d[o + 1] = (gg + hash) * m + 21 * (1 - m); d[o + 2] = (b + hash) * m + 22 * (1 - m); }
+        for (let jj = 0; jj < step; jj++) for (let ii = 0; ii < step; ii++) { const o = ((j + jj) * W + i + ii) * 4; d[o] = (r + hash) * m + 30 * (1 - m); d[o + 1] = (gg + hash) * m + 48 * (1 - m); d[o + 2] = (b + hash) * m + 62 * (1 - m); }
       }
       g.putImageData(img, 0, 0);
     }
@@ -747,7 +875,15 @@ export class SanFrancisco {
         }
       }
     }
-    const cable = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(cablePts), new THREE.LineBasicMaterial({ color: golden ? 0xd85a38 : 0xa8aab0 }));
+    // Main cables as tubes, so they read at any distance; the suspenders stay as lines.
+    const cableGroup = new THREE.Group();
+    for (let i = 0; i + 1 < cablePts.length; i += 2) {
+      const a2 = cablePts[i], b2 = cablePts[i + 1];
+      if (a2.distanceTo(b2) < 0.01) continue;
+      const seg = new THREE.Mesh(new THREE.CylinderGeometry(golden ? 0.95 : 0.6, golden ? 0.95 : 0.6, a2.distanceTo(b2), 6, 1), new THREE.MeshStandardMaterial({ color: golden ? 0xd85a38 : 0xa8aab0, roughness: 0.5, metalness: 0.3 }));
+      seg.position.copy(a2).lerp(b2, 0.5); seg.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b2.clone().sub(a2).normalize()); cableGroup.add(seg);
+    }
+    const cable = cableGroup;
     const susp = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(hang), new THREE.LineBasicMaterial({ color: golden ? 0xb84a2e : 0x8a8c92, transparent: true, opacity: 0.7 }));
     group.add(cable, susp);
     const towersMesh = new THREE.Mesh(g.geometry(), mat); group.add(towersMesh);
@@ -761,6 +897,15 @@ export class SanFrancisco {
     const pts = new THREE.Points(lg, new THREE.PointsMaterial({ map: glow, size: 10, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true }));
     group.add(pts); this.irSwap.push({ mesh: pts, eo: pts.material, ir: new THREE.PointsMaterial({ size: 0, transparent: true, opacity: 0 }) });
     return mat;
+  }
+
+  private hidden: THREE.Object3D[] = [];
+  /** Hide everything that is not solid geometry (fog, sprites, points, lines) for a depth prepass, and restore. */
+  solidOnly(on: boolean) {
+    if (on) {
+      this.hidden = [];
+      this.scene.traverse(o => { if (o.visible && (o.name === 'fog' || (o as THREE.Sprite).isSprite || (o as THREE.Points).isPoints || (o as THREE.Line).isLine || (o as THREE.Mesh).material && ((o as THREE.Mesh).material as THREE.Material).transparent)) { o.visible = false; this.hidden.push(o); } });
+    } else { for (const o of this.hidden) o.visible = true; this.hidden = []; }
   }
 
   /** The sky as an environment for reflections, one per time of day, made on first use. */
