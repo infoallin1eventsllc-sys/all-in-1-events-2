@@ -113,7 +113,8 @@ export const SurveyDashboard: React.FC = () => {
   const stage = (
     <SurveyScanCanvas3D plan={plan} legs={sim.legs} legIndex={sim.legIndex} legProgressM={sim.legProgressM} aircraft={ac}
       photosRef={sim.photosRef} photoCount={sim.photoCount} grid={sim.grid} gridVersion={sim.gridVersion} phase={phase}
-      layer={layer} onLayerChange={setLayer} coveredPct={stats.coveredPct} progressLabel={progressLabel} compact={hero !== '3D'} />
+      layer={layer} onLayerChange={setLayer} coveredPct={stats.coveredPct} progressLabel={progressLabel} compact={hero !== '3D'}
+      lines={orbit ? { done: angles, total: ORBIT_PHOTOS, current: null, angles } : { done: sim.linesDone, total: plan.lines.length, current: phase === 'CAPTURING' || phase === 'TRANSIT' ? sim.currentLine : null }} />
   );
   const map = (
     <SurveyMapCanvas plan={plan} legs={sim.legs} legIndex={sim.legIndex} aircraft={ac} photosRef={sim.photosRef} grid={sim.grid} gridVersion={sim.gridVersion} layer={layer} compact={hero !== 'MAP'} />

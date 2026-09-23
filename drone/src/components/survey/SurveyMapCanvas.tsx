@@ -52,7 +52,7 @@ export const SurveyMapCanvas: React.FC<Props> = (props) => {
     const drawVeil = (grid: CoverageGrid, layer: SurveyLayer) => {
       const key = `${grid.version}:${layer}`; if (key === veilKey) return; veilKey = key;
       vctx.clearRect(0, 0, MAP_W, MAP_H);
-      vctx.fillStyle = 'rgba(6,8,11,0.62)'; vctx.fillRect(0, 0, MAP_W, MAP_H);
+      vctx.fillStyle = 'rgba(4,7,14,0.66)'; vctx.fillRect(0, 0, MAP_W, MAP_H);
       const cs = grid.cellM * s;
       for (let r = 0; r < grid.rows; r++) for (let c = 0; c < grid.cols; c++) {
         const i = r * grid.cols + c; if (!grid.inside[i]) continue;
@@ -62,7 +62,15 @@ export const SurveyMapCanvas: React.FC<Props> = (props) => {
         if (layer === 'OVERLAP') {
           vctx.fillStyle = v === 0 ? 'rgba(8,10,14,0.86)' : v >= GOOD_VIEWS ? 'rgba(46,184,92,0.55)' : v >= 2 ? 'rgba(242,158,31,0.65)' : 'rgba(230,51,51,0.7)';
           vctx.fillRect(px, py, cs + 0.5, cs + 0.5);
-        } else if (v === 0) { vctx.fillStyle = 'rgba(8,10,14,0.8)'; vctx.fillRect(px, py, cs + 0.5, cs + 0.5); }
+        } else if (v === 0) { vctx.fillStyle = 'rgba(4,8,16,0.86)'; vctx.fillRect(px, py, cs + 0.5, cs + 0.5); }
+      }
+      // Blueprint grid (25 m, heavier every 100 m) over ground no photo has seen, matching the 3D view.
+      if (layer === 'MODEL') {
+        vctx.save();
+        vctx.globalCompositeOperation = 'source-atop';
+        for (let m = Math.floor(vx0 / 25) * 25; m < vx0 + MAP_W / s; m += 25) { vctx.fillStyle = m % 100 === 0 ? 'rgba(91,141,239,0.35)' : 'rgba(91,141,239,0.16)'; vctx.fillRect(X(m), 0, 1, MAP_H); }
+        for (let m = Math.floor(vy0 / 25) * 25; m < vy0 + MAP_H / s; m += 25) { vctx.fillStyle = m % 100 === 0 ? 'rgba(91,141,239,0.35)' : 'rgba(91,141,239,0.16)'; vctx.fillRect(0, Y(m), MAP_W, 1); }
+        vctx.restore();
       }
     };
 
