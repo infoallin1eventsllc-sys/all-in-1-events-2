@@ -18,19 +18,62 @@ full architecture spec, the fleet telemetry grid, and the DTLS / TimescaleDB / G
 SITL / benchmark / radio / FAA-waiver labs — sits one click further in, under
 **Engineering detail**, and keeps its dark tooling chrome.
 
+## Which drones work
+
+Any aircraft whose flight controller runs **ArduPilot** (recommended) or **PX4** — they
+speak **MAVLink**. The autopilot is detected from its heartbeat and every command is
+encoded for it (flight-mode numbering, takeoff altitude reference and mission item 0
+differ between the two).
+
+| Aircraft | Works? |
+| --- | --- |
+| ArduPilot: Pixhawk / Cube / Matek controllers (e.g. Holybro X500 V2 + Pixhawk 6C) | ✅ every feature |
+| PX4 on the same hardware | ✅ flight, missions, payload |
+| Skybrush show drones (ArduPilot show firmware) | ✅ via the show-package export; Skybrush flies the fleet |
+| DJI (Mini, Mavic, Mavic 3 Enterprise, Matrice), Autel, Skydio | ❌ closed systems, no MAVLink |
+
+For **all features** on one airframe: ArduPilot, a Raspberry Pi companion computer
+(network link + video), a MAVLink gimbal camera (Siyi A8 mini; ZT6 / ZT30 for thermal),
+a mapping camera on the autopilot's shutter output, and a spotlight on relay 1.
+Payload commands the dashboard sends: gimbal (`DO_GIMBAL_MANAGER_PITCHYAW`, falling back
+to `DO_MOUNT_CONTROL`), zoom (`SET_CAMERA_ZOOM`), thermal/colour (`SET_CAMERA_SOURCE`),
+spotlight (`DO_SET_RELAY`) and photo (`IMAGE_START_CAPTURE`); it reads the gimbal's
+reported angle and every photo's `CAMERA_FEEDBACK`. The codec is checked byte for byte
+against pymavlink (`scripts/fixtures/mavlink.json`).
+
+Still simulation-only: person/vehicle detection and auto-track (need onboard AI on the
+companion computer) and thermal palettes / night vision (no standard command).
+
+## Phone, tablet or laptop
+
+Drone Command is an installable web app: **Install app** in the app bar (Chrome / Edge
+on Android, Windows, macOS) or **Share → Add to Home Screen** on iPhone and iPad. It
+opens full-screen from its own icon and reloads offline. Home-screen shortcuts open
+straight into Light show, Site survey, Surveillance or Analytics.
+
+| Device | Bluetooth | USB radio | Network |
+| --- | --- | --- | --- |
+| Laptop, Chrome / Edge | ✅ | ✅ | ✅ |
+| Android phone / tablet, Chrome | ✅ | Chrome 148+, some devices | ✅ |
+| iPhone / iPad (any browser) | ❌ Apple doesn't allow it | ❌ | ✅ |
+| Firefox | ❌ | ❌ | ✅ |
+
 ## Talking to a real aircraft
 
-The **link button** in the app bar (next to the theme toggle) connects the browser to a
-flight controller over **MAVLink** — the protocol PX4 and ArduPilot speak:
+The **link button** in the app bar connects the browser to a flight controller over
+**MAVLink**:
 
 | Transport | Browser API | Hardware | Range |
 | --- | --- | --- | --- |
 | **Bluetooth** | Web Bluetooth (BLE) | A BLE bridge on the flight controller's TELEM port exposing the Nordic UART Service — an ESP32 running a MAVLink-to-NUS sketch is the usual part. | ~30 m: pairing, pre-flight, pad checks |
 | **USB telemetry radio** | Web Serial, 57600 baud | SiK 915 MHz, mLRS or ELRS radio plugged into the laptop, or the controller's own USB port | kilometres |
+| **Network** | WebSocket | The companion computer's bridge (`hardware/companion-pi/bridge/mavlink_ws.py`) on Wi-Fi, LTE or Tailscale; `wss://` with a token | wherever the network reaches |
 | **Simulation** | — | none | — |
 
-Both need **Chrome or Edge** (desktop, or Android for Bluetooth) over **HTTPS**, and a
-click — the browser shows its own device picker and never connects silently.
+Bluetooth and USB need **Chrome or Edge** over **HTTPS** and a click — the browser shows
+its own device picker and never connects silently. Network works in every browser. To
+bench-test the whole chain with no drone, run the bridge with
+`bridge/fake_vehicle.py` (ArduCopter, or `--px4`); see `hardware/companion-pi/README.md`.
 
 Once linked, every vehicle heard on the radio takes over an aircraft slot in the
 Surveillance dashboard (routing by MAVLink system id), driven by live telemetry —

@@ -24,6 +24,11 @@ what needs hardware in your hands, and what needs a permit rather than code.
 | CI: typecheck, codec tests, build on every push | ✅ built | `.github/workflows/drone.yml` |
 | Flight recorder: every session recorded, browsable, exportable, printable | ✅ built, unit-tested | `src/record`, Records tab |
 | Analytics: flight hours, products, fleet health (service interval, battery drain), safety, flight-log export | ✅ built, unit-tested | Analytics tab, `src/analytics` |
+| Network link: any browser incl. iPhone/iPad, via the companion computer's WebSocket bridge | ✅ built, tested end to end against a stand-in autopilot | link → Network, `hardware/companion-pi/bridge` |
+| PX4 as well as ArduPilot: modes, takeoff, go-to, missions | ✅ built, tested end to end | `src/link/mavlink.ts` |
+| Payload on real aircraft: gimbal, zoom, thermal source, spotlight, photo, photo feedback | ✅ built, codec checked against pymavlink | Surveillance action bar |
+| Installable app (home screen, offline, shortcuts) on phone, tablet and laptop | ✅ built | Install app button, `public/manifest.webmanifest` |
+| Remote relay for flying over the internet without Tailscale | ⏳ needs a hosted server | the bridge already speaks WebSocket; pairs with accounts below |
 | Crash isolation: one view failing cannot take down the console | ✅ built | `src/dashboards/ErrorBoundary.tsx` |
 | Keyboard operation, visible focus, reduced motion, print stylesheet | ✅ built | `src/index.css`, App shortcuts |
 | Offline reload at a venue with no signal | ✅ built | `public/sw.js` |

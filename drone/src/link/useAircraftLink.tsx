@@ -1,8 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  MavParser, decodeInto, encodeHeartbeat, encodeCommandLong, encodeSetInterval, encodeSetMode, encodeArm, encodeTakeoff, encodeGotoGlobal,
+  MavParser, decodeInto, encodeHeartbeat, encodeCommandLong, encodeSetInterval, encodeArm, encodeGotoGlobal,
   encodeMissionCount, encodeMissionClearAll, encodeMissionItemInt, encodeMissionAck, decodeMissionRequestSeq, decodeMissionAck,
-  EMPTY_TELEMETRY, MAV_CMD, COPTER_MODE, type Telemetry, type MavFrame, type MissionItem,
+  encodeFlightMode, encodeTakeoffFor, encodeReposition, encodeGimbalPitchYaw, encodeMountControl, encodeCameraZoom, encodeCameraSource, encodeRelay, encodeTakePhoto,
+  autopilotOf, EMPTY_TELEMETRY, MAV_CMD, MAV_RESULT, type Telemetry, type MavFrame, type MissionItem, type Autopilot, type FlightMode,
 } from './mavlink';
 
 /**
@@ -14,13 +15,18 @@ import {
  *              Chrome / Edge on desktop and Android; needs HTTPS and a click.
  *   SERIAL     Web Serial to a USB telemetry radio (SiK 915 MHz, mLRS, ELRS
  *              backpack) or the flight controller's own USB port. 57600 baud.
+ *   NETWORK    WebSocket to the companion computer's bridge
+ *              (hardware/companion-pi/bridge), raw MAVLink in binary messages.
+ *              Works in every browser, including iPhone and iPad, which have
+ *              neither Web Bluetooth nor Web Serial.
  *   SIMULATION No hardware; the dashboards run their client-side sims.
  *
  * DJI consumer aircraft are not reachable this way — they only speak through
- * DJI's SDK / cloud. This works with PX4 and ArduPilot flight controllers.
+ * DJI's SDK / cloud. This works with ArduPilot and PX4 flight controllers; the
+ * autopilot is detected from its heartbeat and commands are encoded for it.
  */
 
-export type Transport = 'SIMULATION' | 'BLUETOOTH' | 'SERIAL';
+export type Transport = 'SIMULATION' | 'BLUETOOTH' | 'SERIAL' | 'NETWORK';
 export type LinkStatus = 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'ERROR';
 
 export interface PreflightCheck { id: string; label: string; ok: boolean; detail: string }
@@ -37,25 +43,36 @@ interface LinkState {
   bytesIn: number;
   badCrc: number;
   lastHeartbeatAgoS: number;
-  support: { bluetooth: boolean; serial: boolean; secure: boolean };
+  support: { bluetooth: boolean; serial: boolean; secure: boolean; network: boolean };
 }
 
 interface LinkApi extends LinkState {
   connectBluetooth: () => Promise<void>;
   connectSerial: () => Promise<void>;
+  /** WebSocket to the companion computer's MAVLink bridge, e.g. wss://pi.local:8770/?token=… */
+  connectNetwork: (url: string) => Promise<void>;
+  /** Detected from the heartbeat. Commands below are encoded for it. */
+  autopilot: Autopilot;
   disconnect: () => Promise<void>;
   send: (bytes: Uint8Array) => Promise<void>;
   returnToLaunch: () => Promise<void>;
   land: () => Promise<void>;
   arm: (arm: boolean) => Promise<void>;
   takeoff: (altM: number) => Promise<void>;
-  setMode: (customMode: number) => Promise<void>;
-  /** GUIDED go-to: switches to GUIDED then sends the position target. */
+  setFlightMode: (mode: FlightMode) => Promise<void>;
+  /** Go-to: ArduPilot switches to GUIDED and sends a position target; PX4 uses DO_REPOSITION. */
   goTo: (lat: number, lon: number, altRelM: number) => Promise<void>;
   /** Upload a waypoint mission (home item is added automatically) and optionally start it in AUTO. */
   uploadMission: (items: MissionItem[], start?: boolean) => Promise<void>;
   missionUpload: { state: 'IDLE' | 'UPLOADING' | 'DONE' | 'FAILED'; sent: number; total: number; error: string };
   preflight: { ok: boolean; checks: PreflightCheck[] };
+  // Payload (sent to the autopilot, which drives its gimbal / camera / relays)
+  /** Point the gimbal. Uses gimbal protocol v2 and falls back to DO_MOUNT_CONTROL if the autopilot refuses. */
+  setGimbal: (pitchDeg: number, yawDeg?: number) => Promise<void>;
+  setZoom: (percent: number) => Promise<void>;
+  setCameraSource: (source: 'RGB' | 'IR') => Promise<void>;
+  setRelay: (instance: number, on: boolean) => Promise<void>;
+  takePhoto: () => Promise<void>;
   /** True when live telemetry should replace the simulation for the selected aircraft. */
   live: boolean;
 }
@@ -73,6 +90,7 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     bluetooth: !!nav?.bluetooth,
     serial: !!nav?.serial,
     secure: typeof window !== 'undefined' && window.isSecureContext,
+    network: typeof WebSocket !== 'undefined',
   }), [nav]);
 
   const [state, setState] = useState<LinkState>({
@@ -198,27 +216,86 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, [support.serial, ingest, requestStreams]);
 
+  const connectNetwork = useCallback(async (url: string) => {
+    const u = url.trim();
+    if (!/^wss?:\/\//i.test(u)) { setState(s => ({ ...s, status: 'ERROR', error: 'Use a ws:// or wss:// address, e.g. wss://drone-pi.local:8770' })); return; }
+    // A page served over HTTPS may only open secure sockets (except to this device itself).
+    const host = (() => { try { return new URL(u).hostname; } catch { return ''; } })();
+    if (typeof location !== 'undefined' && location.protocol === 'https:' && /^ws:/i.test(u) && !['localhost', '127.0.0.1', '[::1]'].includes(host)) {
+      setState(s => ({ ...s, status: 'ERROR', error: 'This page is secure (https), so the browser only allows wss:// connections. Start the bridge with --cert/--key, or reach it through the relay.' }));
+      return;
+    }
+    setState(s => ({ ...s, transport: 'NETWORK', status: 'CONNECTING', error: '' }));
+    try {
+      const ws = new WebSocket(u);
+      ws.binaryType = 'arraybuffer';
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('No answer from the bridge within 8 s')), 8000);
+        ws.onopen = () => { clearTimeout(timer); resolve(); };
+        ws.onerror = () => { clearTimeout(timer); reject(new Error('Could not reach the bridge. Check the address, the token and that the companion computer is on the same network.')); };
+      });
+      let open = true;
+      ws.onmessage = e => { if (e.data instanceof ArrayBuffer) ingest(new Uint8Array(e.data)); };
+      ws.onclose = ev => {
+        writer.current = null; closer.current = null;
+        if (open) setState(s => ({ ...s, status: 'DISCONNECTED', error: ev.code === 4001 ? 'The bridge refused the token' : 'Network link dropped' }));
+      };
+      writer.current = async (bytes: Uint8Array) => { if (ws.readyState === WebSocket.OPEN) ws.send(bytes as Uint8Array<ArrayBuffer>); };
+      closer.current = async () => { open = false; ws.close(); };
+      setState(s => ({ ...s, status: 'CONNECTED', deviceName: host || 'Network bridge' }));
+      await requestStreams();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setState(s => ({ ...s, status: 'ERROR', error: msg, transport: 'SIMULATION' }));
+    }
+  }, [ingest, requestStreams]);
+
   const sysId = () => primarySys.current || 1;
+  const ap = () => autopilotOf(telem.current);
   const returnToLaunch = useCallback(() => send(encodeCommandLong(MAV_CMD.RETURN_TO_LAUNCH, [], sysId())), [send]);
   const land = useCallback(() => send(encodeCommandLong(MAV_CMD.LAND, [], sysId())), [send]);
   const arm = useCallback((on: boolean) => send(encodeArm(on)), [send]);
-  const takeoff = useCallback((altM: number) => send(encodeTakeoff(altM)), [send]);
-  const setMode = useCallback((m: number) => send(encodeSetMode(m)), [send]);
+  const setFlightMode = useCallback(async (mode: FlightMode) => { const b = encodeFlightMode(ap(), mode, sysId()); if (b) await send(b); }, [send]);
+  /** ArduCopter only takes off in GUIDED; PX4 switches to its takeoff mode by itself. */
+  const takeoff = useCallback(async (altM: number) => {
+    if (ap() !== 'PX4') await setFlightMode('GUIDED');
+    await send(encodeTakeoffFor(ap(), altM, telem.current, sysId()));
+  }, [send, setFlightMode]);
   const goTo = useCallback(async (lat: number, lon: number, altRelM: number) => {
-    await send(encodeSetMode(COPTER_MODE.GUIDED));
+    if (ap() === 'PX4') { await send(encodeReposition(lat, lon, altRelM, sysId())); return; }
+    await setFlightMode('GUIDED');
     await send(encodeGotoGlobal(lat, lon, altRelM, sysId()));
-  }, [send]);
+  }, [send, setFlightMode]);
+
+  /** Resolve with the COMMAND_ACK result for `command`, or null after `ms`. */
+  const awaitAck = useCallback((command: number, ms = 900) => new Promise<number | null>(resolve => {
+    const onFrame = (f: MavFrame) => { if (f.msgId === 77 && f.payload.getUint16(0, true) === command) { done(f.payload.getUint8(2)); } };
+    const done = (r: number | null) => { clearTimeout(timer); frameListeners.current.delete(onFrame); resolve(r); };
+    const timer = setTimeout(() => done(null), ms);
+    frameListeners.current.add(onFrame);
+  }), []);
+  const setGimbal = useCallback(async (pitchDeg: number, yawDeg = NaN) => {
+    const ack = awaitAck(MAV_CMD.DO_GIMBAL_MANAGER_PITCHYAW);
+    await send(encodeGimbalPitchYaw(pitchDeg, yawDeg, sysId()));
+    const r = await ack;
+    if (r !== MAV_RESULT.ACCEPTED && r !== MAV_RESULT.IN_PROGRESS) await send(encodeMountControl(pitchDeg, Number.isNaN(yawDeg) ? 0 : yawDeg, sysId()));
+  }, [send, awaitAck]);
+  const setZoom = useCallback((percent: number) => send(encodeCameraZoom(percent, sysId())), [send]);
+  const setCameraSource = useCallback((source: 'RGB' | 'IR') => send(encodeCameraSource(source, sysId())), [send]);
+  const setRelay = useCallback((instance: number, on: boolean) => send(encodeRelay(instance, on, sysId())), [send]);
+  const takePhoto = useCallback(() => send(encodeTakePhoto(sysId())), [send]);
 
   /**
    * Mission upload handshake: MISSION_COUNT → autopilot asks for each item with
    * MISSION_REQUEST(_INT) → we answer → MISSION_ACK. ArduPilot treats item 0 as home,
-   * so the caller's first waypoint becomes seq 1.
+   * so the caller's first waypoint becomes seq 1; PX4 starts at seq 0.
    */
   const uploadMission = useCallback(async (items: MissionItem[], start = false) => {
     if (!writer.current) throw new Error('Not connected');
     const t = telem.current;
-    const home: MissionItem = { lat: t.lat, lon: t.lon, altRelM: 0 };
-    const all = [home, ...items];
+    // ArduPilot reserves item 0 for home; PX4 flies item 0 as the first real item.
+    const all = ap() === 'PX4' ? [...items] : [{ lat: t.lat, lon: t.lon, altRelM: 0 } as MissionItem, ...items];
+    const firstCurrent = ap() === 'PX4' ? 0 : 1;
     setMissionUpload({ state: 'UPLOADING', sent: 0, total: all.length, error: '' });
     await new Promise<void>((resolve, reject) => {
       let done = false;
@@ -232,7 +309,7 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
         const seq = decodeMissionRequestSeq(f);
         if (seq !== null) {
           clearTimeout(timer); timer = setTimeout(() => finish(`Timed out waiting for request after item ${seq}`), 5000);
-          if (seq < all.length) { send(encodeMissionItemInt(seq, all[seq], seq === 1 ? 1 : 0, sysId())).catch(() => {}); setMissionUpload(m => ({ ...m, sent: seq + 1 })); }
+          if (seq < all.length) { send(encodeMissionItemInt(seq, all[seq], seq === firstCurrent ? 1 : 0, sysId())).catch(() => {}); setMissionUpload(m => ({ ...m, sent: seq + 1 })); }
           return;
         }
         const ack = decodeMissionAck(f);
@@ -241,8 +318,8 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
       frameListeners.current.add(onFrame);
       send(encodeMissionClearAll(sysId())).then(() => send(encodeMissionCount(all.length, sysId()))).catch(e => finish(String(e)));
     });
-    if (start) await send(encodeSetMode(COPTER_MODE.AUTO));
-  }, [send]);
+    if (start) await setFlightMode('AUTO');
+  }, [send, setFlightMode]);
 
   // Pre-flight gate: what must be true before the dashboard will arm a real aircraft.
   const tNow = state.telemetry;
@@ -260,7 +337,9 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const api: LinkApi = {
     ...state, support,
-    connectBluetooth, connectSerial, disconnect, send, returnToLaunch, land, arm, takeoff, setMode, goTo, uploadMission, missionUpload, preflight,
+    connectBluetooth, connectSerial, connectNetwork, disconnect, send, returnToLaunch, land, arm, takeoff, setFlightMode, goTo, uploadMission, missionUpload, preflight,
+    setGimbal, setZoom, setCameraSource, setRelay, takePhoto,
+    autopilot: autopilotOf(state.telemetry),
     live: state.status === 'CONNECTED' && state.telemetry.heartbeatMs > 0,
   };
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;

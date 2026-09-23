@@ -4,6 +4,7 @@ import {
   type SurveyParams, type SurveyPlan, type Leg, type Pt, type GeoOrigin,
 } from '../survey/plan';
 import { SITE, structureAt } from '../survey/site';
+import { modeName } from '../link/mavlink';
 
 /**
  * Site survey mission: one mapping aircraft flying a planned capture pattern.
@@ -14,8 +15,9 @@ import { SITE, structureAt } from '../survey/site';
  * Gusts raise vibration and blur photos; a low battery flies home, swaps, and
  * resumes from where it left the line — the way real multi-battery surveys run.
  *
- * On a real link the aircraft's position comes from telemetry and photos are
- * estimated from distance flown in AUTO at survey height.
+ * On a real link the aircraft's position comes from telemetry. Photos come from
+ * the autopilot's CAMERA_FEEDBACK when the camera reports them, otherwise they
+ * are estimated from distance flown in AUTO at survey height.
  */
 
 export type Phase = 'READY' | 'TAKEOFF' | 'TRANSIT' | 'CAPTURING' | 'PAUSED' | 'RETURNING' | 'LANDING' | 'SWAP' | 'HELD' | 'COMPLETE';
@@ -74,7 +76,7 @@ export function useSurveyMission() {
   const flightS = useRef(0);
   const batteries = useRef(1);
   const refly = useRef(false);
-  const liveRef = useRef<{ origin: GeoOrigin; lastPos: Pt | null; since: number } | null>(null);
+  const liveRef = useRef<{ origin: GeoOrigin; lastPos: Pt | null; since: number; reported: number; feedback: boolean } | null>(null);
 
   const [phase, setPhase] = useState<Phase>('READY');
   const [snap, setSnap] = useState(() => ({ ac: acRef.current, photos: 0, rejected: 0, version: 0, legIndex: 0, flightS: 0, batteries: 1 }));
@@ -189,11 +191,15 @@ export function useSurveyMission() {
    * Replace the simulated aircraft with telemetry. The first fix is taken as the
    * home point, and the site is placed so home lands on SITE.home.
    */
-  const applyLive = useCallback((t: { lat: number; lon: number; altRelM: number; headingDeg: number; groundspeedMps: number; batteryPct: number; voltageV: number; currentA: number; armed: boolean; customMode: number; radioRssi: number }) => {
+  const applyLive = useCallback((t: {
+    lat: number; lon: number; altRelM: number; headingDeg: number; groundspeedMps: number; batteryPct: number; voltageV: number; currentA: number;
+    armed: boolean; customMode: number; autopilot: number; radioRssi: number;
+    photosReported: number; lastPhoto: { lat: number; lon: number; altRelM: number } | null;
+  }) => {
     if (!t.lat) return;
     if (!liveRef.current) {
       const origin = toLatLon({ lat: t.lat, lon: t.lon }, { x: -SITE.home.x, y: -SITE.home.y });
-      liveRef.current = { origin, lastPos: null, since: 0 };
+      liveRef.current = { origin, lastPos: null, since: 0, reported: t.photosReported, feedback: false };
     }
     const L = liveRef.current;
     const p = fromLatLon(L.origin, t.lat, t.lon);
@@ -203,12 +209,22 @@ export function useSurveyMission() {
       battery: t.batteryPct >= 0 ? t.batteryPct : ac.battery, voltageV: t.voltageV || ac.voltageV, currentA: t.currentA || ac.currentA,
       signalPct: t.radioRssi ? Math.round((t.radioRssi / 254) * 100) : ac.signalPct,
     };
-    // Photos: the autopilot triggers by distance in AUTO at survey height; estimate the same.
-    const P = planRef.current;
-    const surveying = t.armed && t.customMode === 3 && t.altRelM > P.params.altitudeM * 0.7;
-    if (surveying && L.lastPos) {
-      L.since += dist(L.lastPos, p);
-      if (L.since >= P.triggerM) { L.since = 0; takePhoto((t.headingDeg - 90) * Math.PI / 180, -1, false); }
+    const hRad = ((t.headingDeg - 90) * Math.PI) / 180;
+    if (t.photosReported > L.reported && t.lastPhoto) {
+      // The autopilot reports every photo it takes (CAMERA_FEEDBACK): use its exact position.
+      L.feedback = true; L.reported = t.photosReported;
+      const at = fromLatLon(L.origin, t.lastPhoto.lat, t.lastPhoto.lon);
+      const save = acRef.current; acRef.current = { ...save, x: at.x, y: at.y, altM: t.lastPhoto.altRelM };
+      takePhoto(hRad, -1, false); acRef.current = save;
+    } else if (!L.feedback) {
+      // No feedback from this camera: estimate by distance flown in AUTO at survey height,
+      // which is what the trigger-distance command makes the autopilot do.
+      const P = planRef.current;
+      const surveying = t.armed && modeName(t) === 'AUTO' && t.altRelM > P.params.altitudeM * 0.7;
+      if (surveying && L.lastPos) {
+        L.since += dist(L.lastPos, p);
+        if (L.since >= P.triggerM) { L.since = 0; takePhoto(hRad, -1, false); }
+      }
     }
     L.lastPos = p;
   }, [takePhoto]);

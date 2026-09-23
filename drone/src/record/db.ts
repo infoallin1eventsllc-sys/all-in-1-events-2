@@ -21,7 +21,7 @@ const DB_VERSION = 2;
 
 /** DEFENSE is retired; kept so sessions recorded before then still open. */
 export type Vertical = 'SURVEILLANCE' | 'SURVEY' | 'LIGHT_SHOW' | 'DEFENSE';
-export type LinkSource = 'SIMULATION' | 'BLUETOOTH' | 'SERIAL';
+export type LinkSource = 'SIMULATION' | 'BLUETOOTH' | 'SERIAL' | 'NETWORK';
 
 export interface FlightSession {
   id: string;

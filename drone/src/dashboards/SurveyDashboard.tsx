@@ -9,7 +9,6 @@ import { SITE } from '../survey/site';
 import { CAMERAS, GOOD_VIEWS, ORBIT_PHOTOS, missionItems, toLatLon, type CameraId, type Pattern } from '../survey/plan';
 import { downloadSurveyPackage } from '../survey/exportSurvey';
 import { useAircraftLink } from '../link/useAircraftLink';
-import { COPTER_MODE } from '../link/mavlink';
 import { useRecorder, useRecordedEvents } from '../record/useRecorder';
 import {
   Headline, Card, Section, Divider, Tabs, Stat, Row, Chip, Meter, Sparkline, ToolButton, IconButton, Segmented, Activity, formatClock, useAccentHex, type Tone,
@@ -178,8 +177,8 @@ export const SurveyDashboard: React.FC = () => {
               <ToolButton id="sv-primary" primary icon={primary.icon} label={primary.label} onClick={primary.onClick} disabled={primary.disabled} title={primary.title} />
               {sim.live ? (
                 <>
-                  <ToolButton icon={<Pause />} label="Hold" onClick={() => link.setMode(COPTER_MODE.LOITER)} title="LOITER: hold position" />
-                  <ToolButton icon={<Play />} label="Continue" onClick={() => link.setMode(COPTER_MODE.AUTO)} title="AUTO: continue the mission" />
+                  <ToolButton icon={<Pause />} label="Hold" onClick={() => link.setFlightMode('LOITER')} title="Hold position (Loiter)" />
+                  <ToolButton icon={<Play />} label="Continue" onClick={() => link.setFlightMode('AUTO')} title="Continue the mission (Auto)" />
                 </>
               ) : orbit ? null : (
                 <ToolButton icon={<RefreshCw />} label={sim.weakPatches && phase === 'COMPLETE' ? `Re-fly ${sim.weakPatches} weak patch${sim.weakPatches > 1 ? 'es' : ''}` : 'Re-fly weak patches'}

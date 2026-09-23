@@ -1,0 +1,25 @@
+{
+  "name": "All in 1 Drone Command",
+  "short_name": "Drone Command",
+  "description": "Fly and monitor your drones — light shows, site surveys and surveillance — from a phone, tablet or laptop.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4f5f7",
+  "theme_color": "#ffffff",
+  "categories": ["business", "utilities", "productivity"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Light show", "url": "./?view=show", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Site survey", "url": "./?view=survey", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Surveillance", "url": "./?view=patrol", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Analytics", "url": "./?view=analytics", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

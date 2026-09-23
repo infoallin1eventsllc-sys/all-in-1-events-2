@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { modeName } from '../link/mavlink';
 
 /**
  * Surveillance / patrol simulation.
@@ -103,7 +104,7 @@ let detSeq = 0;
 /** Subset of MAVLink telemetry the patrol model consumes (see src/link/mavlink.ts). */
 export interface LiveTelemetry {
   lat: number; lon: number; altRelM: number; headingDeg: number; groundspeedMps: number; climbMps: number;
-  batteryPct: number; voltageV: number; currentA: number; armed: boolean; customMode: number;
+  batteryPct: number; voltageV: number; currentA: number; armed: boolean; customMode: number; autopilot: number;
   radioRssi: number; satellites: number; msgsPerSec: number;
 }
 
@@ -186,7 +187,7 @@ export function useSurveillanceSimulation() {
         x = SITE.x + ((t.lon - originRef.current.lon) * mPerDegLon) / METERS_PER_PX;
         y = SITE.y - ((t.lat - originRef.current.lat) * mPerDegLat) / METERS_PER_PX;
       }
-      const status: PatrolStatus = !t.armed ? 'OFFLINE' : t.customMode === 6 ? 'RTH' : t.groundspeedMps < 1 ? 'MONITORING' : 'EN_ROUTE';
+      const status: PatrolStatus = !t.armed ? 'OFFLINE' : modeName(t) === 'RTL' ? 'RTH' : t.groundspeedMps < 1 ? 'MONITORING' : 'EN_ROUTE';
       const battery = t.batteryPct >= 0 ? t.batteryPct : d.battery;
       return {
         ...d, x, y, status,

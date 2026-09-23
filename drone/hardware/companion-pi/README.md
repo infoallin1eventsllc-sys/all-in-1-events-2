@@ -1,7 +1,8 @@
 # Companion computer (Raspberry Pi)
 
-Two services, one Pi. The **video streamer** rides on the aircraft; the **Remote ID
-receiver** sits at the venue. They can share a Pi on the bench.
+Three services. On the aircraft: the **MAVLink bridge** (fly from any phone, tablet
+or laptop) and the **video streamer**. At the venue: the optional **Remote ID
+receiver**. They can share a Pi on the bench.
 
 ## Parts
 
@@ -25,11 +26,46 @@ pip install -r requirements.txt
 Copy this folder to `/opt/a1/` on the Pi, then:
 
 ```bash
-sudo cp systemd/a1-video.service systemd/a1-remoteid.service /etc/systemd/system/
+sudo cp systemd/a1-bridge.service systemd/a1-video.service systemd/a1-remoteid.service /etc/systemd/system/
 sudo systemctl daemon-reload
+sudo systemctl enable --now a1-bridge     # aircraft Pi: MAVLink for phones and tablets
 sudo systemctl enable --now a1-video      # aircraft Pi
 sudo systemctl enable --now a1-remoteid   # venue Pi
 journalctl -u a1-video -f
+```
+
+## MAVLink bridge → dashboard (phones, tablets, laptops)
+
+iPhones and iPads can't use Bluetooth or USB from a web page, and Android support for
+USB is new. The bridge puts the flight controller on the network instead:
+`bridge/mavlink_ws.py` reads MAVLink from the controller (Pi UART, or a USB radio)
+and serves it as a WebSocket on port **8770**. In the dashboard: **link button →
+Network → `wss://<pi-address>:8770/?token=<token>` → Connect**. Several screens can
+connect at once (the pilot's laptop and a client's iPad, say).
+
+Wiring: flight controller **TELEM2** → Pi UART (TX→RX, RX→TX, GND), and in ArduPilot
+`SERIAL2_PROTOCOL = 2`, `SERIAL2_BAUD = 921`. PX4: `MAV_1_CONFIG = TELEM 2`,
+`SER_TEL2_BAUD = 921600`.
+
+**Secure connection (wss).** The dashboard is served over HTTPS, and browsers only
+let an HTTPS page open `wss://` sockets. Two ways to give the bridge a certificate:
+
+- **Tailscale (easiest, also works over LTE):** install Tailscale on the Pi and on the
+  phone, run `sudo tailscale cert <pi-name>.<tailnet>.ts.net`, and point `--cert/--key`
+  at the files. Connect to `wss://<pi-name>.<tailnet>.ts.net:8770/?token=…`.
+- **Self-signed (closed field network):** generate a cert, then on each phone open
+  `https://<pi-address>:8770/` once and accept it; the page says *Certificate accepted*.
+
+Always set `--token`: anyone who can reach the socket can command the aircraft.
+
+**Bench test with no drone:** `bridge/fake_vehicle.py` is a stand-in autopilot
+(ArduCopter by default, `--px4` for PX4). It answers arming, modes, takeoff, go-to,
+missions, gimbal, zoom, camera source, relay and photos, and prints every command:
+
+```bash
+python3 bridge/mavlink_ws.py --udp 127.0.0.1:14550 --token test &
+python3 bridge/fake_vehicle.py --to 127.0.0.1:14550        # or --px4, --legacy-gimbal
+# dashboard (opened from http://localhost): Network → ws://127.0.0.1:8770/?token=test
 ```
 
 ## Video → dashboard
@@ -55,8 +91,9 @@ with DJI aircraft too, since it's just video.
 ## Remote ID → dashboard
 
 `receiver.py` scans BLE for Open Drone ID broadcasts and serves decoded tracks over
-WebSocket on port 8765. In the dashboard: **Defense → Sensors → Remote ID receiver →
-`ws://<pi-ip>:8765`** (use `wss://` behind a tunnel or a cert when the page is HTTPS).
+WebSocket on port 8765. The Defense dashboard that displayed them has been retired;
+the receiver still runs on its own (any WebSocket client can read the tracks) and can
+return as an airspace-awareness panel for shows and surveys.
 
 What arrives per aircraft: serial / registration, UA type, position, altitude,
 height, speed, direction, status (ground / airborne / emergency), **operator

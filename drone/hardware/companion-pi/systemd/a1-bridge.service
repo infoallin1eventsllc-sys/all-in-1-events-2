@@ -1,0 +1,17 @@
+[Unit]
+Description=All in 1 Drone Command — MAVLink WebSocket bridge (phones, tablets, laptops)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pi
+WorkingDirectory=/opt/a1/bridge
+# Flight controller TELEM2 on the Pi UART at 921600 (ArduPilot SERIAL2_PROTOCOL=2, SERIAL2_BAUD=921).
+# The token is a long random string: `openssl rand -hex 16 | sudo tee /opt/a1/token`.
+# TLS: see README (Tailscale cert or your own). Remove --cert/--key for ws:// on a closed network.
+ExecStart=/bin/sh -c 'exec /home/pi/a1/bin/python3 /opt/a1/bridge/mavlink_ws.py --serial /dev/ttyAMA0 --baud 921600 --port 8770 --token "$(cat /opt/a1/token)" --cert /opt/a1/tls/cert.pem --key /opt/a1/tls/key.pem'
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

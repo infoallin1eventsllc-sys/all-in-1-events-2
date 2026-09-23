@@ -34,6 +34,10 @@ const CRC_EXTRA: Record<number, number> = {
   51: 196,  // MISSION_REQUEST_INT
   73: 38,   // MISSION_ITEM_INT
   86: 5,    // SET_POSITION_TARGET_GLOBAL_INT
+  75: 158,  // COMMAND_INT
+  158: 134, // MOUNT_STATUS (ArduPilot, legacy gimbal report)
+  180: 52,  // CAMERA_FEEDBACK (ArduPilot: one per photo taken)
+  285: 137, // GIMBAL_DEVICE_ATTITUDE_STATUS
 };
 
 function x25(bytes: Uint8Array, start: number, end: number, seed = 0xffff): number {
@@ -109,6 +113,11 @@ export interface Telemetry {
   msgsPerSec: number;
   missionCurrent: number;
   lastAck: { command: number; result: number; atMs: number } | null;
+  /** Gimbal pointing reported by the aircraft (NaN until a gimbal reports). */
+  gimbalPitchDeg: number; gimbalYawDeg: number;
+  /** Last photo the autopilot reports taking (CAMERA_FEEDBACK), and how many it has reported. */
+  lastPhoto: { idx: number; lat: number; lon: number; altRelM: number; atMs: number } | null;
+  photosReported: number;
 }
 
 export const EMPTY_TELEMETRY: Telemetry = {
@@ -117,6 +126,7 @@ export const EMPTY_TELEMETRY: Telemetry = {
   rollDeg: 0, pitchDeg: 0, yawDeg: 0, airspeedMps: 0, groundspeedMps: 0, climbMps: 0, throttlePct: 0,
   batteryPct: -1, voltageV: 0, currentA: 0, fixType: 0, satellites: 0, hdop: 99,
   radioRssi: 0, radioNoise: 0, radioRemRssi: 0, statusText: '', msgsPerSec: 0, missionCurrent: 0, lastAck: null,
+  gimbalPitchDeg: NaN, gimbalYawDeg: NaN, lastPhoto: null, photosReported: 0,
 };
 
 const R2D = 180 / Math.PI;
@@ -158,6 +168,21 @@ export function decodeInto(t: Telemetry, f: MavFrame): Telemetry {
     case 77: // COMMAND_ACK
       t.lastAck = { command: p.getUint16(0, true), result: p.getUint8(2), atMs: Date.now() };
       break;
+    case 285: { // GIMBAL_DEVICE_ATTITUDE_STATUS: quaternion w,x,y,z at 4..19
+      const w = p.getFloat32(4, true), x = p.getFloat32(8, true), y = p.getFloat32(12, true), z = p.getFloat32(16, true);
+      if (Number.isFinite(w)) {
+        t.gimbalPitchDeg = Math.asin(Math.max(-1, Math.min(1, 2 * (w * y - z * x)))) * R2D;
+        t.gimbalYawDeg = Math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z)) * R2D;
+      }
+      break;
+    }
+    case 158: // MOUNT_STATUS: pitch, roll, yaw in centidegrees
+      t.gimbalPitchDeg = p.getInt32(0, true) / 100; t.gimbalYawDeg = p.getInt32(8, true) / 100;
+      break;
+    case 180: // CAMERA_FEEDBACK
+      t.lastPhoto = { idx: p.getUint16(40, true), lat: p.getInt32(8, true) / 1e7, lon: p.getInt32(12, true) / 1e7, altRelM: p.getFloat32(20, true), atMs: Date.now() };
+      t.photosReported++;
+      break;
     case 253: { // STATUSTEXT
       let s = ''; for (let i = 1; i < 51; i++) { const c = p.getUint8(i); if (!c) break; s += String.fromCharCode(c); }
       t.statusText = s; break;
@@ -194,6 +219,8 @@ export function encodeHeartbeat(): Uint8Array {
 
 export const MAV_CMD = {
   NAV_WAYPOINT: 16, RETURN_TO_LAUNCH: 20, LAND: 21, TAKEOFF: 22, DO_SET_MODE: 176, COMPONENT_ARM_DISARM: 400, SET_MESSAGE_INTERVAL: 511, REQUEST_MESSAGE: 512,
+  DO_SET_RELAY: 181, DO_REPOSITION: 192, DO_MOUNT_CONTROL: 205, SET_CAMERA_ZOOM: 531, SET_CAMERA_SOURCE: 534,
+  DO_GIMBAL_MANAGER_PITCHYAW: 1000, IMAGE_START_CAPTURE: 2000,
 } as const;
 export const MAV_RESULT = { ACCEPTED: 0, TEMPORARILY_REJECTED: 1, DENIED: 2, UNSUPPORTED: 3, FAILED: 4, IN_PROGRESS: 5 } as const;
 /** ArduCopter custom modes (the reference autopilot for this platform). */
@@ -276,5 +303,106 @@ export function encodeSetInterval(msgId: number, hz: number): Uint8Array {
   return encodeCommandLong(MAV_CMD.SET_MESSAGE_INTERVAL, [msgId, hz > 0 ? 1e6 / hz : -1]);
 }
 
-export const FLIGHT_MODE_NAMES: Record<number, string> = { 0: 'Stabilize', 2: 'Alt hold', 3: 'Auto', 4: 'Guided', 5: 'Loiter', 6: 'RTL', 9: 'Land', 16: 'Position hold' };
 export const FIX_NAMES: Record<number, string> = { 0: 'No GPS', 1: 'No fix', 2: '2D', 3: '3D', 4: 'DGPS', 5: 'RTK float', 6: 'RTK fixed' };
+
+// ---------------------------------------------------------------------------
+// Autopilots: ArduPilot and PX4 speak the same MAVLink but number flight modes
+// differently and treat takeoff altitude and mission item 0 differently.
+// ---------------------------------------------------------------------------
+
+export type Autopilot = 'ARDUPILOT' | 'PX4' | 'UNKNOWN';
+/** HEARTBEAT.autopilot: MAV_AUTOPILOT_ARDUPILOTMEGA = 3, MAV_AUTOPILOT_PX4 = 12. */
+export const autopilotOf = (t: Pick<Telemetry, 'autopilot'>): Autopilot => (t.autopilot === 12 ? 'PX4' : t.autopilot === 3 ? 'ARDUPILOT' : 'UNKNOWN');
+
+/** Flight modes the dashboards use, independent of autopilot. */
+export type FlightMode = 'STABILIZE' | 'ALT_HOLD' | 'POSITION' | 'GUIDED' | 'AUTO' | 'LOITER' | 'RTL' | 'LAND' | 'TAKEOFF' | 'MANUAL' | 'OTHER';
+
+const ARDU_MODE: Partial<Record<FlightMode, number>> = { STABILIZE: 0, ALT_HOLD: 2, AUTO: 3, GUIDED: 4, LOITER: 5, RTL: 6, LAND: 9, POSITION: 16 };
+const ARDU_NAME: Record<number, FlightMode> = Object.fromEntries(Object.entries(ARDU_MODE).map(([k, v]) => [v, k as FlightMode]));
+/** PX4 custom_mode = main_mode << 16 | sub_mode << 24. AUTO sub-modes: 2 takeoff, 3 loiter, 4 mission, 5 RTL, 6 land. */
+const PX4_MODE: Partial<Record<FlightMode, [number, number]>> = {
+  MANUAL: [1, 0], ALT_HOLD: [2, 0], POSITION: [3, 0], STABILIZE: [7, 0],
+  TAKEOFF: [4, 2], LOITER: [4, 3], AUTO: [4, 4], RTL: [4, 5], LAND: [4, 6],
+  // PX4 has no GUIDED; a reposition command flies there and holds, which is the same idea.
+  GUIDED: [4, 3],
+};
+
+export function modeName(t: Pick<Telemetry, 'autopilot' | 'customMode'>): FlightMode {
+  if (autopilotOf(t) === 'PX4') {
+    const main = (t.customMode >> 16) & 0xff, sub = (t.customMode >>> 24) & 0xff;
+    if (main === 4) return ({ 2: 'TAKEOFF', 3: 'LOITER', 4: 'AUTO', 5: 'RTL', 6: 'LAND' } as Record<number, FlightMode>)[sub] ?? 'OTHER';
+    return ({ 1: 'MANUAL', 2: 'ALT_HOLD', 3: 'POSITION', 6: 'GUIDED', 7: 'STABILIZE' } as Record<number, FlightMode>)[main] ?? 'OTHER';
+  }
+  return ARDU_NAME[t.customMode] ?? 'OTHER';
+}
+
+export const MODE_LABEL: Record<FlightMode, string> = {
+  STABILIZE: 'Stabilize', ALT_HOLD: 'Alt hold', POSITION: 'Position hold', GUIDED: 'Guided', AUTO: 'Auto', LOITER: 'Loiter',
+  RTL: 'RTL', LAND: 'Land', TAKEOFF: 'Takeoff', MANUAL: 'Manual', OTHER: 'Other',
+};
+
+/** DO_SET_MODE for the given autopilot (ArduPilot numbering when unknown). */
+export function encodeFlightMode(ap: Autopilot, mode: FlightMode, targetSys = 1): Uint8Array | null {
+  if (ap === 'PX4') {
+    const m = PX4_MODE[mode]; if (!m) return null;
+    return encodeCommandLong(MAV_CMD.DO_SET_MODE, [MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, m[0], m[1]], targetSys);
+  }
+  const m = ARDU_MODE[mode]; if (m === undefined) return null;
+  return encodeCommandLong(MAV_CMD.DO_SET_MODE, [MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, m], targetSys);
+}
+
+/** COMMAND_INT: like COMMAND_LONG but with lat/lon as integers (no float32 rounding of positions). */
+export function encodeCommandInt(cmd: number, params: [number, number, number, number], latE7: number, lonE7: number, z: number, frameId = MAV_FRAME_GLOBAL_RELATIVE_ALT_INT, targetSys = 1, targetComp = 1): Uint8Array {
+  const p = new Uint8Array(35); const v = new DataView(p.buffer);
+  params.forEach((x, i) => v.setFloat32(i * 4, x, true));
+  v.setInt32(16, latE7, true); v.setInt32(20, lonE7, true); v.setFloat32(24, z, true);
+  v.setUint16(28, cmd, true); p[30] = targetSys; p[31] = targetComp; p[32] = frameId; p[33] = 0; p[34] = 0;
+  return frame(75, p);
+}
+
+/** DO_REPOSITION: fly to a point and hold (PX4's go-to; ArduPilot 4.1+ accepts it too). Param2 bit 1 = switch mode. */
+export function encodeReposition(lat: number, lon: number, altRelM: number, targetSys = 1): Uint8Array {
+  return encodeCommandInt(MAV_CMD.DO_REPOSITION, [-1, 1, 0, NaN], Math.round(lat * 1e7), Math.round(lon * 1e7), altRelM, MAV_FRAME_GLOBAL_RELATIVE_ALT_INT, targetSys);
+}
+
+/**
+ * NAV_TAKEOFF. ArduPilot reads param7 as altitude above home; PX4 reads it as
+ * altitude above sea level, so for PX4 the caller passes the current AMSL + climb.
+ */
+export function encodeTakeoffFor(ap: Autopilot, altM: number, t: Pick<Telemetry, 'altMslM' | 'altRelM'>, targetSys = 1): Uint8Array {
+  if (ap === 'PX4') {
+    const amsl = t.altMslM ? t.altMslM - t.altRelM + altM : NaN; // NaN: PX4 uses its default takeoff height
+    return encodeCommandLong(MAV_CMD.TAKEOFF, [-1, 0, 0, NaN, NaN, NaN, amsl], targetSys);
+  }
+  return encodeCommandLong(MAV_CMD.TAKEOFF, [0, 0, 0, NaN, NaN, NaN, altM], targetSys);
+}
+
+// ---------------------------------------------------------------------------
+// Payload: gimbal, camera, relay. All go to the autopilot, which forwards to
+// its gimbal/camera driver (ArduPilot MNTx / CAMx, PX4 gimbal v2 and camera).
+// ---------------------------------------------------------------------------
+
+/** Gimbal protocol v2: pitch and yaw in degrees (NaN leaves an axis alone). Param5 flags 0, param7 gimbal 0 = all. */
+export function encodeGimbalPitchYaw(pitchDeg: number, yawDeg = NaN, targetSys = 1): Uint8Array {
+  return encodeCommandLong(MAV_CMD.DO_GIMBAL_MANAGER_PITCHYAW, [pitchDeg, yawDeg, NaN, NaN, 0, 0, 0], targetSys);
+}
+/** Legacy gimbal command, for autopilots that answer UNSUPPORTED to the v2 command. Param7 = MAV_MOUNT_MODE_MAVLINK_TARGETING. */
+export function encodeMountControl(pitchDeg: number, yawDeg = 0, targetSys = 1): Uint8Array {
+  return encodeCommandLong(MAV_CMD.DO_MOUNT_CONTROL, [pitchDeg, 0, yawDeg, 0, 0, 0, 2], targetSys);
+}
+/** Zoom as a percentage of the camera's range (ZOOM_TYPE_RANGE = 2). */
+export function encodeCameraZoom(percent: number, targetSys = 1): Uint8Array {
+  return encodeCommandLong(MAV_CMD.SET_CAMERA_ZOOM, [2, Math.max(0, Math.min(100, percent))], targetSys);
+}
+/** Main image source: 1 = colour (RGB), 2 = thermal (IR). Param1 device 0 = all cameras. */
+export function encodeCameraSource(source: 'RGB' | 'IR', targetSys = 1): Uint8Array {
+  return encodeCommandLong(MAV_CMD.SET_CAMERA_SOURCE, [0, source === 'IR' ? 2 : 1, 0], targetSys);
+}
+/** Relay on/off (spotlight, drop, beacon). */
+export function encodeRelay(instance: number, on: boolean, targetSys = 1): Uint8Array {
+  return encodeCommandLong(MAV_CMD.DO_SET_RELAY, [instance, on ? 1 : 0], targetSys);
+}
+/** One still photo. Param3 = 1 image, param2 interval 0. */
+export function encodeTakePhoto(targetSys = 1): Uint8Array {
+  return encodeCommandLong(MAV_CMD.IMAGE_START_CAPTURE, [0, 0, 1, 0], targetSys);
+}

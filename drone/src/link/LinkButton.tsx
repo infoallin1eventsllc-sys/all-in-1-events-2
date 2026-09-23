@@ -1,13 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Bluetooth, Usb, Cpu, Link2, Link2Off, Satellite, Radio, ShieldCheck, Plane, ArrowDownToLine } from 'lucide-react';
+import { Bluetooth, Usb, Cpu, Link2, Link2Off, Satellite, Radio, ShieldCheck, Plane, ArrowDownToLine, Wifi } from 'lucide-react';
 import { useAircraftLink, type Transport } from './useAircraftLink';
-import { FIX_NAMES, FLIGHT_MODE_NAMES } from './mavlink';
+import { FIX_NAMES, MODE_LABEL, modeName } from './mavlink';
 import { Chip, Dot, ToolButton, type Tone } from '../dashboards/ui';
 
 /** App-bar control: shows link state, opens the transport picker. */
 export const LinkButton: React.FC = () => {
   const link = useAircraftLink();
   const [open, setOpen] = useState(false);
+  const [netUrl, setNetUrl] = useState(() => { try { return localStorage.getItem('a1-bridge-url') || ''; } catch { return ''; } });
+  const saveUrl = (v: string) => { setNetUrl(v); try { localStorage.setItem('a1-bridge-url', v); } catch { /* private mode */ } };
+  const noLocalRadio = !(link.support.bluetooth && link.support.secure) && !(link.support.serial && link.support.secure);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -50,7 +53,7 @@ export const LinkButton: React.FC = () => {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-[340px] rounded-[var(--radius-card)] border border-line bg-surface shadow-[0_12px_40px_rgba(16,24,40,0.14)] p-2 z-50">
+        <div className="fixed left-3 right-3 top-[108px] sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-[360px] max-h-[calc(100dvh-120px)] overflow-y-auto rounded-[var(--radius-card)] border border-line bg-surface shadow-[0_12px_40px_rgba(16,24,40,0.14)] p-2 z-50">
           <div className="px-3 pt-2 pb-1 flex items-center justify-between">
             <span className="text-[13px] font-semibold text-ink">Aircraft link</span>
             <Chip tone={tone}>{link.status === 'CONNECTED' ? (link.live ? 'Live' : 'Linked') : link.status === 'CONNECTING' ? 'Connecting' : link.status === 'ERROR' ? 'Error' : 'Simulation'}</Chip>
@@ -58,9 +61,9 @@ export const LinkButton: React.FC = () => {
 
           {link.status === 'CONNECTED' ? (
             <div className="px-3 py-2 space-y-2">
-              <div className="text-[12px] text-ink-2">{link.deviceName} · {link.transport === 'BLUETOOTH' ? 'Bluetooth LE' : 'USB serial · 57600'}</div>
+              <div className="text-[12px] text-ink-2">{link.deviceName} · {link.transport === 'BLUETOOTH' ? 'Bluetooth LE' : link.transport === 'NETWORK' ? 'Network bridge' : 'USB serial · 57600'}{link.autopilot !== 'UNKNOWN' ? ` · ${link.autopilot === 'PX4' ? 'PX4' : 'ArduPilot'}` : ''}</div>
               <div className="grid grid-cols-3 gap-2 text-[12px]">
-                <div><div className="text-[11px] text-ink-3">Mode</div><div className="font-medium text-ink">{t.heartbeatMs ? `${FLIGHT_MODE_NAMES[t.customMode] ?? `#${t.customMode}`}${t.armed ? ' · armed' : ''}` : '—'}</div></div>
+                <div><div className="text-[11px] text-ink-3">Mode</div><div className="font-medium text-ink">{t.heartbeatMs ? `${MODE_LABEL[modeName(t)]}${t.armed ? ' · armed' : ''}` : '—'}</div></div>
                 <div><div className="text-[11px] text-ink-3">GPS</div><div className="font-medium text-ink num">{FIX_NAMES[t.fixType] ?? '—'} · {t.satellites}</div></div>
                 <div><div className="text-[11px] text-ink-3">Battery</div><div className="font-medium text-ink num">{t.batteryPct >= 0 ? `${t.batteryPct}%` : '—'} · {t.voltageV.toFixed(1)} V</div></div>
                 <div><div className="text-[11px] text-ink-3">Altitude</div><div className="font-medium text-ink num">{t.altRelM.toFixed(1)} m</div></div>
@@ -95,11 +98,26 @@ export const LinkButton: React.FC = () => {
             <div className="space-y-0.5">
               <TransportRow id="BLUETOOTH" icon={<Bluetooth />} title="Bluetooth" body="BLE bridge on the flight controller (Nordic UART). Pairs with a click; ~30 m on the pad." available={link.support.bluetooth && link.support.secure} onPick={() => link.connectBluetooth()} />
               <TransportRow id="SERIAL" icon={<Usb />} title="USB telemetry radio" body="SiK 915 MHz, mLRS or ELRS radio, or the controller's USB port. Kilometres of range." available={link.support.serial && link.support.secure} onPick={() => link.connectSerial()} />
+              <div className={`rounded-lg px-3 py-2.5 ${link.transport === 'NETWORK' && link.status !== 'DISCONNECTED' ? 'bg-accent-soft' : ''}`}>
+                <div className="flex items-start gap-3">
+                  <Wifi className="mt-0.5 w-4 h-4 text-ink-2 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[13px] font-medium text-ink">Network</div>
+                    <div className="text-[11px] text-ink-3">The drone's onboard computer, over Wi-Fi, LTE or the relay. Works on iPhone, iPad, Android and laptops.</div>
+                    <form className="mt-1.5 flex gap-1.5" onSubmit={e => { e.preventDefault(); void link.connectNetwork(netUrl); }}>
+                      <input value={netUrl} onChange={e => saveUrl(e.target.value)} placeholder="wss://drone-pi.local:8770/?token=…" aria-label="Bridge address" inputMode="url" autoCapitalize="off" autoCorrect="off" spellCheck={false}
+                        className="flex-1 min-w-0 rounded-md border border-line bg-surface px-2 py-1 text-[12px] text-ink num" />
+                      <ToolButton size="sm" primary label="Connect" disabled={!netUrl.trim()} onClick={() => void link.connectNetwork(netUrl)} />
+                    </form>
+                  </div>
+                </div>
+              </div>
               <TransportRow id="SIMULATION" icon={<Cpu />} title="Simulation" body="No hardware. The dashboards run on their built-in simulators." available onPick={() => { link.disconnect(); setOpen(false); }} />
+              {noLocalRadio && <div className="mx-2 mt-1 rounded bg-surface-2 px-2.5 py-1.5 text-[11px] text-ink-2">This browser can't use Bluetooth or USB (iPhone, iPad and Firefox don't allow it). Use <strong className="font-medium text-ink">Network</strong>.</div>}
               {link.error && <div className="mx-2 mt-1 rounded bg-bad-soft px-2.5 py-1.5 text-[11px] text-bad">{link.error}</div>}
               <div className="mx-2 mt-1 rounded bg-surface-2 px-2.5 py-2 text-[11px] text-ink-3 flex gap-2">
                 <Radio className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                <span>Speaks MAVLink to PX4 and ArduPilot aircraft. DJI consumer drones only connect through DJI's own SDK, not Bluetooth.</span>
+                <span>Speaks MAVLink to ArduPilot (recommended) and PX4 aircraft, detected automatically. DJI, Autel and Skydio drones are closed systems and can't connect.</span>
               </div>
             </div>
           )}

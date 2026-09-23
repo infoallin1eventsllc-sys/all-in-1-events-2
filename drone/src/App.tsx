@@ -22,6 +22,7 @@ import { LinkButton } from './link/LinkButton';
 import { PlatformView } from './dashboards/PlatformView';
 import { RecordsView } from './dashboards/RecordsView';
 import { AnalyticsView } from './dashboards/AnalyticsView';
+import { InstallButton } from './dashboards/InstallButton';
 import { ErrorBoundary } from './dashboards/ErrorBoundary';
 import { recorder } from './record/recorder';
 import { 
@@ -67,8 +68,13 @@ const VERTICALS: { id: VerticalTab; label: string; icon: React.ReactNode }[] = [
 
 const THEME_KEY = 'drone-command-theme';
 
+/** Home-screen shortcuts (manifest.webmanifest) open a view with ?view=… */
+const START_VIEW: Record<string, ViewTab> = { show: 'LIGHT_SHOW_OPS', survey: 'SURVEY_OPS', patrol: 'SURVEILLANCE_OPS', analytics: 'ANALYTICS', records: 'RECORDS' };
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState<ViewTab>('LIGHT_SHOW_OPS');
+  const [activeTab, setActiveTab] = useState<ViewTab>(() => {
+    try { return START_VIEW[new URLSearchParams(location.search).get('view') ?? ''] ?? 'LIGHT_SHOW_OPS'; } catch { return 'LIGHT_SHOW_OPS'; }
+  });
   const isVertical = activeTab === 'LIGHT_SHOW_OPS' || activeTab === 'SURVEY_OPS' || activeTab === 'SURVEILLANCE_OPS';
   const isPlatform = activeTab === 'PLATFORM';
   const isRecords = activeTab === 'RECORDS';
@@ -191,26 +197,26 @@ export default function App() {
 
       {/* 1. App bar */}
       <header className="sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur">
-        <div className="max-w-[1600px] mx-auto px-5 h-14 flex items-center justify-between gap-4">
+        <div className="max-w-[1600px] mx-auto px-3 sm:px-5 py-2 lg:py-0 lg:h-14 flex flex-wrap lg:flex-nowrap items-center justify-between gap-x-4 gap-y-2">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-8 h-8 rounded-lg bg-ink text-surface flex items-center justify-center shrink-0">
               <Compass className="w-4 h-4" />
             </div>
-            <div className="leading-tight min-w-0">
+            <div className="leading-tight min-w-0 hidden min-[440px]:block">
               <div className="text-[13px] font-semibold text-ink truncate">All in 1 · Drone Command</div>
               <div className="text-[11px] text-ink-3 truncate hidden sm:block">Light show · Site survey · Surveillance</div>
             </div>
           </div>
 
           {isClient ? (
-            <nav id="nav-verticals" className="flex items-center gap-0.5 bg-surface-2 rounded-lg p-0.5 max-w-full overflow-x-auto">
+            <nav id="nav-verticals" className="order-last lg:order-none w-full lg:w-auto flex items-center gap-0.5 bg-surface-2 rounded-lg p-0.5 max-w-full overflow-x-auto">
               {VERTICALS.map(v => (
                 <button
                   key={v.id}
                   id={`nav-vertical-${v.id.toLowerCase()}`}
                   onClick={() => setActiveTab(v.id)}
                   aria-pressed={activeTab === v.id}
-                  className={`inline-flex items-center gap-1.5 px-3 h-8 rounded-md text-[13px] font-medium whitespace-nowrap transition-colors ${
+                  className={`flex-1 lg:flex-none justify-center inline-flex items-center gap-1.5 px-3 h-9 lg:h-8 rounded-md text-[13px] font-medium whitespace-nowrap transition-colors ${
                     activeTab === v.id ? 'bg-surface text-ink shadow-[var(--shadow-card)]' : 'text-ink-2 hover:text-ink'
                   }`}
                 >
@@ -228,7 +234,7 @@ export default function App() {
             </button>
           )}
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <LinkButton />
             {isClient && (
               <button
@@ -267,6 +273,9 @@ export default function App() {
               {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
             </button>
             {isClient && (
+              <InstallButton />
+            )}
+            {isClient && (
               <button
                 id="nav-engineering-toggle"
                 onClick={() => setActiveTab('PLATFORM')}
@@ -277,7 +286,7 @@ export default function App() {
                 title="How the platform works, in plain language — with the engineering detail inside"
               >
                 <Wrench className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">How it works</span>
+                <span className="hidden sm:inline whitespace-nowrap">How it works</span>
               </button>
             )}
           </div>

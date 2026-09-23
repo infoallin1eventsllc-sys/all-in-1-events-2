@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Crosshair, Sun, Moon, Flame, UserSearch, Home, ChevronUp, ChevronDown, ZoomIn, ZoomOut, Map as MapIcon, Video, Maximize2, Clock3, SunMedium, MoonStar, Upload, Cable, Cpu, Globe,
+  Crosshair, Sun, Moon, Flame, UserSearch, Home, Camera, ChevronUp, ChevronDown, ZoomIn, ZoomOut, Map as MapIcon, Video, Maximize2, Clock3, SunMedium, MoonStar, Upload, Cable, Cpu, Globe,
 } from 'lucide-react';
-import { useSurveillanceSimulation, WAYPOINTS, SITE, type PatrolDrone, type Detection } from '../hooks/useSurveillanceSimulation';
+import { useSurveillanceSimulation, WAYPOINTS, SITE, type PatrolDrone, type Detection, type SensorMode } from '../hooks/useSurveillanceSimulation';
 import { SurveillanceMapCanvas } from './SurveillanceMapCanvas';
 import { DroneFeedCanvas } from './DroneFeedCanvas';
 import { useAircraftLink } from '../link/useAircraftLink';
@@ -45,6 +45,33 @@ export const SurveillanceDashboard: React.FC = () => {
     sim.goToWaypoint(selectedDroneId, i);
     if (liveId && isPrimary) { const ll = sim.waypointLatLon(i); if (ll) link.goTo(ll.lat, ll.lon, WAYPOINTS[i].altM).catch(() => {}); }
   };
+  /**
+   * Payload controls. The simulation always follows so the feed stays in step;
+   * when the selected aircraft is the linked one, the command also goes to it.
+   * Thermal switches the camera source (MAV_CMD_SET_CAMERA_SOURCE, e.g. Siyi ZT6/ZT30);
+   * palettes and night vision have no standard command and stay on this screen.
+   */
+  const toAircraft = !!liveId && isPrimary;
+  const payload = {
+    gimbal: (delta: number) => {
+      const pitch = Math.max(-90, Math.min(15, d.gimbalPitchDeg + delta));
+      sim.setGimbal(d.id, delta);
+      if (toAircraft) link.setGimbal(pitch).catch(() => {});
+    },
+    zoom: (z: number) => { sim.setZoom(d.id, z); if (toAircraft) link.setZoom(((z - 1) / 9) * 100).catch(() => {}); },
+    sensor: (mode: SensorMode) => sim.setSensorMode(d.id, mode),
+    task: (task: keyof PatrolDrone['tasks']) => {
+      const on = !d.tasks[task];
+      sim.toggleTask(d.id, task);
+      if (toAircraft && task === 'illumination') link.setRelay(0, on).catch(() => {});
+    },
+  };
+  // The aircraft camera follows the dashboard's sensor state — including the night
+  // protocol switching every payload to thermal after dark — whenever it changes.
+  const wantSource = d.sensorMode.startsWith('THERMAL') ? 'IR' : 'RGB';
+  useEffect(() => { if (toAircraft) link.setCameraSource(wantSource).catch(() => {}); }, [toAircraft, wantSource]); // eslint-disable-line react-hooks/exhaustive-deps
+  const liveGimbal = toAircraft && Number.isFinite(link.telemetry.gimbalPitchDeg) ? Math.round(link.telemetry.gimbalPitchDeg) : null;
+
   const uploadPatrol = () => {
     const items = WAYPOINTS.map((w, i) => { const ll = sim.waypointLatLon(i); return ll ? { lat: ll.lat, lon: ll.lon, altRelM: w.altM, holdS: w.holdSec } : null; });
     if (items.some(x => !x)) return;
@@ -78,7 +105,7 @@ export const SurveillanceDashboard: React.FC = () => {
   const battTone: Tone = d.battery > 30 ? 'ok' : d.battery > 15 ? 'warn' : 'bad';
 
   const feed = (
-    <DroneFeedCanvas key={d.id} drone={d} isNight={isNight} width={960} onSetSensorMode={m => sim.setSensorMode(d.id, m)} onSetZoom={z => sim.setZoom(d.id, z)} className="w-full h-full" videoStream={video.stream} videoLabel={videoLabel} />
+    <DroneFeedCanvas key={d.id} drone={d} isNight={isNight} width={960} onSetSensorMode={payload.sensor} onSetZoom={payload.zoom} className="w-full h-full" videoStream={video.stream} videoLabel={videoLabel} />
   );
   const map = (
     <SurveillanceMapCanvas drones={drones} detections={detections} selectedDroneId={selectedDroneId} onSelectDrone={setSelectedDroneId} onSelectWaypoint={sendToWaypoint} />
@@ -145,20 +172,21 @@ export const SurveillanceDashboard: React.FC = () => {
           {/* Action bar: payload and flight commands for the selected aircraft */}
           <Card padded={false} className="px-3 py-2.5">
             <div className="flex flex-wrap items-center gap-2">
-              <ToolButton icon={<Crosshair />} label="Auto-track" active={d.tasks.autoTrack} disabled={offline} onClick={() => sim.toggleTask(d.id, 'autoTrack')} />
-              <ToolButton icon={<Flame />} label="Thermal" active={d.tasks.thermalScan} disabled={offline} onClick={() => sim.toggleTask(d.id, 'thermalScan')} />
-              <ToolButton icon={<Moon />} label="Night vision" active={d.tasks.nightVision} disabled={offline} onClick={() => sim.toggleTask(d.id, 'nightVision')} />
-              <ToolButton icon={<Sun />} label="Spotlight" active={d.tasks.illumination} disabled={offline} onClick={() => sim.toggleTask(d.id, 'illumination')} />
-              <ToolButton icon={<UserSearch />} label="Survivor detect" active={d.tasks.survivorDetect} disabled={offline} onClick={() => sim.toggleTask(d.id, 'survivorDetect')} />
+              <ToolButton icon={<Crosshair />} label="Auto-track" active={d.tasks.autoTrack} disabled={offline} onClick={() => payload.task('autoTrack')} title={toAircraft ? 'Needs onboard detection (companion computer); on this screen only for now' : undefined} />
+              <ToolButton icon={<Flame />} label="Thermal" active={d.tasks.thermalScan} disabled={offline} onClick={() => payload.task('thermalScan')} title={toAircraft ? 'Switches the aircraft camera to its thermal sensor' : undefined} />
+              <ToolButton icon={<Moon />} label="Night vision" active={d.tasks.nightVision} disabled={offline} onClick={() => payload.task('nightVision')} />
+              <ToolButton icon={<Sun />} label="Spotlight" active={d.tasks.illumination} disabled={offline} onClick={() => payload.task('illumination')} title={toAircraft ? 'Relay 1 on the flight controller (RELAY1_PIN)' : undefined} />
+              <ToolButton icon={<UserSearch />} label="Survivor detect" active={d.tasks.survivorDetect} disabled={offline} onClick={() => payload.task('survivorDetect')} />
+              {toAircraft && <ToolButton icon={<Camera />} label="Photo" onClick={() => link.takePhoto().catch(() => {})} title="Still photo on the aircraft camera (IMAGE_START_CAPTURE)" />}
               <span className="w-px h-6 bg-line mx-1" />
               <span className="text-[11px] text-ink-3">Gimbal</span>
-              <IconButton icon={<ChevronUp />} label="Gimbal up" disabled={offline} onClick={() => sim.setGimbal(d.id, 5)} />
-              <span className="num text-[12px] text-ink w-9 text-center">{d.gimbalPitchDeg}°</span>
-              <IconButton icon={<ChevronDown />} label="Gimbal down" disabled={offline} onClick={() => sim.setGimbal(d.id, -5)} />
+              <IconButton icon={<ChevronUp />} label="Gimbal up" disabled={offline} onClick={() => payload.gimbal(5)} />
+              <span className="num text-[12px] text-ink w-9 text-center" title={liveGimbal != null ? 'Reported by the aircraft gimbal' : undefined}>{liveGimbal ?? d.gimbalPitchDeg}°</span>
+              <IconButton icon={<ChevronDown />} label="Gimbal down" disabled={offline} onClick={() => payload.gimbal(-5)} />
               <span className="text-[11px] text-ink-3 ml-1">Zoom</span>
-              <IconButton icon={<ZoomOut />} label="Zoom out" disabled={offline} onClick={() => sim.setZoom(d.id, Math.max(1, d.zoom - 1))} />
+              <IconButton icon={<ZoomOut />} label="Zoom out" disabled={offline} onClick={() => payload.zoom(Math.max(1, d.zoom - 1))} />
               <span className="num text-[12px] text-ink w-7 text-center">{d.zoom}×</span>
-              <IconButton icon={<ZoomIn />} label="Zoom in" disabled={offline} onClick={() => sim.setZoom(d.id, Math.min(10, d.zoom + 1))} />
+              <IconButton icon={<ZoomIn />} label="Zoom in" disabled={offline} onClick={() => payload.zoom(Math.min(10, d.zoom + 1))} />
               <span className="ml-auto flex items-center gap-3">
                 <span className="relative">
                   <ToolButton icon={videoSource.kind === 'SIM' ? <Cpu /> : videoSource.kind === 'CAPTURE' ? <Cable /> : <Globe />} label={videoSource.kind === 'SIM' ? 'Video: simulation' : videoSource.kind === 'CAPTURE' ? 'Video: capture' : 'Video: aircraft'} active={videoSource.kind !== 'SIM'} onClick={() => setVideoMenu(m => !m)} />
@@ -207,7 +235,7 @@ export const SurveillanceDashboard: React.FC = () => {
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="text-[15px] font-semibold text-ink">{d.id}</div>
-                    <div className="text-[12px] text-ink-3">{liveId ? `${link.transport === 'BLUETOOTH' ? 'Bluetooth LE' : 'USB radio'} · ${link.telemetry.msgsPerSec} msg/s` : d.model} · {SENSOR_LABEL[d.sensorMode]}</div>
+                    <div className="text-[12px] text-ink-3">{liveId ? `${link.transport === 'BLUETOOTH' ? 'Bluetooth LE' : link.transport === 'NETWORK' ? 'Network' : 'USB radio'} · ${link.autopilot === 'PX4' ? 'PX4' : 'ArduPilot'} · ${link.telemetry.msgsPerSec} msg/s` : d.model} · {SENSOR_LABEL[d.sensorMode]}</div>
                   </div>
                   <Chip tone={STATUS_TONE[d.status]} pulse={d.status === 'MONITORING'}>{STATUS_LABEL[d.status]}</Chip>
                 </div>
