@@ -65,6 +65,18 @@ export const TREES: { x: number; y: number; r: number; shade: number }[] = (() =
   });
 })();
 
+/** Cars in the parking lot (seeded), shared by the map imagery and the 3D stage. */
+export const PARKED_CARS: { x: number; y: number; color: string }[] = (() => {
+  let seed = 11; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const cols = ['#d7dbe0', '#1f2937', '#9ca3af', '#7f1d1d', '#1e3a8a', '#f3f4f6', '#374151'];
+  const out: { x: number; y: number; color: string }[] = [];
+  for (let row = 0; row < 4; row++) for (let col = 0; col < 40; col++) {
+    const x = SITE.parking.x0 + 4 + col * 2.8, y = SITE.parking.y0 + 6 + row * 15;
+    if (rnd() < 0.72) out.push({ x, y, color: cols[Math.floor(rnd() * cols.length)] });
+  }
+  return out;
+})();
+
 /**
  * A procedural orthophoto of the venue: what the finished map will look like.
  * Drawn once to a canvas covering WORLD_M × WORLD_M, centred on the origin.
@@ -93,7 +105,6 @@ export function siteImagery(size = 1024): HTMLCanvasElement {
     ctx.fillStyle = `rgba(${22 + t.shade * 18},${48 + t.shade * 20},${26 + t.shade * 10},0.95)`;
     ctx.beginPath(); ctx.arc(X(t.x), Y(t.y), t.r * s, 0, Math.PI * 2); ctx.fill();
   }
-  let seed = 11; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
 
   // Worn gravel paths linking entrance, stage, hall and parking.
   ctx.strokeStyle = 'rgba(176,160,128,0.9)'; ctx.lineCap = 'round'; ctx.lineWidth = 6 * s;
@@ -108,12 +119,8 @@ export function siteImagery(size = 1024): HTMLCanvasElement {
   const P = SITE.parking;
   ctx.fillStyle = '#4a4d52'; ctx.fillRect(X(P.x0), Y(P.y0), (P.x1 - P.x0) * s, (P.y1 - P.y0) * s);
   ctx.strokeStyle = 'rgba(230,230,230,0.5)'; ctx.lineWidth = Math.max(1, 0.2 * s);
-  const carCols = ['#d7dbe0', '#1f2937', '#9ca3af', '#7f1d1d', '#1e3a8a', '#f3f4f6', '#374151'];
-  for (let row = 0; row < 4; row++) for (let col = 0; col < 40; col++) {
-    const x = P.x0 + 4 + col * 2.8, y = P.y0 + 6 + row * 15;
-    ctx.strokeRect(X(x), Y(y), 2.6 * s, 5 * s);
-    if (rnd() < 0.72) { ctx.fillStyle = carCols[Math.floor(rnd() * carCols.length)]; ctx.fillRect(X(x + 0.4), Y(y + 0.5), 1.8 * s, 4 * s); }
-  }
+  for (let row = 0; row < 4; row++) for (let col = 0; col < 40; col++) ctx.strokeRect(X(P.x0 + 4 + col * 2.8), Y(P.y0 + 6 + row * 15), 2.6 * s, 5 * s);
+  for (const car of PARKED_CARS) { ctx.fillStyle = car.color; ctx.fillRect(X(car.x + 0.4), Y(car.y + 0.5), 1.8 * s, 4 * s); }
 
   // Structures (roofs), with a soft shadow to the south-east.
   for (const st of SITE.structures) {
