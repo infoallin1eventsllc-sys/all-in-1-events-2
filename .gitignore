@@ -12,3 +12,4 @@ node_modules/
 
 # Drone command app build output (built on deploy)
 drone/dist/
+drone/dist-artifact/
