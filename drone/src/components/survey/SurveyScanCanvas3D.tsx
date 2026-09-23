@@ -12,6 +12,7 @@ import { RotateCcw } from 'lucide-react';
 import { PARKED_CARS, SITE, TREES, WORLD_M, heightAt, siteImagery, structureAt } from '../../survey/site';
 import { GOOD_VIEWS, type CoverageGrid, type Leg, type SurveyPlan } from '../../survey/plan';
 import { buildDrone, droneMaterials, radialTexture } from '../hero/droneModel';
+import { FrameGovernor } from '../../lib/quality';
 import type { Photo, SurveyAircraft, Phase } from '../../hooks/useSurveyMission';
 
 /**
@@ -207,7 +208,8 @@ export const SurveyScanCanvas3D: React.FC<Props> = (props) => {
     const host = hostRef.current; if (!host) return;
     const w = host.clientWidth || 900, h = host.clientHeight || 520;
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const gov = new FrameGovernor('survey');
+    renderer.setPixelRatio(gov.pixelRatio(2));
     renderer.setSize(w, h);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.15;
@@ -684,7 +686,8 @@ export const SurveyScanCanvas3D: React.FC<Props> = (props) => {
       }
       // Depth of field only when the film or the follow camera is close to the aircraft.
       const filmed = vw === 'CINEMATIC' || vw === 'FOLLOW';
-      bokeh.enabled = filmed;
+      bokeh.enabled = filmed && gov.level === 0;
+      bloom.enabled = gov.level < 2;
       const bu = bokeh.uniforms as { focus: { value: number }; aperture: { value: number } };
       bu.focus.value += (camera.position.distanceTo(ac.position) - bu.focus.value) * 0.15;
       bu.aperture.value = vw === 'CINEMATIC' ? 0.00005 : 0.00002;
@@ -694,6 +697,7 @@ export const SurveyScanCanvas3D: React.FC<Props> = (props) => {
       place(homeRef.current, SITE.home.x, hy + 6, SITE.home.y);
 
       composer.render();
+      if (gov.tick(dt * 1000)) { renderer.setPixelRatio(gov.pixelRatio(2)); const cw = host.clientWidth, ch = host.clientHeight; renderer.setSize(cw, ch); composer.setSize(cw, ch); bloom.setSize(cw, ch); }
     };
     raf = requestAnimationFrame(tick);
 

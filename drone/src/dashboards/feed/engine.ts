@@ -218,7 +218,7 @@ class Engine {
     else if (this.slow < 1 / 56 && this.level > 0 && this.settled > 600) { this.level--; this.settled = 0; }
     this.city.update(dt);
     this.sfSeen = false;
-    for (const v of this.views) if (v.world === 'SF' && !v.video) { this.sfWorld().update(dt); break; }
+    for (const v of this.views) if (v.world === 'SF' && !v.video) { const sf = this.sfWorld(); sf.update(dt); sf.setDetail(this.level); break; }
     const moved = new Set<string>();
     for (const v of this.views) {
       const d = v.get().drone;
@@ -349,8 +349,8 @@ class Engine {
       this.sfRt = new THREE.WebGLRenderTarget(FEED_W, FEED_H, { samples: 4, type: THREE.HalfFloatType });
       this.sfDepth = new THREE.WebGLRenderTarget(FEED_W, FEED_H, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
     }
-    // Depth prepass for the ambient occlusion: solid geometry only, at half resolution.
-    if (!v.compact) {
+    // Depth prepass for the ambient occlusion: solid geometry only; skipped when the machine is stepping down.
+    if (!v.compact && this.level === 0) {
       sf.solidOnly(true);
       sf.scene.overrideMaterial = this.depthMat;
       this.sfDepth!.viewport.set(0, 0, w, h);
@@ -367,7 +367,7 @@ class Engine {
     this.renderer.render(sf.scene, this.cam);
     const u = this.post.uniforms;
     u.tDiffuse.value = this.sfRt.texture; u.tDepth.value = this.sfDepth!.texture;
-    u.ao.value = v.compact ? 0 : 1; u.camNear.value = this.cam.near; u.camFar.value = this.cam.far;
+    u.ao.value = v.compact || this.level > 0 ? 0 : 1; u.camNear.value = this.cam.near; u.camFar.value = this.cam.far;
     u.invProj.value.copy(this.cam.projectionMatrixInverse); u.proj.value.copy(this.cam.projectionMatrix);
     u.uvScale.value.set(w / FEED_W, h / FEED_H); u.uvMax.value.copy(u.uvScale.value); u.uvOffset.value.set(0, 0); u.uvRot.value = 0;
     u.res.value.set(w, h);

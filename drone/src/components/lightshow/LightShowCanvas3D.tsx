@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { FrameGovernor } from '../../lib/quality';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -130,7 +131,8 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
     const w = container.clientWidth || 800, h = container.clientHeight || 520;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const gov = new FrameGovernor('show');
+    renderer.setPixelRatio(gov.pixelRatio(2));
     renderer.setSize(w, h);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.2;
@@ -306,7 +308,8 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
       }
 
       st.bloom.enabled = glow;
-      if (glow) st.composer.render(); else st.renderer.render(s, camera);
+      if (glow && gov.level < 2) st.composer.render(); else st.renderer.render(s, camera);
+      if (gov.tick(dt * 1000)) { renderer.setPixelRatio(gov.pixelRatio(2)); const cw = container.clientWidth, ch = container.clientHeight; renderer.setSize(cw, ch); composer.setSize(cw, ch); bloom.setSize(cw, ch); }
     };
     raf = requestAnimationFrame(tick);
 

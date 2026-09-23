@@ -98,7 +98,7 @@ export function buildDrone(mats: Record<string, THREE.Material>, blurTex: THREE.
 /** Materials for one fleet; share the record across aircraft. */
 export function droneMaterials(): Record<string, THREE.Material> {
   const mats: Record<string, THREE.Material> = {
-    white: new THREE.MeshPhysicalMaterial({ color: 0xcfd3d7, metalness: 0.02, roughness: 0.5, clearcoat: 0.35, clearcoatRoughness: 0.4 }),
+    white: new THREE.MeshPhysicalMaterial({ color: 0xb9bec4, metalness: 0.02, roughness: 0.55, clearcoat: 0.3, clearcoatRoughness: 0.45 }),
     graphite: new THREE.MeshPhysicalMaterial({ color: 0x2c3036, metalness: 0.15, roughness: 0.55, clearcoat: 0.2, clearcoatRoughness: 0.5 }),
     carbon: new THREE.MeshStandardMaterial({ color: 0x1b1e23, metalness: 0.35, roughness: 0.42 }),
     seam: new THREE.MeshStandardMaterial({ color: 0x0c0e11, metalness: 0.2, roughness: 0.8 }),

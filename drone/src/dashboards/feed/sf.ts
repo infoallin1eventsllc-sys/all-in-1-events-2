@@ -899,6 +899,16 @@ export class SanFrancisco {
     return mat;
   }
 
+  private detail = -1;
+  /** Trade detail for speed: fewer fog slices and a smaller shadow map as the level rises. */
+  setDetail(level: number) {
+    if (level === this.detail) return; this.detail = level;
+    let k = 0;
+    this.scene.traverse(o => { if (o.name === 'fog') { o.userData.slice = k++; } });
+    this.scene.traverse(o => { if (o.name === 'fog') o.userData.off = level === 0 ? false : level === 1 ? o.userData.slice % 2 === 1 : o.userData.slice % 3 !== 0; });
+    const size = level === 0 ? 2048 : 1024;
+    if (this.sun.shadow.mapSize.x !== size) { this.sun.shadow.mapSize.set(size, size); this.sun.shadow.map?.dispose(); this.sun.shadow.map = null; }
+  }
   private hidden: THREE.Object3D[] = [];
   /** Hide everything that is not solid geometry (fog, sprites, points, lines) for a depth prepass, and restore. */
   solidOnly(on: boolean) {
@@ -951,7 +961,7 @@ export class SanFrancisco {
     if (!ir) this.scene.environment = this.envFor(mood); else this.scene.environment = null;
     this.gndMat.emissiveIntensity = blue ? 0.9 : golden ? 0.55 : 0;
     this.lights.visible = !ir && !day; this.carLights.visible = !ir && !day; this.sunDisc.visible = !ir && !blue;
-    this.scene.traverse(o => { if (o.name === 'fog') o.visible = !ir; });
+    this.scene.traverse(o => { if (o.name === 'fog') o.visible = !ir && !o.userData.off; });
     this.fogLayer.uniforms.mood.value = MOOD_K[mood];
     this.fogLayer.uniforms.fogCol.value.set(blue ? 0x28324a : golden ? 0xd9c3ae : 0xeef1f4);
     this.ggMat.emissive.set(blue ? 0xff9a3c : 0x000000); this.ggMat.emissiveIntensity = blue ? 0.5 : 0;

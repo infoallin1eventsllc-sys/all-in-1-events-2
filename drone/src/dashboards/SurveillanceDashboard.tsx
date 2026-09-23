@@ -192,7 +192,7 @@ export const SurveillanceDashboard: React.FC = () => {
               <IconButton icon={<ZoomOut />} label="Zoom out" disabled={offline} onClick={() => payload.zoom(Math.max(1, d.zoom - 1))} />
               <span className="num text-[12px] text-ink w-7 text-center">{d.zoom}×</span>
               <IconButton icon={<ZoomIn />} label="Zoom in" disabled={offline} onClick={() => payload.zoom(Math.min(10, d.zoom + 1))} />
-              <span className="ml-auto flex items-center gap-3">
+              <span className="ml-auto flex flex-wrap items-center gap-3 max-sm:ml-0 max-sm:w-full">
                 <span className="relative">
                   <ToolButton icon={videoSource.kind === 'FOOTAGE' ? <Film /> : videoSource.kind === 'SIM' ? <Cpu /> : videoSource.kind === 'CAPTURE' ? <Cable /> : <Globe />} label={videoSource.kind === 'FOOTAGE' ? `Video: ${PLACE_LABEL[videoSource.place]}` : videoSource.kind === 'SIM' ? (videoSource.world === 'SF' ? 'Video: San Francisco tour' : 'Video: 3D simulation') : videoSource.kind === 'CAPTURE' ? 'Video: capture' : 'Video: aircraft'} active={videoSource.kind === 'CAPTURE' || videoSource.kind === 'WEBRTC'} onClick={() => setVideoMenu(m => !m)} />
                   {videoMenu && (

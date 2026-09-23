@@ -6,7 +6,9 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js';
 import { buildDrone, droneMaterials, radialTexture } from '../../components/hero/droneModel';
+import { FrameGovernor } from '../../lib/quality';
 
 /**
  * The Overview hero: a fleet of quadcopters in a dark, hazy sky, hovering with a
@@ -15,6 +17,13 @@ import { buildDrone, droneMaterials, radialTexture } from '../../components/hero
  * anodised bodies under a key light and a blue rim light, LED tips that bloom,
  * propeller blur, thin light trails when the fleet moves, volumetric beams in
  * the haze, and a camera that pushes in and follows the pointer a little.
+ *
+ * Motion: every aircraft holds its slot in the formation the way a real
+ * quadcopter holds a hover: a slow wander round the slot, a lean into each
+ * correction, a settle after it, props that never stop, nav lights that
+ * flash. The formation itself breathes and sways, and the camera dollies
+ * and drifts. A frame governor keeps it smooth, stepping the render sharper
+ * or lighter to match the machine.
  *
  * Reduced motion: one still frame of the chevron, nothing moves. No WebGL: the
  * page's gradient stays and the copy stands on its own.
@@ -52,6 +61,9 @@ interface Drone {
   stagger: number;
   ledColor: THREE.Color;
   roll: number; pitch: number; yaw: number;
+  /** The hover wander: a target offset from the slot the aircraft eases toward, re-picked every few seconds. */
+  wander: THREE.Vector3; wanderGoal: THREE.Vector3; nextPick: number;
+  nav: THREE.Mesh[];
 }
 
 export const DroneHero: React.FC<{ className?: string }> = ({ className = '' }) => {
@@ -66,8 +78,9 @@ export const DroneHero: React.FC<{ className?: string }> = ({ className = '' }) 
     let renderer: THREE.WebGLRenderer;
     try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' }); }
     catch (e) { console.warn('Hero: WebGL unavailable', e); setOk(false); return; }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, phone ? 1.25 : 1.6));
-    renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+    const gov = new FrameGovernor('hero');
+    renderer.setPixelRatio(gov.pixelRatio(2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.95;
     el.appendChild(renderer.domElement);
     renderer.domElement.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block';
 
@@ -89,10 +102,12 @@ export const DroneHero: React.FC<{ className?: string }> = ({ className = '' }) 
 
     // Lighting: warm key from the front-left and above, cool rim from behind, faint sky fill.
     scene.add(new THREE.HemisphereLight(0x8fa8d8, 0x06080c, 0.55));
-    const key = new THREE.DirectionalLight(0xfff1e0, 1.7); key.position.set(-9, 14, 12); scene.add(key);
-    const fill = new THREE.DirectionalLight(0xdbe6ff, 0.55); fill.position.set(10, 3, 14); scene.add(fill);
-    const rim = new THREE.DirectionalLight(0x8fc0ff, 2.4); rim.position.set(2, 9, -16); scene.add(rim);
-    const under = new THREE.DirectionalLight(0x3d6fd6, 0.6); under.position.set(0, -10, 4); scene.add(under);
+    const key = new THREE.DirectionalLight(0xfff1e0, 1.35); key.position.set(-9, 14, 12); scene.add(key);
+    const fill = new THREE.DirectionalLight(0xdbe6ff, 0.45); fill.position.set(10, 3, 14); scene.add(fill);
+    const rim = new THREE.DirectionalLight(0x8fc0ff, 2.2); rim.position.set(2, 9, -16); scene.add(rim);
+    const under = new THREE.DirectionalLight(0x3d6fd6, 0.5); under.position.set(0, -10, 4); scene.add(under);
+    // A specular highlight that moves across the bodies as the camera drifts: a small, sharp kicker.
+    const kicker = new THREE.PointLight(0xffffff, 9, 30, 1.8); kicker.position.set(4, 8, 10); scene.add(kicker);
 
     // Volumetric beams: soft additive slabs cutting through the haze.
     const beamMat = new THREE.ShaderMaterial({
@@ -126,17 +141,20 @@ export const DroneHero: React.FC<{ className?: string }> = ({ className = '' }) 
       tg.setAttribute('color', new THREE.BufferAttribute(new Float32Array(pts * 3), 3));
       const trail = new THREE.Line(tg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
       trail.frustumCulled = false; scene.add(trail);
-      drones.push({ group, props, blur, trail, history: Array.from({ length: pts }, () => group.position.clone()), prev: group.position.clone(), phase: rnd() * Math.PI * 2, stagger: i / n, ledColor, roll: 0, pitch: 0, yaw: 0 });
+      const nav = group.children.filter((c): c is THREE.Mesh => (c as THREE.Mesh).isMesh && ((c as THREE.Mesh).material === mats.ledGreen || (c as THREE.Mesh).material === mats.ledRed)).map(m => { m.material = (m.material as THREE.Material).clone(); return m; });
+      drones.push({ group, props, blur, trail, history: Array.from({ length: pts }, () => group.position.clone()), prev: group.position.clone(), phase: rnd() * Math.PI * 2, stagger: i / n, ledColor, roll: 0, pitch: 0, yaw: 0, wander: new THREE.Vector3(), wanderGoal: new THREE.Vector3(), nextPick: rnd() * 3, nav });
     }
 
     const composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, cam));
     // Shallow depth of field, focused on whichever aircraft is nearest; skipped on phones.
-    const bokeh = phone ? null : new BokehPass(scene, cam, { focus: 12, aperture: 0.00012, maxblur: 0.0022 });
+    const bokeh = phone ? null : new BokehPass(scene, cam, { focus: 12, aperture: 0.0001, maxblur: 0.0018 });
     if (bokeh) composer.addPass(bokeh);
-    const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), phone ? 0.4 : 0.45, 0.55, 0.98);
+    const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), phone ? 0.3 : 0.34, 0.5, 1.0);
     composer.addPass(bloom);
     composer.addPass(new OutputPass());
+    // Edge anti-aliasing after tone mapping: crisp arms and blades at every pixel ratio.
+    const smaa = new SMAAPass(); composer.addPass(smaa);
 
     const size = () => {
       const w = el.clientWidth, h = el.clientHeight;
@@ -166,9 +184,12 @@ export const DroneHero: React.FC<{ className?: string }> = ({ className = '' }) 
       let x: number, y: number, z: number;
       if (u < 0.5) { const s = smooth(u / 0.5); x = a[0] + (b[0] - a[0]) * s; y = a[1] + (b[1] - a[1]) * s; z = a[2] + (b[2] - a[2]) * s; }
       else { const s = smooth((u - 0.5) / 0.5); x = b[0] + (c[0] - b[0]) * s; y = b[1] + (c[1] - b[1]) * s; z = b[2] + (c[2] - b[2]) * s; }
-      // Idle hover: a slow bob and a lean, unique to each aircraft.
-      y += Math.sin(t * 0.9 + d.phase) * 0.09 + Math.sin(t * 1.7 + d.phase * 2) * 0.03;
-      x += Math.sin(t * 0.5 + d.phase) * 0.06;
+      // The formation breathes and sways as one: a slow swell in scale, a lean of the whole fleet.
+      const swell = 1 + Math.sin(t * 0.23) * 0.035, sway = Math.sin(t * 0.17) * 0.35;
+      x = x * swell + sway * (y * 0.12); z = z * swell;
+      // Hover: a wander round the slot, plus the fine bob a real aircraft never loses.
+      x += d.wander.x; y += d.wander.y; z += d.wander.z;
+      y += Math.sin(t * 0.9 + d.phase) * 0.06 + Math.sin(t * 1.7 + d.phase * 2) * 0.02;
       d.group.position.set(x, y, z);
     };
 
@@ -183,19 +204,26 @@ export const DroneHero: React.FC<{ className?: string }> = ({ className = '' }) 
       cam.lookAt(0, 0.9 + p * 0.3, 0);
       let nearest = 1e9;
       beams.forEach((b, k) => { b.rotation.z = [0.55, 0.42, -0.35][k] + Math.sin(t * 0.08 + k) * 0.05; });
+      kicker.position.set(4 + px * 3, 8 - py * 2, 10);
       drones.forEach((d, i) => {
         d.prev.copy(d.group.position);
+        // Every few seconds the aircraft picks a new spot a little off its slot and eases there: station-keeping.
+        if (t > d.nextPick) { d.wanderGoal.set((rnd() - 0.5) * 0.9, (rnd() - 0.5) * 0.5, (rnd() - 0.5) * 0.7); d.nextPick = t + 2.5 + rnd() * 4; }
+        d.wander.lerp(d.wanderGoal, 1 - Math.exp(-dt * 0.9));
         place(d, i, p, t);
         vel.subVectors(d.group.position, d.prev).divideScalar(Math.max(dt, 1e-3));
         // Bank into the turn: roll with sideways speed, pitch with fore-aft speed, yaw a little toward the heading.
-        const roll = THREE.MathUtils.clamp(-vel.x * 0.09, -0.55, 0.55) + Math.sin(t * 0.8 + d.phase) * 0.035;
-        const pitch = THREE.MathUtils.clamp(vel.z * 0.07, -0.45, 0.45) + Math.sin(t * 1.1 + d.phase) * 0.025;
+        const roll = THREE.MathUtils.clamp(-vel.x * 0.16, -0.55, 0.55) + Math.sin(t * 0.8 + d.phase) * 0.03;
+        const pitch = THREE.MathUtils.clamp(vel.z * 0.12, -0.45, 0.45) + Math.sin(t * 1.1 + d.phase) * 0.02;
         const yaw = vel.length() > 0.8 ? Math.atan2(vel.x, -vel.z) * 0.35 : d.yaw;
         d.roll += (roll - d.roll) * (1 - Math.exp(-dt * 3)); d.pitch += (pitch - d.pitch) * (1 - Math.exp(-dt * 3)); d.yaw += (yaw - d.yaw) * (1 - Math.exp(-dt * 1.5));
         d.group.rotation.set(d.pitch - 0.08, d.yaw - Math.PI * 0.5 + 0.55 + Math.sin(d.phase) * 0.3, d.roll, 'YXZ');
         nearest = Math.min(nearest, d.group.position.distanceTo(cam.position));
-        const spin = dt * 62;
+        const spin = dt * (62 + vel.length() * 6);
         d.props.forEach((pr, k) => { pr.rotation.y += spin * (k % 2 ? -1 : 1); });
+        // Nav lights: the aviation flash, once a second, offset per aircraft.
+        const flash = ((t * 1.0 + d.phase) % 1) < 0.12 ? 1 : 0.18;
+        d.nav.forEach(m => { const mat = m.material as THREE.MeshBasicMaterial; mat.opacity = flash; mat.transparent = true; });
         // Light trail: recent positions, fading, brighter the faster the aircraft moves.
         d.history.pop(); d.history.unshift(d.group.position.clone());
         const pos = d.trail.geometry.getAttribute('position') as THREE.BufferAttribute, col = d.trail.geometry.getAttribute('color') as THREE.BufferAttribute;
@@ -203,8 +231,10 @@ export const DroneHero: React.FC<{ className?: string }> = ({ className = '' }) 
         d.history.forEach((h, k) => { pos.setXYZ(k, h.x, h.y - 0.05, h.z); const f = strength * (1 - k / d.history.length) * 0.8; col.setXYZ(k, d.ledColor.r * f, d.ledColor.g * f, d.ledColor.b * f); });
         pos.needsUpdate = true; col.needsUpdate = true;
       });
-      if (bokeh) (bokeh.uniforms as { focus: { value: number } }).focus.value += (nearest - (bokeh.uniforms as { focus: { value: number } }).focus.value) * 0.1;
+      if (bokeh) { bokeh.enabled = gov.level === 0; (bokeh.uniforms as { focus: { value: number } }).focus.value += (nearest - (bokeh.uniforms as { focus: { value: number } }).focus.value) * 0.1; }
+      bloom.enabled = gov.level < 2; smaa.enabled = gov.level < 2;
       composer.render();
+      if (gov.tick(dt * 1000)) { renderer.setPixelRatio(gov.pixelRatio(2)); size(); }
       raf = requestAnimationFrame(frame);
     };
 
