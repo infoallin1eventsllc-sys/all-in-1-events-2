@@ -13,7 +13,7 @@ import type { Place } from '../dashboards/feed/footage';
  */
 export type VideoSource =
   | { kind: 'FOOTAGE'; place: Place }
-  | { kind: 'SIM' }
+  | { kind: 'SIM'; world?: 'CITY' | 'SF' }
   | { kind: 'CAPTURE'; deviceId?: string }
   | { kind: 'WEBRTC'; url: string };
 

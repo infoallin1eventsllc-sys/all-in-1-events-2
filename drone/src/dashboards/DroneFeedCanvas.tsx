@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Circle, Maximize2, Crosshair as CrosshairIcon, Thermometer } from 'lucide-react';
-import { feedEngine, FEED_W, FEED_H, THUMB_W, THUMB_H, type Lock } from './feed/engine';
+import { feedEngine, FEED_W, FEED_H, THUMB_W, THUMB_H, type Lock, type World } from './feed/engine';
 import { playlist, sources, type Place, type Source } from './feed/footage';
 import type { PatrolDrone, SensorMode } from '../hooks/useSurveillanceSimulation';
 
@@ -25,6 +25,8 @@ interface Props {
   compact?: boolean;
   /** Real footage of this place; null or undefined shows the 3D simulation. */
   footage?: Place | null;
+  /** Which 3D world when no footage plays: the venue's city, or the San Francisco dusk take (the default for San Francisco footage that can't load). */
+  world?: World;
   onSetSensorMode?: (mode: SensorMode) => void;
   onSetZoom?: (zoom: number) => void;
   className?: string;
@@ -46,7 +48,7 @@ const CSS_LOOK: Record<SensorMode, string> = {
 };
 const GRAIN = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
 
-export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = false, footage = null, onSetSensorMode, onSetZoom, className = '', videoStream = null, videoLabel }) => {
+export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = false, footage = null, world, onSetSensorMode, onSetZoom, className = '', videoStream = null, videoLabel }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const clipRef = useRef<HTMLVideoElement>(null);
@@ -77,6 +79,7 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = fal
   }, [clip, compact]);
   const src = srcs?.[srcIdx] ?? null;
   const useFootage = !!clip && !failed && !videoStream;
+  const simWorld: World = world ?? (footage === 'SAN_FRANCISCO' ? 'SF' : 'CITY');
   const glVideo = useFootage && !!src?.sameOrigin;   // same-origin: WebGL reads the frames, full sensor stage
   const nextSource = () => {
     if (srcs && srcIdx + 1 < srcs.length) { setSrcIdx(srcIdx + 1); return; }
@@ -96,7 +99,7 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = fal
     const engine = feedEngine();
     if (!engine) { setNoGl(true); return; }
     const off = engine.add({
-      canvas, compact,
+      canvas, compact, world: simWorld,
       get: () => live.current,
       video: glVideo ? clipRef.current ?? undefined : undefined,
       onLock: compact ? undefined : next => setLock(prev => {
@@ -105,7 +108,7 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = fal
       }),
     });
     return () => { off(); setLock(null); };
-  }, [compact, videoStream, useFootage, glVideo, src]);
+  }, [compact, videoStream, useFootage, glVideo, src, simWorld]);
 
   useEffect(() => {
     if (compact) return;
@@ -159,7 +162,7 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = fal
               <span className="hidden sm:inline px-1.5 py-0.5 rounded bg-black/60 text-slate-300">{drone.model}</span>
               <span className={`px-1.5 py-0.5 rounded bg-black/60 font-bold ${videoStream ? 'text-sky-300' : thermal ? 'text-rose-300' : drone.sensorMode === 'NIGHT_VISION' ? 'text-lime-300' : 'text-emerald-300'}`}>{videoStream ? (videoLabel ?? 'LIVE VIDEO') : MODE_LABEL[drone.sensorMode]}</span>
               <span className="px-1.5 py-0.5 rounded bg-black/60 text-amber-300">{drone.zoom.toFixed(1)}×</span>
-              {footage && failed && !videoStream && <span className="hidden sm:inline px-1.5 py-0.5 rounded bg-black/60 text-slate-400" title="The recorded footage could not be loaded; showing the 3D simulation">3D SIM</span>}
+              {footage && failed && !videoStream && <span className="hidden sm:inline px-1.5 py-0.5 rounded bg-black/60 text-slate-400" title={simWorld === 'SF' ? 'The recorded footage could not be loaded; showing the rendered San Francisco take' : 'The recorded footage could not be loaded; showing the 3D simulation'}>{simWorld === 'SF' ? '3D · SF' : '3D SIM'}</span>}
             </div>
             <div className="flex items-center gap-2">
               {!offline && <span className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/60"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />LIVE · {drone.rttMs} ms</span>}
@@ -221,6 +224,9 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = fal
           )}
           {useFootage && clip && !offline && (
             <div className="absolute bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] text-slate-300/70">Recorded flight · {clip.title} · {clip.by} · Pexels</div>
+          )}
+          {!useFootage && !videoStream && !offline && simWorld === 'SF' && (
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] text-slate-300/70">San Francisco at dusk · the opening take, rendered live</div>
           )}
           {!offline && !videoStream && !useFootage && isNight && !thermal && drone.sensorMode !== 'NIGHT_VISION' && (
             <div className="absolute left-1/2 top-12 -translate-x-1/2 px-2 py-1 rounded bg-amber-500/20 border border-amber-400/50 text-amber-200 flex items-center gap-1.5">

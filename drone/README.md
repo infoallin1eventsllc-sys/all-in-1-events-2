@@ -41,7 +41,7 @@ site serves them itself; then the sensor modes run in WebGL on the real frames. 
 free Pexels API key (`PEXELS_KEY` for the script, `VITE_PEXELS_KEY` for the build)
 resolves exact files. If a clip can't load, the feed falls back to a 3D city
 simulation with traffic, people and thermal signatures, which is also the offline
-option. The clip list is `src/dashboards/feed/footage.ts`.
+option. The clip list is `src/dashboards/feed/footage.ts`. When the footage can't play, the San Francisco feed shows the **opening take** instead (`src/dashboards/feed/sf.ts`): one continuous flight rendered live, low round the Salesforce Tower and the Transamerica Pyramid, out over the Embarcadero, the Golden Gate through rolling fog into the sunset as the hero reveal, then back over the Victorian rooftops and cable-car wires, with a feature grade (teal shadows, warm highlights, grain, lens flare) in the sensor stage. It is also a choice under Video source, and the thermal and night-vision modes run on it.
 
 ## Operators, the record and the server
 

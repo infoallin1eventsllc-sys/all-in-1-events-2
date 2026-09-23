@@ -100,6 +100,7 @@ export const SurveillanceDashboard: React.FC = () => {
   const videoLabel = videoSource.kind === 'CAPTURE' ? 'CAPTURE · LIVE' : videoSource.kind === 'WEBRTC' ? 'WEBRTC · LIVE' : undefined;
   // Real footage: the selected aircraft flies the chosen place; the others each get a different one.
   const place = videoSource.kind === 'FOOTAGE' ? videoSource.place : null;
+  const simWorld = videoSource.kind === 'SIM' ? videoSource.world ?? 'CITY' : undefined;
   const placeFor = (i: number): Place | null => place ? PLACES[(PLACES.indexOf(place) + i) % PLACES.length] : null;
 
   const airborne = drones.filter(x => x.status !== 'OFFLINE');
@@ -109,7 +110,7 @@ export const SurveillanceDashboard: React.FC = () => {
   const battTone: Tone = d.battery > 30 ? 'ok' : d.battery > 15 ? 'warn' : 'bad';
 
   const feed = (
-    <DroneFeedCanvas key={d.id} drone={d} isNight={isNight} footage={placeFor(drones.findIndex(x => x.id === d.id) - Math.max(0, drones.findIndex(x => x.id === selectedDroneId)))} onSetSensorMode={payload.sensor} onSetZoom={payload.zoom} className="w-full h-full" videoStream={video.stream} videoLabel={videoLabel} />
+    <DroneFeedCanvas key={d.id} drone={d} isNight={isNight} footage={placeFor(drones.findIndex(x => x.id === d.id) - Math.max(0, drones.findIndex(x => x.id === selectedDroneId)))} world={simWorld} onSetSensorMode={payload.sensor} onSetZoom={payload.zoom} className="w-full h-full" videoStream={video.stream} videoLabel={videoLabel} />
   );
   const map = (
     <SurveillanceMapCanvas drones={drones} detections={detections} selectedDroneId={selectedDroneId} onSelectDrone={setSelectedDroneId} onSelectWaypoint={sendToWaypoint} />
@@ -146,7 +147,7 @@ export const SurveillanceDashboard: React.FC = () => {
               return (
                 <button key={x.id} onClick={() => setSelectedDroneId(x.id)} aria-pressed={sel}
                   className={`text-left rounded-xl overflow-hidden border bg-surface transition-colors ${sel ? 'border-accent ring-2 ring-accent/25' : 'border-line hover:border-line-2'}`}>
-                  <div className="bg-imagery"><DroneFeedCanvas drone={x} isNight={isNight} footage={placeFor(drones.indexOf(x) - Math.max(0, drones.findIndex(y => y.id === selectedDroneId)))} compact /></div>
+                  <div className="bg-imagery"><DroneFeedCanvas drone={x} isNight={isNight} footage={placeFor(drones.indexOf(x) - Math.max(0, drones.findIndex(y => y.id === selectedDroneId)))} world={simWorld} compact /></div>
                   <div className="flex items-center justify-between px-2.5 py-1.5">
                     <span className="flex items-center gap-2 text-[12px] font-medium text-ink"><Dot tone={STATUS_TONE[x.status]} pulse={x.status === 'MONITORING'} />{x.id}</span>
                     <span className="text-[11px] text-ink-3">{STATUS_LABEL[x.status]}</span>
@@ -193,7 +194,7 @@ export const SurveillanceDashboard: React.FC = () => {
               <IconButton icon={<ZoomIn />} label="Zoom in" disabled={offline} onClick={() => payload.zoom(Math.min(10, d.zoom + 1))} />
               <span className="ml-auto flex items-center gap-3">
                 <span className="relative">
-                  <ToolButton icon={videoSource.kind === 'FOOTAGE' ? <Film /> : videoSource.kind === 'SIM' ? <Cpu /> : videoSource.kind === 'CAPTURE' ? <Cable /> : <Globe />} label={videoSource.kind === 'FOOTAGE' ? `Video: ${PLACE_LABEL[videoSource.place]}` : videoSource.kind === 'SIM' ? 'Video: 3D simulation' : videoSource.kind === 'CAPTURE' ? 'Video: capture' : 'Video: aircraft'} active={videoSource.kind === 'CAPTURE' || videoSource.kind === 'WEBRTC'} onClick={() => setVideoMenu(m => !m)} />
+                  <ToolButton icon={videoSource.kind === 'FOOTAGE' ? <Film /> : videoSource.kind === 'SIM' ? <Cpu /> : videoSource.kind === 'CAPTURE' ? <Cable /> : <Globe />} label={videoSource.kind === 'FOOTAGE' ? `Video: ${PLACE_LABEL[videoSource.place]}` : videoSource.kind === 'SIM' ? (videoSource.world === 'SF' ? 'Video: San Francisco take' : 'Video: 3D simulation') : videoSource.kind === 'CAPTURE' ? 'Video: capture' : 'Video: aircraft'} active={videoSource.kind === 'CAPTURE' || videoSource.kind === 'WEBRTC'} onClick={() => setVideoMenu(m => !m)} />
                   {videoMenu && (
                     <div className="absolute right-0 bottom-full mb-2 w-[320px] rounded-[var(--radius-card)] border border-line bg-surface shadow-[0_12px_40px_rgba(16,24,40,0.14)] p-2 z-40">
                       <div className="px-2 pt-1 pb-2 flex items-center justify-between"><span className="text-[13px] font-semibold text-ink">Video source</span><Chip tone={video.status === 'LIVE' ? 'ok' : video.status === 'CONNECTING' ? 'warn' : video.status === 'ERROR' ? 'bad' : 'neutral'}>{video.status === 'IDLE' ? (videoSource.kind === 'FOOTAGE' ? 'Recorded' : 'Simulation') : video.status[0] + video.status.slice(1).toLowerCase()}</Chip></div>
@@ -207,7 +208,8 @@ export const SurveillanceDashboard: React.FC = () => {
                           ))}
                         </div>
                       </div>
-                      <button onClick={() => { setVideoSource({ kind: 'SIM' }); setVideoMenu(false); }} className={`w-full text-left rounded-lg px-2 py-2 text-[13px] ${videoSource.kind === 'SIM' ? 'bg-accent-soft' : 'hover:bg-surface-2'}`}><span className="font-medium text-ink">3D simulation</span><span className="block text-[11px] text-ink-3">A rendered city with traffic, people and thermal signatures; works offline</span></button>
+                      <button onClick={() => { setVideoSource({ kind: 'SIM', world: 'SF' }); setVideoMenu(false); }} className={`w-full text-left rounded-lg px-2 py-2 text-[13px] ${videoSource.kind === 'SIM' && videoSource.world === 'SF' ? 'bg-accent-soft' : 'hover:bg-surface-2'}`}><span className="font-medium text-ink">San Francisco at dusk</span><span className="block text-[11px] text-ink-3">One continuous take round the towers and out to the Golden Gate, rendered live with a feature grade; works offline</span></button>
+                      <button onClick={() => { setVideoSource({ kind: 'SIM' }); setVideoMenu(false); }} className={`w-full text-left rounded-lg px-2 py-2 text-[13px] ${videoSource.kind === 'SIM' && videoSource.world !== 'SF' ? 'bg-accent-soft' : 'hover:bg-surface-2'}`}><span className="font-medium text-ink">3D simulation</span><span className="block text-[11px] text-ink-3">A rendered city with traffic, people and thermal signatures; works offline</span></button>
                       <button onClick={() => { setVideoSource({ kind: 'CAPTURE' }); video.refreshDevices(); }} className={`w-full text-left rounded-lg px-2 py-2 text-[13px] ${videoSource.kind === 'CAPTURE' ? 'bg-accent-soft' : 'hover:bg-surface-2'}`}><span className="font-medium text-ink">Capture device</span><span className="block text-[11px] text-ink-3">HDMI capture stick or USB camera on this computer</span></button>
                       {videoSource.kind === 'CAPTURE' && video.devices.length > 0 && (
                         <select value={videoSource.deviceId ?? ''} onChange={e => setVideoSource({ kind: 'CAPTURE', deviceId: e.target.value || undefined })} className="mx-2 mb-1 w-[calc(100%-16px)] rounded-md border border-line bg-surface px-2 py-1 text-[12px] text-ink">

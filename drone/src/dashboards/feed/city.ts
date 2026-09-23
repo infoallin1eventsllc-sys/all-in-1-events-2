@@ -40,7 +40,7 @@ export const EVENT_CENTER = { x: 2 * B + 50, z: 2 * B + 50 };
 
 // ---- Geometry builder ----------------------------------------------------------
 type V = [number, number, number];
-class Geo {
+export class Geo {
   p: number[] = []; n: number[] = []; uv: number[] = []; c: number[] = []; idx: number[] = [];
   quad(o: V, e1: V, e2: V, uv: number[], col: number | V = 1) {
     const b = this.p.length / 3;

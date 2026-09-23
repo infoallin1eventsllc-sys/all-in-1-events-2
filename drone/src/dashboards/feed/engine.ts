@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { City, P, wrap, EVENT_CENTER, type Look } from './city';
+import { SanFrancisco } from './sf';
+import { glowTex } from './textures';
 import type { PatrolDrone } from '../../hooks/useSurveillanceSimulation';
 
 /**
@@ -19,7 +21,10 @@ export interface View {
   onLock?: (l: Lock | null) => void;
   /** Real footage: the sensor stage runs on this video's frames instead of the 3D city. */
   video?: HTMLVideoElement;
+  /** Which rendered world: the venue's city (default) or the San Francisco dusk take. */
+  world?: 'CITY' | 'SF';
 }
+export type World = NonNullable<View['world']>;
 
 export const FEED_W = 1280, FEED_H = 720, THUMB_W = 320, THUMB_H = 180;
 const SUN = new THREE.Vector3(-0.42, 0.78, 0.46).normalize();
@@ -31,6 +36,7 @@ const POST_FRAG = `
 precision highp float;
 uniform sampler2D tDiffuse; uniform vec2 uvScale; uniform vec2 texel; uniform vec2 res;
 uniform int mode; uniform float time; uniform float gain; uniform float display;
+uniform float grade; uniform vec2 sunPos; uniform float flare;
 varying vec2 vUv;
 float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 float lum(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
@@ -58,8 +64,28 @@ void main() {
     c = display > 0.5 ? clamp(c, 0.0, 1.0) : pow(aces(c), vec3(1.0 / 2.2));
     float l = lum(c);
     c = mix(vec3(l), c, mode == 0 ? 1.08 : 0.75);
-    c += n * (mode == 0 ? 0.014 : 0.06);
-    col = c * mix(1.0, vig, 0.55);
+    if (grade > 0.5) {
+      // The feature grade: teal in the shadows, warmth in the highlights, a filmic S-curve, lifted blacks.
+      c = mix(c, c * vec3(0.82, 1.0, 1.18), (1.0 - l) * 0.55);
+      c = mix(c, c * vec3(1.14, 1.0, 0.84), l * 0.5);
+      c = mix(c, c * c * (3.0 - 2.0 * c), 0.55);
+      c = c * 0.96 + 0.02;
+      // Lens flare when the sun is in frame and not behind a tower: an anamorphic streak, a halo and a ghost.
+      if (flare > 0.0) {
+        vec2 d = (vUv - sunPos) * vec2(1.0, 0.5625);
+        float vis = smoothstep(0.35, 0.75, lum(tex(clamp(sunPos, 0.02, 0.98) * uvScale))) * flare;
+        float streak = exp(-abs(d.y) * 110.0) * exp(-abs(d.x) * 5.5);
+        float halo = exp(-length(d) * 7.0);
+        vec2 gd = (vUv - (1.0 - sunPos)) * vec2(1.0, 0.5625);
+        float ghost = exp(-length(gd) * 28.0) * 0.6 + exp(-length(gd * 0.5) * 30.0) * 0.25;
+        c += vis * (streak * 0.3 * vec3(1.0, 0.72, 0.5) + halo * 0.22 * vec3(1.0, 0.8, 0.6) + ghost * 0.3 * vec3(0.45, 0.75, 1.0));
+      }
+      c += n * 0.035;
+      col = c * mix(1.0, vig, 0.75);
+    } else {
+      c += n * (mode == 0 ? 0.014 : 0.06);
+      col = c * mix(1.0, vig, 0.55);
+    }
   } else if (mode <= 3) {
     float h = lum(tex(uv)) * 0.4 + (lum(tex(uv + dx)) + lum(tex(uv - dx)) + lum(tex(uv + dy)) + lum(tex(uv - dy))) * 0.15;
     h = clamp((h - 0.1) / 0.82, 0.0, 1.0);        // automatic gain: the scene spans the palette
@@ -96,6 +122,8 @@ class Engine {
   private locks = new WeakMap<View, { kind: 'PERSON' | 'VEHICLE'; idx: number }>();
   private snow: HTMLCanvasElement;
   private videoTex = new WeakMap<HTMLVideoElement, THREE.VideoTexture>();
+  private sf: SanFrancisco | null = null;
+  private sfSeen = false;
   private raf = 0; private last = 0; private frame = 0;
   private level = 0; private slow = 1 / 60; private settled = 0;
 
@@ -120,6 +148,7 @@ class Engine {
       uniforms: {
         tDiffuse: { value: this.rt.texture }, uvScale: { value: new THREE.Vector2(1, 1) }, texel: { value: new THREE.Vector2(1 / FEED_W, 1 / FEED_H) },
         res: { value: new THREE.Vector2(FEED_W, FEED_H) }, mode: { value: 0 }, time: { value: 0 }, gain: { value: 1 }, display: { value: 0 },
+        grade: { value: 0 }, sunPos: { value: new THREE.Vector2(-10, -10) }, flare: { value: 0 },
       },
     });
     this.postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.post));
@@ -147,6 +176,8 @@ class Engine {
     if (this.slow > 1 / 32 && this.level < LEVELS.length - 1 && this.settled > 90) { this.level++; this.settled = 0; }
     else if (this.slow < 1 / 56 && this.level > 0 && this.settled > 600) { this.level--; this.settled = 0; }
     this.city.update(dt);
+    this.sfSeen = false;
+    for (const v of this.views) if (v.world === 'SF' && !v.video) { this.sfWorld().update(dt); break; }
     const moved = new Set<string>();
     for (const v of this.views) {
       const d = v.get().drone;
@@ -162,6 +193,7 @@ class Engine {
       const { drone } = v.get();
       if (drone.status === 'OFFLINE') this.drawSnow(v);
       else if (v.video) this.renderVideo(v, now / 1000);
+      else if (v.world === 'SF') this.renderSF(v, now / 1000, dt);
       else this.render(v, now / 1000);
     }
     this.raf = requestAnimationFrame(this.tick);
@@ -191,6 +223,7 @@ class Engine {
     const pitch = (Math.min(89, Math.max(4, -d.gimbalPitchDeg)) * Math.PI) / 180 + Math.sin(time * 3.1) * shake;
     const alt = Math.max(3, d.altM);
     const cam = this.cam;
+    cam.near = 1; cam.far = 900;
     cam.position.set(p.x, alt, p.z);
     cam.fov = (2 * Math.atan(Math.tan((20 * Math.PI) / 180) / Math.max(1, d.zoom)) * 180) / Math.PI;
     cam.updateProjectionMatrix();
@@ -239,6 +272,7 @@ class Engine {
     u.time.value = time;
     u.mode.value = thermal ? (d.sensorMode === 'THERMAL_WHITE_HOT' ? 2 : 3) : nv ? 4 : night ? 1 : 0;
     u.gain.value = nv ? (night ? 4.2 : 1.1) : night ? 2.2 : 1;
+    u.grade.value = 0; u.flare.value = 0;
     this.renderer.setRenderTarget(null);
     this.renderer.setViewport(0, 0, w, h);
     this.renderer.render(this.postScene, this.postCam);
@@ -247,6 +281,44 @@ class Engine {
     if (ctx) ctx.drawImage(this.renderer.domElement, 0, FEED_H - h, w, h, 0, 0, v.canvas.width, v.canvas.height);
 
     if (v.onLock) v.onLock(d.tasks.autoTrack || d.tasks.survivorDetect || thermal ? this.lock(v, p) : null);
+  }
+
+  private sfWorld() {
+    if (!this.sf) this.sf = new SanFrancisco(this.renderer.capabilities.getMaxAnisotropy(), glowTex());
+    return this.sf;
+  }
+
+  /** The San Francisco take through the sensor stage, with the feature grade on the EO picture. */
+  private renderSF(v: View, time: number, dt: number) {
+    const sf = this.sfWorld();
+    const { drone: d, night } = v.get();
+    const q = LEVELS[this.level], w = v.compact ? THUMB_W : q.w, h = v.compact ? THUMB_H : q.h;
+    const thermal = d.sensorMode === 'THERMAL_WHITE_HOT' || d.sensorMode === 'THERMAL_IRONBOW';
+    const nv = d.sensorMode === 'NIGHT_VISION';
+    const look: Look = thermal ? (night ? 'IR_NIGHT' : 'IR_DAY') : night ? 'NIGHT' : 'DAY';
+    sf.applyLook(look);
+    // Each aircraft flies the take from its own point along it.
+    const seed = [...d.id].reduce((a, c) => a + c.charCodeAt(0), 0);
+    const sun = sf.pose(this.cam, time + (seed % 7) * 41, d.zoom, this.sfSeen ? 0 : dt);
+    this.sfSeen = true;
+    this.rt.viewport.set(0, 0, w, h);
+    this.renderer.setRenderTarget(this.rt);
+    this.renderer.render(sf.scene, this.cam);
+    const u = this.post.uniforms;
+    u.uvScale.value.set(w / FEED_W, h / FEED_H);
+    u.res.value.set(w, h);
+    u.time.value = time;
+    u.mode.value = thermal ? (d.sensorMode === 'THERMAL_WHITE_HOT' ? 2 : 3) : nv ? 4 : night ? 1 : 0;
+    u.gain.value = nv ? (night ? 3.2 : 1.1) : night ? 1.35 : 1.05;
+    u.grade.value = thermal || nv ? 0 : 1;
+    u.flare.value = sun && !night ? 1 : 0;
+    if (sun) u.sunPos.value.copy(sun); else u.sunPos.value.set(-10, -10);
+    this.renderer.setRenderTarget(null);
+    this.renderer.setViewport(0, 0, w, h);
+    this.renderer.render(this.postScene, this.postCam);
+    const ctx = v.canvas.getContext('2d');
+    if (ctx) ctx.drawImage(this.renderer.domElement, 0, FEED_H - h, w, h, 0, 0, v.canvas.width, v.canvas.height);
+    if (v.onLock) v.onLock(d.tasks.autoTrack || d.tasks.survivorDetect || thermal ? this.lock(v, { x: this.cam.position.x, z: this.cam.position.z }, sf) : null);
   }
 
   /** Real footage through the same sensor stage: EO passthrough, thermal palettes, night vision. */
@@ -281,11 +353,13 @@ class Engine {
   private v3 = new THREE.Vector3();
   private project(x: number, y: number, z: number) { return this.v3.set(x, y, z).project(this.cam); }
 
-  private near(x: number, px: number) { let d = x - px; d -= Math.round(d / P) * P; return px + d; }
+  private near(x: number, px: number, wrapped: boolean) { if (!wrapped) return x; let d = x - px; d -= Math.round(d / P) * P; return px + d; }
 
-  private screen(kind: 'PERSON' | 'VEHICLE', idx: number, p: { x: number; z: number }) {
-    const o = kind === 'PERSON' ? this.city.walkers[idx] : this.city.cars[idx];
-    const x = this.near(o.x, p.x), z = this.near(o.z, p.z);
+  private screen(kind: 'PERSON' | 'VEHICLE', idx: number, p: { x: number; z: number }, world: City | SanFrancisco) {
+    const o = kind === 'PERSON' ? world.walkers[idx] : world.cars[idx];
+    if (!o) return null;
+    const wrapped = world === this.city;
+    const x = this.near(o.x, p.x, wrapped), z = this.near(o.z, p.z, wrapped);
     const c = this.project(x, 1, z);
     if (c.z > 1 || Math.abs(c.x) > 0.96 || Math.abs(c.y) > 0.96) return null;
     const cx = c.x, cy = c.y;
@@ -300,28 +374,29 @@ class Engine {
     return { cx, cy, x0, y0, x1, y1 };
   }
 
-  private lock(v: View, p: { x: number; z: number }): Lock | null {
+  private lock(v: View, p: { x: number; z: number }, world: City | SanFrancisco = this.city): Lock | null {
     let cur = this.locks.get(v);
-    let s = cur ? this.screen(cur.kind, cur.idx, p) : null;
+    let s = cur ? this.screen(cur.kind, cur.idx, p, world) : null;
+    const wrapped = world === this.city;
     if (!s || this.frame % 90 === 0) {
       // (Re)acquire: the person or moving vehicle nearest the reticle.
       let best: { kind: 'PERSON' | 'VEHICLE'; idx: number; d: number } | null = null;
       const consider = (kind: 'PERSON' | 'VEHICLE', idx: number, weight: number) => {
-        const o = kind === 'PERSON' ? this.city.walkers[idx] : this.city.cars[idx];
-        const c = this.project(this.near(o.x, p.x), 1, this.near(o.z, p.z));
+        const o = kind === 'PERSON' ? world.walkers[idx] : world.cars[idx];
+        const c = this.project(this.near(o.x, p.x, wrapped), 1, this.near(o.z, p.z, wrapped));
         if (c.z > 1 || Math.abs(c.x) > 0.7 || Math.abs(c.y) > 0.7) return;
         const d = Math.hypot(c.x, c.y) * weight;
         if (!best || d < best.d) best = { kind, idx, d };
       };
       if (!s) {
-        this.city.walkers.forEach((_, i) => consider('PERSON', i, 1));
-        this.city.cars.forEach((c, i) => { if (c.v > 1) consider('VEHICLE', i, 1.4); });
-        if (best) { const b = best as { kind: 'PERSON' | 'VEHICLE'; idx: number }; cur = { kind: b.kind, idx: b.idx }; this.locks.set(v, cur); s = this.screen(cur.kind, cur.idx, p); }
+        (world.walkers as { x: number; z: number }[]).forEach((_, i) => consider('PERSON', i, 1));
+        world.cars.forEach((c, i) => { if (c.v > 1) consider('VEHICLE', i, 1.4); });
+        if (best) { const b = best as { kind: 'PERSON' | 'VEHICLE'; idx: number }; cur = { kind: b.kind, idx: b.idx }; this.locks.set(v, cur); s = this.screen(cur.kind, cur.idx, p, world); }
       }
     }
     if (!s || !cur) { this.locks.delete(v); return null; }
     const W = v.canvas.width, H = v.canvas.height;
-    const obj = cur.kind === 'PERSON' ? this.city.walkers[cur.idx] : this.city.cars[cur.idx];
+    const obj = (cur.kind === 'PERSON' ? world.walkers[cur.idx] : world.cars[cur.idx]) as { id: number };
     return {
       id: `${cur.kind === 'PERSON' ? 'TGT' : 'VEH'}-${String((obj.id % 90) + 10)}`,
       kind: cur.kind,
