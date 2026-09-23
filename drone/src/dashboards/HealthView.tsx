@@ -100,8 +100,8 @@ const SimBar: React.FC = () => {
         <span className="num text-[12px] text-ink-3 min-w-[118px] text-right">{sim.flying ? `Flying ${mmss(sim.t)} / ${mmss(SIM_FLIGHT_S)}` : 'On the ground'}</span>
         <Segmented size="sm" value={String(sim.speed)} onChange={v => sim.setSpeed(+v)} items={[{ id: '1', label: '1×' }, { id: '4', label: '4×' }, { id: '10', label: '10×' }]} />
         {sim.flying
-          ? <ToolButton id="sim-land" icon={<PlaneLanding />} label="Land" onClick={sim.land} />
-          : <ToolButton id="sim-fly" primary icon={<PlaneTakeoff />} label="Fly a test flight" onClick={sim.takeoff} />}
+          ? <ToolButton command="abort" id="sim-land" icon={<PlaneLanding />} label="Land" onClick={sim.land} />
+          : <ToolButton command="fly" id="sim-fly" primary icon={<PlaneTakeoff />} label="Fly a test flight" onClick={sim.takeoff} />}
       </div>
     </Card>
   );

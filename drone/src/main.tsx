@@ -3,19 +3,30 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import { AircraftLinkProvider } from './link/useAircraftLink';
 import { HealthProvider } from './diagnostics/useHealth';
+import { OperatorProvider } from './operator/operator';
 import { recorder } from './record/recorder';
 import { seedDemo } from './demo/seed';
+import * as sync from './sync/sync';
 import './index.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AircraftLinkProvider>
       <HealthProvider>
-        <App />
+        <OperatorProvider>
+          <App />
+        </OperatorProvider>
       </HealthProvider>
     </AircraftLinkProvider>
   </StrictMode>,
 );
+
+// Server copy (only when configured): pick up an email sign-in, queue every closed flight.
+if (sync.enabled()) {
+  sync.consumeRedirect();
+  recorder.onClosed(id => sync.queue.add({ kind: 'session', id }));
+  void sync.flush();
+}
 
 // Tidy sessions a reload left open, then give a first-time visitor the demo content.
 void recorder.recoverOrphans().then(() => seedDemo());

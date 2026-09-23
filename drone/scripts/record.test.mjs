@@ -36,4 +36,25 @@ const still = m.summarise(session, [samples[0], samples[2]], []);
 assert.equal(still.distanceM, 0);
 assert.equal(still.criticalEvents, 0);
 
+
+// Tamper-evident chain: intact verifies; an edit, a deletion or a reorder is caught at the right entry.
+const c = await loadModule('../src/record/chain.ts');
+const mk = () => [0, 1, 2, 3, 4].map(i => ({ id: i + 1, sessionId: 's9', t: t0 + i * 1000, severity: 'INFO', kind: i === 2 ? 'COMMAND' : 'SYSTEM', text: `entry ${i}`, operator: 'Pilot A · pilot in command' }));
+const chain = mk(); const head = await c.stamp(chain);
+assert.equal(head, chain[4].hash); assert.match(head, /^[0-9a-f]{64}$/);
+assert.deepEqual(await c.verify(chain), { status: 'VERIFIED', checked: 5 });
+assert.deepEqual(await c.verify([...chain].reverse()), { status: 'VERIFIED', checked: 5 }, 'display order does not matter; storage order does');
+const edited = chain.map(e => ({ ...e })); edited[2].text = 'entry 2 (edited)';
+assert.equal((await c.verify(edited)).brokenAt, 2);
+const byWho = chain.map(e => ({ ...e })); byWho[1].operator = 'Someone else';
+assert.equal((await c.verify(byWho)).brokenAt, 1);
+const deleted = chain.filter((_, i) => i !== 3);
+assert.equal((await c.verify(deleted)).brokenAt, 3);
+const swapped = chain.map(e => ({ ...e })); [swapped[1].id, swapped[2].id] = [swapped[2].id, swapped[1].id];
+assert.equal((await c.verify(swapped)).status, 'BROKEN');
+assert.equal((await c.verify(mk())).status, 'UNSIGNED');
+// Continuing a chain across flushes gives the same result as stamping all at once.
+const a = mk(), b = mk(); const h1 = await c.stamp(a.slice(0, 2)); await c.stamp(a.slice(2), h1); await c.stamp(b);
+assert.deepEqual(a.map(e => e.hash), b.map(e => e.hash));
+
 console.log('flight recorder: all tests passed');

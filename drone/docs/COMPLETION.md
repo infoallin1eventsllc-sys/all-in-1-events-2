@@ -28,7 +28,15 @@ what needs hardware in your hands, and what needs a permit rather than code.
 | PX4 as well as ArduPilot: modes, takeoff, go-to, missions | ✅ built, tested end to end | `src/link/mavlink.ts` |
 | Payload on real aircraft: gimbal, zoom, thermal source, spotlight, photo, photo feedback | ✅ built, codec checked against pymavlink | Surveillance action bar |
 | Installable app (home screen, offline, shortcuts) on phone, tablet and laptop | ✅ built | Install app button, `public/manifest.webmanifest` |
-| Remote relay for flying over the internet without Tailscale | ⏳ needs a hosted server | the bridge already speaks WebSocket; pairs with accounts below |
+| Aircraft health: which part is failing, in flight and after landing; parts life | ✅ built, tested against real ArduCopter 4.5.7 SITL (a weakened motor 3 is caught) | Health tab, `src/diagnostics` |
+| Tested against the real ArduPilot firmware, not only a stand-in | ✅ ArduCopter 4.5.7 SITL built from source; arm, takeoff, hover, land and health through the bridge | `hardware/companion-pi/README.md` → SITL |
+| Portfolio demo: Overview with live hero, guided tour, labelled sample data | ✅ built | Overview, `src/demo` |
+| Operator roles (pilot in command / observer / client view-only) stamped on every event | ✅ built | operator menu, `src/operator` |
+| Tamper-evident record: every event SHA-256 chained, verified in Records | ✅ built, unit-tested | `src/record/chain.ts` |
+| Accounts and a server copy the device can't clear (append-only, chain-checked by the database) | ✅ built and tested against real Postgres; ⏳ needs your Supabase project | `server/`, `src/sync` |
+| Remote relay for flying over the internet (fly / watch-only / aircraft roles) | ✅ built, 27-check end-to-end test; ⏳ needs hosting | `hardware/companion-pi/relay` |
+| Light show on real aircraft: live-fleet gates, fleet list, abort lands every aircraft | ✅ built | Light show → Fleet |
+| TURN relay for video over LTE, both ends | ✅ built; ⏳ needs a TURN server | video source → TURN, `stream.py --turn-user` |
 | Crash isolation: one view failing cannot take down the console | ✅ built | `src/dashboards/ErrorBoundary.tsx` |
 | Keyboard operation, visible focus, reduced motion, print stylesheet | ✅ built | `src/index.css`, App shortcuts |
 | Offline reload at a venue with no signal | ✅ built | `public/sw.js` |
@@ -38,7 +46,7 @@ what needs hardware in your hands, and what needs a permit rather than code.
 | Light-show flight (per-aircraft trajectory upload, LED control, RTK, time sync) | ⏳ needs show-control stack | see below |
 | Photogrammetry processing (orthomosaic, 3D mesh) | ⏳ external tool | WebODM / Pix4D / DroneDeploy, fed by the package |
 | Real camera feedback in coverage (CAMERA_FEEDBACK) | ⏳ needs a mapping camera on the bench | coverage is estimated from distance until then |
-| Operator accounts and server-side audit trail | ⏳ not started | needs a backend; the local recorder is the interim record |
+| Operator accounts and server-side audit trail | ✅ built (see accounts row above); ⏳ needs your Supabase project | `server/README.md` |
 | FAA waivers, insurance, venue agreements | ⏳ paperwork | see Regulatory |
 
 ## Bill of materials to bench-test everything (~$700 without an airframe)
@@ -109,14 +117,15 @@ hardware, this dashboard as the front of house.
 
 ## Next engineering steps, in order
 
-1. Bench-test the link on a Pixhawk (an afternoon). Fix anything the real autopilot
-   says differently than the spec.
-2. Deploy `/drone/` and test Bluetooth + Serial from the real HTTPS origin.
-3. Companion Pi video in the field; add a TURN server for LTE links.
-4. Operator login and a server-side audit trail. The flight recorder already
-   captures every arm, command and authorisation locally and exports it; what is
-   missing is accounts, roles, and syncing those records off the device so they
-   cannot be cleared by whoever is holding the laptop.
-5. Fly one real survey with a mapping camera and compare the in-flight coverage
-   estimate with the processing software's quality report; wire CAMERA_FEEDBACK.
-6. Skybrush integration for the light-show flight stack.
+1. Merge and deploy `/drone/` to the HTTPS site; test Bluetooth and USB from there.
+2. Bench-test on a Pixhawk (an afternoon). The same code already flew real
+   ArduCopter firmware in SITL, which caught one real bug (takeoff before the mode
+   change landed) that the stand-in autopilot hid; hardware may show more.
+3. Create the Supabase project and apply `server/supabase/migrations` (15 minutes,
+   `server/README.md`); build with `VITE_SYNC_URL`/`VITE_SYNC_ANON_KEY` and `VITE_DEMO=off`.
+4. Host the relay (`hardware/companion-pi/relay`, Fly.io or a VPS) and a TURN server
+   (coturn) for flying and video over LTE. Then MAVLink2 signing end to end.
+5. Fly fault-free baseline flights on your own airframe and tune `LIMITS` in
+   `src/diagnostics/health.ts`; turn on ESC telemetry.
+6. Fly one real survey with a mapping camera; compare coverage with the processing report.
+7. Skybrush integration for show trajectories; this console stays front of house.

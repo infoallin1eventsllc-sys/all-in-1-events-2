@@ -39,6 +39,8 @@ export interface FlightSession {
   note?: string;
   /** Demo content (src/demo/seed.ts): labelled on screen, removable in one click. */
   sample?: boolean;
+  /** Hash of the last event written (src/record/chain.ts). */
+  chainHead?: string;
 }
 
 export interface FlightSample {
@@ -67,6 +69,11 @@ export interface FlightEvent {
   kind: string;
   text: string;
   aircraft?: string;
+  /** Who was operating when this happened, e.g. "Otis · pilot in command". */
+  operator?: string;
+  /** Tamper-evident chain (src/record/chain.ts). */
+  prev?: string;
+  hash?: string;
 }
 
 let dbPromise: Promise<IDBDatabase> | null = null;

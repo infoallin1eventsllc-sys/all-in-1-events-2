@@ -16,7 +16,21 @@ export type VideoSource =
 
 export type VideoStatus = 'IDLE' | 'CONNECTING' | 'LIVE' | 'ERROR';
 
-const ICE = [{ urls: 'stun:stun.l.google.com:19302' }];
+const STUN = { urls: 'stun:stun.l.google.com:19302' };
+export const TURN_KEY = 'a1-turn';
+export interface TurnConfig { url: string; username: string; credential: string }
+/**
+ * STUN finds a direct path on Wi-Fi. Over LTE both ends usually sit behind carrier
+ * NAT, and only a TURN relay gets the video through (coturn, or a hosted service).
+ * The same server goes on the aircraft side: stream.py --ice turn:… --turn-user …
+ */
+function iceServers(): RTCIceServer[] {
+  try {
+    const t = JSON.parse(localStorage.getItem(TURN_KEY) || 'null') as TurnConfig | null;
+    if (t?.url) return [STUN, { urls: t.url, username: t.username, credential: t.credential }];
+  } catch { /* none */ }
+  return [STUN];
+}
 
 export function useVideoSource(source: VideoSource) {
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -56,7 +70,7 @@ export function useVideoSource(source: VideoSource) {
           setStream(local); setStatus('LIVE');
           refreshDevices(); // labels become available after permission
         } else {
-          const pc = new RTCPeerConnection({ iceServers: ICE });
+          const pc = new RTCPeerConnection({ iceServers: iceServers() });
           pcRef.current = pc;
           pc.addTransceiver('video', { direction: 'recvonly' });
           pc.ontrack = e => { if (!cancelled) { setStream(e.streams[0] ?? new MediaStream([e.track])); setStatus('LIVE'); } };

@@ -19,6 +19,31 @@ full architecture spec, the fleet telemetry grid, and the DTLS / TimescaleDB / G
 SITL / benchmark / radio / FAA-waiver labs — sits one click further in, under
 **Engineering detail**, and keeps its dark tooling chrome.
 
+## Portfolio demo
+
+Opened with no aircraft, the console is a working demo (a Meridian Interface case
+study). **Overview** is the front door: the real show renderer flying 100 aircraft as
+the hero, the three products and what sits underneath. **Take the tour** (or press
+`t`) walks through each screen and can press the one button that brings it to life.
+A first visit gets labelled sample content so no page is empty: three recorded
+flights with paths, three months of fleet history, and health reports where motor 3
+wears out flight by flight. **Remove sample history** in Analytics clears it all.
+Build with `VITE_DEMO=off` for an operator install.
+
+## Operators, the record and the server
+
+- **Roles.** The operator menu (app bar) sets who is flying and as what: pilot in
+  command (commands the aircraft), visual observer (may only abort or bring aircraft
+  home) or client (view only). Command buttons follow the role.
+- **Tamper-evident record.** Every recorded event carries the operator and is chained
+  to the one before with SHA-256 (`src/record/chain.ts`). Records says *Record intact*
+  or names the first entry changed after the flight. CSV exports carry the hashes.
+- **Server copy.** With a Supabase project configured, operators sign in by email and
+  every closed flight uploads; the database re-checks the chain and never lets an
+  event be edited or deleted. Setup: [`server/README.md`](server/README.md).
+- **Internet relay.** Fly from anywhere without a VPN: the bridge connects out to
+  `hardware/companion-pi/relay`, pilots use `/fly/<id>`, clients `/watch/<id>`.
+
 ## Which drones work
 
 Any aircraft whose flight controller runs **ArduPilot** (recommended) or **PX4** — they

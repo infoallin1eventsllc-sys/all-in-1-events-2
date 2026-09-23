@@ -3,7 +3,7 @@ import {
   MavParser, decodeInto, encodeHeartbeat, encodeCommandLong, encodeSetInterval, encodeArm, encodeGotoGlobal,
   encodeMissionCount, encodeMissionClearAll, encodeMissionItemInt, encodeMissionAck, decodeMissionRequestSeq, decodeMissionAck,
   encodeFlightMode, encodeTakeoffFor, encodeReposition, encodeGimbalPitchYaw, encodeMountControl, encodeCameraZoom, encodeCameraSource, encodeRelay, encodeTakePhoto,
-  autopilotOf, EMPTY_TELEMETRY, MAV_CMD, MAV_RESULT, type Telemetry, type MavFrame, type MissionItem, type Autopilot, type FlightMode,
+  autopilotOf, modeName, EMPTY_TELEMETRY, MAV_CMD, MAV_RESULT, type Telemetry, type MavFrame, type MissionItem, type Autopilot, type FlightMode,
 } from './mavlink';
 import { HEALTH_STREAMS } from '../diagnostics/decode';
 
@@ -264,16 +264,25 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const land = useCallback(() => send(encodeCommandLong(MAV_CMD.LAND, [], sysId())), [send]);
   const arm = useCallback((on: boolean) => send(encodeArm(on)), [send]);
   const setFlightMode = useCallback(async (mode: FlightMode) => { const b = encodeFlightMode(ap(), mode, sysId()); if (b) await send(b); }, [send]);
-  /** ArduCopter only takes off in GUIDED; PX4 switches to its takeoff mode by itself. */
+  /** Resolve once the autopilot's heartbeat reports `mode`, or after `ms` (found flying real ArduCopter SITL). */
+  const awaitMode = useCallback((mode: FlightMode, ms = 2000) => new Promise<boolean>(resolve => {
+    const t0 = Date.now();
+    const tick = () => { if (modeName(telem.current) === mode) resolve(true); else if (Date.now() - t0 > ms) resolve(false); else setTimeout(tick, 50); };
+    tick();
+  }), []);
+  /**
+   * ArduCopter only takes off in GUIDED; PX4 switches to its takeoff mode by itself.
+   * The mode change must land before the takeoff command, or ArduCopter refuses it.
+   */
   const takeoff = useCallback(async (altM: number) => {
-    if (ap() !== 'PX4') await setFlightMode('GUIDED');
+    if (ap() !== 'PX4') { await setFlightMode('GUIDED'); await awaitMode('GUIDED'); }
     await send(encodeTakeoffFor(ap(), altM, telem.current, sysId()));
-  }, [send, setFlightMode]);
+  }, [send, setFlightMode, awaitMode]);
   const goTo = useCallback(async (lat: number, lon: number, altRelM: number) => {
     if (ap() === 'PX4') { await send(encodeReposition(lat, lon, altRelM, sysId())); return; }
-    await setFlightMode('GUIDED');
+    await setFlightMode('GUIDED'); await awaitMode('GUIDED');
     await send(encodeGotoGlobal(lat, lon, altRelM, sysId()));
-  }, [send, setFlightMode]);
+  }, [send, setFlightMode, awaitMode]);
 
   /** Resolve with the COMMAND_ACK result for `command`, or null after `ms`. */
   const awaitAck = useCallback((command: number, ms = 900) => new Promise<number | null>(resolve => {

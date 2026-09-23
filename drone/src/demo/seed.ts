@@ -2,6 +2,7 @@ import { recordDb, type FlightEvent, type FlightSample, type FlightSession } fro
 import { sampleHistory, sampleService } from '../analytics/sample';
 import { frameOf, type FlightHealth, type Finding } from '../diagnostics/health';
 import type { ServiceRecord } from '../analytics/aggregate';
+import { stamp } from '../record/chain';
 
 /**
  * Demo content, so every page has something worth looking at the first time a
@@ -179,9 +180,11 @@ export async function seedDemo(force = false): Promise<boolean> {
     if (!sessions.some(s => s.sample)) {
       const day = 86_400_000;
       for (const rec of [surveyFlight(now - 1 * day - 3 * 3_600_000), patrolFlight(now - 2 * day - 7 * 3_600_000), showFlight(now - 3 * day - 9 * 3_600_000)]) {
+        const events: FlightEvent[] = rec.events.sort((a, b) => a.t - b.t).map(x => ({ ...x, sessionId: rec.session.id, ...(x.kind === 'SYSTEM' ? {} : { operator: 'Demo pilot · pilot in command' }) }));
+        rec.session.chainHead = await stamp(events);
         await recordDb.putSession(rec.session);
         await recordDb.addSamples(rec.samples.map(x => ({ ...x, sessionId: rec.session.id })));
-        await recordDb.addEvents(rec.events.map(x => ({ ...x, sessionId: rec.session.id })));
+        await recordDb.addEvents(events);
       }
     }
     if (!health.some(h => h.sample)) {

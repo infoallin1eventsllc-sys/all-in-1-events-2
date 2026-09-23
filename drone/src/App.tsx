@@ -27,6 +27,7 @@ import { OverviewView } from './dashboards/OverviewView';
 import { DemoTour, type TourView } from './dashboards/DemoTour';
 import { useHealth } from './diagnostics/useHealth';
 import { InstallButton } from './dashboards/InstallButton';
+import { OperatorMenu } from './operator/OperatorMenu';
 import { ErrorBoundary } from './dashboards/ErrorBoundary';
 import { recorder } from './record/recorder';
 import { 
@@ -251,6 +252,7 @@ export default function App() {
 
           <div className="flex items-center gap-1.5 sm:gap-2">
             <LinkButton />
+            {isClient && <OperatorMenu />}
             {isClient && (
               <button
                 id="nav-health"

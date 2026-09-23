@@ -12,6 +12,8 @@ import { Headline, Card, Section, Divider, Tabs, Stat, Row, Chip, Dot, Meter, Sp
 import type { LightShowDrone } from '../types/lightShowTypes';
 import { useRecorder } from '../record/useRecorder';
 import { recorder } from '../record/recorder';
+import { useAircraftLink } from '../link/useAircraftLink';
+import { encodeCommandLong, MAV_CMD, modeName } from '../link/mavlink';
 
 type RailTab = 'CUES' | 'FLEET' | 'PREFLIGHT';
 
@@ -81,7 +83,31 @@ export const LightShowDashboard: React.FC = () => {
     recorder.event('SHOW', 'INFO', `Cue ${cs.activeFormationIndex + 1}: ${SHOW_FORMATIONS[cs.activeFormationIndex]?.name ?? '—'}`);
   }, [cs.activeFormationIndex]);
 
-  const gates = useShowGates(drones, wind.mps, cs.clockJitterMs);
+  // Real aircraft on the link. Trajectories fly from the show controller (Skybrush /
+  // Verge, fed by Export show package); this console watches every airframe,
+  // holds the launch on their real state, and aborts them all at once.
+  const link = useAircraftLink();
+  const live = link.live ? Object.entries(link.vehicles).map(([sys, t]) => ({ sys: Number(sys), t })) : [];
+  const simGates = useShowGates(drones, wind.mps, cs.clockJitterMs);
+  const gates = useMemo(() => {
+    if (!live.length) return simGates;
+    const stale = live.filter(v => !v.t.heartbeatMs || Date.now() - v.t.heartbeatMs > 3000).length;
+    const noFix = live.filter(v => v.t.fixType < 3).length;
+    const low = live.filter(v => v.t.batteryPct >= 0 && v.t.batteryPct < 40).length;
+    return [
+      ...simGates,
+      { id: 'live-hb', label: `All ${live.length} connected aircraft reporting`, ok: stale === 0, detail: stale ? `${stale} silent` : 'heartbeat < 3 s' },
+      { id: 'live-gps', label: 'Connected aircraft: 3D GPS fix or better', ok: noFix === 0, detail: noFix ? `${noFix} without` : `${Math.min(...live.map(v => v.t.satellites))} sats min` },
+      { id: 'live-batt', label: 'Connected aircraft: battery above 40%', ok: low === 0, detail: low ? `${low} low` : `min ${Math.min(...live.map(v => v.t.batteryPct))}%` },
+    ];
+  }, [simGates, live.length, link.vehicles]); // eslint-disable-line react-hooks/exhaustive-deps
+  const abortAll = () => {
+    emergencyAbort();
+    if (live.length) {
+      for (const v of live) link.send(encodeCommandLong(MAV_CMD.LAND, [], v.sys)).catch(() => {});
+      recorder.event('COMMAND', 'CRITICAL', `Abort: land sent to ${live.length} connected aircraft`);
+    }
+  };
   const allGatesPass = gates.every(g => g.ok);
   const lastGate = useRef(true);
   useEffect(() => {
@@ -113,7 +139,7 @@ export const LightShowDashboard: React.FC = () => {
     <div ref={rootRef} data-accent="lightshow" id="lightshow-dashboard" className="space-y-5">
       <Headline
         title="Show conductor"
-        context={`${formation.name} · ${droneCount} aircraft · GPS-disciplined master clock`}
+        context={`${formation.name} · ${droneCount} aircraft · GPS-disciplined master clock${live.length ? ` · ${live.length} real aircraft on the link` : ''}`}
         status={{ label: statusLabel, tone: statusTone, pulse: status === 'RUNNING' }}
         stats={[
           { label: 'Synchronised', value: `${fleet.synced} / ${drones.length}`, tone: fleet.synced === drones.length ? 'ok' : 'warn' },
@@ -136,8 +162,8 @@ export const LightShowDashboard: React.FC = () => {
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2">
                 <IconButton icon={<RotateCcw />} label="Rewind to start" onClick={rewind} />
-                <ToolButton id="ls-play" icon={status === 'RUNNING' ? <Pause /> : <Play />} label={status === 'RUNNING' ? 'Hold' : status === 'PAUSED' ? 'Resume' : 'Start show'} primary disabled={status === 'ABORTING'} onClick={togglePlay} />
-                {status === 'PRE_FLIGHT' && <ToolButton id="ls-arm" icon={<ShieldCheck />} label="Arm fleet" disabled={!allGatesPass} onClick={armShow} title={allGatesPass ? 'All pre-flight gates pass' : 'Pre-flight gates not satisfied'} />}
+                <ToolButton command="fly" id="ls-play" icon={status === 'RUNNING' ? <Pause /> : <Play />} label={status === 'RUNNING' ? 'Hold' : status === 'PAUSED' ? 'Resume' : 'Start show'} primary disabled={status === 'ABORTING'} onClick={togglePlay} />
+                {status === 'PRE_FLIGHT' && <ToolButton command="fly" id="ls-arm" icon={<ShieldCheck />} label="Arm fleet" disabled={!allGatesPass} onClick={armShow} title={allGatesPass ? 'All pre-flight gates pass' : 'Pre-flight gates not satisfied'} />}
               </div>
               <div className="flex-1 min-w-[260px]">
                 <div className="flex items-baseline justify-between">
@@ -152,7 +178,7 @@ export const LightShowDashboard: React.FC = () => {
                   ))}
                 </div>
               </div>
-              <ToolButton id="ls-abort" icon={<AlertOctagon />} label="Abort" danger onClick={emergencyAbort} title="Lights out, vertical descent, all aircraft" />
+              <ToolButton command="abort" id="ls-abort" icon={<AlertOctagon />} label="Abort" danger onClick={abortAll} title="Lights out, vertical descent, all aircraft" />
             </div>
           </Card>
         </div>
@@ -191,6 +217,19 @@ export const LightShowDashboard: React.FC = () => {
 
             {rail === 'FLEET' && (
               <div className="space-y-5">
+                {live.length > 0 && (
+                  <Section title="Connected aircraft" right={`${live.length} on ${link.deviceName || 'the link'}`}>
+                    <ul className="divide-y divide-line text-[12px]">
+                      {live.map(v => (
+                        <li key={v.sys} className="flex items-center justify-between gap-2 py-1.5">
+                          <span className="flex items-center gap-2"><Dot tone={v.t.armed ? 'ok' : 'neutral'} /><span className="font-medium text-ink">Aircraft {v.sys}</span><span className="text-ink-3">{modeName(v.t).toLowerCase()}</span></span>
+                          <span className="num text-ink-2">{v.t.altRelM.toFixed(0)} m · {v.t.batteryPct >= 0 ? `${v.t.batteryPct}%` : `${v.t.voltageV.toFixed(1)} V`} · {v.t.satellites} sats</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-1.5 text-[11px] text-ink-3">Show trajectories fly from the show controller; Abort lands every connected aircraft.</p>
+                  </Section>
+                )}
                 <div className="grid grid-cols-3 gap-3">
                   <Stat label="In formation" value={fleet.inFormation} tone="ok" />
                   <Stat label="Moving" value={fleet.moving} />

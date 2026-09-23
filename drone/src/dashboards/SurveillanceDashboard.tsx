@@ -6,7 +6,7 @@ import { useSurveillanceSimulation, WAYPOINTS, SITE, type PatrolDrone, type Dete
 import { SurveillanceMapCanvas } from './SurveillanceMapCanvas';
 import { DroneFeedCanvas } from './DroneFeedCanvas';
 import { useAircraftLink } from '../link/useAircraftLink';
-import { useVideoSource, type VideoSource } from '../link/useVideoSource';
+import { useVideoSource, TURN_KEY, type VideoSource, type TurnConfig } from '../link/useVideoSource';
 import { useRecorder, useRecordedEvents } from '../record/useRecorder';
 import {
   Headline, Card, Section, Divider, Tabs, Stat, Row, Chip, Dot, Meter, Sparkline, ToolButton, IconButton, Toggle, Segmented, Activity, formatClock, useAccentHex, type Tone,
@@ -175,9 +175,9 @@ export const SurveillanceDashboard: React.FC = () => {
               <ToolButton icon={<Crosshair />} label="Auto-track" active={d.tasks.autoTrack} disabled={offline} onClick={() => payload.task('autoTrack')} title={toAircraft ? 'Needs onboard detection (companion computer); on this screen only for now' : undefined} />
               <ToolButton icon={<Flame />} label="Thermal" active={d.tasks.thermalScan} disabled={offline} onClick={() => payload.task('thermalScan')} title={toAircraft ? 'Switches the aircraft camera to its thermal sensor' : undefined} />
               <ToolButton icon={<Moon />} label="Night vision" active={d.tasks.nightVision} disabled={offline} onClick={() => payload.task('nightVision')} />
-              <ToolButton icon={<Sun />} label="Spotlight" active={d.tasks.illumination} disabled={offline} onClick={() => payload.task('illumination')} title={toAircraft ? 'Relay 1 on the flight controller (RELAY1_PIN)' : undefined} />
+              <ToolButton command="fly" icon={<Sun />} label="Spotlight" active={d.tasks.illumination} disabled={offline} onClick={() => payload.task('illumination')} title={toAircraft ? 'Relay 1 on the flight controller (RELAY1_PIN)' : undefined} />
               <ToolButton icon={<UserSearch />} label="Survivor detect" active={d.tasks.survivorDetect} disabled={offline} onClick={() => payload.task('survivorDetect')} />
-              {toAircraft && <ToolButton icon={<Camera />} label="Photo" onClick={() => link.takePhoto().catch(() => {})} title="Still photo on the aircraft camera (IMAGE_START_CAPTURE)" />}
+              {toAircraft && <ToolButton command="fly" icon={<Camera />} label="Photo" onClick={() => link.takePhoto().catch(() => {})} title="Still photo on the aircraft camera (IMAGE_START_CAPTURE)" />}
               <span className="w-px h-6 bg-line mx-1" />
               <span className="text-[11px] text-ink-3">Gimbal</span>
               <IconButton icon={<ChevronUp />} label="Gimbal up" disabled={offline} onClick={() => payload.gimbal(5)} />
@@ -208,13 +208,14 @@ export const SurveillanceDashboard: React.FC = () => {
                           <input value={webrtcUrl} onChange={e => { setWebrtcUrl(e.target.value); try { localStorage.setItem('a1-webrtc-url', e.target.value); } catch { /* ignore */ } }} placeholder="http://<pi>:8080" className="flex-1 min-w-0 rounded-md border border-line bg-surface px-2 py-1 text-[12px] text-ink num" />
                           <ToolButton size="sm" primary label="Connect" onClick={() => setVideoSource({ kind: 'WEBRTC', url: webrtcUrl })} />
                         </div>
+                        <TurnSettings />
                       </div>
                       {video.error && <div className="mx-2 mt-1 rounded bg-bad-soft px-2.5 py-1.5 text-[11px] text-bad">{video.error}</div>}
                     </div>
                   )}
                 </span>
                 <span className="w-40"><Toggle on={d.autopilot} onChange={on => sim.setAutopilot(d.id, on)} label="Autopilot" /></span>
-                <ToolButton icon={<Home />} label="Return home" danger disabled={offline || d.status === 'RTH'} onClick={() => { sim.returnHome(d.id); if (liveId && isPrimary) link.returnToLaunch(); }} title={liveId ? 'Sends MAV_CMD_NAV_RETURN_TO_LAUNCH to the aircraft' : undefined} />
+                <ToolButton command="abort" icon={<Home />} label="Return home" danger disabled={offline || d.status === 'RTH'} onClick={() => { sim.returnHome(d.id); if (liveId && isPrimary) link.returnToLaunch(); }} title={liveId ? 'Sends MAV_CMD_NAV_RETURN_TO_LAUNCH to the aircraft' : undefined} />
               </span>
             </div>
           </Card>
@@ -287,7 +288,7 @@ export const SurveillanceDashboard: React.FC = () => {
                   <div className="rounded-lg bg-accent-soft px-3 py-2.5">
                     <div className="flex items-center justify-between gap-2">
                       <div className="text-[12px] text-ink">Fly this loop on {liveId}</div>
-                      <ToolButton size="sm" primary icon={<Upload />} label={link.missionUpload.state === 'UPLOADING' ? `Uploading ${link.missionUpload.sent}/${link.missionUpload.total}` : 'Upload patrol'} disabled={link.missionUpload.state === 'UPLOADING' || !link.preflight.ok} onClick={uploadPatrol} title={link.preflight.ok ? 'Sends the five waypoints as a MAVLink mission and starts AUTO' : 'Pre-flight gate not satisfied (see link popover)'} />
+                      <ToolButton command="fly" size="sm" primary icon={<Upload />} label={link.missionUpload.state === 'UPLOADING' ? `Uploading ${link.missionUpload.sent}/${link.missionUpload.total}` : 'Upload patrol'} disabled={link.missionUpload.state === 'UPLOADING' || !link.preflight.ok} onClick={uploadPatrol} title={link.preflight.ok ? 'Sends the five waypoints as a MAVLink mission and starts AUTO' : 'Pre-flight gate not satisfied (see link popover)'} />
                     </div>
                     {link.missionUpload.state === 'DONE' && <div className="mt-1 text-[11px] text-ok">Mission on the aircraft · AUTO started</div>}
                     {link.missionUpload.state === 'FAILED' && <div className="mt-1 text-[11px] text-bad">{link.missionUpload.error}</div>}
@@ -328,7 +329,7 @@ export const SurveillanceDashboard: React.FC = () => {
                         </div>
                         {!det.acknowledged && (
                           <div className="mt-2 flex gap-2">
-                            <ToolButton size="sm" primary label={`Send ${selectedDroneId}`} disabled={offline} onClick={() => sim.dispatchToDetection(selectedDroneId, det.id)} />
+                            <ToolButton command="fly" size="sm" primary label={`Send ${selectedDroneId}`} disabled={offline} onClick={() => sim.dispatchToDetection(selectedDroneId, det.id)} />
                             <ToolButton size="sm" label="Dismiss" onClick={() => sim.acknowledgeDetection(det.id)} />
                           </div>
                         )}
@@ -374,5 +375,27 @@ const RouteProgressChart: React.FC<{ legIndex: number; legFraction: number; acce
       ))}
       <circle cx={progressX} cy={my} r={4.5} fill={accent} stroke="white" strokeWidth={1.5} />
     </svg>
+  );
+};
+
+/** TURN relay for video over LTE: stored on this device, used by the next WebRTC connect. */
+const TurnSettings: React.FC = () => {
+  const [open, setOpen] = useState(false);
+  const [t, setT] = useState<TurnConfig>(() => { try { return JSON.parse(localStorage.getItem(TURN_KEY) || 'null') ?? { url: '', username: '', credential: '' }; } catch { return { url: '', username: '', credential: '' }; } });
+  const save = (n: TurnConfig) => { setT(n); try { localStorage.setItem(TURN_KEY, JSON.stringify(n)); } catch { /* private mode */ } };
+  return (
+    <div className="mt-1.5">
+      <button onClick={() => setOpen(o => !o)} aria-expanded={open} className="text-[11px] text-ink-3 underline underline-offset-2 hover:text-ink">{t.url ? 'TURN relay set (for LTE)' : 'Over LTE? Add a TURN relay'}</button>
+      {open && (
+        <div className="mt-1.5 grid gap-1.5">
+          <input value={t.url} onChange={e => save({ ...t, url: e.target.value.trim() })} placeholder="turn:turn.example.com:3478" aria-label="TURN server" className="rounded-md border border-line bg-surface px-2 py-1 text-[12px] text-ink num" />
+          <div className="flex gap-1.5">
+            <input value={t.username} onChange={e => save({ ...t, username: e.target.value })} placeholder="username" aria-label="TURN username" className="flex-1 min-w-0 rounded-md border border-line bg-surface px-2 py-1 text-[12px] text-ink" />
+            <input type="password" value={t.credential} onChange={e => save({ ...t, credential: e.target.value })} placeholder="password" aria-label="TURN password" className="flex-1 min-w-0 rounded-md border border-line bg-surface px-2 py-1 text-[12px] text-ink" />
+          </div>
+          <p className="text-[11px] text-ink-3">Use the same server on the aircraft: <span className="num">stream.py --ice turn:… --turn-user … --turn-pass …</span></p>
+        </div>
+      )}
+    </div>
   );
 };

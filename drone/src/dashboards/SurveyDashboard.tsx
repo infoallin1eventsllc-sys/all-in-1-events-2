@@ -175,11 +175,11 @@ export const SurveyDashboard: React.FC = () => {
           {/* Action bar */}
           <Card padded={false} className="px-3 py-2.5">
             <div className="flex flex-wrap items-center gap-2">
-              <ToolButton id="sv-primary" primary icon={primary.icon} label={primary.label} onClick={primary.onClick} disabled={primary.disabled} title={primary.title} />
+              <ToolButton command="fly" id="sv-primary" primary icon={primary.icon} label={primary.label} onClick={primary.onClick} disabled={primary.disabled} title={primary.title} />
               {sim.live ? (
                 <>
                   <ToolButton icon={<Pause />} label="Hold" onClick={() => link.setFlightMode('LOITER')} title="Hold position (Loiter)" />
-                  <ToolButton icon={<Play />} label="Continue" onClick={() => link.setFlightMode('AUTO')} title="Continue the mission (Auto)" />
+                  <ToolButton command="fly" icon={<Play />} label="Continue" onClick={() => link.setFlightMode('AUTO')} title="Continue the mission (Auto)" />
                 </>
               ) : orbit ? null : (
                 <ToolButton icon={<RefreshCw />} label={sim.weakPatches && phase === 'COMPLETE' ? `Re-fly ${sim.weakPatches} weak patch${sim.weakPatches > 1 ? 'es' : ''}` : 'Re-fly weak patches'}
@@ -197,9 +197,9 @@ export const SurveyDashboard: React.FC = () => {
                 </>
               )}
               <span className="ml-auto flex items-center gap-2">
-                {connected && !sim.live && <ToolButton icon={<Upload />} label="Upload to aircraft" disabled={!link.preflight.ok} onClick={uploadAndStart} title="Waiting for GPS and telemetry from the aircraft" />}
+                {connected && !sim.live && <ToolButton command="fly" icon={<Upload />} label="Upload to aircraft" disabled={!link.preflight.ok} onClick={uploadAndStart} title="Waiting for GPS and telemetry from the aircraft" />}
                 <ToolButton icon={<Download />} label="Export package" onClick={() => downloadSurveyPackage(plan, sim.photosRef.current ?? [], sim.grid, sim.origin, sim.camera)} title="Mission plan, photo geotags and coverage for WebODM / Pix4D / DroneDeploy" />
-                <ToolButton icon={<Home />} label="Return home" danger disabled={sim.live ? false : !flying || phase === 'RETURNING' || phase === 'LANDING'}
+                <ToolButton command="abort" icon={<Home />} label="Return home" danger disabled={sim.live ? false : !flying || phase === 'RETURNING' || phase === 'LANDING'}
                   onClick={() => (sim.live ? link.returnToLaunch() : sim.returnHome())} />
               </span>
             </div>

@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Download, Printer, Trash2, FileJson, Plane, ShieldAlert, Sparkles, Eye, HardDriveDownload, ScanLine } from 'lucide-react';
 import { recordDb, type FlightEvent, type FlightSample, type FlightSession } from '../record/db';
 import { exportSessionCsv, exportSessionJson, recorder, summarise } from '../record/recorder';
+import { verify, type ChainCheck } from '../record/chain';
+import * as sync from '../sync/sync';
 import { Headline, Card, Section, Divider, Stat, Chip, Dot, ToolButton, Activity, useAccentHex, formatClock, type Tone } from './ui';
 
 /**
@@ -32,6 +34,7 @@ export const RecordsView: React.FC = () => {
   const [events, setEvents] = useState<FlightEvent[]>([]);
   const [aircraft, setAircraft] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [integrity, setIntegrity] = useState<ChainCheck | null>(null);
 
   const refresh = useCallback(async () => {
     try { setSessions(await recordDb.listSessions()); } catch { setSessions([]); }
@@ -57,6 +60,7 @@ export const RecordsView: React.FC = () => {
       const [sm, ev] = await Promise.all([recordDb.samplesFor(selectedId), recordDb.eventsFor(selectedId)]);
       if (!live) return;
       setSamples(sm); setEvents(ev);
+      setIntegrity(null); verify(ev).then(c => { if (live) setIntegrity(c); }).catch(() => {});
       setAircraft(sm.length ? sm[0].aircraft : null);
     })();
     return () => { live = false; };
@@ -140,6 +144,14 @@ export const RecordsView: React.FC = () => {
                   {selected.endedAt ? ` to ${fmtTime(selected.endedAt)}` : ' · still running'}
                 </p>
                 <p className="mt-0.5 num text-[11px] text-ink-3">Record {selected.id}</p>
+                {integrity && (
+                  <p id="record-integrity" className="mt-2">
+                    {integrity.status === 'VERIFIED' && <Chip tone="ok">Record intact · {integrity.checked} entries chained with SHA-256</Chip>}
+                    {integrity.status === 'BROKEN' && <Chip tone="bad">Changed after recording, from entry {(integrity.brokenAt ?? 0) + 1}</Chip>}
+                    {integrity.status === 'UNSIGNED' && <Chip tone="neutral">Recorded before record signing</Chip>}
+                    {sync.enabled() && !selected.sample && <Chip className="ml-2" tone={sync.queue.done().has(selected.id) ? 'ok' : 'neutral'}>{sync.queue.done().has(selected.id) ? 'Copy on the server' : 'Waiting to upload'}</Chip>}
+                  </p>
+                )}
               </div>
               <div className="flex flex-wrap gap-2 print:hidden">
                 <ToolButton size="sm" icon={<Printer />} label="Print report" onClick={() => window.print()} />
@@ -197,7 +209,7 @@ export const RecordsView: React.FC = () => {
                     id: String(e.id ?? `${e.t}-${e.text}`),
                     ts: fmtTime(e.t),
                     tone: SEVERITY_TONE[e.severity],
-                    text: `${e.kind === 'SYSTEM' ? '' : `${e.kind.toLowerCase()} · `}${e.text}${e.aircraft ? ` (${e.aircraft})` : ''}`,
+                    text: `${e.kind === 'SYSTEM' ? '' : `${e.kind.toLowerCase()} · `}${e.text}${e.aircraft ? ` (${e.aircraft})` : ''}${e.operator && (e.kind === 'COMMAND' || e.kind === 'SHOW' || e.kind === 'PAYLOAD') ? ` · ${e.operator.split(' · ')[0]}` : ''}`,
                   }))} />}
             </Section>
 

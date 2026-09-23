@@ -1,4 +1,5 @@
 import React from 'react';
+import { useOperator, ROLE_LABEL } from '../operator/operator';
 
 /**
  * Drone Command UI kit (v2).
@@ -186,10 +187,15 @@ export const Sparkline: React.FC<{ data: number[]; color: string; height?: numbe
 
 interface ToolButtonProps {
   icon?: React.ReactNode; label: string; onClick?: () => void; active?: boolean; primary?: boolean; danger?: boolean; disabled?: boolean; title?: string; id?: string; size?: 'sm' | 'md'; className?: string;
+  /** Sends a command: only the pilot in command may ('fly'); an observer may also 'abort'. */
+  command?: 'fly' | 'abort';
 }
 
 /** Toolbar button. Ghost by default; `primary` is the one action that matters; `danger` is destructive. */
-export const ToolButton: React.FC<ToolButtonProps> = ({ icon, label, onClick, active, primary, danger, disabled, title, id, size = 'md', className = '' }) => {
+export const ToolButton: React.FC<ToolButtonProps> = ({ icon, label, onClick, active, primary, danger, disabled, title, id, size = 'md', className = '', command }) => {
+  const op = useOperator();
+  const blocked = command === 'fly' ? !op.canCommand : command === 'abort' ? !op.canAbort : false;
+  if (blocked) { disabled = true; title = `${ROLE_LABEL[op.role]}: only the pilot in command can do this`; }
   const base = size === 'sm' ? 'h-8 px-2.5 text-[12px]' : 'h-9 px-3 text-[13px]';
   const look = danger
     ? 'bg-bad text-white hover:opacity-90'

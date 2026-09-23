@@ -1,5 +1,6 @@
 import { recordDb, type FlightEvent, type FlightSample, type FlightSession, type LinkSource, type Vertical } from './db';
 import { rollupSession } from '../analytics/rollup';
+import { stamp, GENESIS } from './chain';
 
 /**
  * The flight recorder.
@@ -14,21 +15,27 @@ const FLUSH_MS = 4000;
 const MIN_KEEP_SAMPLES = 10;
 
 let session: FlightSession | null = null;
+/** Who is at the controls; stamped on every event (set by the operator menu). */
+let operator = '';
 let sampleBuf: FlightSample[] = [];
 let eventBuf: FlightEvent[] = [];
 let timer: ReturnType<typeof setInterval> | null = null;
 const listeners = new Set<(s: FlightSession | null) => void>();
-const closedListeners = new Set<() => void>();
+const closedListeners = new Set<(sessionId: string) => void>();
 
 function notify() { listeners.forEach(l => l(session ? { ...session } : null)); }
 
-async function flush() {
+/** Flushes run one at a time: the event chain must be stamped in order. */
+let flushing: Promise<void> = Promise.resolve();
+function flush(): Promise<void> { flushing = flushing.then(doFlush, doFlush); return flushing; }
+
+async function doFlush() {
   if (!session) return;
   const s = sampleBuf; const e = eventBuf;
   sampleBuf = []; eventBuf = [];
   try {
     if (s.length) await recordDb.addSamples(s);
-    if (e.length) await recordDb.addEvents(e);
+    if (e.length) { session.chainHead = await stamp(e, session.chainHead ?? GENESIS); await recordDb.addEvents(e); }
     if (s.length || e.length) await recordDb.putSession(session);
   } catch {
     // Storage full or blocked (private mode). Recording is best-effort; the
@@ -68,8 +75,14 @@ export const recorder = {
 
   event(kind: string, severity: FlightEvent['severity'], text: string, aircraft?: string) {
     if (!session) return;
-    eventBuf.push({ sessionId: session.id, t: Date.now(), severity, kind, text, aircraft });
+    eventBuf.push({ sessionId: session.id, t: Date.now(), severity, kind, text, aircraft, ...(operator ? { operator } : {}) });
     session.eventCount++;
+  },
+
+  setOperator(label: string) {
+    if (label === operator) return;
+    const was = operator; operator = label;
+    if (session && was) recorder.event('SYSTEM', 'INFO', `Operator changed to ${label}`);
   },
 
   /** The link changed under us (simulation → Bluetooth, say). Recorded, not restarted. */
@@ -112,7 +125,7 @@ export const recorder = {
     } catch { /* best effort */ }
     session = null;
     notify();
-    closedListeners.forEach(l => l());
+    closedListeners.forEach(l => l(closing.id));
   },
 
   /**
@@ -142,7 +155,7 @@ export const recorder = {
   },
 
   /** Fires after a session is closed and its rollup is stored. */
-  onClosed(fn: () => void) { closedListeners.add(fn); return () => { closedListeners.delete(fn); }; },
+  onClosed(fn: (sessionId: string) => void) { closedListeners.add(fn); return () => { closedListeners.delete(fn); }; },
 };
 
 // A closed tab should not lose the last few seconds.
@@ -167,13 +180,13 @@ const csvCell = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
 export async function exportSessionCsv(s: FlightSession) {
   const [samples, events] = await Promise.all([recordDb.samplesFor(s.id), recordDb.eventsFor(s.id)]);
   const rows: string[] = [];
-  rows.push(['record', 'time_utc', 'aircraft', 'lat', 'lon', 'alt_m', 'speed_mps', 'heading_deg', 'battery_pct', 'detail'].map(csvCell).join(','));
+  rows.push(['record', 'time_utc', 'aircraft', 'lat', 'lon', 'alt_m', 'speed_mps', 'heading_deg', 'battery_pct', 'detail', 'operator', 'sha256'].map(csvCell).join(','));
   for (const r of samples) {
     rows.push(['SAMPLE', new Date(r.t).toISOString(), r.aircraft, r.lat ?? '', r.lon ?? '', r.altM.toFixed(1), r.speedMps.toFixed(1), r.headingDeg.toFixed(0), r.batteryPct.toFixed(0),
       r.extra ? Object.entries(r.extra).map(([k, v]) => `${k}=${v}`).join(' ') : ''].map(csvCell).join(','));
   }
   for (const e of events) {
-    rows.push([`EVENT/${e.kind}`, new Date(e.t).toISOString(), e.aircraft ?? '', '', '', '', '', '', '', `${e.severity}: ${e.text}`].map(csvCell).join(','));
+    rows.push([`EVENT/${e.kind}`, new Date(e.t).toISOString(), e.aircraft ?? '', '', '', '', '', '', '', `${e.severity}: ${e.text}`, e.operator ?? '', e.hash ?? ''].map(csvCell).join(','));
   }
   download(`${s.id}.csv`, rows.join('\n'), 'text/csv');
 }

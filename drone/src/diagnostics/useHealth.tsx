@@ -6,6 +6,7 @@ import { decodeHealth } from './decode';
 import { encodeCommandLong, MAV_CMD } from '../link/mavlink';
 import { HealthMonitor, type FlightHealth, type HealthReport } from './health';
 import { HealthSim, type SimFault } from './sim';
+import { queue as syncQueue } from '../sync/sync';
 
 /**
  * Runs the health monitor for the whole app, whichever screen is open, so a
@@ -70,6 +71,7 @@ export const HealthProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     m.reset();
     m.source = source; m.aircraft = aircraft;
     m.onFlightEnd = r => {
+      if (r.source === 'LIVE') syncQueue.add({ kind: 'health', report: r });
       if (!recordDb.available()) { setFlights(fs => [r, ...fs]); return; }
       recordDb.addHealth(r).then(id => { setFlights(fs => [{ ...r, id: id as number }, ...fs]); }).catch(() => setFlights(fs => [r, ...fs]));
     };
@@ -131,8 +133,9 @@ export const HealthProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const markReplaced = useCallback(async (part: string, note: string) => {
     const r: ServiceRecord = { aircraft, t: Date.now(), note, part };
     try { if (recordDb.available()) r.id = (await recordDb.addService(r)) as number; } catch { /* keep in memory */ }
+    if (source === 'LIVE') syncQueue.add({ kind: 'service', record: r });
     setParts(ps => [r, ...ps]);
-  }, [aircraft]);
+  }, [aircraft, source]);
 
   const deleteFlight = useCallback(async (id: number) => {
     try { await recordDb.deleteHealth(id); } catch { /* ignore */ }

@@ -82,11 +82,11 @@ export const LinkButton: React.FC = () => {
               </div>
               <div className="flex flex-wrap gap-2 pt-1">
                 {!t.armed
-                  ? <ToolButton size="sm" icon={<ShieldCheck />} label="Arm" primary disabled={!link.live || !link.preflight.ok} onClick={() => link.arm(true)} title={link.preflight.ok ? 'COMPONENT_ARM_DISARM' : 'Pre-flight gate not satisfied'} />
-                  : <ToolButton size="sm" icon={<ShieldCheck />} label="Disarm" disabled={!link.live} onClick={() => link.arm(false)} />}
-                <ToolButton size="sm" icon={<Plane />} label="Take off 30 m" disabled={!link.live || !t.armed} onClick={() => link.takeoff(30)} />
-                <ToolButton size="sm" icon={<ArrowDownToLine />} label="Land" disabled={!link.live || !t.armed} onClick={() => link.land()} />
-                <ToolButton size="sm" icon={<Satellite />} label="Return to launch" disabled={!link.live} onClick={() => link.returnToLaunch()} />
+                  ? <ToolButton command="fly" size="sm" icon={<ShieldCheck />} label="Arm" primary disabled={!link.live || !link.preflight.ok} onClick={() => link.arm(true)} title={link.preflight.ok ? 'COMPONENT_ARM_DISARM' : 'Pre-flight gate not satisfied'} />
+                  : <ToolButton command="abort" size="sm" icon={<ShieldCheck />} label="Disarm" disabled={!link.live} onClick={() => link.arm(false)} />}
+                <ToolButton command="fly" size="sm" icon={<Plane />} label="Take off 30 m" disabled={!link.live || !t.armed} onClick={() => link.takeoff(30)} />
+                <ToolButton command="abort" size="sm" icon={<ArrowDownToLine />} label="Land" disabled={!link.live || !t.armed} onClick={() => link.land()} />
+                <ToolButton command="abort" size="sm" icon={<Satellite />} label="Return to launch" disabled={!link.live} onClick={() => link.returnToLaunch()} />
                 <ToolButton size="sm" label="Disconnect" onClick={() => { link.disconnect(); }} />
               </div>
               {t.lastAck && Date.now() - t.lastAck.atMs < 8000 && (

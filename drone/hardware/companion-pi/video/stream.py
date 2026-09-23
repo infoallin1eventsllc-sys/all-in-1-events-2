@@ -16,6 +16,7 @@ Camera sources:
 The dashboard's Surveillance → video source → "WebRTC" takes the URL http://<pi>:8080.
 Run one instance per camera (different --port) for EO + thermal.
 """
+import os
 import argparse
 import asyncio
 import json
@@ -46,7 +47,9 @@ async def offer(request: web.Request) -> web.Response:
     params = await request.json()
     desc = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
-    ice = [RTCIceServer(urls=u) for u in request.app["ice_servers"]] if request.app["ice_servers"] else []
+    args = request.app["args"]
+    ice = [RTCIceServer(urls=u, username=args.turn_user, credential=args.turn_pass) if u.startswith(("turn:", "turns:")) else RTCIceServer(urls=u)
+           for u in request.app["ice_servers"]]
     pc = RTCPeerConnection(RTCConfiguration(iceServers=ice))
     pcs.add(pc)
     pc_id = uuid.uuid4().hex[:8]
@@ -103,6 +106,8 @@ def main():
     ap.add_argument("--audio", action="store_true", help="also send the camera's mic if it has one")
     ap.add_argument("--port", type=int, default=8080)
     ap.add_argument("--ice", action="append", default=[], help="STUN/TURN url, repeatable (e.g. stun:stun.l.google.com:19302)")
+    ap.add_argument("--turn-user", default=os.environ.get("A1_TURN_USER"), help="TURN username (or env A1_TURN_USER); needed on LTE / carrier NAT")
+    ap.add_argument("--turn-pass", default=os.environ.get("A1_TURN_PASS"), help="TURN password (or env A1_TURN_PASS)")
     ap.add_argument("--cert", help="TLS cert for https (needed when the dashboard page is https and the Pi is not on localhost)")
     ap.add_argument("--key")
     ap.add_argument("-v", "--verbose", action="store_true")

@@ -58,6 +58,12 @@ let an HTTPS page open `wss://` sockets. Two ways to give the bridge a certifica
 
 Always set `--token`: anyone who can reach the socket can command the aircraft.
 
+**Over LTE / the internet, no VPN:** add `--relay wss://<relay>/aircraft/<id>?token=…`
+and the bridge also connects *out* to a small relay server you host; phones then
+connect to `wss://<relay>/fly/<id>?token=…` (or `/watch/<id>` read-only) from
+anywhere. Setup, deploy (Fly.io, Render, any VPS) and security notes:
+[`relay/README.md`](relay/README.md).
+
 **Bench test with no drone:** `bridge/fake_vehicle.py` is a stand-in autopilot
 (ArduCopter by default, `--px4` for PX4). It answers arming, modes, takeoff, go-to,
 missions, gimbal, zoom, camera source, relay and photos, and prints every command.
@@ -113,3 +119,33 @@ federal agencies (18 U.S.C. 32, 47 U.S.C. 333, the Aircraft Sabotage Act). A
 private venue's counter-drone product is *detect, locate the operator, alert
 security and law enforcement*. The dashboard's effector controls are therefore
 hidden unless an authorized integrator enables them.
+
+
+## Test against the real ArduPilot firmware (SITL)
+
+The stand-in autopilot is quick, but the real firmware is the truth. ArduCopter's
+software-in-the-loop build runs the actual flight code on a laptop:
+
+```bash
+git clone --depth 1 --branch Copter-4.5.7 https://github.com/ArduPilot/ardupilot.git && cd ardupilot
+git submodule update --init --recursive --depth 1
+pip install empy==3.3.4 pexpect future   # if empy fails to build, copy em.py from its sdist into site-packages
+./waf configure --board sitl && ./waf copter                   # about 4 minutes
+printf "FRAME_CLASS 1\nFRAME_TYPE 1\n" > x.parm
+build/sitl/bin/arducopter --model X --defaults Tools/autotest/default_params/copter.parm,x.parm -I0 --home 33.7701,-118.1937,10,0 &
+python3 bridge/mavlink_ws.py --tcp 127.0.0.1:5760 --port 8770 --token test
+# dashboard: Network → ws://127.0.0.1:8770/?token=test
+```
+
+To see the Health screen catch a failing corner on the real autopilot, add
+`SIM_ENGINE_FAIL 2` and `SIM_ENGINE_MUL 0.8` to `x.parm` (motor 3 at 80% thrust).
+
+Results with ArduCopter 4.5.7 through the bridge and the real app:
+
+| Case | In flight | After landing |
+| --- | --- | --- |
+| Healthy | All systems normal; motors within 0.1% | Fit to fly |
+| Motor 3 at 80% thrust | Land as soon as it is safe: motor 3 or its propeller (motor 3 +17.4%) | Ground it |
+
+It also showed a real bug the stand-in hid: ArduCopter refuses takeoff until the
+switch to GUIDED has landed, so the console now waits for the mode before sending it.
