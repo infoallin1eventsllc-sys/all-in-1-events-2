@@ -1,0 +1,272 @@
+import React, { useEffect, useRef, useState } from 'react';
+import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+
+/**
+ * The Overview hero: a fleet of quadcopters in a dark, hazy sky, hovering with a
+ * life of their own and re-forming as the visitor scrolls (scattered approach →
+ * chevron → fan-out that clears the headline). Cinematic rather than technical:
+ * anodised bodies under a key light and a blue rim light, LED tips that bloom,
+ * propeller blur, thin light trails when the fleet moves, volumetric beams in
+ * the haze, and a camera that pushes in and follows the pointer a little.
+ *
+ * Reduced motion: one still frame of the chevron, nothing moves. No WebGL: the
+ * page's gradient stays and the copy stands on its own.
+ */
+
+type V3 = [number, number, number];
+
+function seeded(a: number) {
+  return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+const smooth = (t: number) => { const u = Math.min(1, Math.max(0, t)); return u * u * (3 - 2 * u); };
+
+/** Three formations the fleet moves through with scroll. */
+function formations(n: number): [V3[], V3[], V3[]] {
+  const r = seeded(11);
+  const scattered: V3[] = [], chevron: V3[] = [], fan: V3[] = [];
+  for (let i = 0; i < n; i++) {
+    scattered.push([(r() - 0.5) * 30, -2.5 + r() * 8, -24 + Math.pow(r(), 1.15) * 36]);
+    const k = Math.ceil(i / 2), side = i === 0 ? 0 : i % 2 ? -1 : 1;
+    chevron.push([side * k * 2.8, 0.9 + k * 0.5, 3.5 - k * 2.3]);
+    const a = -0.42 + (i / (n - 1)) * (Math.PI + 0.84);           // an arc round the headline
+    fan.push([Math.cos(a) * 15, 1.4 + Math.sin(a) * 5.6, -8 + ((i * 7) % 5) * 2.8]);
+  }
+  return [scattered, chevron, fan];
+}
+
+function radialTexture(): THREE.Texture {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d')!;
+  const gr = g.createRadialGradient(64, 64, 8, 64, 64, 64);
+  gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.55, 'rgba(255,255,255,0.9)'); gr.addColorStop(0.92, 'rgba(255,255,255,0.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+
+interface Drone {
+  group: THREE.Group;
+  props: THREE.Group[];
+  blur: THREE.Mesh[];
+  trail: THREE.Line;
+  history: THREE.Vector3[];
+  prev: THREE.Vector3;
+  phase: number;
+  stagger: number;
+  ledColor: THREE.Color;
+  roll: number; pitch: number; yaw: number;
+}
+
+function buildDrone(mats: Record<string, THREE.Material>, blurTex: THREE.Texture, ledColor: THREE.Color): { group: THREE.Group; props: THREE.Group[]; blur: THREE.Mesh[] } {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new RoundedBoxGeometry(1.05, 0.26, 0.64, 4, 0.09), mats.body);
+  g.add(body);
+  const canopy = new THREE.Mesh(new RoundedBoxGeometry(0.62, 0.12, 0.4, 3, 0.05), mats.canopy);
+  canopy.position.set(0.05, 0.17, 0); g.add(canopy);
+  const gimbal = new THREE.Mesh(new THREE.SphereGeometry(0.12, 20, 14), mats.glass);
+  gimbal.position.set(0.5, -0.13, 0); g.add(gimbal);
+  const props: THREE.Group[] = [], blur: THREE.Mesh[] = [];
+  const armGeo = new THREE.CylinderGeometry(0.035, 0.045, 0.98, 10).rotateZ(Math.PI / 2);
+  const motorGeo = new THREE.CylinderGeometry(0.09, 0.1, 0.13, 16);
+  const ledGeo = new THREE.SphereGeometry(0.045, 10, 8);
+  const bladeGeo = new THREE.BoxGeometry(0.66, 0.012, 0.055);
+  const discGeo = new THREE.CircleGeometry(0.34, 32);
+  for (const [sx, sz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    const arm = new THREE.Mesh(armGeo, mats.arm);
+    arm.position.set(sx * 0.42, 0, sz * 0.42); arm.rotation.y = -Math.atan2(sz, sx); g.add(arm);
+    const tip = new THREE.Vector3(sx * 0.78, 0, sz * 0.78);
+    const motor = new THREE.Mesh(motorGeo, mats.arm); motor.position.copy(tip).setY(0.06); g.add(motor);
+    const led = new THREE.Mesh(ledGeo, sx > 0 ? mats.ledFront : mats.ledRear); led.position.copy(tip).setY(-0.04); g.add(led);
+    const prop = new THREE.Group(); prop.position.copy(tip).setY(0.15);
+    const b1 = new THREE.Mesh(bladeGeo, mats.blade), b2 = new THREE.Mesh(bladeGeo, mats.blade); b2.rotation.y = Math.PI / 2;
+    prop.add(b1, b2);
+    const disc = new THREE.Mesh(discGeo, new THREE.MeshBasicMaterial({ map: blurTex, color: 0x9aa4b0, transparent: true, opacity: 0.28, depthWrite: false }));
+    disc.rotation.x = -Math.PI / 2; disc.position.y = 0.002; prop.add(disc);
+    g.add(prop); props.push(prop); blur.push(disc);
+  }
+  void ledColor;
+  return { group: g, props, blur };
+}
+
+export const DroneHero: React.FC<{ className?: string }> = ({ className = '' }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [ok, setOk] = useState(true);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const phone = window.innerWidth < 640;
+    let renderer: THREE.WebGLRenderer;
+    try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' }); }
+    catch (e) { console.warn('Hero: WebGL unavailable', e); setOk(false); return; }
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, phone ? 1.25 : 1.6));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+    el.appendChild(renderer.domElement);
+    renderer.domElement.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block';
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x05070c);
+    scene.fog = new THREE.Fog(0x05070c, 16, 58);
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environmentIntensity = 0.9;
+    const cam = new THREE.PerspectiveCamera(42, 16 / 9, 0.5, 120);
+
+    // Backdrop: deep navy glow falling to black, outside the fog.
+    const back = new THREE.Mesh(new THREE.PlaneGeometry(320, 200), new THREE.ShaderMaterial({
+      fog: false, depthWrite: false,
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: 'varying vec2 vUv; void main(){ float d = distance(vUv, vec2(0.58, 0.62)); vec3 c = mix(vec3(0.014, 0.024, 0.06), vec3(0.0016, 0.002, 0.0038), smoothstep(0.04, 0.6, d)); gl_FragColor = vec4(c, 1.0); }',
+    }));
+    back.position.z = -90; scene.add(back);
+
+    // Lighting: warm key from the front-left and above, cool rim from behind, faint sky fill.
+    scene.add(new THREE.HemisphereLight(0x8fa8d8, 0x06080c, 0.55));
+    const key = new THREE.DirectionalLight(0xfff1e0, 3.6); key.position.set(-8, 12, 14); scene.add(key);
+    const rim = new THREE.DirectionalLight(0x6fa8ff, 3.2); rim.position.set(6, 5, -18); scene.add(rim);
+    const under = new THREE.DirectionalLight(0x3d6fd6, 0.6); under.position.set(0, -10, 4); scene.add(under);
+
+    // Volumetric beams: soft additive slabs cutting through the haze.
+    const beamMat = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+      uniforms: { tint: { value: new THREE.Color(0.32, 0.5, 1.0) }, k: { value: 0.055 } },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: 'uniform vec3 tint; uniform float k; varying vec2 vUv; void main(){ float x = smoothstep(0.0, 0.5, vUv.x) * smoothstep(1.0, 0.5, vUv.x); float y = smoothstep(0.0, 0.35, vUv.y) * smoothstep(1.0, 0.75, vUv.y); gl_FragColor = vec4(tint * x * y * k * (0.6 + 0.4 * vUv.x), 1.0); }',
+    });
+    const beams: THREE.Mesh[] = [];
+    for (const [x, z, rz, w] of [[-14, -22, 0.55, 9], [-6, -30, 0.42, 6], [12, -34, -0.35, 7]]) {
+      const b = new THREE.Mesh(new THREE.PlaneGeometry(w, 70), beamMat);
+      b.position.set(x, 14, z); b.rotation.z = rz; scene.add(b); beams.push(b);
+    }
+
+    // Materials: anodised metal, dark glass, LEDs bright enough to bloom.
+    const mats: Record<string, THREE.Material> = {
+      body: new THREE.MeshStandardMaterial({ color: 0x262b33, metalness: 0.62, roughness: 0.3 }),
+      canopy: new THREE.MeshStandardMaterial({ color: 0x23272e, metalness: 0.7, roughness: 0.28 }),
+      arm: new THREE.MeshStandardMaterial({ color: 0x2a2f37, metalness: 0.7, roughness: 0.38 }),
+      glass: new THREE.MeshPhysicalMaterial({ color: 0x080a0e, metalness: 0.1, roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.08 }),
+      blade: new THREE.MeshStandardMaterial({ color: 0x0f1115, metalness: 0.5, roughness: 0.5 }),
+      ledFront: new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 3.2, 3.8), toneMapped: false }),
+      ledRear: new THREE.MeshBasicMaterial({ color: new THREE.Color(0.7, 1.7, 4.2), toneMapped: false }),
+    };
+    const blurTex = radialTexture();
+    const n = phone ? 7 : 12;
+    const [K0, K1, K2] = formations(n);
+    const drones: Drone[] = [];
+    const rnd = seeded(7);
+    for (let i = 0; i < n; i++) {
+      const ledColor = new THREE.Color(0.45, 0.8, 1.6);
+      const { group, props, blur } = buildDrone(mats, blurTex, ledColor);
+      group.position.set(...(reduced ? K1[i] : K0[i]));
+      group.scale.setScalar(1.35);
+      scene.add(group);
+      const pts = 22;
+      const tg = new THREE.BufferGeometry();
+      tg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pts * 3), 3));
+      tg.setAttribute('color', new THREE.BufferAttribute(new Float32Array(pts * 3), 3));
+      const trail = new THREE.Line(tg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+      trail.frustumCulled = false; scene.add(trail);
+      drones.push({ group, props, blur, trail, history: Array.from({ length: pts }, () => group.position.clone()), prev: group.position.clone(), phase: rnd() * Math.PI * 2, stagger: i / n, ledColor, roll: 0, pitch: 0, yaw: 0 });
+    }
+
+    const composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, cam));
+    const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), phone ? 0.45 : 0.55, 0.6, 0.82);
+    composer.addPass(bloom);
+    composer.addPass(new OutputPass());
+
+    const size = () => {
+      const w = el.clientWidth, h = el.clientHeight;
+      cam.aspect = w / h; cam.updateProjectionMatrix();
+      renderer.setSize(w, h, false); composer.setSize(w, h);
+    };
+    size();
+    const ro = new ResizeObserver(size); ro.observe(el);
+
+    // Scroll drives the choreography; the pointer nudges the camera.
+    let target = 0, p = reduced ? 0.5 : 0, px = 0, py = 0, mx = 0, my = 0;
+    const onScroll = () => { const h = el.offsetHeight || 1; target = Math.min(1, Math.max(0, (window.scrollY - el.offsetTop + 40) / (h * 0.55))); };
+    const onMove = (e: PointerEvent) => { const r = el.getBoundingClientRect(); mx = ((e.clientX - r.left) / r.width - 0.5) * 2; my = ((e.clientY - r.top) / r.height - 0.5) * 2; };
+    const onLeave = () => { mx = 0; my = 0; };
+    window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
+    el.addEventListener('pointermove', onMove); el.addEventListener('pointerleave', onLeave);
+
+    let visible = true, raf = 0, last = performance.now();
+    const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting; if (visible && !raf && !reduced) { last = performance.now(); raf = requestAnimationFrame(frame); } });
+    io.observe(el);
+
+    const tmp = new THREE.Vector3(), vel = new THREE.Vector3();
+    const place = (d: Drone, i: number, pp: number, t: number) => {
+      // Stagger so the leaders move first, then each half of the journey eased.
+      const u = Math.min(1, Math.max(0, (pp - d.stagger * 0.16) / 0.84));
+      const a = K0[i], b = K1[i], c = K2[i];
+      let x: number, y: number, z: number;
+      if (u < 0.5) { const s = smooth(u / 0.5); x = a[0] + (b[0] - a[0]) * s; y = a[1] + (b[1] - a[1]) * s; z = a[2] + (b[2] - a[2]) * s; }
+      else { const s = smooth((u - 0.5) / 0.5); x = b[0] + (c[0] - b[0]) * s; y = b[1] + (c[1] - b[1]) * s; z = b[2] + (c[2] - b[2]) * s; }
+      // Idle hover: a slow bob and a lean, unique to each aircraft.
+      y += Math.sin(t * 0.9 + d.phase) * 0.09 + Math.sin(t * 1.7 + d.phase * 2) * 0.03;
+      x += Math.sin(t * 0.5 + d.phase) * 0.06;
+      d.group.position.set(x, y, z);
+    };
+
+    const frame = (now: number) => {
+      raf = 0;
+      if (!visible || document.hidden) return;
+      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      const t = now / 1000;
+      p += (target - p) * (1 - Math.exp(-dt * 2.6));
+      px += (mx - px) * (1 - Math.exp(-dt * 2)); py += (my - py) * (1 - Math.exp(-dt * 2));
+      cam.position.set(px * 0.9 + Math.sin(t * 0.11) * 0.3, 3.1 - py * 0.5 + Math.sin(t * 0.17) * 0.15, 19.5 - p * 3.2);
+      cam.lookAt(0, 1.3 + p * 0.3, 0);
+      beams.forEach((b, k) => { b.rotation.z = [0.55, 0.42, -0.35][k] + Math.sin(t * 0.08 + k) * 0.05; });
+      drones.forEach((d, i) => {
+        d.prev.copy(d.group.position);
+        place(d, i, p, t);
+        vel.subVectors(d.group.position, d.prev).divideScalar(Math.max(dt, 1e-3));
+        // Bank into the turn: roll with sideways speed, pitch with fore-aft speed, yaw a little toward the heading.
+        const roll = THREE.MathUtils.clamp(-vel.x * 0.09, -0.55, 0.55) + Math.sin(t * 0.8 + d.phase) * 0.035;
+        const pitch = THREE.MathUtils.clamp(vel.z * 0.07, -0.45, 0.45) + Math.sin(t * 1.1 + d.phase) * 0.025;
+        const yaw = vel.length() > 0.8 ? Math.atan2(vel.x, -vel.z) * 0.35 : d.yaw;
+        d.roll += (roll - d.roll) * (1 - Math.exp(-dt * 3)); d.pitch += (pitch - d.pitch) * (1 - Math.exp(-dt * 3)); d.yaw += (yaw - d.yaw) * (1 - Math.exp(-dt * 1.5));
+        d.group.rotation.set(d.pitch, d.yaw + Math.PI * 0.5, d.roll, 'YXZ');
+        const spin = dt * 62;
+        d.props.forEach((pr, k) => { pr.rotation.y += spin * (k % 2 ? -1 : 1); });
+        // Light trail: recent positions, fading, brighter the faster the aircraft moves.
+        d.history.pop(); d.history.unshift(d.group.position.clone());
+        const pos = d.trail.geometry.getAttribute('position') as THREE.BufferAttribute, col = d.trail.geometry.getAttribute('color') as THREE.BufferAttribute;
+        const strength = THREE.MathUtils.clamp((vel.length() - 1.2) / 10, 0, 1);
+        d.history.forEach((h, k) => { pos.setXYZ(k, h.x, h.y - 0.05, h.z); const f = strength * (1 - k / d.history.length) * 1.4; col.setXYZ(k, d.ledColor.r * f, d.ledColor.g * f, d.ledColor.b * f); });
+        pos.needsUpdate = true; col.needsUpdate = true;
+      });
+      composer.render();
+      raf = requestAnimationFrame(frame);
+    };
+
+    if (reduced) {
+      drones.forEach((d, i) => { place(d, i, 0.5, 0); d.group.rotation.y = Math.PI * 0.5; d.props.forEach(pr => { pr.rotation.y = i; }); d.blur.forEach(b => { b.visible = false; }); });
+      cam.position.set(0, 3.1, 18); cam.lookAt(0, 1.4, 0); composer.render();
+    } else {
+      raf = requestAnimationFrame(frame);
+    }
+    const onVis = () => { if (!document.hidden && visible && !raf && !reduced) { last = performance.now(); raf = requestAnimationFrame(frame); } };
+    document.addEventListener('visibilitychange', onVis);
+
+    return () => {
+      cancelAnimationFrame(raf); ro.disconnect(); io.disconnect();
+      window.removeEventListener('scroll', onScroll); el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerleave', onLeave);
+      document.removeEventListener('visibilitychange', onVis);
+      scene.traverse(o => { const m = o as THREE.Mesh; if (m.geometry) m.geometry.dispose(); });
+      Object.values(mats).forEach(m => m.dispose()); blurTex.dispose(); pmrem.dispose(); composer.dispose(); renderer.dispose();
+      renderer.domElement.remove();
+      void tmp;
+    };
+  }, []);
+
+  return <div ref={ref} aria-hidden className={`absolute inset-0 ${className}`}>{!ok && <div className="absolute inset-0 bg-[radial-gradient(60%_60%_at_58%_38%,#131c34_0%,#05070c_100%)]" />}</div>;
+};

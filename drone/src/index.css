@@ -184,3 +184,14 @@ input[type="range"] { accent-color: var(--color-accent); }
 .eng .uppercase { letter-spacing: 0.02em !important; }
 .eng .tracking-widest, .eng .tracking-wider { letter-spacing: 0.03em !important; }
 .eng .font-black { font-weight: 700 !important; }
+
+/* Overview hero: glass call to action over the drone scene. */
+.hero-cta {
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 0 0 rgba(130, 175, 255, 0);
+  transition: background 0.5s ease-in-out, box-shadow 0.5s ease-in-out, border-color 0.5s ease-in-out;
+}
+.hero-cta:hover { background: rgba(255, 255, 255, 0.15); border-color: rgba(255, 255, 255, 0.4); box-shadow: 0 0 36px rgba(130, 175, 255, 0.38); }

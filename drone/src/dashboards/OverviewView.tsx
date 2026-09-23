@@ -1,8 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Sparkles, ScanLine, Eye, HeartPulse, BarChart3, Archive, Radio, Smartphone, ShieldCheck, Cpu, ArrowRight, PlayCircle } from 'lucide-react';
-import { useLightShowSimulation } from '../hooks/useLightShowSimulation';
-import { LightShowCanvas3D } from '../components/lightshow/LightShowCanvas3D';
-import { SHOW_FORMATIONS } from '../data/lightShowFormations';
+import { DroneHero } from './hero/DroneHero';
 
 /**
  * Overview: the front door of the demo.
@@ -38,34 +36,6 @@ const PROOF: { icon: React.ReactNode; title: string; body: string }[] = [
 ];
 
 /** The hero: the actual show renderer, cycling formations. */
-const HeroShow: React.FC = () => {
-  const { drones, conductorState, togglePlay, selectFormation, seek } = useLightShowSimulation(100, true);
-  const started = useRef(false);
-  const [idx, setIdx] = useState(0);
-  useEffect(() => {
-    if (started.current || drones.length === 0) return;
-    started.current = true;
-    selectFormation(0); togglePlay();
-  }, [drones.length, selectFormation, togglePlay]);
-  useEffect(() => {
-    const t = setInterval(() => {
-      setIdx(i => { const n = (i + 1) % SHOW_FORMATIONS.length; selectFormation(n); return n; });
-      seek(10); // keep the conductor clock clear of the end so the fleet never stops
-    }, 9000);
-    return () => clearInterval(t);
-  }, [selectFormation, seek]);
-  void conductorState;
-  return (
-    <>
-      <LightShowCanvas3D bare initialPreset="AUDIENCE" heightClass="h-full" drones={drones} selectedDroneId={null} onSelectDrone={() => {}} showTrajectories={false} showGeofence={false} formationName={SHOW_FORMATIONS[idx]?.name ?? ''} />
-      <div className="absolute bottom-4 right-4 hidden sm:flex items-center gap-2 rounded-lg bg-black/45 backdrop-blur px-3 py-1.5 text-[12px] text-white/80 pointer-events-none">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-        Live: 100 aircraft · {SHOW_FORMATIONS[idx]?.name}
-      </div>
-    </>
-  );
-};
-
 const Shot: React.FC<{ name: string; alt: string }> = ({ name, alt }) => {
   const [ok, setOk] = useState(true);
   return ok
@@ -75,31 +45,29 @@ const Shot: React.FC<{ name: string; alt: string }> = ({ name, alt }) => {
 
 export const OverviewView: React.FC<Props> = ({ onOpen, onTour }) => (
   <div id="overview" className="flex flex-col gap-10 pb-4">
-    {/* Hero */}
-    <section className="relative overflow-hidden rounded-[18px] bg-imagery min-h-[540px] lg:min-h-[600px] flex">
-      <div className="absolute inset-y-0 right-0 w-full lg:w-[72%] [mask-image:linear-gradient(to_right,transparent,black_18%)]"><HeroShow /></div>
-      <div className="absolute inset-0 bg-gradient-to-r from-[#070a10] via-[#070a10]/70 via-35% to-transparent to-65% pointer-events-none" />
-      <div className="relative z-10 flex flex-col justify-center gap-6 px-6 sm:px-10 lg:px-14 py-12 max-w-[640px]">
-        <p className="text-[13px] font-medium text-white/60">All in 1 Drone Command</p>
-        <h1 className="text-[34px] sm:text-[46px] leading-[1.05] font-semibold tracking-[-0.02em] text-white">
-          Every drone job at an event, flown from one screen.
+    {/* Hero: a fleet in a dark sky that re-forms as the page scrolls; the copy is short and stays out of its way. */}
+    <section className="relative overflow-hidden rounded-[18px] bg-[#05070c] min-h-[620px] lg:min-h-[740px] flex items-center justify-center">
+      <DroneHero />
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(52%_46%_at_50%_44%,rgba(5,7,12,0.62)_0%,rgba(5,7,12,0)_100%)]" />
+      <div className="relative z-10 flex flex-col items-center text-center gap-5 px-6 sm:px-10 py-16 max-w-[820px] pointer-events-none">
+        <h1 className="text-[40px] sm:text-[62px] lg:text-[78px] leading-[1.02] font-light tracking-[-0.028em] text-white text-balance">
+          Every drone job.<br />One console.
         </h1>
-        <p className="text-[16px] leading-relaxed text-white/75">
-          Light shows for the crowd, a survey of the grounds before the build, security patrols overnight, and a health check on every aircraft. It runs in a browser on a laptop, a tablet or a phone.
+        <p className="text-[16px] sm:text-[18px] lg:text-[20px] leading-relaxed font-light text-white/70 max-w-[560px]">
+          Light shows, site surveys, night patrols and aircraft health, flown from a browser on any device.
         </p>
-        <div className="flex flex-wrap items-center gap-3">
-          <button id="overview-tour" onClick={onTour} className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-white text-[#0b0f14] text-[14px] font-semibold hover:bg-white/90 transition-colors">
+        <div className="mt-3 flex flex-col items-center gap-4 pointer-events-auto">
+          <button id="overview-tour" onClick={onTour} className="hero-cta inline-flex items-center gap-2 h-12 px-7 rounded-full text-white text-[15px] font-medium">
             <PlayCircle className="w-4.5 h-4.5" />Take the two-minute tour
           </button>
-          <button onClick={() => onOpen('LIGHT_SHOW_OPS')} className="inline-flex items-center gap-2 h-11 px-5 rounded-xl border border-white/25 text-white text-[14px] font-medium hover:bg-white/10 transition-colors">
+          <button onClick={() => onOpen('LIGHT_SHOW_OPS')} className="inline-flex items-center gap-1.5 text-[14px] text-white/60 hover:text-white transition-colors duration-500">
             Explore on your own<ArrowRight className="w-4 h-4" />
           </button>
         </div>
-        <p className="text-[12px] text-white/45">Working demo on simulated aircraft and sample data. Connect a real flight controller from the link menu and the same screens fly it.</p>
       </div>
+      <p className="absolute bottom-4 inset-x-0 text-center text-[12px] text-white/40 px-6 pointer-events-none">Working demo on simulated aircraft and sample data. Connect a real flight controller from the link menu and the same screens fly it.</p>
     </section>
 
-    {/* Three products */}
     <section aria-labelledby="ov-products">
       <div className="flex items-end justify-between gap-4 mb-4">
         <div>

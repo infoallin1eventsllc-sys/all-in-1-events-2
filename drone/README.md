@@ -22,8 +22,10 @@ SITL / benchmark / radio / FAA-waiver labs — sits one click further in, under
 ## Portfolio demo
 
 Opened with no aircraft, the console is a working demo (a Meridian Interface case
-study). **Overview** is the front door: the real show renderer flying 100 aircraft as
-the hero, the three products and what sits underneath. **Take the tour** (or press
+study). **Overview** is the front door: a cinematic hero (a fleet of quadcopters in a
+dark sky that re-forms as the page scrolls, rendered live in Three.js with bloom and
+light trails; a still frame under reduced motion), the three products and what sits
+underneath. **Take the tour** (or press
 `t`) walks through each screen and can press the one button that brings it to life.
 A first visit gets labelled sample content so no page is empty: three recorded
 flights with paths, three months of fleet history, and health reports where motor 3
