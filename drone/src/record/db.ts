@@ -37,6 +37,8 @@ export interface FlightSession {
   eventCount: number;
   /** Operator-entered note, e.g. the venue or client name. */
   note?: string;
+  /** Demo content (src/demo/seed.ts): labelled on screen, removable in one click. */
+  sample?: boolean;
 }
 
 export interface FlightSample {
@@ -188,12 +190,13 @@ export const recordDb = {
     t.onerror = () => reject(t.error ?? new Error('rollup write failed'));
   })),
   listRollups: () => tx<SessionRollup[]>('rollups', 'readonly', st => st.getAll()),
-  /** Remove generated sample history (rollups and service entries), leaving real records alone. */
+  /** Remove all demo content (rollups, service entries, health reports, sample flights), leaving real records alone. */
   clearSamples: async () => {
     const db = await open();
+    for (const s of (await recordDb.listSessions()).filter(x => x.sample)) await recordDb.deleteSession(s.id);
     await new Promise<void>((resolve, reject) => {
-      const t = db.transaction(['rollups', 'maintenance'], 'readwrite');
-      for (const store of ['rollups', 'maintenance'] as const) {
+      const t = db.transaction(['rollups', 'maintenance', 'health'], 'readwrite');
+      for (const store of ['rollups', 'maintenance', 'health'] as const) {
         const cur = t.objectStore(store).openCursor();
         cur.onsuccess = () => { const c = cur.result; if (!c) return; if ((c.value as { sample?: boolean }).sample) c.delete(); c.continue(); };
       }

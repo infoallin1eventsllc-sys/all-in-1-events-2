@@ -27,6 +27,10 @@ interface LightShowCanvas3DProps {
   showTrajectories: boolean;
   showGeofence: boolean;
   formationName: string;
+  /** Hero use (Overview page): no overlays, no picking, a chosen camera, a custom height. */
+  bare?: boolean;
+  initialPreset?: 'AUDIENCE' | 'ISOMETRIC' | 'TOP_DOWN';
+  heightClass?: string;
 }
 
 type Preset = 'AUDIENCE' | 'ISOMETRIC' | 'TOP_DOWN';
@@ -97,10 +101,10 @@ function makeGroundTexture(): THREE.CanvasTexture {
 }
 
 export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
-  drones, selectedDroneId, onSelectDrone, showTrajectories, showGeofence, formationName,
+  drones, selectedDroneId, onSelectDrone, showTrajectories, showGeofence, formationName, bare = false, initialPreset = 'ISOMETRIC', heightClass,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [preset, setPreset] = useState<Preset>('ISOMETRIC');
+  const [preset, setPreset] = useState<Preset>(initialPreset);
   const [glow, setGlow] = useState(true);
 
   // Everything the render loop touches lives in refs so React renders never rebuild the scene.
@@ -114,8 +118,8 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
   flagsRef.current = { selectedDroneId, showTrajectories, showGeofence, glow };
 
   // Camera orbit: the target we ease towards, and where we are now.
-  const orbitGoal = useRef({ ...PRESETS.ISOMETRIC });
-  const orbitNow = useRef({ ...PRESETS.ISOMETRIC });
+  const orbitGoal = useRef({ ...PRESETS[initialPreset] });
+  const orbitNow = useRef({ ...PRESETS[initialPreset] });
   const dragging = useRef(false);
   const lastPointer = useRef({ x: 0, y: 0 });
   const lastInteraction = useRef(0);
@@ -346,15 +350,16 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
   const litCount = drones.reduce((c, d) => c + (d.color.r + d.color.g + d.color.b + d.color.w > 12 ? 1 : 0), 0);
 
   return (
-    <div id="light-show-canvas-container" className="relative w-full h-[520px] lg:h-[620px] bg-imagery select-none overflow-hidden">
+    <div id={bare ? undefined : 'light-show-canvas-container'} className={`relative w-full ${heightClass ?? 'h-[520px] lg:h-[620px]'} bg-imagery select-none overflow-hidden`}>
       <div
         ref={containerRef}
         onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
-        onWheel={onWheel} onClick={onClick}
-        className="w-full h-full cursor-grab active:cursor-grabbing"
+        onWheel={bare ? undefined : onWheel} onClick={bare ? undefined : onClick}
+        className={`w-full h-full ${bare ? '' : 'cursor-grab active:cursor-grabbing'}`}
         role="img" aria-label={`Three-dimensional view of the ${formationName} formation with ${drones.length} aircraft`}
       />
 
+      {!bare && <>
       {/* What you're looking at */}
       <div className="absolute top-3 left-3 flex items-center gap-2 pointer-events-none">
         <span className="rounded-lg bg-black/55 backdrop-blur px-2.5 py-1 text-[12px] font-medium text-white">{formationName}</span>
@@ -382,6 +387,7 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
       </div>
 
       <div className="absolute bottom-3 left-3 text-[11px] text-white/45 pointer-events-none">Drag to orbit · scroll to zoom · click an aircraft to select it</div>
+      </>}
     </div>
   );
 };

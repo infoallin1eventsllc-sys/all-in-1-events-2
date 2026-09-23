@@ -23,6 +23,8 @@ import { PlatformView } from './dashboards/PlatformView';
 import { RecordsView } from './dashboards/RecordsView';
 import { AnalyticsView } from './dashboards/AnalyticsView';
 import { HealthView } from './dashboards/HealthView';
+import { OverviewView } from './dashboards/OverviewView';
+import { DemoTour, type TourView } from './dashboards/DemoTour';
 import { useHealth } from './diagnostics/useHealth';
 import { InstallButton } from './dashboards/InstallButton';
 import { ErrorBoundary } from './dashboards/ErrorBoundary';
@@ -61,7 +63,7 @@ import {
 type VerticalTab = 'LIGHT_SHOW_OPS' | 'SURVEY_OPS' | 'SURVEILLANCE_OPS';
 type EngineeringTab = 'RADAR' | 'DRONE_OPERATOR' | 'LIGHT_SHOW' | 'ARCHITECTURE' | 'TABLE';
 /** 'PLATFORM' is the client-readable explanation that fronts the engineering views. */
-type ViewTab = VerticalTab | EngineeringTab | 'PLATFORM' | 'RECORDS' | 'ANALYTICS' | 'HEALTH';
+type ViewTab = VerticalTab | EngineeringTab | 'PLATFORM' | 'RECORDS' | 'ANALYTICS' | 'HEALTH' | 'OVERVIEW';
 
 const VERTICALS: { id: VerticalTab; label: string; icon: React.ReactNode }[] = [
   { id: 'LIGHT_SHOW_OPS', label: 'Light show', icon: <Sparkles className="w-3.5 h-3.5" /> },
@@ -72,21 +74,26 @@ const VERTICALS: { id: VerticalTab; label: string; icon: React.ReactNode }[] = [
 const THEME_KEY = 'drone-command-theme';
 
 /** Home-screen shortcuts (manifest.webmanifest) open a view with ?view=… */
-const START_VIEW: Record<string, ViewTab> = { show: 'LIGHT_SHOW_OPS', survey: 'SURVEY_OPS', patrol: 'SURVEILLANCE_OPS', analytics: 'ANALYTICS', records: 'RECORDS', health: 'HEALTH' };
+const START_VIEW: Record<string, ViewTab> = { show: 'LIGHT_SHOW_OPS', survey: 'SURVEY_OPS', patrol: 'SURVEILLANCE_OPS', analytics: 'ANALYTICS', records: 'RECORDS', health: 'HEALTH', overview: 'OVERVIEW' };
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ViewTab>(() => {
-    try { return START_VIEW[new URLSearchParams(location.search).get('view') ?? ''] ?? 'LIGHT_SHOW_OPS'; } catch { return 'LIGHT_SHOW_OPS'; }
+    // No ?view: the Overview, the front door of the demo.
+    try { return START_VIEW[new URLSearchParams(location.search).get('view') ?? ''] ?? 'OVERVIEW'; } catch { return 'OVERVIEW'; }
   });
   const isVertical = activeTab === 'LIGHT_SHOW_OPS' || activeTab === 'SURVEY_OPS' || activeTab === 'SURVEILLANCE_OPS';
   const isPlatform = activeTab === 'PLATFORM';
   const isRecords = activeTab === 'RECORDS';
   const isAnalytics = activeTab === 'ANALYTICS';
   const isHealth = activeTab === 'HEALTH';
+  const isOverview = activeTab === 'OVERVIEW';
+  const [tourOpen, setTourOpen] = useState(() => { try { return new URLSearchParams(location.search).has('tour'); } catch { return false; } });
   const health = useHealth();
   // Client-facing chrome covers the three dashboards and the "How it works" page;
   // the deep engineering views keep their original dark tooling look.
-  const isClient = isVertical || isPlatform || isRecords || isAnalytics || isHealth;
+  const isClient = isVertical || isPlatform || isRecords || isAnalytics || isHealth || isOverview;
+  // A new screen starts at the top, not wherever the last one was scrolled to.
+  useEffect(() => { window.scrollTo({ top: 0 }); }, [activeTab]);
   const [showShortcuts, setShowShortcuts] = useState<boolean>(false);
   const [showEngineering, setShowEngineering] = useState<boolean>(false);
   // Light by default (client-facing); dark for night operations. Persisted per browser.
@@ -168,6 +175,8 @@ export default function App() {
       else if (e.key.toLowerCase() === 'r') setActiveTab('RECORDS');
       else if (e.key.toLowerCase() === 'a') setActiveTab('ANALYTICS');
       else if (e.key.toLowerCase() === 'd') setActiveTab('HEALTH');
+      else if (e.key.toLowerCase() === 'o') setActiveTab('OVERVIEW');
+      else if (e.key.toLowerCase() === 't') setTourOpen(v => !v);
       else if (e.key.toLowerCase() === 'h') setActiveTab('PLATFORM');
       else if (e.key === '?') setShowShortcuts(v => !v);
     };
@@ -198,13 +207,13 @@ export default function App() {
   };
 
   return (
-    <div className={`min-h-screen flex flex-col ${isClient ? 'bg-bg text-ink' : 'bg-slate-950 text-slate-100'}`}>
+    <div className={`min-h-screen flex flex-col ${isClient ? 'bg-bg text-ink' : 'eng bg-slate-950 text-slate-100'}`}>
       <a href="#main" className="skip-link">Skip to content</a>
 
       {/* 1. App bar */}
       <header className="sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur">
         <div className="max-w-[1600px] mx-auto px-3 sm:px-5 py-2 lg:py-0 lg:h-14 flex flex-wrap lg:flex-nowrap items-center justify-between gap-x-4 gap-y-2">
-          <div className="flex items-center gap-3 min-w-0">
+          <button id="nav-home" onClick={() => setActiveTab('OVERVIEW')} aria-label="Overview" className="flex items-center gap-3 min-w-0 text-left rounded-lg">
             <div className="w-8 h-8 rounded-lg bg-ink text-surface flex items-center justify-center shrink-0">
               <Compass className="w-4 h-4" />
             </div>
@@ -212,7 +221,7 @@ export default function App() {
               <div className="text-[13px] font-semibold text-ink truncate">All in 1 · Drone Command</div>
               <div className="text-[11px] text-ink-3 truncate hidden sm:block">Light show · Site survey · Surveillance</div>
             </div>
-          </div>
+          </button>
 
           {isClient ? (
             <nav id="nav-verticals" className="order-last lg:order-none w-full lg:w-auto flex items-center gap-0.5 bg-surface-2 rounded-lg p-0.5 max-w-full overflow-x-auto">
@@ -494,6 +503,11 @@ export default function App() {
           </div>
         )}
 
+        {/* Overview: the front door of the demo */}
+        {isOverview && (
+          <ErrorBoundary name="Overview"><OverviewView onOpen={t => setActiveTab(t)} onTour={() => setTourOpen(true)} /></ErrorBoundary>
+        )}
+
         {/* Aircraft health: live diagnostics, post-flight reports, parts */}
         {isHealth && (
           <ErrorBoundary name="Aircraft health"><HealthView /></ErrorBoundary>
@@ -635,6 +649,8 @@ export default function App() {
       </main>
 
       {/* 4. Modals */}
+      {/* Engineering views and labs: legacy tooling, re-skinned to the design system by the .eng scope (index.css) */}
+      <div className="eng contents">
       {selectedDrone && (
         <DroneDetailModal
           drone={selectedDrone}
@@ -703,6 +719,7 @@ export default function App() {
 
       {/* 5. Footer */}
       {/* Keyboard shortcuts */}
+      </div>
       {showShortcuts && (
         <div role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 print:hidden"
@@ -713,7 +730,7 @@ export default function App() {
               <button onClick={() => setShowShortcuts(false)} aria-label="Close" className="w-8 h-8 rounded-lg border border-line text-ink-2 hover:text-ink inline-flex items-center justify-center"><X className="w-4 h-4" /></button>
             </div>
             <ul className="mt-3 divide-y divide-line">
-              {[['1', 'Light show'], ['2', 'Site survey'], ['3', 'Surveillance'], ['D', 'Aircraft health'], ['A', 'Analytics'], ['R', 'Flight records'], ['H', 'How it works'], ['Esc', 'Close dialogs and deselect'], ['?', 'This list']].map(([k, v]) => (
+              {[['O', 'Overview'], ['T', 'Guided tour'], ['1', 'Light show'], ['2', 'Site survey'], ['3', 'Surveillance'], ['D', 'Aircraft health'], ['A', 'Analytics'], ['R', 'Flight records'], ['H', 'How it works'], ['Esc', 'Close dialogs and deselect'], ['?', 'This list']].map(([k, v]) => (
                 <li key={k} className="flex items-center justify-between py-2 text-[13px]">
                   <span className="text-ink-2">{v}</span>
                   <kbd className="num rounded-md border border-line bg-surface-2 px-2 py-0.5 text-[11px] text-ink">{k}</kbd>
@@ -725,9 +742,12 @@ export default function App() {
       )}
 
       <footer className={`mt-auto px-6 py-4 text-center text-[11px] ${isClient ? 'text-ink-3' : 'border-t border-slate-900 text-slate-500'}`}>
-        All in 1 Events · Drone Command · FAA Part 107 / BVLOS waiver workflow ·{' '}
+        All in 1 Events · Drone Command ·{' '}
+        <button onClick={() => setTourOpen(true)} className="underline hover:text-ink-2">Take the tour</button> ·{' '}
         <button onClick={() => setShowShortcuts(true)} className="underline hover:text-ink-2">Keyboard shortcuts</button>
+        <div className="mt-1">Designed and engineered by <a href="https://www.meridianinterface.com" target="_blank" rel="noopener" className="font-medium underline hover:text-ink-2">Meridian Interface</a></div>
       </footer>
+      <DemoTour open={tourOpen} onClose={() => setTourOpen(false)} view={activeTab} go={(v: TourView) => setActiveTab(v)} />
     </div>
   );
 }

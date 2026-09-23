@@ -468,7 +468,7 @@ const FlightCard: React.FC<{ f: FlightHealth; open: boolean; onToggle: () => voi
         <LevelIcon level={f.overall} className="w-5 h-5 shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="text-[14px] font-semibold text-ink truncate">{f.verdict}</div>
-          <div className="text-[12px] text-ink-3">{fmtWhen(f.startedAt)} · {mmss(f.airborneS)} in the air{f.source === 'SIMULATION' ? ' · simulated' : ''}</div>
+          <div className="text-[12px] text-ink-3">{fmtWhen(f.startedAt)} · {mmss(f.airborneS)} in the air{f.sample ? ' · sample' : f.source === 'SIMULATION' ? ' · simulated' : ''}</div>
         </div>
         <Chip tone={LEVEL[f.overall].tone}>{f.findings.length ? `${f.findings.length} found` : 'Clean'}</Chip>
       </button>

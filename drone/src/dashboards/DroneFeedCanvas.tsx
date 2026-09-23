@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Circle, Maximize2, Crosshair as CrosshairIcon, Thermometer } from 'lucide-react';
-import { fbm } from './terrain';
+import { sample as ground, out as G } from './feedWorld';
 import type { PatrolDrone, SensorMode } from '../hooks/useSurveillanceSimulation';
 
 /**
@@ -96,14 +96,15 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, width = 640, 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     // Render at a reduced resolution and let the canvas upscale — it also reads as a compressed stream.
-    const rw = compact ? 160 : 320, rh = Math.round(rw * 9 / 16);
+    const rw = compact ? 176 : 416, rh = Math.round(rw * 9 / 16);
     const off = document.createElement('canvas'); off.width = rw; off.height = rh;
     const octx = off.getContext('2d')!;
     const img = octx.createImageData(rw, rh);
     const px = img.data;
-    const octaves = compact ? 2 : 3;
     let raf = 0, last = performance.now(), frame = 0;
-    const world = { x: 0, y: 0 };
+    // Start over the event block; each aircraft somewhere different on the venue.
+    const seed = drone.id.charCodeAt(drone.id.length - 2) || 0;
+    const world = { x: -50 + (seed % 4) * 25, y: 45 + (seed % 3) * 20 };
 
     const draw = (now: number) => {
       frame++;
@@ -127,7 +128,6 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, width = 640, 
       const alt = Math.max(5, d.altM);
       const horizonY = rh * 0.5 - Math.tan(pitchDown) * focal; // may be above the frame at steep pitch
       const cosH = Math.cos(hd), sinH = Math.sin(hd);
-      const scale = 0.035; // world metres → noise space
 
       if (offline) {
         // No link: snow.
@@ -155,31 +155,29 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, width = 640, 
             // World point: drone pos + forward*dist + right*lat
             const wx = world.x + cosH * dist - sinH * lat;
             const wy = world.y + sinH * dist + cosH * lat;
-            const n = fbm(wx * scale, wy * scale, 3, octaves);          // 0..1 terrain/vegetation
-            const road = Math.abs(((wy * 0.02 + Math.sin(wx * 0.01) * 0.8) % 1 + 1) % 1 - 0.5) < 0.05 ? 1 : 0;
+            ground(wx, wy);
             const i = row + x * 4;
             let r: number, g: number, b: number;
             if (thermal) {
-              // Ground radiometry: vegetation cool, bare ground/roads warmer (retain heat at night).
-              let v = 55 + n * 60 + road * 45;
-              if (night) v -= 10;
-              v = Math.max(20, Math.min(180, v)) * (0.85 + 0.15 * fade);
-              if (mode === 'THERMAL_IRONBOW') [r, g, b] = ironbow(v / 255);
-              else r = g = b = v;
+              // Night radiometry from the surface; by day the sun lifts roads and roofs and flattens the rest.
+              let v = night ? G.heat : 40 + G.heat * 0.75 + (G.heat > 110 && G.heat < 140 ? 30 : 0);
+              v = v * (0.82 + 0.18 * fade) + (Math.random() - 0.5) * 5;
+              // Contrast stretch like a real imager's AGC: cool ground dark, people and engines bright.
+              const t = Math.max(0, Math.min(1, (v - 34) / 221));
+              if (mode === 'THERMAL_IRONBOW') [r, g, b] = ironbow(Math.pow(t, 1.45));
+              else r = g = b = 12 + Math.pow(t, 1.15) * 243;
             } else if (nv) {
-              const v = (35 + n * 140 + road * 40) * (0.7 + 0.3 * fade);
-              r = v * 0.25; g = v; b = v * 0.35;
-              const grain = (Math.random() - 0.5) * 28; r += grain * 0.3; g += grain; b += grain * 0.3;
+              const lum = (G.r * 0.3 + G.g * 0.59 + G.b * 0.11) * (0.55 + 0.45 * fade) + G.lamp * 90;
+              const v = Math.min(255, 14 + lum * 0.8);
+              const grain = (Math.random() - 0.5) * 30;
+              r = v * 0.22 + grain * 0.3; g = v + grain; b = v * 0.32 + grain * 0.3;
             } else if (night) {
-              // Unaided RGB at night: nearly nothing. This is the point of night protocol.
-              const v = (4 + n * 10 + road * 8);
-              r = v * 0.8; g = v; b = v * 1.3;
-              const grain = (Math.random() - 0.5) * 6; r += grain; g += grain; b += grain;
+              // Unaided at night: only what the lamps light. This is the point of night protocol.
+              const lum = (G.r + G.g + G.b) / 3;
+              r = lum * 0.07 + G.lamp * 255; g = lum * 0.07 + G.lamp * 200; b = lum * 0.09 + G.lamp * 130;
+              const grain = (Math.random() - 0.5) * 5; r += grain; g += grain; b += grain;
             } else {
-              const veg = n;
-              r = (70 + (1 - veg) * 90 + road * 60) * fade + (1 - fade) * 120;
-              g = (90 + veg * 70 + road * 55) * fade + (1 - fade) * 140;
-              b = (45 + veg * 20 + road * 55) * fade + (1 - fade) * 165;
+              r = G.r * fade + (1 - fade) * 150; g = G.g * fade + (1 - fade) * 165; b = G.b * fade + (1 - fade) * 180;
             }
             px[i] = r; px[i + 1] = g; px[i + 2] = b; px[i + 3] = 255;
           }

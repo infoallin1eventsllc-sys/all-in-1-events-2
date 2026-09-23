@@ -116,6 +116,10 @@ input[type="range"] { accent-color: var(--color-accent); }
 }
 .skip-link:focus { top: 12px; }
 
+/* Guided tour: what the current step is talking about. */
+.tour-highlight { outline: 2px solid var(--color-accent); outline-offset: 4px; border-radius: 12px; animation: tour-pulse 1.6s ease-in-out 3; }
+@keyframes tour-pulse { 50% { outline-offset: 8px; outline-color: color-mix(in srgb, var(--color-accent) 40%, transparent); } }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
@@ -145,3 +149,38 @@ input[type="range"] { accent-color: var(--color-accent); }
   .rail-scroll { max-height: none !important; overflow: visible !important; }
   @page { margin: 16mm; }
 }
+
+/*
+ * Engineering views and labs (the legacy tooling behind "How it works").
+ * They were written against Tailwind's stock palette with neon accents,
+ * monospace everywhere and 9–10 px labels. Rather than rewrite eleven
+ * components, this scope re-maps the variables those utilities read, so the
+ * same markup lands on the design system: one calm accent, the product's dark
+ * surfaces, Inter for words, monospace only for code, nothing under 11 px.
+ */
+.eng {
+  --font-mono: Inter, ui-sans-serif, system-ui, sans-serif;
+  --color-slate-950: #0c0f14; --color-slate-900: #141820; --color-slate-800: #1c212b; --color-slate-700: #2a313e;
+  --color-slate-600: #3a4252; --color-slate-500: #6f7a8c; --color-slate-400: #97a2b4; --color-slate-300: #bac3d0;
+  --color-slate-200: #d8dee7; --color-slate-100: #eef1f6; --color-slate-50: #f7f8fa;
+}
+.eng, .eng * { font-variant-numeric: tabular-nums; }
+/* One accent: sky / cyan / blue / indigo / violet / purple / fuchsia all become the same calm blue. */
+.eng {
+  --a50: #eef4ff; --a100: #dfe9ff; --a200: #c3d5fe; --a300: #a3bffc; --a400: #82a6f6; --a500: #5f89ea;
+  --a600: #466fd6; --a700: #3857ad; --a800: #2d4586; --a900: #263a6c; --a950: #182443;
+}
+.eng { --color-sky-50: var(--a50); --color-sky-100: var(--a100); --color-sky-200: var(--a200); --color-sky-300: var(--a300); --color-sky-400: var(--a400); --color-sky-500: var(--a500); --color-sky-600: var(--a600); --color-sky-700: var(--a700); --color-sky-800: var(--a800); --color-sky-900: var(--a900); --color-sky-950: var(--a950); }
+.eng { --color-cyan-50: var(--a50); --color-cyan-100: var(--a100); --color-cyan-200: var(--a200); --color-cyan-300: var(--a300); --color-cyan-400: var(--a400); --color-cyan-500: var(--a500); --color-cyan-600: var(--a600); --color-cyan-700: var(--a700); --color-cyan-800: var(--a800); --color-cyan-900: var(--a900); --color-cyan-950: var(--a950); }
+.eng { --color-blue-300: var(--a300); --color-blue-400: var(--a400); --color-blue-500: var(--a500); --color-blue-600: var(--a600); --color-blue-700: var(--a700); --color-blue-800: var(--a800); --color-blue-900: var(--a900); --color-blue-950: var(--a950); }
+.eng { --color-indigo-200: var(--a200); --color-indigo-300: var(--a300); --color-indigo-400: var(--a400); --color-indigo-500: var(--a500); --color-indigo-600: var(--a600); --color-indigo-700: var(--a700); --color-indigo-800: var(--a800); --color-indigo-900: var(--a900); --color-indigo-950: var(--a950); }
+.eng { --color-purple-200: var(--a200); --color-purple-300: var(--a300); --color-purple-400: var(--a400); --color-purple-500: var(--a500); --color-purple-600: var(--a600); --color-purple-700: var(--a700); --color-purple-800: var(--a800); --color-purple-900: var(--a900); --color-purple-950: var(--a950); }
+.eng { --color-violet-300: var(--a300); --color-violet-400: var(--a400); --color-violet-500: var(--a500); --color-violet-600: var(--a600); --color-violet-900: var(--a900); --color-violet-950: var(--a950); }
+.eng { --color-fuchsia-300: var(--a300); --color-fuchsia-400: var(--a400); --color-fuchsia-500: var(--a500); --color-fuchsia-900: var(--a900); --color-fuchsia-950: var(--a950); }
+.eng { --color-teal-300: var(--a300); --color-teal-400: var(--a400); --color-teal-900: var(--a900); --color-teal-950: var(--a950); }
+.eng pre, .eng code, .eng pre * { font-family: 'JetBrains Mono', ui-monospace, monospace !important; }
+.eng .text-\[8px\], .eng .text-\[9px\], .eng .text-\[10px\] { font-size: 11px !important; line-height: 1.4 !important; }
+.eng .text-\[11px\] { line-height: 1.45; }
+.eng .uppercase { letter-spacing: 0.02em !important; }
+.eng .tracking-widest, .eng .tracking-wider { letter-spacing: 0.03em !important; }
+.eng .font-black { font-weight: 700 !important; }

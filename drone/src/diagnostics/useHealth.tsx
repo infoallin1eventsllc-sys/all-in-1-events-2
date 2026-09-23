@@ -62,7 +62,7 @@ export const HealthProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setParts(s.filter(r => r.part).sort((a, b) => b.t - a.t));
     } catch { /* storage unavailable: live view still works */ }
   }, []);
-  useEffect(() => { reload(); }, [reload]);
+  useEffect(() => { reload(); window.addEventListener('demo-seeded', reload); return () => window.removeEventListener('demo-seeded', reload); }, [reload]);
 
   // Fresh monitor whenever the source changes: never mix a real aircraft's data with the simulation's.
   useEffect(() => {

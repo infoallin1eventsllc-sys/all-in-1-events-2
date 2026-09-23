@@ -95,7 +95,7 @@ export const AnalyticsView: React.FC = () => {
       const fresh: SessionRollup[] = [];
       for (const s of missing) {
         const [smp, ev] = await Promise.all([recordDb.samplesFor(s.id), recordDb.eventsFor(s.id)]);
-        fresh.push(rollupSession(s, smp, ev));
+        fresh.push({ ...rollupSession(s, smp, ev), ...(s.sample ? { sample: true } : {}) });
       }
       if (fresh.length) await recordDb.putRollups(fresh);
       setRollups([...have, ...fresh]);
@@ -105,7 +105,13 @@ export const AnalyticsView: React.FC = () => {
       setError(e instanceof Error ? e.message : String(e)); setRollups([]);
     }
   }, []);
-  useEffect(() => { void load(); return recorder.onClosed(() => { void load(); }); }, [load]);
+  useEffect(() => {
+    void load();
+    const onSeed = () => { void load(); };
+    window.addEventListener('demo-seeded', onSeed);
+    const off = recorder.onClosed(() => { void load(); });
+    return () => { off(); window.removeEventListener('demo-seeded', onSeed); };
+  }, [load]);
 
   const hasSample = !!rollups?.some(r => r.sample);
   const anyFlights = !!rollups?.some(isFlight);

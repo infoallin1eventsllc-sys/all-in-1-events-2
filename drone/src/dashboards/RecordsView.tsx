@@ -36,11 +36,18 @@ export const RecordsView: React.FC = () => {
   const refresh = useCallback(async () => {
     try { setSessions(await recordDb.listSessions()); } catch { setSessions([]); }
   }, []);
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => { void refresh(); const f = () => { void refresh(); }; window.addEventListener('demo-seeded', f); return () => window.removeEventListener('demo-seeded', f); }, [refresh]);
   // A dashboard closing its session writes asynchronously, so the list can load a
   // moment too early and show it as still running. The recorder notifies once its
   // final write lands; re-read then.
   useEffect(() => recorder.subscribe(() => { void refresh(); }), [refresh]);
+
+  // Open the most recent finished flight rather than an empty panel.
+  useEffect(() => {
+    if (selectedId || !sessions?.length) return;
+    const first = sessions.find(s => s.endedAt) ?? sessions[0];
+    setSelectedId(first.id);
+  }, [sessions, selectedId]);
 
   const selected = sessions?.find(s => s.id === selectedId) ?? null;
   useEffect(() => {
@@ -92,20 +99,20 @@ export const RecordsView: React.FC = () => {
             {sessions && sessions.length === 0 && recordDb.available() && (
               <p className="text-[13px] text-ink-3">No records yet. Open a dashboard and a session starts automatically; it is kept once something happens in it.</p>
             )}
-            <ul className="divide-y divide-line -mx-2 rail-scroll max-h-[calc(100vh-220px)] overflow-y-auto">
+            <ul id="records-list" className="divide-y divide-line -mx-2 rail-scroll max-h-[calc(100vh-220px)] overflow-y-auto">
               {sessions?.map(s => {
                 const sel = s.id === selectedId;
                 const meta = VERTICAL_META[s.vertical];
                 return (
                   <li key={s.id}>
-                    <button onClick={() => setSelectedId(s.id)} aria-current={sel}
+                    <button onClick={() => setSelectedId(s.id)} aria-current={sel} data-sample={s.sample ? 'true' : undefined}
                       className={`w-full text-left px-2 py-2.5 rounded-lg transition-colors ${sel ? 'bg-accent-soft' : 'hover:bg-surface-2'}`}>
                       <div className="flex items-center justify-between gap-2">
                         <span className="flex items-center gap-2 min-w-0 text-[13px] font-medium text-ink">
                           <span className="text-ink-3 shrink-0 [&>svg]:w-3.5 [&>svg]:h-3.5">{meta.icon}</span>
                           <span className="truncate">{s.title}</span>
                         </span>
-                        <Chip tone={s.source === 'SIMULATION' ? 'neutral' : 'ok'}>{s.source === 'SIMULATION' ? 'Sim' : 'Live'}</Chip>
+                        <Chip tone={s.sample ? 'accent' : s.source === 'SIMULATION' ? 'neutral' : 'ok'}>{s.sample ? 'Sample' : s.source === 'SIMULATION' ? 'Sim' : 'Live'}</Chip>
                       </div>
                       <div className="mt-0.5 flex items-center justify-between gap-2 text-[11px] text-ink-3">
                         <span className="num">{fmtDate(s.startedAt)}</span>
@@ -126,7 +133,7 @@ export const RecordsView: React.FC = () => {
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <h2 className="text-[18px] font-semibold text-ink">{selected.title}</h2>
-                  <Chip tone={selected.source === 'SIMULATION' ? 'neutral' : 'ok'}>{selected.source === 'SIMULATION' ? 'Simulated data' : `Live · ${selected.source.toLowerCase()}`}</Chip>
+                  <Chip tone={selected.sample ? 'accent' : selected.source === 'SIMULATION' ? 'neutral' : 'ok'}>{selected.sample ? 'Sample record' : selected.source === 'SIMULATION' ? 'Simulated data' : `Live · ${selected.source.toLowerCase()}`}</Chip>
                 </div>
                 <p className="mt-1 text-[13px] text-ink-2">
                   {VERTICAL_META[selected.vertical].label} · {fmtDate(selected.startedAt)}
@@ -153,6 +160,15 @@ export const RecordsView: React.FC = () => {
               <Stat label="Lowest battery" value={summary.minBatteryPct <= 100 ? summary.minBatteryPct.toFixed(0) : '—'} unit="%" tone={summary.minBatteryPct < 20 ? 'warn' : 'neutral'} />
               <Stat label="Critical events" value={summary.criticalEvents} tone={summary.criticalEvents ? 'bad' : 'neutral'} />
             </div>
+
+            {samples.some(r => r.lat != null) && (
+              <>
+                <Divider className="my-4" />
+                <Section title="Flight path" right={`${aircraftList.length} aircraft · north up`}>
+                  <FlightPathMap rows={samples} aircraft={aircraftList} selected={aircraft ?? aircraftList[0]} onSelect={setAircraft} />
+                </Section>
+              </>
+            )}
 
             {track.length > 1 && (
               <>
@@ -230,5 +246,99 @@ const AltitudeChart: React.FC<{ rows: FlightSample[]; accent: string }> = ({ row
       <text x={padL} y={H - 6} fontSize={10} fill="currentColor" className="text-ink-3">{new Date(t0).toLocaleTimeString([], { hour12: false })}</text>
       <text x={W - padR} y={H - 6} textAnchor="end" fontSize={10} fill="currentColor" className="text-ink-3">{new Date(t1).toLocaleTimeString([], { hour12: false })}</text>
     </svg>
+  );
+};
+
+/**
+ * Where each aircraft flew, north up, on a dark map surface. Colours are the
+ * validated categorical set (dark-surface steps), fixed per aircraft in list order;
+ * every path is also labelled at its end so colour is never the only cue.
+ * Hover follows the selected aircraft: time, height, speed and battery.
+ */
+const PATH_COLORS = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181'];
+
+const FlightPathMap: React.FC<{ rows: FlightSample[]; aircraft: string[]; selected: string; onSelect: (a: string) => void }> = ({ rows, aircraft, selected, onSelect }) => {
+  const W = 900, H = 380, pad = 28;
+  const [hover, setHover] = useState<FlightSample | null>(null);
+  const geo = useMemo(() => {
+    const pts = rows.filter(r => r.lat != null && r.lon != null);
+    if (pts.length < 2) return null;
+    const lat0 = pts.reduce((m, r) => m + r.lat!, 0) / pts.length;
+    const mx = 111_320 * Math.cos((lat0 * Math.PI) / 180), my = 111_320;
+    const xs = pts.map(r => r.lon! * mx), ys = pts.map(r => -r.lat! * my);
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const span = Math.max(x1 - x0, y1 - y0, 60);
+    const k = Math.min((W - pad * 2) / Math.max(x1 - x0, span * 0.35), (H - pad * 2) / Math.max(y1 - y0, span * 0.35));
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    const P = (r: FlightSample) => [W / 2 + (r.lon! * mx - cx) * k, H / 2 + (-r.lat! * my - cy) * k] as const;
+    const by = new Map<string, FlightSample[]>();
+    for (const r of pts) { const l = by.get(r.aircraft) ?? []; l.push(r); by.set(r.aircraft, l); }
+    // Scale bar: a round number of metres about a fifth of the width.
+    const target = (W / 5) / k, pow = Math.pow(10, Math.floor(Math.log10(target)));
+    const barM = [1, 2, 5, 10].map(f => f * pow).reduce((b, v) => (Math.abs(v - target) < Math.abs(b - target) ? v : b), pow);
+    return { P, by, k, barM };
+  }, [rows]);
+  if (!geo) return null;
+  const color = (a: string) => PATH_COLORS[Math.max(0, aircraft.indexOf(a)) % PATH_COLORS.length];
+  const sel = geo.by.get(selected) ?? [];
+  const onMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const b = e.currentTarget.getBoundingClientRect();
+    const mx = ((e.clientX - b.left) / b.width) * W, my = ((e.clientY - b.top) / b.height) * H;
+    let best: FlightSample | null = null, bd = 24 * 24;
+    for (const r of sel) { const [x, y] = geo.P(r); const d = (x - mx) ** 2 + (y - my) ** 2; if (d < bd) { bd = d; best = r; } }
+    setHover(best);
+  };
+  const hp = hover ? geo.P(hover) : null;
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-2 text-[12px] text-ink-2 print:hidden">
+        {aircraft.map(a => (
+          <button key={a} onClick={() => onSelect(a)} aria-pressed={a === selected} className={`inline-flex items-center gap-1.5 ${a === selected ? 'text-ink font-medium' : 'hover:text-ink'}`}>
+            <span className="w-3 h-[3px] rounded-full" style={{ background: color(a) }} />{a}
+          </button>
+        ))}
+        <span className="ml-auto text-ink-3">Circle: take-off · square: landing</span>
+      </div>
+      <div className="relative rounded-[12px] overflow-hidden bg-[#0b0f14]">
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full block" role="img" onMouseMove={onMove} onMouseLeave={() => setHover(null)}
+          aria-label={`Flight paths of ${aircraft.join(', ')}; selected ${selected}`}>
+          <defs>
+            <pattern id="fp-grid" width={Math.max(8, 50 * geo.k)} height={Math.max(8, 50 * geo.k)} patternUnits="userSpaceOnUse">
+              <path d={`M ${Math.max(8, 50 * geo.k)} 0 L 0 0 0 ${Math.max(8, 50 * geo.k)}`} fill="none" stroke="rgba(148,163,184,0.10)" strokeWidth="1" />
+            </pattern>
+          </defs>
+          <rect width={W} height={H} fill="url(#fp-grid)" />
+          {aircraft.map(a => {
+            const list = geo.by.get(a); if (!list || list.length < 2) return null;
+            const on = a === selected;
+            const d = list.map((r, i) => { const [x, y] = geo.P(r); return `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`; }).join(' ');
+            const [sx, sy] = geo.P(list[0]), [ex, ey] = geo.P(list[list.length - 1]);
+            return (
+              <g key={a} opacity={on ? 1 : 0.45}>
+                {on && <path d={d} fill="none" stroke={color(a)} strokeOpacity={0.25} strokeWidth={8} strokeLinejoin="round" strokeLinecap="round" />}
+                <path d={d} fill="none" stroke={color(a)} strokeWidth={on ? 2.5 : 1.5} strokeLinejoin="round" strokeLinecap="round" />
+                <circle cx={sx} cy={sy} r={5} fill="#0b0f14" stroke={color(a)} strokeWidth={2} />
+                <rect x={ex - 4.5} y={ey - 4.5} width={9} height={9} fill={color(a)} stroke="#0b0f14" strokeWidth={2} />
+                {aircraft.length <= 4 && <text x={ex + 9} y={ey + 4} fontSize={11} fontWeight={600} fill="#e5e7eb">{a}</text>}
+              </g>
+            );
+          })}
+          {/* scale bar + north */}
+          <g transform={`translate(${pad}, ${H - 18})`}>
+            <line x1={0} x2={geo.barM * geo.k} y1={0} y2={0} stroke="#e5e7eb" strokeWidth={2} />
+            <text x={0} y={-6} fontSize={10} fill="#cbd5e1">{geo.barM >= 1000 ? `${geo.barM / 1000} km` : `${geo.barM} m`}</text>
+          </g>
+          <g transform={`translate(${W - 26}, 26)`}><path d="M0 -12 L6 4 L0 0 L-6 4 Z" fill="#e5e7eb" /><text y={17} textAnchor="middle" fontSize={10} fill="#cbd5e1">N</text></g>
+          {hp && <circle cx={hp[0]} cy={hp[1]} r={6} fill="none" stroke="#fff" strokeWidth={2} />}
+        </svg>
+        {hover && hp && (
+          <div className="pointer-events-none absolute rounded-lg bg-black/80 px-2.5 py-1.5 text-[11px] text-white num"
+            style={{ left: `${(hp[0] / W) * 100}%`, top: `${(hp[1] / H) * 100}%`, transform: 'translate(12px, -110%)' }}>
+            <div className="font-semibold">{hover.aircraft} · {new Date(hover.t).toLocaleTimeString([], { hour12: false })}</div>
+            <div>{hover.altM.toFixed(0)} m · {(hover.speedMps * 3.6).toFixed(0)} km/h · {hover.batteryPct.toFixed(0)}%</div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };

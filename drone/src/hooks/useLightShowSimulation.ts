@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { LightShowDrone, ShowConductorState, Vector3D, ColorRGBW } from '../types/lightShowTypes';
 import { SHOW_FORMATIONS } from '../data/lightShowFormations';
 
-export function useLightShowSimulation(initialDroneCount = 100) {
+/** `airborne`: start with the fleet already in the first formation (the Overview hero), not on the pads. */
+export function useLightShowSimulation(initialDroneCount = 100, airborne = false) {
   const [droneCount, setDroneCount] = useState<number>(initialDroneCount);
   const [drones, setDrones] = useState<LightShowDrone[]>([]);
   const [selectedDroneId, setSelectedDroneId] = useState<string | null>(null);
@@ -53,7 +54,7 @@ export function useLightShowSimulation(initialDroneCount = 100) {
       newDrones.push({
         id: `DRN-${String(i + 1).padStart(3, '0')}`,
         droneIndex: i,
-        position: { ...homePos },
+        position: airborne ? { ...targetPoints[i].pos } : { ...homePos },
         targetPosition: { ...targetPoints[i].pos },
         homePosition: { ...homePos },
         velocity: { x: 0, y: 0, z: 0 },
@@ -62,7 +63,7 @@ export function useLightShowSimulation(initialDroneCount = 100) {
         battery: 97 - (i % 8) * 0.5,
         gpsSatellites: 22 + (i % 4),
         syncOffsetMs: 0.4 + (Math.random() - 0.5) * 0.4,
-        status: 'LAUNCH_PAD',
+        status: airborne ? 'IN_FORMATION' : 'LAUNCH_PAD',
         deviationMeters: 0.02,
         hasCommsSync: true,
       });

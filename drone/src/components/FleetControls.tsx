@@ -179,7 +179,7 @@ export const FleetControls: React.FC<FleetControlsProps> = ({
           <span className="font-semibold text-slate-200">COMMUNICATION TOPOLOGY:</span>
           <span className="font-mono text-[11px] text-sky-400">Low-Latency Pub/Sub (Zenoh / UDP)</span>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 gap-2">
           <button
             id="topology-hybrid"
             onClick={() => onSetTopology('HYBRID_MESH')}
@@ -236,7 +236,7 @@ export const FleetControls: React.FC<FleetControlsProps> = ({
           <span className="font-semibold text-slate-200">DISPATCH SWARM MISSIONS:</span>
           <span className="font-mono text-[11px] text-emerald-400">Distributed Market Auction (CNP)</span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <button
             id="dispatch-search-grid"
             onClick={() => onDispatchPreset('SEARCH_GRID')}
@@ -297,7 +297,7 @@ export const FleetControls: React.FC<FleetControlsProps> = ({
           <span className="text-[10px] font-mono text-slate-400">Auto-Mitigation Verification</span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {/* Sever Alpha Tower */}
           <button
             id="inject-comms-drop"

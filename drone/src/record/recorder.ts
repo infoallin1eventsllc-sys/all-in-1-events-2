@@ -97,7 +97,11 @@ export const recorder = {
     try {
       await recordDb.putSession(closing);
       // A session nobody did anything in is noise, not evidence.
-      if (closing.eventCount <= 2 && closing.sampleCount < MIN_KEEP_SAMPLES) {
+      const [rows, evs] = await Promise.all([recordDb.samplesFor(closing.id), recordDb.eventsFor(closing.id)]);
+      const empty = !rows.some(r => r.altM > 1) && !evs.some(e => e.kind !== 'SYSTEM');
+      // A simulation someone glanced at for under a minute is not a flight. Live sessions are always kept.
+      const glance = closing.source === 'SIMULATION' && closing.endedAt - closing.startedAt < 60_000;
+      if ((closing.eventCount <= 2 && closing.sampleCount < MIN_KEEP_SAMPLES) || empty || glance) {
         await recordDb.deleteSession(closing.id);
       } else {
         // Condense the flight for Analytics before the raw rows can be pruned.
@@ -109,6 +113,32 @@ export const recorder = {
     session = null;
     notify();
     closedListeners.forEach(l => l());
+  },
+
+  /**
+   * Sessions left open by a reload or a closed tab never reached stop(). Close
+   * them from their last recorded row, and drop the empty ones (someone opened a
+   * dashboard and left), so Records only lists flights.
+   */
+  async recoverOrphans() {
+    if (!recordDb.available()) return 0;
+    let fixed = 0;
+    try {
+      for (const s of await recordDb.listSessions()) {
+        if (s.endedAt || s.id === session?.id) continue;
+        const [samples, events] = await Promise.all([recordDb.samplesFor(s.id), recordDb.eventsFor(s.id)]);
+        const airborne = samples.some(r => r.altM > 1);
+        const acted = events.some(e => e.kind !== 'SYSTEM');
+        const end = Math.max(s.startedAt, ...samples.map(r => r.t), ...events.map(e => e.t));
+        if ((!airborne && !acted) || (s.source === 'SIMULATION' && end - s.startedAt < 60_000)) { await recordDb.deleteSession(s.id); fixed++; continue; }
+        s.endedAt = end;
+        s.sampleCount = samples.length; s.eventCount = events.length;
+        await recordDb.putSession(s);
+        await recordDb.putRollups([rollupSession(s, samples, events)]);
+        fixed++;
+      }
+    } catch { /* best effort */ }
+    return fixed;
   },
 
   /** Fires after a session is closed and its rollup is stored. */

@@ -3,6 +3,8 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import { AircraftLinkProvider } from './link/useAircraftLink';
 import { HealthProvider } from './diagnostics/useHealth';
+import { recorder } from './record/recorder';
+import { seedDemo } from './demo/seed';
 import './index.css';
 
 createRoot(document.getElementById('root')!).render(
@@ -14,6 +16,9 @@ createRoot(document.getElementById('root')!).render(
     </AircraftLinkProvider>
   </StrictMode>,
 );
+
+// Tidy sessions a reload left open, then give a first-time visitor the demo content.
+void recorder.recoverOrphans().then(() => seedDemo());
 
 /*
  * Offline resilience (public/sw.js): a reload at a venue with no signal still
