@@ -60,11 +60,14 @@ Always set `--token`: anyone who can reach the socket can command the aircraft.
 
 **Bench test with no drone:** `bridge/fake_vehicle.py` is a stand-in autopilot
 (ArduCopter by default, `--px4` for PX4). It answers arming, modes, takeoff, go-to,
-missions, gimbal, zoom, camera source, relay and photos, and prints every command:
+missions, gimbal, zoom, camera source, relay and photos, and prints every command.
+It also sends the health telemetry a real ArduCopter does (motor outputs, vibration,
+ESC telemetry, cells, sensors, EKF, firmware version) and can fake a mechanical fault:
 
 ```bash
 python3 bridge/mavlink_ws.py --udp 127.0.0.1:14550 --token test &
 python3 bridge/fake_vehicle.py --to 127.0.0.1:14550        # or --px4, --legacy-gimbal
+python3 bridge/fake_vehicle.py --fault prop3                # health screen: prop3, motor2, arm, vibration, cell, compass, oldfw
 # dashboard (opened from http://localhost): Network → ws://127.0.0.1:8770/?token=test
 ```
 

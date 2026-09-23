@@ -5,6 +5,7 @@ import {
   encodeFlightMode, encodeTakeoffFor, encodeReposition, encodeGimbalPitchYaw, encodeMountControl, encodeCameraZoom, encodeCameraSource, encodeRelay, encodeTakePhoto,
   autopilotOf, EMPTY_TELEMETRY, MAV_CMD, MAV_RESULT, type Telemetry, type MavFrame, type MissionItem, type Autopilot, type FlightMode,
 } from './mavlink';
+import { HEALTH_STREAMS } from '../diagnostics/decode';
 
 /**
  * Aircraft link: the one place the browser talks to real hardware.
@@ -75,6 +76,8 @@ interface LinkApi extends LinkState {
   takePhoto: () => Promise<void>;
   /** True when live telemetry should replace the simulation for the selected aircraft. */
   live: boolean;
+  /** Every frame from the link, as it arrives (the health monitor reads its messages here). Returns unsubscribe. */
+  onFrame: (listener: (f: MavFrame) => void) => () => void;
 }
 
 const NUS_SERVICE = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
@@ -149,6 +152,11 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     for (const [id, hz] of [[33, 5], [30, 5], [74, 4], [1, 2], [24, 2], [147, 1]] as const) {
       await send(encodeSetInterval(id, hz)).catch(() => {});
     }
+    // Health: motor outputs, vibration, ESC telemetry, battery cells, navigation filter, power.
+    for (const [id, hz] of HEALTH_STREAMS) await send(encodeSetInterval(id, hz)).catch(() => {});
+    // Firmware version once: REQUEST_MESSAGE(AUTOPILOT_VERSION), and the older capabilities request for older firmware.
+    await send(encodeCommandLong(MAV_CMD.REQUEST_MESSAGE, [148])).catch(() => {});
+    await send(encodeCommandLong(520, [1])).catch(() => {});
   }, [send]);
 
   const disconnect = useCallback(async () => {
@@ -335,12 +343,18 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const preflight = { ok: checks.every(c => c.ok), checks };
   void encodeMissionAck;
 
+  const onFrame = useCallback((listener: (f: MavFrame) => void) => {
+    frameListeners.current.add(listener);
+    return () => { frameListeners.current.delete(listener); };
+  }, []);
+
   const api: LinkApi = {
     ...state, support,
     connectBluetooth, connectSerial, connectNetwork, disconnect, send, returnToLaunch, land, arm, takeoff, setFlightMode, goTo, uploadMission, missionUpload, preflight,
     setGimbal, setZoom, setCameraSource, setRelay, takePhoto,
     autopilot: autopilotOf(state.telemetry),
     live: state.status === 'CONNECTED' && state.telemetry.heartbeatMs > 0,
+    onFrame,
   };
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
 };

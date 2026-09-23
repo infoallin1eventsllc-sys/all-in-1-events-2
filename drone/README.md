@@ -7,6 +7,7 @@ one build:
 | --- | --- | --- |
 | **Light Show** | `src/dashboards/LightShowDashboard.tsx` | Three.js 3D stage, show timeline with cue markers, formation rack, fleet sync / timecode jitter, airfield wind, pre-flight gates (battery, RTK, clock lock, wind, deviation) that gate the ARM button, watch list of highest-deviation airframes, ABORT. |
 | **Site survey** | `src/dashboards/SurveyDashboard.tsx` | Mapping and inspection of a venue. Pick the product — **Map** (orthomosaic, nadir grid), **3D model** (crosshatch, camera tilted 25°) or **Inspection** (36-angle orbit of one structure) — and the plan follows from the camera maths: ground detail (cm/px), line spacing, photo spacing, speed limit, flight time and batteries. A **3D stage** (`components/survey/SurveyScanCanvas3D.tsx`) shows the venue developing under the aircraft as photos are accepted, with its camera frustum and footprint; the **Overlap** layer is the in-flight quality report (5+ photos per point is good). Plan view picture-in-picture, gusts that blur photos, automatic battery-swap-and-resume, **Re-fly weak patches**, and a **survey package** export. |
+| **Health** | `src/dashboards/HealthView.tsx` | What is wrong with the aircraft, which part, and what to do, live in flight and after landing. See [Aircraft health](#aircraft-health). |
 | **Surveillance** | `src/dashboards/SurveillanceDashboard.tsx` | **Live gimbal video feed** from the selected airframe (`DroneFeedCanvas.tsx`: EO / IR white-hot / IR ironbow / night vision, moving heat targets with temperature readout, auto-track lock, DVR) with a strip of the other airframes' feeds; **night protocol** (AUTO / DAY / NIGHT) flips every airborne payload to thermal at night. Patrol map (5-waypoint loop, airframes with sensor footprint and altitude tether, detections), fleet list, live telemetry sparklines, power system, flight control (auto-track, illumination, night vision, thermal scan, survivor detect, RTH, gimbal, zoom, autopilot), navigation route-progress chart, detections queue with dispatch, mission map, event log. |
 
 **How it works** (`src/dashboards/PlatformView.tsx`) is the client-readable front for
@@ -125,6 +126,53 @@ DroneDeploy or Metashape. The planning maths, mission and package are unit-teste
 The Defense (counter-UAS) dashboard was retired in favour of Site survey. Flight
 records made with it still open in Records; the Remote ID receiver in `hardware/`
 still works on its own and can be brought back as an airspace-awareness panel.
+
+## Aircraft health
+
+**Health** (app bar, or press `d`) tells the operator what is wrong with the
+aircraft, which part, and what to do, both in the air and after landing. It runs in
+the background on every screen. If a fault shows up in flight, a red banner appears
+on whatever page is open, and the Health button carries a dot.
+
+It reads the autopilot's own telemetry (`src/diagnostics/`), and needs no extra hardware:
+
+| What goes wrong | How it shows up | What the screen says |
+| --- | --- | --- |
+| Chipped, bent or loose propeller | one motor worked harder than the others, and it spins faster | *Propeller on motor 3 is damaged or loose — Replace prop 3* |
+| Worn bearing, rubbing bell, bad winding | one motor worked harder, draws more current, same rpm, runs hot | *Motor 2 is dragging — Replace motor 2* |
+| Twisted arm or tilted motor | all motors of one spin direction work harder all flight | *Twisted arm or tilted motor — Check arms are square* |
+| Load off-centre | the motors on one side work harder | *Load sits off-centre* |
+| Unbalanced prop, loose motor or FC mount | vibration over 30 m/s², accelerometer clipping | *Vibration is too high* |
+| Motor at full power | output saturated, or ArduPilot's "Potential Thrust Loss" | *Motor N ran out of power — Land* |
+| Weak battery cell | cells more than 0.1 V apart, a cell under 3.4 V under load | *Battery cells are out of balance — Retire this pack* |
+| Sensor, compass, GPS, power rail | SYS_STATUS health bits, EKF / estimator variance, POWER_STATUS | named sensor + *Calibrate* / *Check* |
+| Old or test firmware | AUTOPILOT_VERSION | *Firmware is out of date — Update firmware* |
+
+- **Now.** Top-down airframe with each motor coloured by state (autopilot motor
+  numbering and spin), a per-motor table (command against the average, rpm,
+  temperature, current), the findings with their action, nine system tiles,
+  vibration and battery cells, and the autopilot's own warnings.
+- **After landing.** A report per flight is saved on disarm (IndexedDB). A motor
+  trend across flights flags a motor that is working a little harder every flight,
+  which means it is wearing out. There is also the hands-on checklist. The data
+  cannot see a fresh crack in an arm or a prop until it changes how the aircraft
+  flies, so check by hand.
+- **Parts and service.** Hours on the propellers, motor bearings, frame, FC mount
+  and firmware since each was last replaced or checked. *Mark replaced* logs it,
+  from here or straight from a finding.
+- **Simulated quadcopter.** With no aircraft connected, pick a fault (chipped
+  prop, worn bearing, twisted arm, vibration, weak cell, compass interference, old
+  firmware) and fly a test flight to see exactly where it shows up.
+
+**What the aircraft must send:** ArduPilot sends everything by default. For motor
+rpm and temperature (which tell a damaged prop from a failing motor) turn on ESC
+telemetry (BLHeli / DShot, `SERVO_BLH_*`). Per-cell voltages need a cell monitor
+or a smart battery. Without them the screen says so and still gives every other
+check. PX4 works too (ESC_STATUS, ESTIMATOR_STATUS). The app asks for the streams
+and the firmware version on connect. Thresholds are in `LIMITS` in
+`src/diagnostics/health.ts`. Every decoder is checked against pymavlink, and each
+simulated fault is tested end to end in `scripts/diagnostics.test.mjs`. The bench
+vehicle has the same faults: `fake_vehicle.py --fault prop3`.
 
 ## Analytics
 

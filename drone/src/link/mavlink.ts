@@ -38,6 +38,16 @@ const CRC_EXTRA: Record<number, number> = {
   158: 134, // MOUNT_STATUS (ArduPilot, legacy gimbal report)
   180: 52,  // CAMERA_FEEDBACK (ArduPilot: one per photo taken)
   285: 137, // GIMBAL_DEVICE_ATTITUDE_STATUS
+  // Health (decoded in src/diagnostics/decode.ts)
+  36: 222,    // SERVO_OUTPUT_RAW
+  125: 203,   // POWER_STATUS
+  148: 178,   // AUTOPILOT_VERSION
+  193: 71,    // EKF_STATUS_REPORT (ArduPilot)
+  230: 163,   // ESTIMATOR_STATUS
+  241: 90,    // VIBRATION
+  291: 10,    // ESC_STATUS (PX4)
+  11030: 144, // ESC_TELEMETRY_1_TO_4 (ArduPilot)
+  11031: 133, // ESC_TELEMETRY_5_TO_8 (ArduPilot)
 };
 
 function x25(bytes: Uint8Array, start: number, end: number, seed = 0xffff): number {

@@ -169,6 +169,8 @@ async def main() -> None:
             async for msg in ws:
                 if isinstance(msg, (bytes, bytearray)):
                     vehicle.write(bytes(msg))
+        except ConnectionClosed:
+            pass  # tab closed or network dropped without a close frame: normal for phones
         finally:
             clients.discard(ws)
             log.info("dashboard left (%d connected)", len(clients))

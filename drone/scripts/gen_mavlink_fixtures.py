@@ -52,6 +52,41 @@ fx["encode"]["px4_mode_mission"] = L(m.MAV_CMD_DO_SET_MODE, [1, 4, 4, 0, 0, 0, 0
 fx["encode"]["ardu_mode_guided"] = L(m.MAV_CMD_DO_SET_MODE, [1, 4, 0, 0, 0, 0, 0])
 fx["encode"]["reposition"] = payload(m.MAVLink_command_int_message(1, 1, 6, m.MAV_CMD_DO_REPOSITION, 0, 0, -1, 1, 0, nan, 337748940, -1184090000, 40.0), g)  # target sys, comp, frame, command, current, autocontinue, params, x, y, z
 
+# --- health messages the diagnostics screen decodes -----------------------------
+h = fx["health"] = {}
+outs = [1480, 1520, 1610, 1495, 1100, 0, 0, 0]
+h["servo_output_raw"] = {"frame": m.MAVLink_servo_output_raw_message(123456, 0, *outs, 1000, 0, 0, 0, 0, 0, 0, 0).pack(v).hex(), "us": outs[:4]}
+h["vibration"] = {"frame": m.MAVLink_vibration_message(1, 12.5, 11.25, 31.5, 3, 0, 7).pack(v).hex(), "x": 12.5, "y": 11.25, "z": 31.5, "clip": [3, 0, 7]}
+h["esc_1_to_4"] = {"frame": m.MAVLink_esc_telemetry_1_to_4_message([48, 51, 55, 47], [1560, 1558, 1555, 1561], [812, 1034, 1275, 790], [120, 135, 160, 118], [6400, 6500, 7010, 6390], [10, 10, 10, 10]).pack(v).hex(),
+                   "tempC": [48, 51, 55, 47], "voltageV": [15.6, 15.58, 15.55, 15.61], "currentA": [8.12, 10.34, 12.75, 7.9], "rpm": [6400, 6500, 7010, 6390]}
+cells = [3912, 3905, 3701, 3910] + [65535] * 6
+h["battery_cells"] = {"frame": m.MAVLink_battery_status_message(0, 1, 1, 3150, cells, 2150, 800, 12000, 64, 900, 1, [0, 0, 0, 0], 0, 4).pack(v).hex(),
+                      "cells": [3.912, 3.905, 3.701, 3.91], "tempC": 31.5, "currentA": 21.5, "remaining": 64, "faults": 4}
+pack = [15600] + [65535] * 9
+h["battery_pack_only"] = {"frame": m.MAVLink_battery_status_message(0, 1, 1, 32767, pack, -1, -1, -1, -1, 0, 0, [0, 0, 0, 0], 0, 0).pack(v).hex(), "packV": 15.6}
+present = 0x1 | 0x2 | 0x4 | 0x8 | 0x20
+h["sys_status"] = {"frame": m.MAVLink_sys_status_message(present, present, present & ~0x4, 350, 15600, 2150, 64, 250, 0, 0, 0, 0, 0).pack(v).hex(),
+                   "present": present, "health": present & ~0x4, "drop": 2.5}
+h["ekf_status"] = {"frame": m.MAVLink_ekf_status_report_message(0x1ff, 0.12, 0.25, 0.08, 0.61, 0.0, 0.0).pack(v).hex(), "velocity": 0.12, "posHoriz": 0.25, "posVert": 0.08, "compass": 0.61, "flags": 0x1ff}
+h["estimator_status"] = {"frame": m.MAVLink_estimator_status_message(1, 0x3ff, 0.2, 0.3, 0.1, 0.9, 0, 0, 0.5, 0.8).pack(v).hex(), "velocity": 0.2, "posHoriz": 0.3, "posVert": 0.1, "compass": 0.9}
+h["power_status"] = {"frame": m.MAVLink_power_status_message(5120, 0, 1 | 8).pack(v).hex(), "vcc": 5.12, "flags": 9}
+fw = (4 << 24) | (5 << 16) | (7 << 8) | 255
+h["autopilot_version"] = {"frame": m.MAVLink_autopilot_version_message(0, fw, 0, 0, 0x8c0000, list(b"2a3dc4b7"), [0] * 8, [0] * 8, 0x1209, 0x5740, 0).pack(v).hex(),
+                          "major": 4, "minor": 5, "patch": 7, "type": 255, "git": "2a3dc4b7"}
+h["statustext"] = {"frame": m.MAVLink_statustext_message(2, b"Potential Thrust Loss (3)").pack(v).hex(), "severity": 2, "text": "Potential Thrust Loss (3)"}
+
+# PX4 ESC_STATUS: generated from its XML definition (not in pymavlink's ArduPilot dialect).
+import importlib.util, tempfile
+from pymavlink.generator import mavgen, mavparse
+xml = os.path.join(os.path.dirname(__file__), "fixtures", "px4_esc_status.xml")
+with tempfile.TemporaryDirectory() as d:
+    mod = os.path.join(d, "escdialect.py")
+    mavgen.mavgen(mavgen.Opts(mod, wire_protocol=mavparse.PROTOCOL_2_0, language="Python3", validate=False), [xml])
+    spec = importlib.util.spec_from_file_location("escdialect", mod); e = importlib.util.module_from_spec(spec); spec.loader.exec_module(e)
+    ev = e.MAVLink(Sink(), srcSystem=1, srcComponent=1)
+    h["px4_esc_status"] = {"frame": e.MAVLink_esc_status_message(0, 99, [6400, 6500, 7010, 6390], [15.5, 15.5, 15.25, 15.5], [8.0, 10.5, 12.75, 7.5]).pack(ev).hex(),
+                           "rpm": [6400, 6500, 7010, 6390], "currentA": [8.0, 10.5, 12.75, 7.5]}
+
 out = os.path.join(os.path.dirname(__file__), "fixtures", "mavlink.json")
 with open(out, "w") as f:
     json.dump(fx, f, indent=1)

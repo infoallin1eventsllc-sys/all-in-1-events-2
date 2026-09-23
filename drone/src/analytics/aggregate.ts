@@ -139,7 +139,8 @@ export function byProduct(rs: SessionRollup[]): ProductRow[] {
 
 // ---- fleet health -----------------------------------------------------------
 
-export interface ServiceRecord { id?: number; aircraft: string; t: number; note: string; sample?: boolean }
+/** A full service, or (with `part`) one part replaced — which does not reset the service clock. */
+export interface ServiceRecord { id?: number; aircraft: string; t: number; note: string; part?: string; sample?: boolean }
 
 export type Health = 'SERVICE_DUE' | 'BATTERY' | 'SERVICE_SOON' | 'OK';
 
@@ -170,7 +171,7 @@ export function fleet(all: SessionRollup[], service: ServiceRecord[]): AircraftS
     map.set(a.id, e);
   }
   const lastService = new Map<string, number>();
-  for (const s of service) lastService.set(s.aircraft, Math.max(lastService.get(s.aircraft) ?? 0, s.t));
+  for (const s of service) if (!s.part) lastService.set(s.aircraft, Math.max(lastService.get(s.aircraft) ?? 0, s.t));
 
   return [...map.entries()].map(([id, e]) => {
     const flights = e.flights.sort((x, y) => x.t - y.t);

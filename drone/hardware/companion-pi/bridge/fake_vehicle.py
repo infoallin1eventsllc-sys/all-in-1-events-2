@@ -10,6 +10,12 @@ not physics — for flight dynamics use ArduPilot SITL.
   python3 fake_vehicle.py --to 127.0.0.1:14550          # then: mavlink_ws.py --udp 0.0.0.0:14550
   python3 fake_vehicle.py --to 127.0.0.1:14550 --px4
   python3 fake_vehicle.py --legacy-gimbal               # refuse gimbal v2, to test the fallback
+  python3 fake_vehicle.py --fault prop3                  # health screen: chipped prop on motor 3
+      (faults: prop3, motor2, arm, vibration, cell, compass, oldfw)
+
+Health telemetry is sent like a real ArduCopter's: motor outputs (SERVO_OUTPUT_RAW),
+VIBRATION, ESC telemetry, per-cell BATTERY_STATUS, sensor health in SYS_STATUS,
+EKF_STATUS_REPORT, POWER_STATUS, and AUTOPILOT_VERSION when asked for it.
 
 Every command received is printed as one line (`CMD name …`), which the bench
 test reads back.
@@ -19,6 +25,7 @@ from __future__ import annotations
 import argparse
 import math
 import os
+import random
 import time
 
 os.environ.setdefault("MAVLINK20", "1")
@@ -38,8 +45,11 @@ def say(*a) -> None:
 
 
 class Vehicle:
-    def __init__(self, px4: bool, legacy_gimbal: bool) -> None:
+    def __init__(self, px4: bool, legacy_gimbal: bool, fault: str = "none") -> None:
         self.px4 = px4
+        self.fault = fault
+        self.clip = 0
+        self.cell_wear = 0.0
         self.legacy_gimbal = legacy_gimbal
         self.lat, self.lon, self.alt = HOME[0], HOME[1], 0.0
         self.target: tuple[float, float, float] | None = None
@@ -104,9 +114,76 @@ class Vehicle:
                 self.wp += 1
         self.alt += max(-3 * dt, min(4 * dt, talt - self.alt))
         self.battery = max(10, self.battery - 0.01 * dt * (2 + self.speed))
+        self.cell_wear = min(1.0, self.cell_wear + dt / 900)
         if self.alt <= 0.05 and self.mode in ("LAND", "RTL") and self.near_home():
             self.armed = False
             say("EVT landed and disarmed")
+
+    # --- health ---------------------------------------------------------------
+    SPIN_CW = (False, False, True, True)  # quad X, ArduPilot numbering: motors 3 and 4 spin clockwise
+
+    def motor_mult(self) -> list[float]:
+        f = self.fault
+        if f == "prop3":
+            return [0.98, 0.98, 1.25, 0.98]
+        if f == "motor2":
+            return [0.99, 1.12, 0.99, 0.99]
+        if f == "arm":
+            return [1.045 if cw else 0.955 for cw in self.SPIN_CW]
+        return [1.0, 1.0, 1.0, 1.0]
+
+    def outputs_pct(self) -> list[float]:
+        if not self.armed:
+            return [0.0] * 4
+        base = 48.0 if self.alt > 0.5 else 22.0
+        fwd = 3.5 if self.speed > 6 else self.speed * 0.3
+        return [max(0.0, min(100.0, (base + (-fwd if i in (0, 2) else fwd)) * k + random.uniform(-1.2, 1.2)))
+                for i, k in enumerate(self.motor_mult())]
+
+    def send_health(self, mav, tick: int, now: float) -> None:
+        out = self.outputs_pct()
+        flying = self.armed and self.alt > 0.5
+        us = [int(1000 + p * 10) if self.armed else 1000 for p in out]
+        if tick % 2 == 0:  # 5 Hz
+            mav.servo_output_raw_send(int(now * 1e6) & 0xFFFFFFFF, 0, *us, 0, 0, 0, 0)
+        if tick % 5 == 0:  # 2 Hz
+            v = 11 + random.uniform(-3, 3) if flying else 0.5
+            vz = 16 + random.uniform(-4, 4) if flying else 0.6
+            if flying and self.fault == "prop3":
+                vz += 12
+            if flying and self.fault == "vibration":
+                vz, v = 48 + random.uniform(-14, 14), 34 + random.uniform(-9, 9)
+                if vz > 58:
+                    self.clip += random.randint(1, 4)
+            mav.vibration_send(int(now * 1e6), abs(v), abs(v * 0.9), abs(vz), self.clip, 0, 0)
+            mult = self.motor_mult()
+            rpm_mult = [1.0, 1.0, 1.09 if self.fault == "prop3" else 1.0, 1.0]
+            cur_mult = [1.0, 1.3 if self.fault == "motor2" else 1.0, 1.0, 1.0]
+            hot = [0, 21 if self.fault == "motor2" and flying else 0, 0, 0]
+            rpm = [int((1800 + (p if self.fault == "arm" else p / mult[i]) * 98) * rpm_mult[i]) if self.armed else 0 for i, p in enumerate(out)]
+            cur = [int((0.3 + (p / 100) ** 2 * 24) * cur_mult[i] * 100) if self.armed else 0 for i, p in enumerate(out)]
+            temp = [int(31 + (p * 0.28 if flying else 0) + hot[i]) for i, p in enumerate(out)]
+            mav.esc_telemetry_1_to_4_send(temp, [1560] * 4, cur, [0] * 4, rpm, [tick & 0xFFFF] * 4)
+        if tick % 10 == 0:  # 1 Hz
+            load = 1.0 if flying else 0.4 if self.armed else 0.0
+            rest = 4.17 - self.cell_wear * 0.42
+            cells = []
+            for i in range(4):
+                c = rest - load * 0.13 + random.uniform(-0.006, 0.006)
+                if self.fault == "cell" and i == 2:
+                    c -= 0.05 + load * 0.2
+                cells.append(int(c * 1000))
+            current = int((21 if flying else 4 if self.armed else 0.4) * 100)
+            mav.battery_status_send(0, 1, 1, int((27 + self.cell_wear * 13) * 100), cells + [65535] * 6, current, -1, -1, int(self.battery), 0, 0, [0, 0, 0, 0], 0, 0)
+            comp = 0.56 + random.uniform(0, 0.14) if self.fault == "compass" and flying else 0.06 + random.uniform(0, 0.05)
+            mav.ekf_status_report_send(0x1FF, 0.08, 0.07, 0.05, comp, 0.0, 0.0)
+            mav.power_status_send(5120, 0, 1)
+
+    def send_version(self, mav) -> None:
+        major, minor, patch = (4, 3, 7) if self.fault == "oldfw" else ((1, 15, 2) if self.px4 else (4, 5, 7))
+        fw = (major << 24) | (minor << 16) | (patch << 8) | 255
+        mav.autopilot_version_send(0, fw, 0, 0, 0x8C0000, list(b"fa4e0001"), [0] * 8, [0] * 8, 0x1209, 0x5740, 0)
+        say(f"CMD version sent {major}.{minor}.{patch}")
 
     def near_home(self) -> bool:
         return abs(self.lat - HOME[0]) * M_PER_DEG < 2 and abs(self.lon - HOME[1]) * M_PER_DEG < 2
@@ -117,11 +194,13 @@ def main() -> None:
     ap.add_argument("--to", default="127.0.0.1:14550", help="where the bridge listens for UDP")
     ap.add_argument("--px4", action="store_true")
     ap.add_argument("--legacy-gimbal", action="store_true")
+    ap.add_argument("--fault", default="none", choices=["none", "prop3", "motor2", "arm", "vibration", "cell", "compass", "oldfw"],
+                    help="simulate a mechanical or setup fault for the health screen")
     args = ap.parse_args()
 
     link = mavutil.mavlink_connection(f"udpout:{args.to}", source_system=1, source_component=1, dialect="ardupilotmega")
     mav = link.mav
-    v = Vehicle(args.px4, args.legacy_gimbal)
+    v = Vehicle(args.px4, args.legacy_gimbal, args.fault)
     say(f"EVT fake {'PX4' if args.px4 else 'ArduCopter'} sending to {args.to}")
 
     def ack(cmd: int, result: int = m.MAV_RESULT_ACCEPTED) -> None:
@@ -138,13 +217,16 @@ def main() -> None:
         if tick % 10 == 0:
             base = m.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED | (m.MAV_MODE_FLAG_SAFETY_ARMED if v.armed else 0)
             mav.heartbeat_send(m.MAV_TYPE_QUADROTOR, m.MAV_AUTOPILOT_PX4 if v.px4 else m.MAV_AUTOPILOT_ARDUPILOTMEGA, base, v.custom_mode(), m.MAV_STATE_ACTIVE if v.armed else m.MAV_STATE_STANDBY)
-            mav.sys_status_send(0, 0, 0, 500, int((13.2 + v.battery * 0.039) * 1000), 1800, int(v.battery), 0, 0, 0, 0, 0, 0)
+            sensors = 0x1 | 0x2 | 0x4 | 0x8 | 0x20 | 0x8000 | 0x10000 | 0x200000 | 0x1000000 | 0x2000000
+            mav.sys_status_send(sensors, sensors, sensors, 500, int((13.2 + v.battery * 0.039) * 1000), 1800, int(v.battery), 0, 0, 0, 0, 0, 0)
             mav.gps_raw_int_send(int(now * 1e6), 3, int(v.lat * 1e7), int(v.lon * 1e7), int(v.alt * 1000), 80, 120, 0, 0, 14)
             q = [math.cos(math.radians(v.gimbal_pitch) / 2), 0, math.sin(math.radians(v.gimbal_pitch) / 2), 0]
             mav.gimbal_device_attitude_status_send(0, 0, int(now * 1000) & 0xFFFFFFFF, 0, q, 0, 0, 0, 0)
         if tick % 2 == 0:
             mav.global_position_int_send(int(now * 1000) & 0xFFFFFFFF, int(v.lat * 1e7), int(v.lon * 1e7), int((10 + v.alt) * 1000), int(v.alt * 1000), 0, 0, 0, int(v.heading * 100))
-            mav.vfr_hud_send(v.speed, v.speed, int(v.heading), 40 if v.armed else 0, v.alt, 0)
+            mav.vfr_hud_send(v.speed, v.speed, int(v.heading), 48 if v.armed else 0, v.alt, 0)
+            mav.attitude_send(int(now * 1000) & 0xFFFFFFFF, 0.0, -0.05 * v.speed / 8, math.radians(v.heading), 0, 0, 0)
+        v.send_health(mav, tick, now)
 
         while True:
             msg = link.recv_msg()
@@ -155,6 +237,9 @@ def main() -> None:
                 c = msg.command
                 p = [msg.param1, msg.param2, msg.param3, msg.param4]
                 if c == m.MAV_CMD_COMPONENT_ARM_DISARM:
+                    if p[0] == 1 and not v.armed and v.mode in ("LAND", "RTL"):
+                        v.mode = "LOITER" if v.px4 else "STABILIZE"  # after a landing, arm in a flyable mode
+                        v.target = None
                     v.armed = p[0] == 1
                     say(f"CMD arm {v.armed}")
                     ack(c)
@@ -202,6 +287,10 @@ def main() -> None:
                     say(f"CMD photo {v.photos}"); ack(c)
                 elif c == m.MAV_CMD_SET_MESSAGE_INTERVAL:
                     ack(c)
+                elif c == m.MAV_CMD_REQUEST_MESSAGE and int(p[0]) == 148:
+                    ack(c); v.send_version(mav)
+                elif c == m.MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES:
+                    ack(c); v.send_version(mav)
                 else:
                     say(f"CMD other {c}"); ack(c, m.MAV_RESULT_UNSUPPORTED)
             elif t == "SET_POSITION_TARGET_GLOBAL_INT":

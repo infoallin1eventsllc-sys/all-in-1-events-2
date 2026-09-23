@@ -2,12 +2,15 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import { AircraftLinkProvider } from './link/useAircraftLink';
+import { HealthProvider } from './diagnostics/useHealth';
 import './index.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AircraftLinkProvider>
-      <App />
+      <HealthProvider>
+        <App />
+      </HealthProvider>
     </AircraftLinkProvider>
   </StrictMode>,
 );

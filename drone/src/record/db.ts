@@ -1,5 +1,6 @@
 import type { SessionRollup } from '../analytics/rollup';
 import type { ServiceRecord } from '../analytics/aggregate';
+import type { FlightHealth } from '../diagnostics/health';
 
 /**
  * Flight recorder storage.
@@ -9,7 +10,8 @@ import type { ServiceRecord } from '../analytics/aggregate';
  *   samples      periodic position/state rows, the flight path
  *   events       commands, alerts, detections, authorisations — what was done and why
  *   rollups      one small summary per closed session; never pruned (Analytics)
- *   maintenance  services logged per aircraft (Analytics → Fleet health)
+ *   maintenance  services and part replacements per aircraft (Analytics, Health)
+ *   health       one aircraft-health report per flight (v3, Health → After landing)
  *
  * This is the local tier of the record the platform promises. A deployment with
  * the server-side time-series tier (architecture layer 08) syncs these rows up;
@@ -17,7 +19,7 @@ import type { ServiceRecord } from '../analytics/aggregate';
  */
 
 const DB_NAME = 'a1-drone-recorder';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 /** DEFENSE is retired; kept so sessions recorded before then still open. */
 export type Vertical = 'SURVEILLANCE' | 'SURVEY' | 'LIGHT_SHOW' | 'DEFENSE';
@@ -89,6 +91,10 @@ function open(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains('maintenance')) {
         db.createObjectStore('maintenance', { keyPath: 'id', autoIncrement: true }).createIndex('aircraft', 'aircraft');
+      }
+      // v3: Aircraft health
+      if (!db.objectStoreNames.contains('health')) {
+        db.createObjectStore('health', { keyPath: 'id', autoIncrement: true }).createIndex('aircraft', 'aircraft');
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -197,4 +203,9 @@ export const recordDb = {
   },
   addService: (r: ServiceRecord) => tx<IDBValidKey>('maintenance', 'readwrite', st => st.add(r)),
   listService: () => tx<ServiceRecord[]>('maintenance', 'readonly', st => st.getAll()),
+
+  // ---- Aircraft health ----
+  addHealth: (r: FlightHealth) => tx<IDBValidKey>('health', 'readwrite', st => st.add(r)),
+  listHealth: () => tx<FlightHealth[]>('health', 'readonly', st => st.getAll()),
+  deleteHealth: (id: number) => tx<undefined>('health', 'readwrite', st => st.delete(id)),
 };
