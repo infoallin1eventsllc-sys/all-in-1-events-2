@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { City, P, wrap, EVENT_CENTER, type Look } from './city';
 import { SanFrancisco } from './sf';
+import { platesNow, loadPlates } from './plates';
 import { glowTex } from './textures';
 import type { PatrolDrone } from '../../hooks/useSurveillanceSimulation';
 
@@ -34,7 +35,7 @@ const LEVELS = [{ w: 1280, h: 720, thumbEvery: 4 }, { w: 960, h: 540, thumbEvery
 const POST_VERT = `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
 const POST_FRAG = `
 precision highp float;
-uniform sampler2D tDiffuse; uniform vec2 uvScale; uniform vec2 texel; uniform vec2 res;
+uniform sampler2D tDiffuse; uniform vec2 uvScale; uniform vec2 uvOffset; uniform vec2 uvMax; uniform float uvRot; uniform vec2 texel; uniform vec2 res;
 uniform int mode; uniform float time; uniform float gain; uniform float display;
 uniform float grade; uniform vec2 sunPos; uniform float flare; uniform float warm; uniform float fade;
 varying vec2 vUv;
@@ -49,9 +50,12 @@ vec3 ironbow(float t) {
   if (t < 0.9) return mix(c3, c4, (t - 0.75) / 0.15);
   return mix(c4, c5, (t - 0.9) / 0.1);
 }
-vec3 tex(vec2 uv) { return texture2D(tDiffuse, clamp(uv, texel * 0.5, uvScale - texel * 0.5)).rgb; }
+vec3 tex(vec2 uv) { return texture2D(tDiffuse, clamp(uv, texel * 0.5, uvMax - texel * 0.5)).rgb; }
 void main() {
-  vec2 uv = vUv * uvScale;
+  // The view: a window of the source (offset, scale), turned about its centre by uvRot (the camera's roll).
+  vec2 pr = vUv - 0.5; float asp = res.x / res.y;
+  pr.x *= asp; pr = mat2(cos(uvRot), sin(uvRot), -sin(uvRot), cos(uvRot)) * pr; pr.x /= asp;
+  vec2 uv = uvOffset + (pr + 0.5) * uvScale;
   vec2 q = vUv - 0.5;
   float vig = 1.0 - dot(q * vec2(1.0, 0.7), q * vec2(1.0, 0.7)) * 1.1;
   float n = hash(floor(vUv * res) + fract(time * 7.13) * vec2(97.0, 31.0)) - 0.5;
@@ -77,7 +81,7 @@ void main() {
       // Lens flare when the sun is in frame and not behind a tower: an anamorphic streak, a halo and a ghost.
       if (flare > 0.0) {
         vec2 d = (vUv - sunPos) * vec2(1.0, 0.5625);
-        float vis = smoothstep(0.35, 0.75, lum(tex(clamp(sunPos, 0.02, 0.98) * uvScale))) * flare;
+        float vis = smoothstep(0.35, 0.75, lum(tex(uvOffset + clamp(sunPos, 0.02, 0.98) * uvScale))) * flare;
         float streak = exp(-abs(d.y) * 110.0) * exp(-abs(d.x) * 5.5);
         float halo = exp(-length(d) * 7.0);
         vec2 gd = (vUv - (1.0 - sunPos)) * vec2(1.0, 0.5625);
@@ -150,13 +154,14 @@ class Engine {
     this.post = new THREE.ShaderMaterial({
       vertexShader: POST_VERT, fragmentShader: POST_FRAG, depthTest: false, depthWrite: false,
       uniforms: {
-        tDiffuse: { value: this.rt.texture }, uvScale: { value: new THREE.Vector2(1, 1) }, texel: { value: new THREE.Vector2(1 / FEED_W, 1 / FEED_H) },
+        tDiffuse: { value: this.rt.texture }, uvScale: { value: new THREE.Vector2(1, 1) }, uvOffset: { value: new THREE.Vector2(0, 0) }, uvMax: { value: new THREE.Vector2(1, 1) }, uvRot: { value: 0 }, texel: { value: new THREE.Vector2(1 / FEED_W, 1 / FEED_H) },
         res: { value: new THREE.Vector2(FEED_W, FEED_H) }, mode: { value: 0 }, time: { value: 0 }, gain: { value: 1 }, display: { value: 0 },
         grade: { value: 0 }, sunPos: { value: new THREE.Vector2(-10, -10) }, flare: { value: 0 }, warm: { value: 0 }, fade: { value: 1 },
       },
     });
     this.postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.post));
     this.snow = document.createElement('canvas'); this.snow.width = 160; this.snow.height = 90;
+    void loadPlates();
   }
 
   add(v: View) {
@@ -271,7 +276,7 @@ class Engine {
     this.renderer.render(this.scene, cam);
 
     const u = this.post.uniforms;
-    u.uvScale.value.set(w / FEED_W, h / FEED_H);
+    u.uvScale.value.set(w / FEED_W, h / FEED_H); u.uvMax.value.copy(u.uvScale.value); u.uvOffset.value.set(0, 0); u.uvRot.value = 0;
     u.res.value.set(w, h);
     u.time.value = time;
     u.mode.value = thermal ? (d.sensorMode === 'THERMAL_WHITE_HOT' ? 2 : 3) : nv ? 4 : night ? 1 : 0;
@@ -292,10 +297,12 @@ class Engine {
     return this.sf;
   }
 
-  /** The San Francisco take through the sensor stage, with the feature grade on the EO picture. */
+  /** The San Francisco feed: the AI plate reel when it has loaded, otherwise the rendered city. */
   private renderSF(v: View, time: number, dt: number) {
-    const sf = this.sfWorld();
     const { drone: d, night } = v.get();
+    const plates = platesNow();
+    if (plates) { this.renderPlate(v, plates, time); return; }
+    const sf = this.sfWorld();
     const q = LEVELS[this.level], w = v.compact ? THUMB_W : q.w, h = v.compact ? THUMB_H : q.h;
     const thermal = d.sensorMode === 'THERMAL_WHITE_HOT' || d.sensorMode === 'THERMAL_IRONBOW';
     const nv = d.sensorMode === 'NIGHT_VISION';
@@ -310,7 +317,7 @@ class Engine {
     this.renderer.setRenderTarget(this.rt);
     this.renderer.render(sf.scene, this.cam);
     const u = this.post.uniforms;
-    u.uvScale.value.set(w / FEED_W, h / FEED_H);
+    u.uvScale.value.set(w / FEED_W, h / FEED_H); u.uvMax.value.copy(u.uvScale.value); u.uvOffset.value.set(0, 0); u.uvRot.value = 0;
     u.res.value.set(w, h);
     u.time.value = time;
     u.mode.value = thermal ? (d.sensorMode === 'THERMAL_WHITE_HOT' ? 2 : 3) : nv ? 4 : night ? 1 : 0;
@@ -328,6 +335,44 @@ class Engine {
     if (v.onLock) v.onLock(d.tasks.autoTrack || d.tasks.survivorDetect || thermal ? this.lock(v, { x: this.cam.position.x, z: this.cam.position.z }, sf) : null);
   }
 
+  /** One frame of the AI plate reel: the camera's window on the still, through the sensor stage and grade. */
+  private renderPlate(v: View, plates: NonNullable<ReturnType<typeof platesNow>>, time: number) {
+    const { drone: d, night } = v.get();
+    const q = LEVELS[this.level], w = v.compact ? THUMB_W : q.w, h = v.compact ? THUMB_H : q.h;
+    const thermal = d.sensorMode === 'THERMAL_WHITE_HOT' || d.sensorMode === 'THERMAL_IRONBOW';
+    const nv = d.sensorMode === 'NIGHT_VISION';
+    const seed = [...d.id].reduce((a, c) => a + c.charCodeAt(0), 0);
+    const f = plates.frame(time + (seed % 7) * 23, w / h);
+    if (!f) return;
+    // Zoom narrows the window about its centre.
+    const z = Math.max(1, d.zoom);
+    const u = this.post.uniforms;
+    u.tDiffuse.value = f.tex;
+    u.uvScale.value.copy(f.scale).divideScalar(z);
+    u.uvOffset.value.set(f.offset.x + (f.scale.x - f.scale.x / z) / 2, f.offset.y + (f.scale.y - f.scale.y / z) / 2);
+    u.uvMax.value.set(1, 1); u.uvRot.value = f.rot;
+    const img = f.tex.image as { width: number; height: number };
+    u.texel.value.set(1 / img.width, 1 / img.height);
+    u.res.value.set(w, h);
+    u.time.value = time;
+    u.display.value = 1;
+    u.mode.value = thermal ? (d.sensorMode === 'THERMAL_WHITE_HOT' ? 2 : 3) : nv ? 4 : night ? 1 : 0;
+    u.gain.value = nv ? 1.6 : night ? 0.8 : 1;
+    u.grade.value = thermal || nv ? 0 : 1;
+    const mood = night ? 'BLUE' : f.mood;
+    u.warm.value = mood === 'GOLDEN' ? 1 : mood === 'BLUE' ? -1 : 0;
+    u.flare.value = f.sun && mood === 'GOLDEN' && z === 1 ? 1 : 0;
+    if (f.sun) u.sunPos.value.copy(f.sun); else u.sunPos.value.set(-10, -10);
+    u.fade.value = thermal || nv ? 1 : f.fade;
+    this.renderer.setRenderTarget(null);
+    this.renderer.setViewport(0, 0, w, h);
+    this.renderer.render(this.postScene, this.postCam);
+    u.tDiffuse.value = this.rt.texture; u.display.value = 0; u.texel.value.set(1 / FEED_W, 1 / FEED_H);
+    const ctx = v.canvas.getContext('2d');
+    if (ctx) ctx.drawImage(this.renderer.domElement, 0, FEED_H - h, w, h, 0, 0, v.canvas.width, v.canvas.height);
+    v.onLock?.(null);
+  }
+
   /** Real footage through the same sensor stage: EO passthrough, thermal palettes, night vision. */
   private renderVideo(v: View, time: number) {
     const video = v.video!;
@@ -340,7 +385,8 @@ class Engine {
     const q = LEVELS[this.level], w = v.compact ? THUMB_W : q.w, h = v.compact ? THUMB_H : q.h;
     const u = this.post.uniforms;
     u.tDiffuse.value = tex;
-    u.uvScale.value.set(1, 1);
+    u.uvScale.value.set(1, 1); u.uvMax.value.set(1, 1); u.uvOffset.value.set(0, 0); u.uvRot.value = 0;
+    u.grade.value = 0; u.flare.value = 0; u.fade.value = 1;
     u.texel.value.set(1 / video.videoWidth, 1 / video.videoHeight);
     u.res.value.set(w, h);
     u.time.value = time;

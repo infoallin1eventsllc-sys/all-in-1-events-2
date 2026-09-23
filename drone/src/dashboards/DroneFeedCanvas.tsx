@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Circle, Maximize2, Crosshair as CrosshairIcon, Thermometer } from 'lucide-react';
 import { feedEngine, FEED_W, FEED_H, THUMB_W, THUMB_H, type Lock, type World } from './feed/engine';
 import { playlist, sources, type Place, type Source } from './feed/footage';
+import { loadPlates } from './feed/plates';
 import type { PatrolDrone, SensorMode } from '../hooks/useSurveillanceSimulation';
 
 /**
@@ -61,8 +62,13 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = fal
   const [noGl, setNoGl] = useState(false);
   const width = compact ? THUMB_W : FEED_W, height = compact ? THUMB_H : FEED_H;
 
+  // AI aerial plates, when installed, take over the San Francisco feed from streamed footage.
+  const [plates, setPlates] = useState(false);
+  useEffect(() => { let on = true; loadPlates().then(ok => { if (on) setPlates(ok); }); return () => { on = false; }; }, []);
+  const usePlates = plates && footage === 'SAN_FRANCISCO' && !videoStream;
+
   // --- Footage playlist: one clip after another; each clip's file from the best source that plays ---
-  const clips = useMemo(() => (footage ? playlist(footage, isNight) : []), [footage, isNight]);
+  const clips = useMemo(() => (footage && !usePlates ? playlist(footage, isNight) : []), [footage, isNight, usePlates]);
   const [clipIdx, setClipIdx] = useState(0);
   const [srcs, setSrcs] = useState<Source[] | null>(null);
   const [srcIdx, setSrcIdx] = useState(0);
@@ -226,7 +232,7 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = fal
             <div className="absolute bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] text-slate-300/70">Recorded flight · {clip.title} · {clip.by} · Pexels</div>
           )}
           {!useFootage && !videoStream && !offline && simWorld === 'SF' && (
-            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] text-slate-300/70">San Francisco, California · aerial tour, rendered live</div>
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] text-slate-300/70">{plates ? 'San Francisco, California · aerial tour · AI-generated imagery' : 'San Francisco, California · aerial tour, rendered live'}</div>
           )}
           {!offline && !videoStream && !useFootage && isNight && !thermal && drone.sensorMode !== 'NIGHT_VISION' && (
             <div className="absolute left-1/2 top-12 -translate-x-1/2 px-2 py-1 rounded bg-amber-500/20 border border-amber-400/50 text-amber-200 flex items-center gap-1.5">
