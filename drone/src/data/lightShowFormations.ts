@@ -39,6 +39,55 @@ function rotY(p: Vector3D, a: number): Vector3D { const c = Math.cos(a), s = Mat
 function rotX(p: Vector3D, a: number): Vector3D { const c = Math.cos(a), s = Math.sin(a); return { x: p.x, y: p.y * c - p.z * s, z: p.y * s + p.z * c }; }
 const at = (p: Vector3D, cx: number, cy: number, cz: number): Vector3D => ({ x: p.x + cx, y: p.y + cy, z: p.z + cz });
 
+
+// ---- Dot font, so words and numbers can be flown (and exported without a browser) ----
+const FONT: Record<string, string[]> = {
+  A: ['01110', '10001', '10001', '11111', '10001', '10001', '10001'], B: ['11110', '10001', '10001', '11110', '10001', '10001', '11110'],
+  C: ['01110', '10001', '10000', '10000', '10000', '10001', '01110'], D: ['11110', '10001', '10001', '10001', '10001', '10001', '11110'],
+  E: ['11111', '10000', '10000', '11110', '10000', '10000', '11111'], F: ['11111', '10000', '10000', '11110', '10000', '10000', '10000'],
+  G: ['01110', '10001', '10000', '10111', '10001', '10001', '01111'], H: ['10001', '10001', '10001', '11111', '10001', '10001', '10001'],
+  I: ['11111', '00100', '00100', '00100', '00100', '00100', '11111'], J: ['00111', '00010', '00010', '00010', '00010', '10010', '01100'],
+  K: ['10001', '10010', '10100', '11000', '10100', '10010', '10001'], L: ['10000', '10000', '10000', '10000', '10000', '10000', '11111'],
+  M: ['10001', '11011', '10101', '10101', '10001', '10001', '10001'], N: ['10001', '11001', '10101', '10011', '10001', '10001', '10001'],
+  O: ['01110', '10001', '10001', '10001', '10001', '10001', '01110'], P: ['11110', '10001', '10001', '11110', '10000', '10000', '10000'],
+  Q: ['01110', '10001', '10001', '10001', '10101', '10010', '01101'], R: ['11110', '10001', '10001', '11110', '10100', '10010', '10001'],
+  S: ['01111', '10000', '10000', '01110', '00001', '00001', '11110'], T: ['11111', '00100', '00100', '00100', '00100', '00100', '00100'],
+  U: ['10001', '10001', '10001', '10001', '10001', '10001', '01110'], V: ['10001', '10001', '10001', '10001', '10001', '01010', '00100'],
+  W: ['10001', '10001', '10001', '10101', '10101', '10101', '01010'], X: ['10001', '01010', '00100', '00100', '00100', '01010', '10001'],
+  Y: ['10001', '01010', '00100', '00100', '00100', '00100', '00100'], Z: ['11111', '00001', '00010', '00100', '01000', '10000', '11111'],
+  '0': ['01110', '10001', '10011', '10101', '11001', '10001', '01110'], '1': ['00100', '01100', '00100', '00100', '00100', '00100', '01110'],
+  '2': ['01110', '10001', '00001', '00010', '00100', '01000', '11111'], '3': ['11110', '00001', '00001', '01110', '00001', '00001', '11110'],
+  '4': ['00010', '00110', '01010', '10010', '11111', '00010', '00010'], '5': ['11111', '10000', '11110', '00001', '00001', '10001', '01110'],
+  '6': ['01110', '10000', '10000', '11110', '10001', '10001', '01110'], '7': ['11111', '00001', '00010', '00100', '01000', '01000', '01000'],
+  '8': ['01110', '10001', '10001', '01110', '10001', '10001', '01110'], '9': ['01110', '10001', '10001', '01111', '00001', '00001', '01110'],
+  '&': ['01100', '10010', '10100', '01000', '10101', '10010', '01101'], '!': ['00100', '00100', '00100', '00100', '00100', '00000', '00100'],
+  '.': ['00000', '00000', '00000', '00000', '00000', '00000', '00100'], '-': ['00000', '00000', '00000', '11111', '00000', '00000', '00000'],
+  "'": ['00100', '00100', '00000', '00000', '00000', '00000', '00000'], ' ': ['00000', '00000', '00000', '00000', '00000', '00000', '00000'],
+};
+const glyphCache = new Map<string, { x: number; y: number }[]>();
+/**
+ * Points (in cells, x right, y up, centred) spelling `text`, `count` of them spread
+ * evenly over the lit cells; a bigger fleet fills each cell more densely.
+ */
+function textPoints(text: string, count: number): { x: number; y: number }[] {
+  const key = `${text}|${count}`;
+  const hit = glyphCache.get(key); if (hit) return hit;
+  const chars = text.toUpperCase().split('').filter(c => FONT[c]);
+  const cells: { x: number; y: number }[] = [];
+  const width = chars.length * 6 - 1;
+  chars.forEach((c, ci) => FONT[c].forEach((row, r) => row.split('').forEach((bit, col) => { if (bit === '1') cells.push({ x: ci * 6 + col - width / 2 + 0.5, y: 3 - r }); })));
+  if (!cells.length) return [];
+  const sub = Math.max(1, Math.ceil(Math.sqrt(count / cells.length)));
+  const fine: { x: number; y: number }[] = [];
+  for (const c of cells) for (let a = 0; a < sub; a++) for (let b = 0; b < sub; b++) fine.push({ x: c.x - 0.5 + (a + 0.5) / sub, y: c.y - 0.5 + (b + 0.5) / sub });
+  const out: { x: number; y: number }[] = [];
+  for (let i = 0; i < count; i++) out.push(fine[Math.floor((i * fine.length) / count) % fine.length]);
+  glyphCache.set(key, out);
+  return out;
+}
+/** The words flown by the "name in lights" cue; the conductor can change them. */
+export const showText = { value: 'ALL IN 1' };
+
 export const SHOW_FORMATIONS: ShowFormation[] = [
   {
     id: 'SPHERICAL_CELESTIAL',
@@ -264,6 +313,74 @@ export const SHOW_FORMATIONS: ShowFormation[] = [
           out.push({ pos: at(p, 0, 60, 0), color: scale(rgb(0.9, 0.95, 1, 0.8), 0.5 + 0.5 * (0.5 + 0.5 * Math.sin(a * 3 - t * 2))) });
         }
       }
+      return out;
+    },
+  },
+  {
+    id: 'WEDDING_RINGS',
+    name: 'Wedding Rings',
+    description: 'Two rings, gold and rose gold, linked and turning slowly together, a diamond flash chasing round each.',
+    durationSeconds: 22,
+    paletteName: 'Gold and rose gold',
+    generatePoints: (count, t = 0) => {
+      const out: Pt[] = [];
+      const per = Math.floor(count / 2), R = 19, tube = 1.6, spin = t * 0.22;
+      for (let i = 0; i < count; i++) {
+        const ring = i < per ? 0 : 1, k = ring ? i - per : i, n = ring ? count - per : per;
+        const u = (k / n) * TAU, ring2 = (k % 3) * (TAU / 3);       // three strands round the tube
+        const local = { x: Math.cos(u) * (R + Math.cos(ring2) * tube), y: Math.sin(u) * (R + Math.cos(ring2) * tube), z: Math.sin(ring2) * tube };
+        // Ring 0 stands in the x-y plane; ring 1 is turned 62° about the vertical and shifted, so they link.
+        const p = ring ? at(rotY(local, 1.08), 9.5, 0, 0) : at(local, -9.5, 0, 0);
+        const flash = Math.exp(-Math.pow((((u / TAU - t * 0.25 - ring * 0.5) % 1 + 1) % 1) * 5 - 2.5, 2) / 0.12);
+        const base = ring ? rgb(1, 0.62, 0.55, 0.3) : rgb(1, 0.8, 0.3, 0.4);
+        out.push({ pos: at(rotY(p, spin), 0, 60, 0), color: mixc(scale(base, twinkle(i, t, 0.12)), rgb(1, 1, 1, 1), flash) });
+      }
+      return out;
+    },
+  },
+  {
+    id: 'COUNTDOWN',
+    name: 'Countdown',
+    description: 'Five, four, three, two, one, each number flipping into the next, then the fleet bursts outward in gold.',
+    durationSeconds: 22,
+    paletteName: 'White, then gold',
+    generatePoints: (count, t = 0) => {
+      const out: Pt[] = [];
+      const step = 3.2, idx = Math.floor(t / step);
+      if (idx < 5) {
+        const digit = String(5 - idx), pts = textPoints(digit, count), u = (t - idx * step) / step;
+        const flip = (1 - ease(Math.min(1, u * 2.5))) * 1.4;   // each number arrives with a turn
+        const glow = 0.55 + 0.45 * ease(Math.min(1, u * 3));
+        pts.forEach((p, i) => {
+          const local = { x: -p.x * 6.4, y: p.y * 6.4, z: ((i % 3) - 1) * 2.2 };   // x runs left on screen from the crowd
+          out.push({ pos: at(rotY(local, flip), 0, 60, 0), color: scale(mixc(rgb(1, 1, 1, 0.9), rgb(1, 0.85, 0.35, 0.4), u), glow * twinkle(i, t, 0.1)) });
+        });
+      } else {
+        const u = Math.min(1, (t - 5 * step) / 4), r = 6 + 34 * (1 - Math.exp(-u * 3));
+        for (let i = 0; i < count; i++) {
+          const d = fib(i, count);
+          out.push({ pos: at({ x: d.x * r, y: d.y * r * 0.8, z: d.z * r }, 0, 60, 0), color: scale(mixc(rgb(1, 0.95, 0.75, 0.9), rgb(1, 0.7, 0.15, 0.3), u), (0.7 + 0.3 * Math.sin(t * 5 + i)) * (1 - u * 0.35)) });
+        }
+      }
+      return out;
+    },
+  },
+  {
+    id: 'NAME_IN_LIGHTS',
+    name: 'Name in Lights',
+    description: 'Any words, spelt out across the sky in a colour wave, with a gentle ripple running through the letters.',
+    durationSeconds: 22,
+    paletteName: 'Rainbow wave',
+    generatePoints: (count, t = 0) => {
+      const out: Pt[] = [];
+      const text = showText.value.trim() || 'ALL IN 1';
+      const pts = textPoints(text, count);
+      const cell = Math.min(5.2, 96 / Math.max(6, text.length * 6));   // long names shrink to fit the stage
+      pts.forEach((p, i) => {
+        const ripple = Math.sin(p.x * 0.35 - t * 1.6) * 1.6;
+        out.push({ pos: { x: -p.x * cell, y: 60 + p.y * cell * 1.1 + ripple, z: Math.sin(p.x * 0.2 + t * 0.6) * 2.5 }, color: scale(hsv((p.x * cell) / 140 + t * 0.06, 0.8, 1, 0.15), twinkle(i, t, 0.18)) });
+      });
+      while (out.length < count) out.push(out[out.length % Math.max(1, pts.length)] ?? { pos: { x: 0, y: 60, z: 0 }, color: rgb(0, 0, 0) });
       return out;
     },
   },

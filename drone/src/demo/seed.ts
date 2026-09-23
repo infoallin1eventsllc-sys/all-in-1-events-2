@@ -125,7 +125,7 @@ function showFlight(t0: number): Rec {
       samples.push({ t: t0 + s * 1000, aircraft: id, lat: p.lat, lon: p.lon, altM: alt, speedMps: on ? 3.5 : 0, headingDeg: (ang * 180) / Math.PI % 360, batteryPct: Math.round(batt), extra: { formation: cues[Math.max(0, Math.min(5, Math.floor(ph)))] } });
     }
   });
-  return { session: { id: `sample-show-${t0.toString(36)}`, vertical: 'LIGHT_SHOW', title: 'Show · Harbour Lights finale', source: 'SIMULATION', startedAt: t0, endedAt: t0 + dur * 1000, aircraft: ids, sampleCount: samples.length, eventCount: events.length, note: '100 aircraft, 8 formations', sample: true }, samples, events };
+  return { session: { id: `sample-show-${t0.toString(36)}`, vertical: 'LIGHT_SHOW', title: 'Show · Harbour Lights finale', source: 'SIMULATION', startedAt: t0, endedAt: t0 + dur * 1000, aircraft: ids, sampleCount: samples.length, eventCount: events.length, note: '100 aircraft, 11 formations', sample: true }, samples, events };
 }
 
 /** Eight flights on SIM-1 where motor 3 works a little harder each time, and a parts log. */

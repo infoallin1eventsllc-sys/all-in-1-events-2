@@ -3,7 +3,7 @@ import { Play, Pause, RotateCcw, AlertOctagon, ShieldCheck, Layers, Clock, ListC
 import { downloadShowPackage } from '../lightshow/exportShow';
 import { useLightShowSimulation } from '../hooks/useLightShowSimulation';
 import { LightShowCanvas3D } from '../components/lightshow/LightShowCanvas3D';
-import { SHOW_FORMATIONS } from '../data/lightShowFormations';
+import { SHOW_FORMATIONS, showText } from '../data/lightShowFormations';
 import { ChoreographyEngineModal } from '../components/lightshow/ChoreographyEngineModal';
 import { SyncPrecisionModal } from '../components/lightshow/SyncPrecisionModal';
 import { LaunchPadProvisioningModal } from '../components/production/LaunchPadProvisioningModal';
@@ -44,6 +44,7 @@ export const LightShowDashboard: React.FC = () => {
   const rootRef = useRef<HTMLDivElement>(null);
   const accent = useAccentHex(rootRef, '#5b5bd6');
   const [rail, setRail] = useState<RailTab>('CUES');
+  const [nameText, setNameText] = useState(() => { try { const v = localStorage.getItem('a1-show-text') || ''; if (v) showText.value = v; return v; } catch { return ''; } });
   const [wind, setWind] = useState({ mps: 3.4, headingDeg: 212, gustMps: 5.1 });
   const [jitterHistory, setJitterHistory] = useState<number[]>(() => Array.from({ length: 40 }, () => 0.5 + Math.random() * 0.3));
   const [audioLocked, setAudioLocked] = useState(true);
@@ -204,6 +205,10 @@ export const LightShowDashboard: React.FC = () => {
                       );
                     })}
                   </ol>
+                  <label className="mt-2 block text-[11px] text-ink-3">Words for the Name in Lights cue
+                    <input value={nameText} maxLength={24} onChange={e => { setNameText(e.target.value); showText.value = e.target.value; try { localStorage.setItem('a1-show-text', e.target.value); } catch { /* ignore */ } }}
+                      placeholder="ALL IN 1" className="mt-1 w-full h-8 rounded-lg border border-line bg-surface px-2 text-[13px] text-ink uppercase tracking-wide" />
+                  </label>
                 </Section>
                 <Divider />
                 <div className="flex flex-wrap gap-2">

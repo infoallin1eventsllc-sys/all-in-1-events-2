@@ -151,12 +151,13 @@ export function useLightShowSimulation(initialDroneCount = 100, airborne = false
 
       if (isRunningRef.current) {
         // Advance the show clock; cues follow it, so the show plays itself.
+        // At the end the show starts again from the first cue, so a demo never stalls.
         const cs = conductorStateRef.current;
-        const nextTime = Math.min(cs.totalDurationSec, cs.currentTimeSec + deltaSec);
-        let cue = cs.activeFormationIndex;
+        const wrapped = cs.currentTimeSec + deltaSec >= cs.totalDurationSec;
+        const nextTime = wrapped ? 0 : cs.currentTimeSec + deltaSec;
+        let cue = wrapped ? 0 : cs.activeFormationIndex;
         while (cue + 1 < SHOW_FORMATIONS.length && nextTime >= CUE_STARTS[cue + 1]) cue++;
-        const complete = nextTime >= cs.totalDurationSec;
-        setConductorState(prev => ({ ...prev, currentTimeSec: nextTime, activeFormationIndex: cue, status: complete ? 'SHOW_COMPLETE' : prev.status }));
+        setConductorState(prev => ({ ...prev, currentTimeSec: nextTime, activeFormationIndex: cue }));
 
         // Every target moves with the formation's animation; aircraft ease after
         // their targets (a critically damped chase, capped at a real airspeed), so
