@@ -30,6 +30,17 @@ flights with paths, three months of fleet history, and health reports where moto
 wears out flight by flight. **Remove sample history** in Analytics clears it all.
 Build with `VITE_DEMO=off` for an operator install.
 
+**Patrol video.** The patrol feed plays real drone footage over San Francisco, Los
+Angeles, New York, mountain ranges and city streets (recorded flights from Pexels;
+free for commercial use), with the thermal and night-vision modes applied on top.
+Out of the box the clips stream from Pexels. Run `npm run footage` once on a normal
+internet connection to download them into `public/footage/` (about 150 MB) so the
+site serves them itself; then the sensor modes run in WebGL on the real frames. A
+free Pexels API key (`PEXELS_KEY` for the script, `VITE_PEXELS_KEY` for the build)
+resolves exact files. If a clip can't load, the feed falls back to a 3D city
+simulation with traffic, people and thermal signatures, which is also the offline
+option. The clip list is `src/dashboards/feed/footage.ts`.
+
 ## Operators, the record and the server
 
 - **Roles.** The operator menu (app bar) sets who is flying and as what: pilot in

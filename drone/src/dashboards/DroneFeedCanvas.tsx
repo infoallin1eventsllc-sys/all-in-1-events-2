@@ -1,28 +1,30 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Circle, Maximize2, Crosshair as CrosshairIcon, Thermometer } from 'lucide-react';
-import { sample as ground, out as G } from './feedWorld';
+import { feedEngine, FEED_W, FEED_H, THUMB_W, THUMB_H, type Lock } from './feed/engine';
+import { playlist, sources, type Place, type Source } from './feed/footage';
 import type { PatrolDrone, SensorMode } from '../hooks/useSurveillanceSimulation';
 
 /**
- * Synthetic gimbal video feed for a patrol airframe.
- *
- * Renders a perspective view of the ground from the drone's altitude, gimbal pitch
- * and heading, scrolling with its ground speed, with moving targets (people,
- * vehicles) on the ground plane. Sensor modes change the whole image:
- *   RGB_4K            daylight colour; at night it's near-black (you cannot see)
- *   THERMAL_WHITE_HOT ground cool grey, warm bodies white with heat trails
- *   THERMAL_IRONBOW   same radiometry, ironbow palette
- *   NIGHT_VISION      green phosphor with grain
- * The feed is what a real H.264/WebRTC stream from the payload would replace.
+ * Gimbal video from a patrol aircraft with the HUD over it. Three pictures can
+ * sit under the HUD:
+ *   footage      recorded drone flights over real cities and mountains (default)
+ *   simulation   a 3D city (buildings, traffic, people) seen from the aircraft's
+ *                altitude, heading, gimbal pitch and zoom; also the fallback when
+ *                footage can't load
+ *   videoStream  a real MediaStream from a capture device or the aircraft's WebRTC
+ * Sensor modes change the whole image: EO colour; white-hot and ironbow thermal;
+ * green image-intensified night vision. On footage the sensor stage runs in WebGL
+ * when the file is served from this site, and as CSS filters when it streams from
+ * Pexels (a cross-origin video can't be read by WebGL).
  */
 
 interface Props {
   drone: PatrolDrone;
   isNight: boolean;
-  /** Internal render width; the canvas scales to its container. */
-  width?: number;
-  /** Compact thumbnails skip the HUD and run fewer noise octaves. */
+  /** Thumbnails skip the HUD and render at lower resolution and rate. */
   compact?: boolean;
+  /** Real footage of this place; null or undefined shows the 3D simulation. */
+  footage?: Place | null;
   onSetSensorMode?: (mode: SensorMode) => void;
   onSetZoom?: (zoom: number) => void;
   className?: string;
@@ -31,254 +33,106 @@ interface Props {
   videoLabel?: string;
 }
 
-interface Target {
-  id: string;
-  kind: 'PERSON' | 'VEHICLE';
-  fwd: number;     // metres ahead of the drone along heading
-  lat: number;     // metres right of the drone
-  vFwd: number; vLat: number;
-  tempC: number;
-  trail: { fwd: number; lat: number }[];
-}
-
 const MODE_LABEL: Record<SensorMode, string> = {
   RGB_4K: 'EO · RGB 4K', THERMAL_WHITE_HOT: 'IR · WHITE HOT', THERMAL_IRONBOW: 'IR · IRONBOW', NIGHT_VISION: 'LL · NIGHT VISION',
 };
 
-function ironbow(t: number): [number, number, number] {
-  // black → purple → red → orange → yellow → white
-  const stops: [number, [number, number, number]][] = [
-    [0, [0, 0, 0]], [0.25, [70, 0, 110]], [0.5, [200, 20, 30]], [0.75, [255, 140, 0]], [0.9, [255, 235, 60]], [1, [255, 255, 255]],
-  ];
-  for (let i = 1; i < stops.length; i++) {
-    if (t <= stops[i][0]) {
-      const [t0, c0] = stops[i - 1], [t1, c1] = stops[i];
-      const k = (t - t0) / (t1 - t0);
-      return [c0[0] + (c1[0] - c0[0]) * k, c0[1] + (c1[1] - c0[1]) * k, c0[2] + (c1[2] - c0[2]) * k];
-    }
-  }
-  return [255, 255, 255];
-}
+/** Sensor looks for cross-origin footage, where WebGL can't read the frames. */
+const CSS_LOOK: Record<SensorMode, string> = {
+  RGB_4K: 'contrast(1.04) saturate(1.05)',
+  THERMAL_WHITE_HOT: 'grayscale(1) contrast(1.75) brightness(1.12)',
+  THERMAL_IRONBOW: 'grayscale(1) sepia(1) saturate(6) hue-rotate(-28deg) contrast(1.7) brightness(0.95)',
+  NIGHT_VISION: 'grayscale(1) sepia(1) saturate(4.5) hue-rotate(62deg) brightness(1.35) contrast(1.4)',
+};
+const GRAIN = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
 
-function seedTargets(seed: number): Target[] {
-  const r = (n: number) => { const x = Math.sin(seed * 999 + n * 77) * 10000; return x - Math.floor(x); };
-  const list: Target[] = [];
-  for (let i = 0; i < 4; i++) {
-    const kind: Target['kind'] = i === 1 ? 'VEHICLE' : 'PERSON';
-    list.push({
-      id: `TGT-${i + 1}`, kind,
-      fwd: 40 + r(i) * 90, lat: (r(i + 10) - 0.5) * 90,
-      vFwd: (r(i + 20) - 0.5) * (kind === 'VEHICLE' ? 8 : 1.4), vLat: (r(i + 30) - 0.5) * (kind === 'VEHICLE' ? 8 : 1.4),
-      tempC: kind === 'VEHICLE' ? 41 + r(i + 40) * 12 : 35.5 + r(i + 40) * 2,
-      trail: [],
-    });
-  }
-  return list;
-}
-
-export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, width = 640, compact = false, onSetSensorMode, onSetZoom, className = '', videoStream = null, videoLabel }) => {
+export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = false, footage = null, onSetSensorMode, onSetZoom, className = '', videoStream = null, videoLabel }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const clipRef = useRef<HTMLVideoElement>(null);
   useEffect(() => { if (videoRef.current) videoRef.current.srcObject = videoStream; }, [videoStream]);
-  const droneRef = useRef(drone);
-  droneRef.current = drone;
-  const nightRef = useRef(isNight);
-  nightRef.current = isNight;
-  const targetsRef = useRef<Target[]>(seedTargets(drone.id.charCodeAt(2)));
+  const live = useRef({ drone, night: isNight });
+  live.current = { drone, night: isNight };
   const [rec, setRec] = useState(true);
-  const [lock, setLock] = useState<{ id: string; x: number; y: number; w: number; h: number; tempC: number; kind: string } | null>(null);
+  const [lock, setLock] = useState<Lock | null>(null);
   const [clock, setClock] = useState('');
-  const height = Math.round(width * 9 / 16);
+  const [noGl, setNoGl] = useState(false);
+  const width = compact ? THUMB_W : FEED_W, height = compact ? THUMB_H : FEED_H;
+
+  // --- Footage playlist: one clip after another; each clip's file from the best source that plays ---
+  const clips = useMemo(() => (footage ? playlist(footage, isNight) : []), [footage, isNight]);
+  const [clipIdx, setClipIdx] = useState(0);
+  const [srcs, setSrcs] = useState<Source[] | null>(null);
+  const [srcIdx, setSrcIdx] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [failed, setFailed] = useState(false);       // every clip refused to play: show the simulation instead
+  const misses = useRef(0);
+  const clip = clips.length ? clips[clipIdx % clips.length] : null;
+  useEffect(() => { setClipIdx(0); setFailed(false); misses.current = 0; }, [footage, isNight]);
+  useEffect(() => {
+    let on = true;
+    setSrcs(null); setSrcIdx(0); setPlaying(false);
+    if (clip) sources(clip, compact).then(list => { if (on) setSrcs(list); });
+    return () => { on = false; };
+  }, [clip, compact]);
+  const src = srcs?.[srcIdx] ?? null;
+  const useFootage = !!clip && !failed && !videoStream;
+  const glVideo = useFootage && !!src?.sameOrigin;   // same-origin: WebGL reads the frames, full sensor stage
+  const nextSource = () => {
+    if (srcs && srcIdx + 1 < srcs.length) { setSrcIdx(srcIdx + 1); return; }
+    misses.current++;
+    if (misses.current >= clips.length) setFailed(true); else setClipIdx(i => i + 1);
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || videoStream) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    // Render at a reduced resolution and let the canvas upscale — it also reads as a compressed stream.
-    const rw = compact ? 176 : 416, rh = Math.round(rw * 9 / 16);
-    const off = document.createElement('canvas'); off.width = rw; off.height = rh;
-    const octx = off.getContext('2d')!;
-    const img = octx.createImageData(rw, rh);
-    const px = img.data;
-    let raf = 0, last = performance.now(), frame = 0;
-    // Start over the event block; each aircraft somewhere different on the venue.
-    const seed = drone.id.charCodeAt(drone.id.length - 2) || 0;
-    const world = { x: -50 + (seed % 4) * 25, y: 45 + (seed % 3) * 20 };
+    if (!canvas || videoStream || (useFootage && !glVideo)) return;
+    const engine = feedEngine();
+    if (!engine) { setNoGl(true); return; }
+    const off = engine.add({
+      canvas, compact,
+      get: () => live.current,
+      video: glVideo ? clipRef.current ?? undefined : undefined,
+      onLock: compact ? undefined : next => setLock(prev => {
+        if (!next || !prev) return next;
+        return prev.id === next.id && Math.abs(prev.x - next.x) < 0.5 && Math.abs(prev.y - next.y) < 0.5 && Math.abs(prev.w - next.w) < 0.5 ? prev : next;
+      }),
+    });
+    return () => { off(); setLock(null); };
+  }, [compact, videoStream, useFootage, glVideo, src]);
 
-    const draw = (now: number) => {
-      frame++;
-      if (compact && frame % 2) { raf = requestAnimationFrame(draw); return; } // thumbnails at half rate
-      const dt = Math.min(0.1, (now - last) / 1000); last = now;
-      const d = droneRef.current;
-      const night = nightRef.current;
-      const mode = d.sensorMode;
-      const offline = d.status === 'OFFLINE';
-      const thermal = mode === 'THERMAL_WHITE_HOT' || mode === 'THERMAL_IRONBOW';
-      const nv = mode === 'NIGHT_VISION';
-
-      // World scroll from ground speed along heading.
-      const hd = ((d.headingDeg - 90) * Math.PI) / 180;
-      world.x += Math.cos(hd) * d.groundSpeedMps * dt;
-      world.y += Math.sin(hd) * d.groundSpeedMps * dt;
-
-      // Camera model. Pitch is degrees below horizon; focal length grows with zoom.
-      const pitchDown = Math.max(8, -d.gimbalPitchDeg) * Math.PI / 180;
-      const focal = rw * 0.9 * d.zoom;
-      const alt = Math.max(5, d.altM);
-      const horizonY = rh * 0.5 - Math.tan(pitchDown) * focal; // may be above the frame at steep pitch
-      const cosH = Math.cos(hd), sinH = Math.sin(hd);
-
-      if (offline) {
-        // No link: snow.
-        for (let i = 0; i < px.length; i += 4) { const g = 10 + Math.random() * 40; px[i] = g; px[i + 1] = g; px[i + 2] = g; px[i + 3] = 255; }
-      } else {
-        for (let y = 0; y < rh; y++) {
-          const dy = y - rh * 0.5;
-          const ang = pitchDown + Math.atan2(dy, focal); // angle below horizon of this row
-          const row = y * rw * 4;
-          if (ang <= 0.01) {
-            // Sky
-            const k = Math.max(0, Math.min(1, (y - Math.max(0, horizonY - rh * 0.6)) / Math.max(1, rh * 0.6)));
-            let r = 0, g = 0, b = 0;
-            if (thermal) { const v = 20 + k * 40; r = g = b = v; if (mode === 'THERMAL_IRONBOW') { [r, g, b] = ironbow(v / 255); } }
-            else if (nv) { r = 5; g = 30 + k * 30; b = 12; }
-            else if (night) { r = 4; g = 6; b = 12; }
-            else { r = 90 + k * 60; g = 130 + k * 60; b = 170 + k * 50; }
-            for (let x = 0; x < rw; x++) { const i = row + x * 4; px[i] = r; px[i + 1] = g; px[i + 2] = b; px[i + 3] = 255; }
-            continue;
-          }
-          const dist = alt / Math.tan(ang);
-          const fade = Math.min(1, 300 / dist); // atmospheric falloff with range
-          for (let x = 0; x < rw; x++) {
-            const lat = ((x - rw * 0.5) / focal) * dist;
-            // World point: drone pos + forward*dist + right*lat
-            const wx = world.x + cosH * dist - sinH * lat;
-            const wy = world.y + sinH * dist + cosH * lat;
-            ground(wx, wy);
-            const i = row + x * 4;
-            let r: number, g: number, b: number;
-            if (thermal) {
-              // Night radiometry from the surface; by day the sun lifts roads and roofs and flattens the rest.
-              let v = night ? G.heat : 40 + G.heat * 0.75 + (G.heat > 110 && G.heat < 140 ? 30 : 0);
-              v = v * (0.82 + 0.18 * fade) + (Math.random() - 0.5) * 5;
-              // Contrast stretch like a real imager's AGC: cool ground dark, people and engines bright.
-              const t = Math.max(0, Math.min(1, (v - 34) / 221));
-              if (mode === 'THERMAL_IRONBOW') [r, g, b] = ironbow(Math.pow(t, 1.45));
-              else r = g = b = 12 + Math.pow(t, 1.15) * 243;
-            } else if (nv) {
-              const lum = (G.r * 0.3 + G.g * 0.59 + G.b * 0.11) * (0.55 + 0.45 * fade) + G.lamp * 90;
-              const v = Math.min(255, 14 + lum * 0.8);
-              const grain = (Math.random() - 0.5) * 30;
-              r = v * 0.22 + grain * 0.3; g = v + grain; b = v * 0.32 + grain * 0.3;
-            } else if (night) {
-              // Unaided at night: only what the lamps light. This is the point of night protocol.
-              const lum = (G.r + G.g + G.b) / 3;
-              r = lum * 0.07 + G.lamp * 255; g = lum * 0.07 + G.lamp * 200; b = lum * 0.09 + G.lamp * 130;
-              const grain = (Math.random() - 0.5) * 5; r += grain; g += grain; b += grain;
-            } else {
-              r = G.r * fade + (1 - fade) * 150; g = G.g * fade + (1 - fade) * 165; b = G.b * fade + (1 - fade) * 180;
-            }
-            px[i] = r; px[i + 1] = g; px[i + 2] = b; px[i + 3] = 255;
-          }
-        }
-      }
-      octx.putImageData(img, 0, 0);
-
-      // --- Targets on the ground plane ------------------------------------
-      let nearest: { t: Target; sx: number; sy: number; sw: number; sh: number } | null = null;
-      if (!offline) {
-        for (const t of targetsRef.current) {
-          // Wander; the vehicle follows a loose road-like path, people drift.
-          t.vFwd += (Math.random() - 0.5) * 0.2 * dt; t.vLat += (Math.random() - 0.5) * 0.2 * dt;
-          const maxV = t.kind === 'VEHICLE' ? 9 : 1.6;
-          const sp = Math.hypot(t.vFwd, t.vLat); if (sp > maxV) { t.vFwd *= maxV / sp; t.vLat *= maxV / sp; }
-          // Targets are anchored to the ground, so the drone's own motion moves them in the frame.
-          t.fwd += t.vFwd * dt - d.groundSpeedMps * dt; t.lat += t.vLat * dt;
-          // Keep the scene populated: re-seed anything that leaves the sensor footprint.
-          const maxFwd = alt / Math.tan(Math.max(0.05, pitchDown - Math.atan2(rh * 0.5, focal))) + 20;
-          if (t.fwd < alt * 0.3 || t.fwd > Math.min(400, maxFwd) || Math.abs(t.lat) > t.fwd * 0.9 + 15) {
-            t.fwd = 40 + Math.random() * Math.min(200, maxFwd - 40); t.lat = (Math.random() - 0.5) * t.fwd * 1.2; t.trail = [];
-          }
-          if (frame % 4 === 0) t.trail = [...t.trail.slice(-14), { fwd: t.fwd, lat: t.lat }];
-
-          const project = (fwd: number, lat: number) => {
-            const angT = Math.atan2(alt, fwd);
-            const sy = rh * 0.5 + Math.tan(angT - pitchDown) * focal;
-            const sx = rw * 0.5 + (lat / fwd) * focal;
-            return { sx, sy, k: focal / fwd };
-          };
-          const p = project(t.fwd, t.lat);
-          if (p.sy < -10 || p.sy > rh + 10 || p.sx < -20 || p.sx > rw + 20) continue;
-          const sw = (t.kind === 'VEHICLE' ? 4.4 : 0.7) * p.k, sh = (t.kind === 'VEHICLE' ? 2.2 : 1.8) * p.k * Math.sin(pitchDown) + (t.kind === 'VEHICLE' ? 1.6 : 1.8) * p.k * Math.cos(pitchDown) * 0.6;
-
-          if (thermal) {
-            // Heat trail: cooling footprints / exhaust.
-            t.trail.forEach((tp, i) => {
-              const q = project(tp.fwd - (t.fwd - tp.fwd) * 0, tp.lat);
-              const a = (i / t.trail.length) * 0.35;
-              octx.fillStyle = mode === 'THERMAL_IRONBOW' ? `rgba(255,120,20,${a})` : `rgba(255,255,255,${a})`;
-              octx.beginPath(); octx.ellipse(q.sx, q.sy, Math.max(0.6, sw * 0.35), Math.max(0.4, sw * 0.18), 0, 0, Math.PI * 2); octx.fill();
-            });
-            const gr = Math.max(2, Math.min(sw * (t.kind === 'VEHICLE' ? 0.9 : 1.8), rw * 0.06));
-            const glow = octx.createRadialGradient(p.sx, p.sy - sh * 0.3, 0, p.sx, p.sy - sh * 0.3, gr);
-            if (mode === 'THERMAL_IRONBOW') { glow.addColorStop(0, 'rgba(255,255,220,1)'); glow.addColorStop(0.5, 'rgba(255,170,30,0.8)'); glow.addColorStop(1, 'rgba(200,30,40,0)'); }
-            else { glow.addColorStop(0, 'rgba(255,255,255,1)'); glow.addColorStop(0.55, 'rgba(255,255,255,0.75)'); glow.addColorStop(1, 'rgba(255,255,255,0)'); }
-            octx.fillStyle = glow;
-            octx.beginPath(); octx.ellipse(p.sx, p.sy - sh * 0.3, gr, Math.max(2, Math.min(sh * 1.4, gr * 0.7)), 0, 0, Math.PI * 2); octx.fill();
-            octx.fillStyle = mode === 'THERMAL_IRONBOW' ? '#fffbe6' : '#ffffff';
-          } else if (nv) {
-            octx.fillStyle = 'rgba(200,255,200,0.75)';
-          } else if (night) {
-            octx.fillStyle = 'rgba(30,34,44,0.9)'; // a person in the dark: a slightly darker smudge
-          } else {
-            octx.fillStyle = t.kind === 'VEHICLE' ? '#1f2937' : '#111827';
-          }
-          if (t.kind === 'VEHICLE') octx.fillRect(p.sx - sw / 2, p.sy - sh, sw, sh);
-          else { octx.beginPath(); octx.ellipse(p.sx, p.sy - sh / 2, Math.max(0.5, sw / 2), Math.max(0.8, sh / 2), 0, 0, Math.PI * 2); octx.fill(); }
-
-          const dNear = Math.hypot(p.sx - rw / 2, p.sy - rh / 2);
-          if (!nearest || dNear < Math.hypot(nearest.sx - rw / 2, nearest.sy - rh / 2)) nearest = { t, sx: p.sx, sy: p.sy, sw, sh };
-        }
-      }
-
-      // Sensor character: NV grain bloom, thermal soft edges, mild vignette everywhere.
-      if (nv && !offline && frame % 2 === 0) { octx.fillStyle = 'rgba(120,255,140,0.04)'; octx.fillRect(0, 0, rw, rh); }
-      const vig = octx.createRadialGradient(rw / 2, rh / 2, rh * 0.5, rw / 2, rh / 2, rw * 0.75);
-      vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(0,0,0,0.45)');
-      octx.fillStyle = vig; octx.fillRect(0, 0, rw, rh);
-
-      // Blit up.
-      ctx.imageSmoothingEnabled = true;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(off, 0, 0, canvas.width, canvas.height);
-
-      // Publish lock box for the HUD (auto-track follows the target nearest the reticle).
-      if (!compact) {
-        const sx = canvas.width / rw, sy = canvas.height / rh;
-        if (nearest && (d.tasks.autoTrack || d.tasks.survivorDetect || thermal)) {
-          const n = nearest;
-          setLock(prev => {
-            const next = { id: n.t.id, x: (n.sx - n.sw / 2 - 3) * sx, y: (n.sy - n.sh - 3) * sy, w: (n.sw + 6) * sx, h: (n.sh + 6) * sy, tempC: n.t.tempC, kind: n.t.kind };
-            return prev && Math.abs(prev.x - next.x) < 0.5 && Math.abs(prev.y - next.y) < 0.5 && prev.id === next.id ? prev : next;
-          });
-        } else setLock(null);
-        if (frame % 15 === 0) setClock(new Date().toLocaleTimeString([], { hour12: false }));
-      }
-      raf = requestAnimationFrame(draw);
-    };
-    raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
-  }, [compact, videoStream]);
+  useEffect(() => {
+    if (compact) return;
+    const tick = () => setClock(new Date().toLocaleTimeString([], { hour12: false }));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [compact]);
 
   const offline = drone.status === 'OFFLINE';
   const thermal = drone.sensorMode.startsWith('THERMAL');
 
   return (
     <div data-feed className={`relative bg-black overflow-hidden select-none ${className}`} style={{ aspectRatio: '16 / 9' }}>
-      {videoStream
-        ? <video ref={videoRef} autoPlay muted playsInline className="w-full h-full block object-cover bg-black" aria-label={`Live video from ${drone.id}`} />
-        : <canvas ref={canvasRef} width={width} height={height} className="w-full h-full block" aria-label={`Live feed from ${drone.id}`} role="img" />}
+      {videoStream && <video ref={videoRef} autoPlay muted playsInline className="w-full h-full block object-cover bg-black" aria-label={`Live video from ${drone.id}`} />}
+      {useFootage && src && (
+        <video key={src.url} ref={clipRef} src={src.url} autoPlay muted playsInline preload="auto" loop={clips.length === 1}
+          onPlaying={() => { setPlaying(true); misses.current = 0; }} onError={nextSource} onStalled={() => { /* keep waiting; the browser retries */ }}
+          onEnded={() => setClipIdx(i => i + 1)}
+          className={`w-full h-full block object-cover bg-black ${glVideo ? 'hidden' : ''}`}
+          style={glVideo ? undefined : { filter: offline ? 'brightness(0)' : CSS_LOOK[drone.sensorMode] }}
+          aria-label={`Recorded flight: ${clip?.title}`} />
+      )}
+      {useFootage && !glVideo && !offline && drone.sensorMode !== 'RGB_4K' && (
+        <div aria-hidden className="absolute inset-0 pointer-events-none" style={{ backgroundImage: GRAIN, opacity: drone.sensorMode === 'NIGHT_VISION' ? 0.28 : 0.16, mixBlendMode: 'overlay' }} />
+      )}
+      {useFootage && !glVideo && !playing && !offline && (
+        <div className="absolute inset-0 flex items-center justify-center text-[11px] text-slate-400 bg-black/60">Buffering</div>
+      )}
+      {(!useFootage || glVideo) && !videoStream && <canvas ref={canvasRef} width={width} height={height} className="w-full h-full block" aria-label={`Live feed from ${drone.id}`} role="img" />}
+      {noGl && !videoStream && !useFootage && (
+        <div className="absolute inset-0 flex items-center justify-center text-[11px] text-slate-400">Simulated video needs WebGL</div>
+      )}
 
       {compact ? (
         <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-1.5 py-1 bg-gradient-to-t from-black/80 to-transparent font-mono text-[9px] text-slate-200">
@@ -299,6 +153,7 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, width = 640, 
               <span className="hidden sm:inline px-1.5 py-0.5 rounded bg-black/60 text-slate-300">{drone.model}</span>
               <span className={`px-1.5 py-0.5 rounded bg-black/60 font-bold ${videoStream ? 'text-sky-300' : thermal ? 'text-rose-300' : drone.sensorMode === 'NIGHT_VISION' ? 'text-lime-300' : 'text-emerald-300'}`}>{videoStream ? (videoLabel ?? 'LIVE VIDEO') : MODE_LABEL[drone.sensorMode]}</span>
               <span className="px-1.5 py-0.5 rounded bg-black/60 text-amber-300">{drone.zoom.toFixed(1)}×</span>
+              {footage && failed && !videoStream && <span className="hidden sm:inline px-1.5 py-0.5 rounded bg-black/60 text-slate-400" title="The recorded footage could not be loaded; showing the 3D simulation">3D SIM</span>}
             </div>
             <div className="flex items-center gap-2">
               {!offline && <span className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/60"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />LIVE · {drone.rttMs} ms</span>}
@@ -321,8 +176,8 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, width = 640, 
 
           {/* Target lock */}
           {lock && !offline && !videoStream && (
-            <div className="absolute" style={{ left: `${(lock.x / width) * 100}%`, top: `${(lock.y / height) * 100}%`, width: `${Math.max(4, (lock.w / width) * 100)}%`, height: `${Math.max(4, (lock.h / height) * 100)}%` }}>
-              <div className={`w-full h-full min-w-[26px] min-h-[26px] border ${drone.tasks.autoTrack ? 'border-orange-400' : 'border-white/70'}`} />
+            <div className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${((lock.x + lock.w / 2) / width) * 100}%`, top: `${((lock.y + lock.h / 2) / height) * 100}%`, width: `max(22px, ${((lock.w + 8) / width) * 100}%)`, height: `max(22px, ${((lock.h + 8) / height) * 100}%)` }}>
+              <div className={`w-full h-full border ${drone.tasks.autoTrack ? 'border-orange-400' : 'border-white/70'}`} />
               <div className={`absolute left-full top-0 ml-1.5 whitespace-nowrap px-1.5 py-0.5 rounded bg-black/70 ${drone.tasks.autoTrack ? 'text-orange-200' : 'text-slate-100'}`}>
                 <div className="font-bold">{lock.id} · {lock.kind}{drone.tasks.autoTrack ? ' · TRACKING' : ''}</div>
                 {thermal && <div className="flex items-center gap-1 text-rose-200"><Thermometer className="w-2.5 h-2.5" />{lock.tempC.toFixed(1)} °C · MOVING</div>}
@@ -358,7 +213,10 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, width = 640, 
               <span className="text-slate-500">{drone.id} is on the pad</span>
             </div>
           )}
-          {!offline && !videoStream && isNight && !thermal && drone.sensorMode !== 'NIGHT_VISION' && (
+          {useFootage && clip && !offline && (
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] text-slate-300/70">Recorded flight · {clip.title} · {clip.by} · Pexels</div>
+          )}
+          {!offline && !videoStream && !useFootage && isNight && !thermal && drone.sensorMode !== 'NIGHT_VISION' && (
             <div className="absolute left-1/2 top-12 -translate-x-1/2 px-2 py-1 rounded bg-amber-500/20 border border-amber-400/50 text-amber-200 flex items-center gap-1.5">
               <CrosshairIcon className="w-3 h-3" /><span className="hidden sm:inline">NIGHT · EO IMAGE UNUSABLE — </span>SWITCH TO IR
             </div>

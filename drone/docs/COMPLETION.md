@@ -31,6 +31,7 @@ what needs hardware in your hands, and what needs a permit rather than code.
 | Aircraft health: which part is failing, in flight and after landing; parts life | ✅ built, tested against real ArduCopter 4.5.7 SITL (a weakened motor 3 is caught) | Health tab, `src/diagnostics` |
 | Tested against the real ArduPilot firmware, not only a stand-in | ✅ ArduCopter 4.5.7 SITL built from source; arm, takeoff, hover, land and health through the bridge | `hardware/companion-pi/README.md` → SITL |
 | Portfolio demo: Overview with live hero, guided tour, labelled sample data | ✅ built | Overview, `src/demo` |
+| Patrol feed: real drone footage over real cities and mountains, sensor modes on top; 3D city simulation as fallback and offline option | ✅ built; clips stream from Pexels until `npm run footage` self-hosts them | `src/dashboards/feed` |
 | Operator roles (pilot in command / observer / client view-only) stamped on every event | ✅ built | operator menu, `src/operator` |
 | Tamper-evident record: every event SHA-256 chained, verified in Records | ✅ built, unit-tested | `src/record/chain.ts` |
 | Accounts and a server copy the device can't clear (append-only, chain-checked by the database) | ✅ built and tested against real Postgres; ⏳ needs your Supabase project | `server/`, `src/sync` |

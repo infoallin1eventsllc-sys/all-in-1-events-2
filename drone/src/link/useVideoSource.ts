@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Place } from '../dashboards/feed/footage';
 
 /**
  * Real video for the feed panel.
  *
- *   SIM      the synthetic gimbal renderer (default)
+ *   FOOTAGE  recorded drone flights over real cities (default; src/dashboards/feed/footage.ts)
+ *   SIM      the synthetic 3D city renderer
  *   CAPTURE  a camera or an HDMI capture stick on this machine, via getUserMedia —
  *            works with any aircraft that has an HDMI/USB video out, DJI included
  *   WEBRTC   the companion computer's aiortc streamer (hardware/companion-pi/video):
  *            POST an SDP offer to <url>/offer, get the answer, receive one video track
  */
 export type VideoSource =
+  | { kind: 'FOOTAGE'; place: Place }
   | { kind: 'SIM' }
   | { kind: 'CAPTURE'; deviceId?: string }
   | { kind: 'WEBRTC'; url: string };
@@ -57,7 +60,7 @@ export function useVideoSource(source: VideoSource) {
 
     (async () => {
       setError('');
-      if (source.kind === 'SIM') { setStream(null); setStatus('IDLE'); return; }
+      if (source.kind === 'SIM' || source.kind === 'FOOTAGE') { setStream(null); setStatus('IDLE'); return; }
       setStatus('CONNECTING');
       try {
         if (source.kind === 'CAPTURE') {
