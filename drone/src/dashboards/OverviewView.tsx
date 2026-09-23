@@ -17,7 +17,7 @@ interface Props { onOpen: (t: Target) => void; onTour: () => void }
 const BASE = import.meta.env.BASE_URL;
 
 const PRODUCTS: { id: Target; icon: React.ReactNode; name: string; line: string; facts: string[]; img: string; accent: string }[] = [
-  { id: 'LIGHT_SHOW_OPS', icon: <Sparkles />, name: 'Light shows', line: 'Conduct a 100-aircraft show from the front of house, with the pre-flight checks that hold the launch.', facts: ['Six choreographed formations', 'One-button abort: lights out, controlled descent', 'Export to the show-control stack'], img: 'show', accent: '#5b5bd6' },
+  { id: 'LIGHT_SHOW_OPS', icon: <Sparkles />, name: 'Light shows', line: 'Conduct a 100-aircraft show from the front of house, with the pre-flight checks that hold the launch.', facts: ['Eight living formations: a phoenix, a lotus, fireworks, a heartbeat', 'One-button abort: lights out, controlled descent', 'Export to the show-control stack'], img: 'show', accent: '#5b5bd6' },
   { id: 'SURVEY_OPS', icon: <ScanLine />, name: 'Site survey', line: 'Map a venue before the build: plan from the camera maths, watch the site develop, re-fly the weak spots.', facts: ['Orthomosaic, 3D model or inspection orbit', 'Coverage checked in flight, not back at the office', 'Mission upload and a processing package'], img: 'survey', accent: '#c2410c' },
   { id: 'SURVEILLANCE_OPS', icon: <Eye />, name: 'Security patrol', line: 'Overnight patrols with thermal video from four aircraft, detections queued for the security team.', facts: ['Night protocol switches every camera to thermal', 'Gimbal, zoom, spotlight on the real aircraft', 'Patrol route uploaded as a mission'], img: 'patrol', accent: '#0d9488' },
 ];

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { LightShowDrone, ShowConductorState, Vector3D, ColorRGBW } from '../types/lightShowTypes';
-import { SHOW_FORMATIONS } from '../data/lightShowFormations';
+import { SHOW_FORMATIONS, CUE_STARTS, SHOW_TOTAL_SECONDS } from '../data/lightShowFormations';
 
 /** `airborne`: start with the fleet already in the first formation (the Overview hero), not on the pads. */
 export function useLightShowSimulation(initialDroneCount = 100, airborne = false) {
@@ -11,7 +11,7 @@ export function useLightShowSimulation(initialDroneCount = 100, airborne = false
   const [conductorState, setConductorState] = useState<ShowConductorState>({
     status: 'PRE_FLIGHT',
     currentTimeSec: 0,
-    totalDurationSec: 180, // 3-minute show
+    totalDurationSec: SHOW_TOTAL_SECONDS,
     activeFormationIndex: 0,
     syncClockSource: 'GPS_1PPS',
     clockJitterMs: 0.68,
@@ -20,8 +20,8 @@ export function useLightShowSimulation(initialDroneCount = 100, airborne = false
     minSeparationObservedMeters: 3.2,
   });
 
-  const [showTrajectories, setShowTrajectories] = useState<boolean>(true);
-  const [showGeofence, setShowGeofence] = useState<boolean>(true);
+  const [showTrajectories, setShowTrajectories] = useState<boolean>(false);
+  const [showGeofence, setShowGeofence] = useState<boolean>(false);
 
   const isRunningRef = useRef<boolean>(false);
   const conductorStateRef = useRef<ShowConductorState>(conductorState);
@@ -77,10 +77,11 @@ export function useLightShowSimulation(initialDroneCount = 100, airborne = false
     initializeFleet(droneCount);
   }, [droneCount, initializeFleet]);
 
-  // Set active formation and calculate smooth transitions
+  // Set active formation: the show clock jumps to that cue, and the tick loop
+  // then keeps every target moving with the formation's own animation.
   const selectFormation = useCallback((formationIndex: number) => {
     const formation = SHOW_FORMATIONS[formationIndex];
-    const targetPoints = formation.generatePoints(dronesRef.current.length);
+    const targetPoints = formation.generatePoints(dronesRef.current.length, 0);
 
     setDrones(prev => prev.map((d, i) => {
       const pt = targetPoints[i];
@@ -95,6 +96,7 @@ export function useLightShowSimulation(initialDroneCount = 100, airborne = false
     setConductorState(prev => ({
       ...prev,
       activeFormationIndex: formationIndex,
+      currentTimeSec: prev.status === 'PRE_FLIGHT' || prev.status === 'ARMED' ? prev.currentTimeSec : CUE_STARTS[formationIndex] ?? prev.currentTimeSec,
     }));
   }, []);
 
@@ -148,19 +150,27 @@ export function useLightShowSimulation(initialDroneCount = 100, airborne = false
       lastTime = currentTime;
 
       if (isRunningRef.current) {
-        // Advance show timeline
-        setConductorState(prev => {
-          const nextTime = prev.currentTimeSec + deltaSec;
-          if (nextTime >= prev.totalDurationSec) {
-            return { ...prev, currentTimeSec: prev.totalDurationSec, status: 'SHOW_COMPLETE' };
-          }
-          return { ...prev, currentTimeSec: nextTime };
-        });
+        // Advance the show clock; cues follow it, so the show plays itself.
+        const cs = conductorStateRef.current;
+        const nextTime = Math.min(cs.totalDurationSec, cs.currentTimeSec + deltaSec);
+        let cue = cs.activeFormationIndex;
+        while (cue + 1 < SHOW_FORMATIONS.length && nextTime >= CUE_STARTS[cue + 1]) cue++;
+        const complete = nextTime >= cs.totalDurationSec;
+        setConductorState(prev => ({ ...prev, currentTimeSec: nextTime, activeFormationIndex: cue, status: complete ? 'SHOW_COMPLETE' : prev.status }));
 
-        // Move drones toward target position and interpolate RGBW colors
+        // Every target moves with the formation's animation; aircraft ease after
+        // their targets (a critically damped chase, capped at a real airspeed), so
+        // the fleet flows rather than snaps.
+        const tCue = nextTime - (CUE_STARTS[cue] ?? 0);
+        const formation = SHOW_FORMATIONS[cue];
+        const n = dronesRef.current.length;
+        const pts = n ? formation.generatePoints(n, tCue) : [];
         setDrones(prevDrones => {
-          const maxSpeed = 5.0; // 5.0 m/s
-          return prevDrones.map(d => {
+          const maxSpeed = 11.0;
+          const k = 1 - Math.exp(-deltaSec * 2.4);
+          return prevDrones.map((d0, i) => {
+            const pt = pts[i];
+            const d = pt && d0.status !== 'EMERGENCY_ABORT' && d0.status !== 'LANDED' ? { ...d0, targetPosition: pt.pos, targetColor: pt.color } : d0;
             const dx = d.targetPosition.x - d.position.x;
             const dy = d.targetPosition.y - d.position.y;
             const dz = d.targetPosition.z - d.position.z;
@@ -172,17 +182,17 @@ export function useLightShowSimulation(initialDroneCount = 100, airborne = false
             let nextStatus = d.status;
 
             if (dist > 0.05) {
-              const moveDist = Math.min(dist, maxSpeed * deltaSec);
+              const moveDist = Math.min(dist * k, maxSpeed * deltaSec);
               nextX += (dx / dist) * moveDist;
               nextY += (dy / dist) * moveDist;
               nextZ += (dz / dist) * moveDist;
-              nextStatus = 'TRANSITIONING';
+              nextStatus = dist > 1.5 ? 'TRANSITIONING' : 'IN_FORMATION';
             } else {
               nextStatus = 'IN_FORMATION';
             }
 
             // Smooth color interpolation
-            const colorSpeed = 4.0 * deltaSec;
+            const colorSpeed = Math.min(1, 6.0 * deltaSec);
             const nextR = Math.round(d.color.r + (d.targetColor.r - d.color.r) * colorSpeed);
             const nextG = Math.round(d.color.g + (d.targetColor.g - d.color.g) * colorSpeed);
             const nextB = Math.round(d.color.b + (d.targetColor.b - d.color.b) * colorSpeed);

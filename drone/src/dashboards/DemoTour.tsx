@@ -15,7 +15,7 @@ interface Step { view: TourView; title: string; body: string; action?: string; t
 
 const STEPS: Step[] = [
   { view: 'OVERVIEW', title: 'A working console, not a mock-up', body: 'Everything here runs: a 100-aircraft show renderer, survey planning from real camera maths, a MAVLink link to real flight controllers. The aircraft are simulated so you can try it anywhere.' },
-  { view: 'LIGHT_SHOW_OPS', title: 'Conduct a light show', body: 'Pre-flight gates (sync, wind, clock) must all pass before the fleet will arm. Arm it and start the show: six formations, with one-button abort.', action: 'Arm and start the show', target: 'ls-play' },
+  { view: 'LIGHT_SHOW_OPS', title: 'Conduct a light show', body: 'Pre-flight gates (sync, wind, clock) must all pass before the fleet will arm. Arm it and start the show: eight formations that breathe, turn and burst, with one-button abort.', action: 'Arm and start the show', target: 'ls-play' },
   { view: 'SURVEY_OPS', title: 'Survey the venue', body: 'Pick a map, a 3D model or an inspection; height, spacing and flight time follow from the camera. Watch the grounds develop from blueprint to photo as the aircraft flies its lines.', action: 'Fly the survey at 16×', target: 'sv-primary' },
   { view: 'SURVEILLANCE_OPS', title: 'Patrol overnight', body: 'Four aircraft on a patrol loop with live thermal video. Detections queue for the security team; night protocol switches every camera to thermal.', target: 'surveillance-dashboard' },
   { view: 'HEALTH', title: 'Know which part is failing', body: 'The motors that work hardest give away a chipped prop, a worn bearing or a twisted arm. Fly a test flight with a damaged propeller and watch it get caught.', action: 'Fly with a chipped prop', target: 'health-verdict' },

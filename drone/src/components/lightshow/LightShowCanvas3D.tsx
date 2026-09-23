@@ -36,11 +36,11 @@ interface LightShowCanvas3DProps {
 type Preset = 'AUDIENCE' | 'ISOMETRIC' | 'TOP_DOWN';
 
 const CAPACITY = 512;            // max aircraft the buffers hold
-const TRAIL = 14;                // trail samples per aircraft
+const TRAIL = 16;                // trail samples per aircraft
 const SHOW_CENTRE = new THREE.Vector3(0, 52, 0);
 
 const PRESETS: Record<Preset, { radius: number; theta: number; phi: number }> = {
-  AUDIENCE: { radius: 135, theta: -Math.PI / 2, phi: Math.PI / 2.25 },
+  AUDIENCE: { radius: 122, theta: -Math.PI / 2, phi: Math.PI / 2.4 },
   ISOMETRIC: { radius: 120, theta: Math.PI / 4, phi: Math.PI / 3.1 },
   TOP_DOWN: { radius: 125, theta: 0, phi: 0.06 },
 };
@@ -101,7 +101,7 @@ function makeGroundTexture(): THREE.CanvasTexture {
 }
 
 export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
-  drones, selectedDroneId, onSelectDrone, showTrajectories, showGeofence, formationName, bare = false, initialPreset = 'ISOMETRIC', heightClass,
+  drones, selectedDroneId, onSelectDrone, showTrajectories, showGeofence, formationName, bare = false, initialPreset = 'AUDIENCE', heightClass,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [preset, setPreset] = useState<Preset>(initialPreset);
@@ -133,7 +133,7 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(w, h);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.05;
+    renderer.toneMappingExposure = 1.2;
     container.innerHTML = ''; container.appendChild(renderer.domElement);
 
     const s = new THREE.Scene();
@@ -160,12 +160,25 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshBasicMaterial({ map: makeGroundTexture() }));
     floor.rotation.x = -Math.PI / 2; s.add(floor);
 
+    // Stage beams: four searchlights on the show line, sweeping slowly through the haze.
+    const beamMat = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false,
+      uniforms: { tint: { value: new THREE.Color(0.55, 0.65, 1.0) } },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: 'uniform vec3 tint; varying vec2 vUv; void main(){ float a = (1.0 - vUv.y) * (1.0 - vUv.y) * 0.028 * smoothstep(0.0, 0.08, vUv.y); gl_FragColor = vec4(tint * a, 1.0); }',
+    });
+    const beams: THREE.Mesh[] = [];
+    for (const x of [-70, -30, 30, 70]) {
+      const b = new THREE.Mesh(new THREE.CylinderGeometry(4, 0.6, 150, 16, 1, true).translate(0, 75, 0), beamMat);
+      b.position.set(x, 0, -70); s.add(b); beams.push(b);
+    }
+
     // Geofence: a quiet volume, only when asked for.
     const fence = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(100, 110, 100)), new THREE.LineBasicMaterial({ color: 0x6b8fe8, transparent: true, opacity: 0.09 }));
     fence.position.set(0, 55, 0); fence.visible = false; s.add(fence);
 
     // Aircraft cores
-    const cores = new THREE.InstancedMesh(new THREE.SphereGeometry(0.75, 10, 10), new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }), CAPACITY);
+    const cores = new THREE.InstancedMesh(new THREE.SphereGeometry(0.6, 10, 10), new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }), CAPACITY);
     cores.count = 0; cores.instanceMatrix.setUsage(THREE.DynamicDrawUsage); s.add(cores);
 
     // LED halos — the thing bloom grabs.
@@ -177,8 +190,8 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
       g.setDrawRange(0, 0);
       return new THREE.Points(g, new THREE.PointsMaterial({ size, map, transparent: true, opacity, blending: THREE.AdditiveBlending, vertexColors: true, depthWrite: false, sizeAttenuation: true, toneMapped: false }));
     };
-    const halos = mkPoints(4.6, 0.95, halo); s.add(halos);
-    const floorGlow = mkPoints(40, 0.035, soft); s.add(floorGlow);
+    const halos = mkPoints(5.6, 1, halo); s.add(halos);
+    const floorGlow = mkPoints(54, 0.06, soft); s.add(floorGlow);
 
     // Trails: TRAIL-1 segments per aircraft, colour fades with age.
     const segs = CAPACITY * (TRAIL - 1);
@@ -200,7 +213,7 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
     // Post: bloom on the lights only (threshold keeps the floor and sky dark).
     const composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(s, camera));
-    const bloom = new UnrealBloomPass(new THREE.Vector2(w, h), 0.6, 0.55, 0.32);
+    const bloom = new UnrealBloomPass(new THREE.Vector2(w, h), 0.9, 0.65, 0.22);
     composer.addPass(bloom);
     composer.addPass(new OutputPass());
 
@@ -226,6 +239,7 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
         SHOW_CENTRE.z + o.radius * Math.sin(o.phi) * Math.sin(o.theta),
       );
       camera.lookAt(SHOW_CENTRE);
+      beams.forEach((b, k) => { b.rotation.z = (k < 2 ? 0.35 : -0.35) + Math.sin(now / 1000 * 0.21 + k * 1.9) * 0.22; b.rotation.x = -0.25 + Math.sin(now / 1000 * 0.13 + k) * 0.18; });
 
       // Aircraft buffers
       const hp = st.halos.geometry.attributes.position.array as Float32Array, hc = st.halos.geometry.attributes.color.array as Float32Array;
@@ -282,7 +296,7 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
             const o6 = seg * 6;
             lp[o6] = st.history[ai]; lp[o6 + 1] = st.history[ai + 1]; lp[o6 + 2] = st.history[ai + 2];
             lp[o6 + 3] = st.history[bi]; lp[o6 + 4] = st.history[bi + 1]; lp[o6 + 5] = st.history[bi + 2];
-            const f0 = (k / (TRAIL - 1)) ** 2 * 0.55, f1 = ((k + 1) / (TRAIL - 1)) ** 2 * 0.55;
+            const f0 = (k / (TRAIL - 1)) ** 2 * 0.38, f1 = ((k + 1) / (TRAIL - 1)) ** 2 * 0.38;
             lc[o6] = r * f0; lc[o6 + 1] = gch * f0; lc[o6 + 2] = b * f0; lc[o6 + 3] = r * f1; lc[o6 + 4] = gch * f1; lc[o6 + 5] = b * f1;
             seg++;
           }

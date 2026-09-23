@@ -34,7 +34,8 @@ export interface ShowFormation {
   description: string;
   durationSeconds: number;
   paletteName: string;
-  generatePoints: (count: number) => { pos: Vector3D; color: ColorRGBW }[];
+  /** Positions and colours for `count` aircraft at `t` seconds into the cue; formations are alive. */
+  generatePoints: (count: number, t?: number) => { pos: Vector3D; color: ColorRGBW }[];
 }
 
 export interface ShowTimelineCue {
