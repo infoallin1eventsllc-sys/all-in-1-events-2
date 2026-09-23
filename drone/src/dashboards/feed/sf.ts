@@ -83,10 +83,14 @@ export class SanFrancisco {
   private fog = new THREE.FogExp2(0x8a7d78, 0.00042);
   private sky: THREE.ShaderMaterial;
   private water: THREE.ShaderMaterial;
-  private banks: THREE.Sprite[] = [];
+  private fogLayer!: THREE.ShaderMaterial;
+  private env: Partial<Record<Mood, THREE.Texture>> = {};
+  private renderer: THREE.WebGLRenderer | null;
   private lights: THREE.Points;
   private lightMat: THREE.PointsMaterial;
-  private facadeMats: THREE.MeshLambertMaterial[] = [];
+  private facadeMats: THREE.MeshStandardMaterial[] = [];
+  private houseFront!: THREE.MeshStandardMaterial;
+  private bayMat!: THREE.MeshStandardMaterial;
   private irSwap: { mesh: THREE.Mesh | THREE.InstancedMesh | THREE.Points | THREE.Sprite; eo: THREE.Material; ir: THREE.Material }[] = [];
   private carMesh: THREE.InstancedMesh;
   private carLights: THREE.InstancedMesh;
@@ -95,9 +99,8 @@ export class SanFrancisco {
   private night = false;
   private sunDisc: THREE.Sprite;
   private gndMat!: THREE.MeshLambertMaterial;
-  private ggMat!: THREE.MeshLambertMaterial;
-  private bbMat!: THREE.MeshLambertMaterial;
-  private marine: THREE.Sprite[] = [];
+  private ggMat!: THREE.MeshStandardMaterial;
+  private bbMat!: THREE.MeshStandardMaterial;
   private ship!: THREE.Group;
   private boat!: THREE.Group;
   private wheel!: THREE.Group;
@@ -106,11 +109,18 @@ export class SanFrancisco {
   private mood: Mood = 'DAY';
   private forcedNight = false;
 
-  constructor(maxAniso = 8, glow: THREE.Texture) {
+  constructor(maxAniso = 8, glow: THREE.Texture, renderer: THREE.WebGLRenderer | null = null) {
     const aniso = Math.min(8, maxAniso);
+    this.renderer = renderer;
     this.scene.fog = this.fog;
     this.scene.add(this.sun, this.sun.target, this.hemi);
     this.sun.position.copy(SUN_DUSK).multiplyScalar(4000); this.sun.target.position.set(0, 0, 0);
+    // Sun shadows over the area each shot looks at (placed per frame in pose()).
+    this.sun.castShadow = true;
+    this.sun.shadow.mapSize.set(2048, 2048);
+    const shCam = this.sun.shadow.camera as THREE.OrthographicCamera;
+    shCam.left = -520; shCam.right = 520; shCam.top = 520; shCam.bottom = -520; shCam.near = 50; shCam.far = 7000; shCam.updateProjectionMatrix();
+    this.sun.shadow.bias = -0.0003; this.sun.shadow.normalBias = 1.2;
 
     // Sky: a dome graded from the warm west to the deep blue zenith, with the sun in it.
     this.sky = new THREE.ShaderMaterial({
@@ -123,9 +133,9 @@ export class SanFrancisco {
         void main(){
           vec3 d = normalize(vDir); float y = clamp(d.y, 0.0, 1.0);
           float toSun = max(dot(normalize(vec3(d.x, 0.0, d.z)), normalize(vec3(sunDir.x, 0.0, sunDir.z))), 0.0);
-          vec3 zen = pick(vec3(0.10, 0.30, 0.76), vec3(0.05, 0.10, 0.24), vec3(0.03, 0.05, 0.18));
-          vec3 horC = pick(vec3(0.50, 0.66, 0.88), vec3(0.42, 0.44, 0.52), vec3(0.10, 0.12, 0.26));
-          vec3 horW = pick(vec3(0.80, 0.86, 0.94), vec3(1.0, 0.52, 0.22), vec3(0.36, 0.20, 0.24));
+          vec3 zen = pick(vec3(0.10, 0.30, 0.76), vec3(0.05, 0.10, 0.24), vec3(0.025, 0.035, 0.10));
+          vec3 horC = pick(vec3(0.50, 0.66, 0.88), vec3(0.42, 0.44, 0.52), vec3(0.09, 0.10, 0.17));
+          vec3 horW = pick(vec3(0.80, 0.86, 0.94), vec3(1.0, 0.52, 0.22), vec3(0.30, 0.18, 0.20));
           vec3 hor = mix(horC, horW, pow(toSun, 2.5));
           vec3 col = mix(hor, zen, pow(y, pick(vec3(0.6), vec3(0.42), vec3(0.42)).x));
           float s = max(dot(d, sunDir), 0.0);
@@ -143,7 +153,7 @@ export class SanFrancisco {
     this.sunDisc.scale.setScalar(520); this.scene.add(this.sunDisc);
 
     // Ground: a heightfield of the peninsula, Marin and the islands, painted from a map canvas.
-    const SIZE = 12000, SEG = 320;
+    const SIZE = 12000, SEG = 440;
     const gnd = new THREE.PlaneGeometry(SIZE, SIZE, SEG, SEG); gnd.rotateX(-Math.PI / 2);
     const gp = gnd.attributes.position as THREE.BufferAttribute;
     for (let i = 0; i < gp.count; i++) gp.setY(i, sfHeight(gp.getX(i), gp.getZ(i)) - 1.5);
@@ -152,7 +162,7 @@ export class SanFrancisco {
     const emit = new THREE.CanvasTexture(this.paintMap(SIZE, true)); emit.colorSpace = THREE.SRGBColorSpace;
     const gndMat = new THREE.MeshLambertMaterial({ map: mapTex, emissiveMap: emit, emissive: 0xffffff, emissiveIntensity: 0.6 });
     this.gndMat = gndMat;
-    const ground = new THREE.Mesh(gnd, gndMat); this.scene.add(ground);
+    const ground = new THREE.Mesh(gnd, gndMat); ground.receiveShadow = true; this.scene.add(ground);
     this.irSwap.push({ mesh: ground, eo: gndMat, ir: new THREE.MeshLambertMaterial({ color: 0x8a8a8a }) });
 
     // Water: the Bay and the ocean, reflecting the sky with the sun's glitter on it.
@@ -177,10 +187,10 @@ export class SanFrancisco {
           vec3 R = reflect(-V, N);
           float fres = pow(1.0 - max(dot(N, V), 0.0), 3.0);
           float toSun = max(dot(normalize(vec3(R.x, 0.0, R.z)), normalize(vec3(sunDir.x, 0.0, sunDir.z))), 0.0);
-          vec3 horC = pick(vec3(0.50, 0.66, 0.88), vec3(0.42, 0.44, 0.52), vec3(0.10, 0.12, 0.26));
-          vec3 horW = pick(vec3(0.80, 0.86, 0.94), vec3(1.0, 0.55, 0.25), vec3(0.36, 0.20, 0.24));
+          vec3 horC = pick(vec3(0.50, 0.66, 0.88), vec3(0.42, 0.44, 0.52), vec3(0.09, 0.10, 0.17));
+          vec3 horW = pick(vec3(0.80, 0.86, 0.94), vec3(1.0, 0.55, 0.25), vec3(0.30, 0.18, 0.20));
           vec3 skyHor = mix(horC, horW, pow(toSun, 2.5));
-          vec3 skyZen = pick(vec3(0.10, 0.30, 0.76), vec3(0.06, 0.12, 0.26), vec3(0.03, 0.05, 0.18));
+          vec3 skyZen = pick(vec3(0.10, 0.30, 0.76), vec3(0.06, 0.12, 0.26), vec3(0.025, 0.035, 0.10));
           vec3 sky = mix(skyHor, skyZen, clamp(R.y * 2.5, 0.0, 1.0));
           vec3 deep = pick(vec3(0.05, 0.19, 0.34), vec3(0.04, 0.1, 0.13), vec3(0.01, 0.02, 0.05));
           float glit = pow(max(dot(R, sunDir), 0.0), 300.0) * (0.4 + 0.6 * hash(floor(vWorld.xz * 0.5) + floor(time * 6.0)));
@@ -193,59 +203,79 @@ export class SanFrancisco {
     this.scene.add(water);
     this.irSwap.push({ mesh: water, eo: this.water, ir: new THREE.MeshLambertMaterial({ color: 0x3a3a3a }) });
 
-    // Downtown towers.
+    // ---- The city fabric: every block built out to the street, as San Francisco is. ----
+    // Downtown and SoMa: office and loft buildings filling each block, the tallest round the
+    // foot of Market Street with podiums and setbacks. The hills: attached row houses, two to
+    // four floors, flat roofs, bay windows, in the city's muted plaster colours.
     const facades = { glass: T.facade('glass'), concrete: T.facade('concrete'), stone: T.facade('stone'), brick: T.facade('brick') };
     const G: Record<T.FacadeStyle, Geo> = { glass: new Geo(), concrete: new Geo(), stone: new Geo(), brick: new Geo() };
     const roofs = new Geo();
     const rng = mulberry(1907);
-    const towers: Tower[] = [];
-    const tower = (x: number, z: number, w: number, d: number, h: number, style: T.FacadeStyle) => {
-      const y0 = sfHeight(x, z) - 0.5, y1 = y0 + h, g = G[style];
-      const x0 = x - w / 2, x1 = x + w / 2, z0 = z - d / 2, z1 = z + d / 2;
-      const c: [number, number][] = [[x0, z0], [x0, z1], [x1, z1], [x1, z0]];
+    const MARGIN = 10;                                   // half street plus sidewalk
+    const CORE = { x: 120, z: -320 };
+    const inDowntown = (x: number, z: number) => x > -720 && x < 330 && z > -900 && z < 380;
+    const inSoma = (x: number, z: number) => x > -1500 && x < 330 && z >= 380 && z < 1300 && !(Math.hypot(x - 380, z - 750) < 190) && !(Math.hypot(x - 430, z - 1150) < 130);
+    // Market Street: the wide diagonal from the Ferry Building south-west across the grid; nothing is built on it.
+    const MK_A = { x: 340, z: -10 }, MK_D = (() => { const dx = -3000 - 340, dz = 580 + 10, l = Math.hypot(dx, dz); return { x: dx / l, z: dz / l }; })();
+    const marketDist = (x: number, z: number) => { const ux = x - MK_A.x, uz = z - MK_A.z; const t = ux * MK_D.x + uz * MK_D.z; if (t < 0) return 1e9; return Math.abs(ux * MK_D.z - uz * MK_D.x); };
+    const clearOfLandmarks = (x: number, z: number, r: number) => Math.hypot(x - 180, z + 260) > 40 + r && Math.hypot(x + 180, z + 620) > 44 + r && Math.hypot(x + 60, z + 480) > 38 + r && Math.hypot(x - 330, z - 10) > 30 + r;
+    /** One box of a building: four textured walls and a roof, with a tint. */
+    const mass = (x0: number, z0: number, x1: number, z1: number, y0: number, y1: number, style: T.FacadeStyle, tint: V) => {
+      const g = G[style], c: [number, number][] = [[x0, z0], [x0, z1], [x1, z1], [x1, z0]];
       let u = Math.floor(rng() * 4) / 4; const v0 = Math.floor(rng() * 4) / 4;
-      for (let k = 0; k < 4; k++) { const a = c[k], b = c[(k + 1) % 4], len = Math.hypot(b[0] - a[0], b[1] - a[1]); g.wall(a[0], a[1], b[0], b[1], y0, y1, u, u + len / T.FACADE_W, v0, v0 - h / T.FACADE_H); u += len / T.FACADE_W; }
-      const rt = rng(); roofs.up(x0, z0, x1, z1, y1, (px, pz) => [px / 8, pz / 8], rt < 0.4 ? [0.3, 0.3, 0.32] : rt < 0.7 ? [0.5, 0.48, 0.45] : [0.62, 0.58, 0.5]);
-      roofs.box(x - w * 0.2, z - d * 0.2, x + w * 0.2, z + d * 0.2, y1, y1 + 3 + rng() * 4, [0.45, 0.45, 0.47]);
-      towers.push({ x, z, w, d, h, style });
+      for (let k = 0; k < 4; k++) { const a = c[k], b = c[(k + 1) % 4], len = Math.hypot(b[0] - a[0], b[1] - a[1]); g.wall(a[0], a[1], b[0], b[1], y0, y1, u, u + len / T.FACADE_W, v0, v0 - (y1 - y0) / T.FACADE_H, tint); u += len / T.FACADE_W; }
+      const rt = rng(), rc: V = rt < 0.45 ? [0.34, 0.34, 0.35] : rt < 0.8 ? [0.52, 0.5, 0.47] : [0.64, 0.62, 0.58];
+      roofs.up(x0, z0, x1, z1, y1, (px, pz) => [px / 8, pz / 8], rc);
+      // Parapet and rooftop plant.
+      const pw = 0.5; roofs.box(x0, z0, x1, z0 + pw, y1, y1 + 1.1, 0.7); roofs.box(x0, z1 - pw, x1, z1, y1, y1 + 1.1, 0.7); roofs.box(x0, z0, x0 + pw, z1, y1, y1 + 1.1, 0.7); roofs.box(x1 - pw, z0, x1, z1, y1, y1 + 1.1, 0.7);
+      const w = x1 - x0, d = z1 - z0, n = 1 + Math.floor(rng() * 3);
+      for (let k = 0; k < n; k++) { const uw = 2 + rng() * Math.min(8, w * 0.3), ud = 2 + rng() * Math.min(6, d * 0.3); const ux = x0 + 2 + rng() * Math.max(0.1, w - uw - 4), uz = z0 + 2 + rng() * Math.max(0.1, d - ud - 4); roofs.box(ux, uz, ux + uw, uz + ud, y1, y1 + 1.5 + rng() * 2.5, 0.8 + rng() * 0.25); }
     };
-    // The Financial District: a grid of blocks, tallest round the foot of Market Street.
-    for (let bx = -6; bx <= 2; bx++) for (let bz = -8; bz <= 3; bz++) {
-      const X = bx * BLOCK, Z = bz * BLOCK;
-      if (landMask(X + BLOCK / 2, Z + BLOCK / 2) < 0.9) continue;
-      const cx = X + BLOCK / 2, cz = Z + BLOCK / 2;
-      const core = Math.exp(-((cx - 120) ** 2 + (cz + 320) ** 2) / (420 * 420));
-      const n = 2 + Math.floor(rng() * 3);
-      for (let k = 0; k < n; k++) {
-        const w = 26 + rng() * 34, d = 26 + rng() * 34;
-        const px = X + STREET + w / 2 + rng() * Math.max(1, BLOCK - STREET * 2 - w), pz = Z + STREET + d / 2 + rng() * Math.max(1, BLOCK - STREET * 2 - d);
-        if (Math.hypot(px - 180, pz + 260) < 45 || Math.hypot(px + 180, pz + 620) < 50) continue;   // room for the landmarks
-        const floors = 6 + Math.floor(rng() * 10 + core * (30 + rng() * 40));
-        const style: T.FacadeStyle = rng() < 0.45 + core * 0.3 ? 'glass' : rng() < 0.5 ? 'concrete' : rng() < 0.6 ? 'stone' : 'brick';
-        tower(px, pz, w, d, floors * T.FLOOR, style);
-      }
-    }
-    // North Beach and the hills: mid-rise fill along the streets.
-    for (let bx = -20; bx <= -7; bx++) for (let bz = -13; bz <= 4; bz++) {
+    /** A building on a lot: podium, shaft and crown when it is tall. */
+    const building = (x0: number, z0: number, x1: number, z1: number, floors: number, style: T.FacadeStyle) => {
+      const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+      let y0 = Infinity; for (const [px, pz] of [[x0, z0], [x0, z1], [x1, z0], [x1, z1], [cx, cz]]) y0 = Math.min(y0, sfHeight(px, pz)); y0 -= 1.5;
+      const tone = 0.86 + rng() * 0.22, tint: V = [tone, tone * (0.98 + rng() * 0.04), tone * (0.96 + rng() * 0.06)];
+      const H = floors * T.FLOOR, w = x1 - x0, d = z1 - z0;
+      if (floors < 18 || Math.min(w, d) < 30) { mass(x0, z0, x1, z1, y0, y0 + H, style, tint); return; }
+      const pod = (4 + Math.floor(rng() * 5)) * T.FLOOR, i1 = Math.min(w, d) * (0.1 + rng() * 0.08);
+      mass(x0, z0, x1, z1, y0, y0 + pod, rng() < 0.5 ? 'stone' : style, tint);
+      const shaftTop = y0 + (floors > 34 ? H * 0.82 : H);
+      mass(x0 + i1, z0 + i1, x1 - i1, z1 - i1, y0 + pod, shaftTop, style, tint);
+      if (floors > 34) { const i2 = i1 + Math.min(w, d) * 0.1; mass(x0 + i2, z0 + i2, x1 - i2, z1 - i2, shaftTop, y0 + H, style, tint); }
+    };
+    for (let bx = -14; bx <= 3; bx++) for (let bz = -9; bz <= 11; bz++) {
       const X = bx * BLOCK, Z = bz * BLOCK, cx = X + BLOCK / 2, cz = Z + BLOCK / 2;
-      if (landMask(cx, cz) < 0.9 || rng() < 0.55) continue;
-      const w = 22 + rng() * 26, d = 22 + rng() * 26;
-      tower(X + STREET + w / 2 + rng() * (BLOCK - STREET * 2 - w), Z + STREET + d / 2 + rng() * (BLOCK - STREET * 2 - d), w, d, (4 + Math.floor(rng() * 6)) * T.FLOOR, rng() < 0.5 ? 'stone' : rng() < 0.5 ? 'concrete' : 'brick');
+      const down = inDowntown(cx, cz), soma = inSoma(cx, cz);
+      if ((!down && !soma) || landMask(cx, cz) < 0.95 || landMask(X + MARGIN, Z + MARGIN) < 0.9 || landMask(X + BLOCK - MARGIN, Z + BLOCK - MARGIN) < 0.9) continue;
+      const core = Math.exp(-((cx - CORE.x) ** 2 + (cz - CORE.z) ** 2) / (430 * 430));
+      // Split the block into two to four lots.
+      const sx = 0.35 + rng() * 0.3, sz = 0.35 + rng() * 0.3, L = BLOCK - 2 * MARGIN, bx0 = X + MARGIN, bz0 = Z + MARGIN;
+      const xs = rng() < 0.25 ? [0, 1] : [0, sx, 1], zs = rng() < 0.25 ? [0, 1] : [0, sz, 1];
+      for (let i = 0; i + 1 < xs.length; i++) for (let j = 0; j + 1 < zs.length; j++) {
+        const x0 = bx0 + xs[i] * L + 0.6, x1 = bx0 + xs[i + 1] * L - 0.6, z0 = bz0 + zs[j] * L + 0.6, z1 = bz0 + zs[j + 1] * L - 0.6;
+        const lx = (x0 + x1) / 2, lz = (z0 + z1) / 2;
+        if (!clearOfLandmarks(lx, lz, Math.max(x1 - x0, z1 - z0) / 2) || marketDist(lx, lz) < 22 + Math.max(x1 - x0, z1 - z0) / 2) continue;
+        const floors = down ? 7 + Math.floor(rng() * 8 + core * (18 + rng() * 42)) : 4 + Math.floor(rng() * 6);
+        const style: T.FacadeStyle = down ? (rng() < 0.4 + core * 0.35 ? 'glass' : rng() < 0.55 ? 'stone' : 'concrete') : (rng() < 0.45 ? 'brick' : rng() < 0.6 ? 'concrete' : 'stone');
+        building(x0, z0, x1, z1, floors, style);
+      }
     }
     for (const style of Object.keys(G) as T.FacadeStyle[]) {
       const f = facades[style]; f.map.anisotropy = aniso; f.night.anisotropy = aniso;
-      const mat = new THREE.MeshLambertMaterial({ map: f.map, emissiveMap: f.night, emissive: 0xffffff, emissiveIntensity: 0.75, vertexColors: true });
+      const glass = style === 'glass';
+      const mat = new THREE.MeshStandardMaterial({ map: f.map, emissiveMap: f.night, emissive: 0xffffff, emissiveIntensity: 0, vertexColors: true, roughness: glass ? 0.22 : 0.82, metalness: glass ? 0.55 : 0.02, envMapIntensity: glass ? 1.2 : 0.5 });
       this.facadeMats.push(mat);
-      const mesh = new THREE.Mesh(G[style].geometry(), mat); this.scene.add(mesh);
+      const mesh = new THREE.Mesh(G[style].geometry(), mat); mesh.castShadow = mesh.receiveShadow = true; this.scene.add(mesh);
       this.irSwap.push({ mesh, eo: mat, ir: new THREE.MeshLambertMaterial({ map: f.ir, color: 0x9a9a9a }) });
     }
-    const roofMat = new THREE.MeshLambertMaterial({ vertexColors: true });
-    const roofMesh = new THREE.Mesh(roofs.geometry(), roofMat); this.scene.add(roofMesh);
+    const roofMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 });
+    const roofMesh = new THREE.Mesh(roofs.geometry(), roofMat); roofMesh.castShadow = roofMesh.receiveShadow = true; this.scene.add(roofMesh);
     this.irSwap.push({ mesh: roofMesh, eo: roofMat, ir: new THREE.MeshLambertMaterial({ color: 0x7a7a7a }) });
 
     // Landmarks.
-    const glassMat = new THREE.MeshPhongMaterial({ color: 0x5f7d93, specular: 0x88aacc, shininess: 60, emissive: 0x2a3340, emissiveIntensity: 0.6 });
-    const addLandmark = (mesh: THREE.Mesh, heat = 0x9a9a9a) => { this.scene.add(mesh); this.irSwap.push({ mesh, eo: mesh.material as THREE.Material, ir: new THREE.MeshLambertMaterial({ color: heat }) }); };
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x8aa2b4, roughness: 0.12, metalness: 0.75, envMapIntensity: 1.4 });
+    const addLandmark = (mesh: THREE.Mesh, heat = 0x9a9a9a) => { mesh.castShadow = mesh.receiveShadow = true; this.scene.add(mesh); this.irSwap.push({ mesh, eo: mesh.material as THREE.Material, ir: new THREE.MeshLambertMaterial({ color: heat }) }); };
     {
       // Salesforce Tower: 326 m, a tapered rounded shaft with a lit crown.
       const y0 = sfHeight(180, -260);
@@ -262,7 +292,7 @@ export class SanFrancisco {
       for (const s of [-1, 1]) { const wing = new THREE.Mesh(new THREE.BoxGeometry(8, 150, 12).translate(s * 18, 75, 10), new THREE.MeshLambertMaterial({ color: 0xcdc8bc })); wing.position.copy(pyr.position); addLandmark(wing, 0xa8a8a8); }
       // 555 California: the dark granite slab.
       const y2 = sfHeight(-60, -480);
-      const slab = new THREE.Mesh(new THREE.BoxGeometry(62, 237, 40).translate(0, 118.5, 0), new THREE.MeshLambertMaterial({ color: 0x3a3230, emissive: 0xffd9a0, emissiveIntensity: 0.12 }));
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(62, 237, 40).translate(0, 118.5, 0), new THREE.MeshStandardMaterial({ color: 0x2b2826, roughness: 0.7, metalness: 0.1, emissive: 0xffd9a0, emissiveIntensity: 0.03 }));
       slab.position.set(-60, y2, -480); addLandmark(slab, 0x808080);
       // Coit Tower on Telegraph Hill.
       const y3 = sfHeight(-450, -1250);
@@ -282,38 +312,59 @@ export class SanFrancisco {
       lh.position.set(-880, y5 + 18, -2585); addLandmark(lh, 0xb0b0b0);
     }
 
-    // Victorian rows on the hills: painted ladies on every hill block, following the slope.
-    const shade = (g: THREE.BufferGeometry, k: number) => { const n = g.attributes.position.count, c = new Float32Array(n * 3).fill(k); g.setAttribute('color', new THREE.BufferAttribute(c, 3)); return g; };
-    const house = mergeGeometries([
-      shade(new THREE.BoxGeometry(8, 10, 12).translate(0, 5, 0), 1),
-      shade(new THREE.BoxGeometry(2.6, 3, 2.2).translate(0, 5.5, 6.6), 1),                         // bay window
-      shade(new THREE.ConeGeometry(6.4, 4, 4).rotateY(Math.PI / 4).scale(1, 1, 1.9).translate(0, 12, 0), 0.42),   // gabled roof, darker shingles
-    ])!;
-    const houseMat = new THREE.MeshLambertMaterial({ vertexColors: true });
-    const PASTEL = [0xe8dcc8, 0xd9e6ea, 0xead7d0, 0xdfe5cf, 0xe6d3e0, 0xcfd6e6, 0xf0e2c6, 0xc9d7cc, 0xead9c2, 0xd5cfe6];
-    const houses: { x: number; z: number; ry: number; c: number }[] = [];
-    const hr = mulberry(41);
-    for (let bx = -22; bx <= -6; bx++) for (let bz = -14; bz <= 5; bz++) {
-      const X = bx * BLOCK, Z = bz * BLOCK;
-      if (landMask(X + 55, Z + 55) < 0.95 || sfHeight(X + 55, Z + 55) < 12) continue;
-      if (X > -750 && Z > -900 && Z < 400) continue;     // downtown
-      for (let k = 0; k < 9; k++) {
-        const s = STREET + 8 + k * 9.6;
-        if (hr() < 0.85) houses.push({ x: X + s, z: Z + STREET + 7, ry: Math.PI, c: PASTEL[Math.floor(hr() * PASTEL.length)] });
-        if (hr() < 0.85) houses.push({ x: X + s, z: Z + BLOCK - STREET - 7, ry: 0, c: PASTEL[Math.floor(hr() * PASTEL.length)] });
-        if (hr() < 0.7) houses.push({ x: X + STREET + 7, z: Z + s, ry: Math.PI / 2, c: PASTEL[Math.floor(hr() * PASTEL.length)] });
-        if (hr() < 0.7) houses.push({ x: X + BLOCK - STREET - 7, z: Z + s, ry: -Math.PI / 2, c: PASTEL[Math.floor(hr() * PASTEL.length)] });
-      }
+    // Row houses on the hills: attached, two to four floors, flat roofs behind a cornice,
+    // a bay window on every front, built out to the sidewalk round each block.
+    const front = SanFrancisco.rowhouseTextures(), bay = SanFrancisco.bayTextures();
+    for (const t of [front.map, front.night, bay.map, bay.night]) t.anisotropy = aniso;
+    const plaster = new THREE.MeshStandardMaterial({ color: 0xd6d2ca, roughness: 0.92 });
+    const roofTop = new THREE.MeshStandardMaterial({ map: SanFrancisco.flatRoofTexture(), roughness: 0.97 });
+    this.houseFront = new THREE.MeshStandardMaterial({ map: front.map, emissiveMap: front.night, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.75 });
+    this.bayMat = new THREE.MeshStandardMaterial({ map: bay.map, emissiveMap: bay.night, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.6 });
+    const houseGeo = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, -0.5);      // front face at z = 0, looking +z
+    const bayGeo = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0.5);
+    const PALETTE = [0xece6da, 0xd9d6cf, 0xe6dcc2, 0xc7d0d4, 0xb9c6c9, 0xd2c3a8, 0xbfa88f, 0xb8bfb0, 0xe0d2bf, 0xa9a59a, 0xd7c9c3, 0x9fb0b8, 0xc9b79c, 0xb5c2b3, 0x8f8f88, 0xd8b9a4, 0x7f8a94];
+    const lots: { x: number; z: number; ry: number; w: number; d: number; h: number; base: number; c: number; bay: boolean }[] = [];
+    const hr = mulberry(41), LOT = 7.6;
+    for (let bx = -24; bx <= 2; bx++) for (let bz = -14; bz <= 12; bz++) {
+      const X = bx * BLOCK, Z = bz * BLOCK, cx = X + BLOCK / 2, cz = Z + BLOCK / 2;
+      if (inDowntown(cx, cz) || inSoma(cx, cz) || landMask(cx, cz) < 0.5) continue;
+      if (Math.hypot(cx + 450, cz + 1250) < 120 || Math.hypot(cx - 380, cz - 750) < 220 || Math.hypot(cx - 430, cz - 1150) < 160) continue;   // Pioneer Park round Coit Tower, the ballpark, the arena
+      if (cx < -2650 && cz < -900) continue;                                                                                                  // the Presidio: trees
+      const a0 = X + MARGIN, a1 = X + BLOCK - MARGIN, b0 = Z + MARGIN, b1 = Z + BLOCK - MARGIN;
+      const street = (sx: number, sz: number, dx: number, dz: number, len: number, ry: number) => {
+        const n = Math.floor(len / LOT);
+        for (let k = 0; k < n; k++) {
+          if (hr() < 0.04) continue;                                                  // a gap: a driveway or a garden
+          const px = sx + dx * (k + 0.5) * LOT, pz = sz + dz * (k + 0.5) * LOT;
+          if (landMask(px, pz) < 0.97 || landMask(px + dz * 20, pz - dx * 20) < 0.97 || marketDist(px, pz) < 30) continue;
+          const d = 17 + hr() * 7, floors = hr() < 0.18 ? 2 : hr() < 0.7 ? 3 : 4;
+          let base = Infinity; for (const [ox, oz] of [[0, 0], [dz * 3.5, -dx * 3.5], [-dz * 3.5, dx * 3.5]]) base = Math.min(base, sfHeight(px + ox, pz + oz));
+          lots.push({ x: px, z: pz, ry, w: LOT - 0.05, d, h: floors * 3.3 + 1.4 + (sfHeight(px, pz) - base), base: base - 0.6, c: PALETTE[Math.floor(hr() * PALETTE.length)], bay: hr() < 0.85 });
+        }
+      };
+      street(a0, b0, 1, 0, a1 - a0, Math.PI);            // north side, facing north (-z)
+      street(a0, b1, 1, 0, a1 - a0, 0);                  // south side, facing south
+      street(a0, b0 + 18, 0, 1, b1 - b0 - 36, -Math.PI / 2);   // west side, facing west
+      street(a1, b0 + 18, 0, 1, b1 - b0 - 36, Math.PI / 2);    // east side, facing east
     }
-    const hm = new THREE.InstancedMesh(house, houseMat, houses.length);
-    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(1, 1, 1), p3 = new THREE.Vector3(), col = new THREE.Color();
-    houses.forEach((h, i) => { q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), h.ry); p3.set(h.x, sfHeight(h.x, h.z) - 0.6, h.z); sc.setScalar(0.9 + hr() * 0.3); hm.setMatrixAt(i, m4.compose(p3, q, sc)); hm.setColorAt(i, col.set(h.c)); });
-    this.scene.add(hm);
-    this.irSwap.push({ mesh: hm, eo: houseMat, ir: new THREE.MeshLambertMaterial({ color: 0x8c8c8c }) });
+    const houses = new THREE.InstancedMesh(houseGeo, [plaster, plaster, roofTop, plaster, this.houseFront, plaster], lots.length);
+    const bays = new THREE.InstancedMesh(bayGeo, [this.bayMat, this.bayMat, roofTop, plaster, this.bayMat, plaster], lots.filter(l => l.bay).length);
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(1, 1, 1), p3 = new THREE.Vector3(), col = new THREE.Color(), up = new THREE.Vector3(0, 1, 0);
+    let bi = 0;
+    lots.forEach((l, i) => {
+      q.setFromAxisAngle(up, l.ry);
+      p3.set(l.x, l.base, l.z); sc.set(l.w, l.h, l.d); houses.setMatrixAt(i, m4.compose(p3, q, sc)); houses.setColorAt(i, col.set(l.c));
+      if (l.bay) {
+        const fz = new THREE.Vector3(0, 0, 1).applyQuaternion(q);
+        p3.set(l.x, l.base + l.h * 0.36, l.z).addScaledVector(fz, 0); sc.set(l.w * 0.62, l.h * 0.5, 1.0);
+        bays.setMatrixAt(bi, m4.compose(p3, q, sc)); bays.setColorAt(bi, col.set(l.c)); bi++;
+      }
+    });
+    for (const m of [houses, bays]) { m.castShadow = m.receiveShadow = true; this.scene.add(m); this.irSwap.push({ mesh: m, eo: m.material as unknown as THREE.Material, ir: new THREE.MeshLambertMaterial({ color: 0x8c8c8c }) }); }
 
     // Trees on the hills and in the Presidio and Marin.
-    const treeGeo = mergeGeometries([new THREE.CylinderGeometry(0.4, 0.5, 3, 5).translate(0, 1.5, 0), new THREE.SphereGeometry(4, 7, 6).translate(0, 6, 0)])!;
-    const treeMat = new THREE.MeshLambertMaterial({ color: 0x24361e });
+    const treeGeo = new THREE.IcosahedronGeometry(1, 1).scale(4, 2.2, 4).translate(0, 1.2, 0);     // low rounded scrub and cypress clumps
+    const treeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 });
     const treesAt: [number, number][] = [];
     const tr = mulberry(9);
     for (let i = 0; i < 6000; i++) {
@@ -322,8 +373,8 @@ export class SanFrancisco {
       if (landMask(x, z) < 0.95 || inCity || (x > -1000 && z > -1400 && z < 400)) continue;
       treesAt.push([x, z]);
     }
-    const tm = new THREE.InstancedMesh(treeGeo, treeMat, treesAt.length);
-    treesAt.forEach(([x, z], i) => { p3.set(x, sfHeight(x, z) - 0.5, z); sc.setScalar(1.2 + tr() * 1.6); q.identity(); tm.setMatrixAt(i, m4.compose(p3, q, sc)); });
+    const tm = new THREE.InstancedMesh(treeGeo, treeMat, treesAt.length); tm.castShadow = true;
+    treesAt.forEach(([x, z], i) => { p3.set(x, sfHeight(x, z) - 1.2, z); const k = 0.8 + tr() * 2.2; sc.set(k * (0.7 + tr() * 0.8), k * (0.5 + tr() * 0.7), k * (0.7 + tr() * 0.8)); q.setFromAxisAngle(up, tr() * 6.28); tm.setMatrixAt(i, m4.compose(p3, q, sc)); tm.setColorAt(i, col.setRGB(0.16 + tr() * 0.08, 0.22 + tr() * 0.08, 0.12 + tr() * 0.05, THREE.SRGBColorSpace)); });
     this.scene.add(tm);
     this.irSwap.push({ mesh: tm, eo: treeMat, ir: new THREE.MeshLambertMaterial({ color: 0x5a5a5a }) });
 
@@ -355,7 +406,6 @@ export class SanFrancisco {
         for (const [x, z] of [[X + s, Z + 5], [X + 5, Z + s]] as [number, number][]) if (landMask(x, z) > 0.95 && lr() < 0.8) lamp(x + (lr() - 0.5) * 3, z + (lr() - 0.5) * 3, 0.85 + lr() * 0.15);
       }
     }
-    for (const h of houses) if (lr() < 0.6) { lp.push(h.x, sfHeight(h.x, h.z) + 4, h.z); lc.push(1, 0.75, 0.45); }
     // The Embarcadero's palm-lined light strip and the far shores.
     for (let z = 400; z > -1500; z -= 18) { const x = shoreX(z) - 14; lamp(x, z, 0.6); }
     for (let x = -1500; x > -3400; x -= 22) lamp(x, shoreZ(x) + 40, 0.9);
@@ -385,25 +435,47 @@ export class SanFrancisco {
       this.cars.push(car);
     }
 
-    // Fog: banks rolling in through the Gate and low sheets threading the towers.
-    const bankTex = SanFrancisco.fogTexture();
-    const fr = mulberry(3);
-    const bank = (x: number, y: number, z: number, s: number, o: number, drift: number) => {
-      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: bankTex, color: 0xffffff, transparent: true, opacity: o, depthWrite: false, fog: true }));
-      sp.position.set(x, y, z); sp.scale.set(s, s * 0.32, 1); sp.userData = { drift, x0: x, o };
-      this.banks.push(sp); this.scene.add(sp);
-    };
-    for (let i = 0; i < 46; i++) bank(-4800 + fr() * 1900, 25 + fr() * 130, -1700 - fr() * 1600, 500 + fr() * 700, 0.34 + fr() * 0.26, 5 + fr() * 6);
-    for (let i = 0; i < 24; i++) bank(-2800 + fr() * 1600, 30 + fr() * 80, -2100 - fr() * 1000, 400 + fr() * 500, 0.2 + fr() * 0.22, 4 + fr() * 5);
-    for (let i = 0; i < 14; i++) bank(-700 + fr() * 900, 40 + fr() * 70, -900 + fr() * 1000, 200 + fr() * 220, 0.16 + fr() * 0.14, 1.5 + fr() * 2);
-    for (let i = 0; i < 12; i++) bank(-2200 + fr() * 1500, 60 + fr() * 60, -1500 + fr() * 900, 260 + fr() * 300, 0.14 + fr() * 0.14, 2 + fr() * 2);
-
-    // The marine layer: fog lying over the tower tops and the Bay by day.
-    for (let i = 0; i < 34; i++) {
-      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: bankTex, color: 0xeef1f4, transparent: true, opacity: 0.16 + fr() * 0.2, depthWrite: false, fog: true }));
-      sp.position.set(-400 + fr() * 1500, 130 + fr() * 90, -1100 + fr() * 1500); sp.scale.set(380 + fr() * 420, 90 + fr() * 70, 1); sp.userData = { drift: 3 + fr() * 4, x0: sp.position.x };
-      this.marine.push(sp); this.scene.add(sp);
+    // Fog: a volume of horizontal slices. The bank rolls in through the Gate below the deck and
+    // over the headlands; by day a thin marine layer lies broken over the downtown tower tops.
+    this.fogLayer = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, side: THREE.DoubleSide,
+      uniforms: { time: { value: 0 }, mood: { value: 0 }, sunDir: { value: SUN_DAY.clone() }, slice: { value: 0 }, fogCol: { value: new THREE.Color() } },
+      vertexShader: 'varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
+      fragmentShader: `uniform float time; uniform float mood; uniform vec3 sunDir; uniform vec3 fogCol; varying vec3 vW;
+        float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        float n2(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h2(i), h2(i + vec2(1, 0)), f.x), mix(h2(i + vec2(0, 1)), h2(i + vec2(1, 1)), f.x), f.y); }
+        float fbm(vec2 p){ float a = 0.5, s = 0.0; for (int i = 0; i < 4; i++) { s += a * n2(p); p = p * 2.03 + vec2(1.7, 9.2); a *= 0.5; } return s; }
+        float band(float y, float lo, float hi, float soft){ return smoothstep(lo, lo + soft, y) * (1.0 - smoothstep(hi - soft, hi, y)); }
+        void main(){
+          vec2 wind = vec2(time * 6.0, time * 1.5);
+          float y = vW.y;
+          // The Gate bank: west of the city, thickest over the strait, spilling east into the Bay.
+          float gate = smoothstep(-1500.0, -2800.0, vW.x) * smoothstep(-1300.0, -2000.0, vW.z) * smoothstep(-3900.0, -3100.0, vW.z);
+          gate *= band(y, 8.0, 150.0 - 60.0 * smoothstep(-3000.0, -1800.0, vW.x), 40.0);
+          // The marine layer over downtown, by day only.
+          float marine = smoothstep(-1100.0, -500.0, vW.x) * smoothstep(900.0, 400.0, vW.x) * smoothstep(-1300.0, -700.0, vW.z) * smoothstep(900.0, 300.0, vW.z);
+          marine *= band(y, 140.0, 215.0, 25.0) * step(mood, 0.5);
+          float n = fbm((vW.xz + wind) * 0.0032 + y * 0.004);
+          float d = gate * smoothstep(0.38, 0.72, n) + marine * smoothstep(0.52, 0.8, n) * 0.8;
+          // Distance softens every slice into the haze; up close it thins so the camera passes through.
+          float dist = length(vW - cameraPosition);
+          d *= smoothstep(20.0, 160.0, dist);
+          float a = clamp(d * 0.22, 0.0, 0.5);
+          // Lit from the sun on top, cooler in the body.
+          float top = smoothstep(0.45, 0.85, n);
+          float bright = mood < 0.5 ? 1.55 : (mood < 1.5 ? 1.15 : 0.55);
+          vec3 lit = fogCol * bright * (0.85 + 0.35 * top * clamp(sunDir.y * 2.0 + 0.3, 0.0, 1.0));
+          gl_FragColor = vec4(lit, a);
+          #include <colorspace_fragment>
+        }`,
+    });
+    for (let k = 0; k < 11; k++) {
+      const yk = 12 + k * 19;
+      const m = this.fogLayer.clone(); m.uniforms = this.fogLayer.uniforms;      // one set of uniforms for every slice
+      const slab = new THREE.Mesh(new THREE.PlaneGeometry(7000, 6000).rotateX(-Math.PI / 2), m);
+      slab.position.set(-2400, yk, -1400); slab.renderOrder = 10 + k; slab.name = 'fog'; this.scene.add(slab);
     }
+
     // A container ship making for the Gate, a speedboat on the Bay with its wake, the Wharf's Ferris wheel.
     this.ship = new THREE.Group();
     {
@@ -448,7 +520,7 @@ export class SanFrancisco {
       const py = sfHeight(380, 750);
       const bowl = new THREE.Mesh(new THREE.CylinderGeometry(150, 156, 30, 48, 1, true).translate(0, 15, 0), new THREE.MeshLambertMaterial({ color: 0xb59a7c, side: THREE.DoubleSide }));
       bowl.position.set(380, py, 750); bowl.scale.z = 0.85;
-      const field = new THREE.Mesh(new THREE.CircleGeometry(118, 40).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0x3f8a3a })); field.position.set(380, py + 0.6, 750); field.scale.z = 0.85;
+      const field = new THREE.Mesh(new THREE.CircleGeometry(118, 40).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x2f5e2a, roughness: 0.95 })); field.position.set(380, py + 0.6, 750); field.scale.z = 0.85;
       const seats = new THREE.Mesh(new THREE.RingGeometry(118, 150, 48).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0x4a6a48, side: THREE.DoubleSide })); seats.position.set(380, py + 22, 750); seats.scale.z = 0.85;
       const diamond = new THREE.Mesh(new THREE.PlaneGeometry(52, 52).rotateX(-Math.PI / 2).rotateY(Math.PI / 4), new THREE.MeshLambertMaterial({ color: 0xb08a5a })); diamond.position.set(380, py + 1.0, 780);
       this.scene.add(bowl, field, seats, diamond);
@@ -460,15 +532,6 @@ export class SanFrancisco {
       const arena = new THREE.Mesh(new THREE.CylinderGeometry(92, 98, 34, 40).translate(0, 17, 0), new THREE.MeshLambertMaterial({ color: 0xd9d6cf })); arena.position.set(430, ay, 1150); arena.scale.z = 0.8;
       const roof = new THREE.Mesh(new THREE.CircleGeometry(90, 40).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ color: 0xf4f4f2 })); roof.position.set(430, ay + 34.2, 1150); roof.scale.z = 0.8;
       this.scene.add(arena, roof);
-    }
-    // Lombard Street's hedges and flower beds in 3D, so the top-down shot has something to see.
-    {
-      const hedges = new Geo();
-      for (let i = 0; i < 8; i++) {
-        const x0 = -1160 + i * 20 + 3, z0 = -1146, y = sfHeight(x0 + 7, z0 + 15);
-        hedges.box(x0, z0, x0 + 14, z0 + 30, y - 1, y + 1.8, i % 2 ? [0.72, 0.28, 0.42] : [0.22, 0.45, 0.2]);
-      }
-      this.scene.add(new THREE.Mesh(hedges.geometry(), new THREE.MeshLambertMaterial({ vertexColors: true })));
     }
 
     this.shots = SanFrancisco.shotList();
@@ -486,16 +549,16 @@ export class SanFrancisco {
       (t: number, u: number, o: { pos: THREE.Vector3; look: THREE.Vector3 }) => { const a = a0 + (a1 - a0) * u, r = r0 + (r1 - r0) * u; o.pos.set(c.x + Math.cos(a) * r, h0 + (h1 - h0) * u, c.z + Math.sin(a) * r); o.look.set(c.x, lookH, c.z); void t; };
     return [
       // Daylight
-      { dur: 7, mood: 'DAY', fov: 30, pose: (t, u, o) => { o.pos.copy(lerp(V3(-3380, 150, -2000), V3(-3560, 135, -2320), ease(u))); o.look.copy(GG_N).setY(205); } },                    // along the cables to the north tower
-      { dur: 5, mood: 'DAY', fov: 34, pose: (t, u, o) => { o.pos.set(FERRY.x + 40, 300 - u * 40, FERRY.z + 60); o.look.set(FERRY.x + 40, 0, FERRY.z + 61); o.roll = u * 0.35; } },    // straight down over the piers, slowly turning
+      { dur: 7, mood: 'DAY', fov: 34, pose: (t, u, o) => { o.pos.copy(lerp(V3(-3230, 120, -2030), V3(-3420, 110, -2330), ease(u))); o.look.copy(GG_N).setY(190); } },                    // along the cables to the north tower
+      { dur: 5, mood: 'DAY', fov: 36, pose: (t, u, o) => { o.pos.set(SALES.x - 60 + u * 30, 620 - u * 60, SALES.z - 40); o.look.set(SALES.x - 60 + u * 30, 0, SALES.z - 39); o.roll = 0.3 + u * 0.25; } },    // straight down on the Salesforce Tower and its shadow, slowly turning
       { dur: 8, mood: 'DAY', fov: 40, pose: (t, u, o) => { o.pos.copy(lerp(V3(760, 430, 1050), V3(640, 400, 320), u)); o.look.copy(lerp(V3(200, 140, -200), V3(120, 160, -320), u)); } },   // high over the Bay Bridge, fog on the towers
       { dur: 6, mood: 'DAY', fov: 36, pose: (t, u, o) => { o.pos.copy(lerp(V3(-760, 150, -1010), V3(-520, 160, -830), u)); o.look.copy(TRANS).setY(150); } },                            // North Beach toward the Pyramid
       { dur: 5, mood: 'DAY', fov: 36, pose: (t, u, o) => { o.pos.copy(lerp(V3(-800, 210, -1520), V3(-680, 200, -1470), u)); o.look.copy(COIT).setY(115); } },                             // Coit Tower
-      { dur: 5, mood: 'DAY', fov: 34, pose: (t, u, o) => { o.pos.set(-1080 + u * 20, 230 - u * 70, -1131); o.look.set(-1080 + u * 20, 0, -1130); o.roll = 0.2; } },                     // Lombard, straight down, descending
+      { dur: 5, mood: 'DAY', fov: 40, pose: (t, u, o) => { o.pos.set(-1080 + u * 20, 330 - u * 80, -1131); o.look.set(-1080 + u * 20, 0, -1130); o.roll = 0.2; } },                     // Lombard, straight down, descending
       { dur: 7, mood: 'DAY', fov: 36, pose: (t, u, o) => { o.pos.copy(lerp(V3(760, 320, 950), V3(470, 130, 330), ease(u))); o.look.copy(FERRY).setY(30); } },                             // down the piers to the Embarcadero
       { dur: 7, mood: 'DAY', fov: 34, pose: (t, u, o) => { o.pos.copy(lerp(V3(1520, 125, -150), V3(820, 115, -60), u)); o.look.copy(lerp(V3(600, 100, -330), V3(250, 130, -350), u)); } },   // along the Bay Bridge, the city through the trusses
       { dur: 7, mood: 'DAY', fov: 34, pose: (t, u, o, w) => { const b = w.boat.position; o.pos.set(b.x + 20, 160, b.z + 30); o.look.copy(lerp(b.clone(), V3(60, 160, -420), ease(Math.max(0, (u - 0.45) / 0.55)))); } },   // the speedboat, then up to the skyline
-      { dur: 7, mood: 'DAY', fov: 34, pose: (t, u, o) => { o.pos.copy(lerp(V3(60, 200, -430), V3(-40, 130, -380), u)); o.look.copy(lerp(V3(-60, 170, -500), SALES.clone().setY(170), u)); } },   // downtown canyon
+      { dur: 7, mood: 'DAY', fov: 36, pose: (t, u, o) => { o.pos.copy(lerp(V3(-420, 150, 125), V3(-140, 115, 75), ease(u))); o.look.copy(FERRY).setY(40); } },   // down Market Street to the Ferry Building
       { dur: 7, mood: 'DAY', fov: 36, pose: orbit(ORACLE, 300, 200, 230, 150, 0.4, 1.9, 40) },                                                                                            // Oracle Park, descending orbit
       { dur: 6, mood: 'DAY', fov: 34, pose: (t, u, o) => { o.pos.copy(lerp(V3(-1560, 190, -1380), V3(-1360, 180, -1430), u)); o.look.copy(lerp(WHEEL.clone().setY(60), ALC.clone().setY(30), ease(Math.max(0, (u - 0.5) / 0.5)))); } },   // the Wharf, then Alcatraz
       // Golden hour
@@ -509,7 +572,68 @@ export class SanFrancisco {
     ];
   }
 
-  /** Soft cloud for the fog banks. */
+  /** The front of a row house: three floors of paired sash windows over a garage, a cornice at the top. Tinted per house. */
+  private static rowhouseTextures() {
+    const W = 256, H = 384;
+    const mk = (night: boolean) => {
+      const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d')!;
+      const r = mulberry(night ? 17 : 5);
+      g.fillStyle = night ? '#000' : '#f4f1ea'; g.fillRect(0, 0, W, H);
+      if (!night) {
+        g.fillStyle = 'rgba(0,0,0,0.05)'; for (let y = 0; y < H; y += 6) g.fillRect(0, y, W, 1);         // siding lines
+        g.fillStyle = '#ffffff'; g.fillRect(0, 0, W, 26); g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(0, 26, W, 4);   // cornice and its shadow
+        g.fillStyle = 'rgba(0,0,0,0.18)'; g.fillRect(0, 30, W, 3);
+      }
+      const floors = 3, fh = (H - 30 - 90) / floors;
+      for (let f = 0; f < floors; f++) for (const x of [34, 150]) {
+        const y = 30 + f * fh + fh * 0.18, w = 72, h = fh * 0.62;
+        if (night) { if (r() < 0.5) { g.fillStyle = r() < 0.7 ? 'rgba(255,196,120,0.95)' : 'rgba(210,225,255,0.9)'; g.fillRect(x, y, w, h); } continue; }
+        g.fillStyle = '#ffffff'; g.fillRect(x - 5, y - 5, w + 10, h + 12);                                  // trim
+        const gr = g.createLinearGradient(x, y, x + w, y + h); gr.addColorStop(0, '#46545e'); gr.addColorStop(1, '#1c2329');
+        g.fillStyle = gr; g.fillRect(x, y, w, h);
+        g.fillStyle = '#f2f2f2'; g.fillRect(x, y + h * 0.48, w, 3); g.fillRect(x + w / 2 - 1.5, y, 3, h);
+        g.fillStyle = 'rgba(255,255,255,0.12)'; g.fillRect(x + 3, y + 3, w * 0.4, h * 0.4);                 // sky in the glass
+      }
+      // Ground floor: garage door and the entry stair.
+      if (!night) {
+        g.fillStyle = '#d9d6cf'; g.fillRect(0, H - 90, W, 90);
+        g.fillStyle = '#6f6a62'; g.fillRect(24, H - 76, 120, 76); g.fillStyle = 'rgba(0,0,0,0.25)'; for (let y = H - 76; y < H; y += 12) g.fillRect(24, y, 120, 2);
+        g.fillStyle = '#4a3a2e'; g.fillRect(178, H - 80, 44, 80); g.fillStyle = '#ffffff'; g.fillRect(172, H - 86, 56, 6);
+      } else if (r() < 0.6) { g.fillStyle = 'rgba(255,200,130,0.8)'; g.fillRect(186, H - 76, 28, 20); }
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+    };
+    return { map: mk(false), night: mk(true) };
+  }
+
+  /** A bay window: three tall panes framed in white. */
+  private static bayTextures() {
+    const mk = (night: boolean) => {
+      const c = document.createElement('canvas'); c.width = 128; c.height = 128; const g = c.getContext('2d')!;
+      g.fillStyle = night ? '#000' : '#f6f4ee'; g.fillRect(0, 0, 128, 128);
+      for (let f = 0; f < 2; f++) {
+        const y = 10 + f * 60, h = 44;
+        if (night) { g.fillStyle = f ? 'rgba(255,190,110,0.9)' : 'rgba(255,214,150,0.85)'; g.fillRect(10, y, 108, h); continue; }
+        const gr = g.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, '#55646e'); gr.addColorStop(1, '#1d242a');
+        g.fillStyle = gr; g.fillRect(10, y, 108, h);
+        g.fillStyle = '#ffffff'; g.fillRect(44, y, 4, h); g.fillRect(80, y, 4, h); g.fillRect(10, y + h * 0.45, 108, 3);
+      }
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+    };
+    return { map: mk(false), night: mk(true) };
+  }
+
+  /** A flat tar-and-gravel roof with its parapet edge and a skylight. */
+  private static flatRoofTexture() {
+    const c = document.createElement('canvas'); c.width = 128; c.height = 128; const g = c.getContext('2d')!;
+    const r = mulberry(8);
+    g.fillStyle = '#8a8884'; g.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 900; i++) { const v = 110 + r() * 60; g.fillStyle = `rgb(${v},${v - 2},${v - 6})`; g.fillRect(r() * 128, r() * 128, 1.5, 1.5); }
+    g.fillStyle = '#d8d6d0'; g.fillRect(0, 0, 128, 6); g.fillRect(0, 122, 128, 6); g.fillRect(0, 0, 6, 128); g.fillRect(122, 0, 6, 128);
+    g.fillStyle = '#9fb2bc'; g.fillRect(52, 40, 22, 30);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+  }
+
+  /** Soft cloud for the fog banks (kept for the Ferris wheel's lights and future use). */
   private static fogTexture() {
     const c = document.createElement('canvas'); c.width = 256; c.height = 128;
     const g = c.getContext('2d')!;
@@ -531,7 +655,7 @@ export class SanFrancisco {
 
   /** The street map painted onto the ground: blocks, streets and the shores. Emissive pass draws the street lighting. */
   private paintMap(size: number, emissive: boolean): HTMLCanvasElement {
-    const W = 3072, c = document.createElement('canvas'); c.width = c.height = W;
+    const W = 4096, c = document.createElement('canvas'); c.width = c.height = W;
     const g = c.getContext('2d')!, k = W / size, ox = W / 2, oz = W / 2;
     const px = (x: number) => ox + x * k, pz = (z: number) => oz + z * k;
     g.fillStyle = emissive ? '#000' : '#131516'; g.fillRect(0, 0, W, W);
@@ -543,7 +667,7 @@ export class SanFrancisco {
         if (m < 0.05) continue;
         const h = sfHeight(x, z);
         const city = x > -2700 && z > -1600 && z < 600 && x < 400;
-        const r = city ? 104 : 66 + h * 0.08, gg = city ? 97 : 76 + h * 0.06, b = city ? 88 : 50;
+        const r = city ? 104 : 104 + h * 0.05, gg = city ? 97 : 98 + h * 0.03, b = city ? 88 : 62;
         const hash = ((i * 7 + j * 13) % 17) / 17 * 10 - 5;
         for (let jj = 0; jj < step; jj++) for (let ii = 0; ii < step; ii++) { const o = ((j + jj) * W + i + ii) * 4; d[o] = (r + hash) * m + 19 * (1 - m); d[o + 1] = (gg + hash) * m + 21 * (1 - m); d[o + 2] = (b + hash) * m + 22 * (1 - m); }
       }
@@ -566,7 +690,7 @@ export class SanFrancisco {
       g.beginPath(); g.moveTo(px(-1160), pz(-1150));
       for (let i = 0; i <= 8; i++) g.lineTo(px(-1160 + i * 20), pz(i % 2 ? -1112 : -1150));
       g.stroke();
-      for (let i = 0; i < 8; i++) { g.fillStyle = i % 2 ? '#c94a7a' : '#4f8a3c'; g.fillRect(px(-1160 + i * 20 + 4), pz(-1146), 12 * k, 30 * k); }
+      for (let i = 0; i < 8; i++) { g.fillStyle = i % 2 ? '#6d4a58' : '#3d5a36'; g.fillRect(px(-1160 + i * 20 + 5), pz(-1144), 9 * k, 26 * k); }
     }
     // Piers along the Embarcadero.
     if (!emissive) { g.fillStyle = '#4a4a4c'; for (let z = 300; z > -1400; z -= 130) { const x = shoreX(z); g.save(); g.translate(px(x), pz(z)); g.rotate(-0.18); g.fillRect(0, -9 * k, 120 * k, 18 * k); g.restore(); } }
@@ -584,11 +708,11 @@ export class SanFrancisco {
   }
 
   /** A suspension bridge from A to B: towers, cables, suspenders and the deck, with its lights. */
-  private bridge(a: THREE.Vector3, b: THREE.Vector3, color: number, towerH: number, golden: boolean, glow: THREE.Texture): THREE.MeshLambertMaterial {
+  private bridge(a: THREE.Vector3, b: THREE.Vector3, color: number, towerH: number, golden: boolean, glow: THREE.Texture): THREE.MeshStandardMaterial {
     const dir = b.clone().sub(a); const len = dir.length(); dir.normalize();
     const side = new THREE.Vector3(-dir.z, 0, dir.x);
     const deckY = golden ? 67 : 50, g = new Geo(), rgb: V = [((color >> 16) & 255) / 255, ((color >> 8) & 255) / 255, (color & 255) / 255];
-    const mat = new THREE.MeshLambertMaterial({ vertexColors: true, emissive: 0xffffff, emissiveIntensity: 0 });
+    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.55, metalness: 0.2 });
     const group = new THREE.Group(); this.scene.add(group);
     // Deck: a box along the span.
     const deckTex = SanFrancisco.deckTexture(); deckTex.wrapS = THREE.RepeatWrapping; deckTex.repeat.set(len / 40, 1);
@@ -639,8 +763,30 @@ export class SanFrancisco {
     return mat;
   }
 
+  /** The sky as an environment for reflections, one per time of day, made on first use. */
+  private envFor(mood: Mood): THREE.Texture | null {
+    if (!this.renderer) return null;
+    if (!this.env[mood]) {
+      const sky = this.sky.clone();
+      sky.uniforms = THREE.UniformsUtils.clone(this.sky.uniforms);
+      sky.uniforms.mood.value = MOOD_K[mood];
+      sky.uniforms.sunDir.value = (mood === 'BLUE' ? SUN_NIGHT : mood === 'GOLDEN' ? SUN_DUSK : SUN_DAY).clone();
+      const s = new THREE.Scene();
+      s.add(new THREE.Mesh(new THREE.SphereGeometry(100, 32, 16), sky));
+      // The city below the horizon: a dark warm ground so glass does not mirror sky downward.
+      const ground = new THREE.Mesh(new THREE.CircleGeometry(100, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: mood === 'BLUE' ? 0x06070b : mood === 'GOLDEN' ? 0x2a2420 : 0x3a3a38 }));
+      ground.position.y = -2; s.add(ground);
+      const pm = new THREE.PMREMGenerator(this.renderer);
+      this.env[mood] = pm.fromScene(s, 0, 0.5, 400).texture;
+      pm.dispose();
+    }
+    return this.env[mood] ?? null;
+  }
+
   /** The shot playing at this moment of the take, with the time into it. */
   shotAt(time: number): { shot: Shot; t: number; u: number; index: number } {
+    const dbg = (globalThis as { __sfShot?: number }).__sfShot;
+    if (typeof dbg === 'number' && this.shots[dbg]) { const sh = this.shots[dbg]; return { shot: sh, t: sh.dur * 0.55, u: 0.55, index: dbg }; }
     let t = ((time % this.total) + this.total) % this.total;
     for (let i = 0; i < this.shots.length; i++) { const sh = this.shots[i]; if (t < sh.dur) return { shot: sh, t, u: t / sh.dur, index: i }; t -= sh.dur; }
     const last = this.shots[this.shots.length - 1]; return { shot: last, t: last.dur, u: 1, index: this.shots.length - 1 };
@@ -655,17 +801,21 @@ export class SanFrancisco {
     this.mood = mood;
     const day = mood === 'DAY', golden = mood === 'GOLDEN', blue = mood === 'BLUE';
     for (const s of this.irSwap) (s.mesh as THREE.Mesh).material = ir ? s.ir : s.eo;
-    for (const m of this.facadeMats) m.emissiveIntensity = blue ? 1.3 : golden ? 0.7 : 0;
+    for (const m of this.facadeMats) m.emissiveIntensity = blue ? 1.3 : golden ? 0.35 : 0;
+    this.houseFront.emissiveIntensity = this.bayMat.emissiveIntensity = blue ? 1.1 : golden ? 0.25 : 0;
+    if (!ir) this.scene.environment = this.envFor(mood); else this.scene.environment = null;
     this.gndMat.emissiveIntensity = blue ? 0.9 : golden ? 0.55 : 0;
     this.lights.visible = !ir && !day; this.carLights.visible = !ir && !day; this.sunDisc.visible = !ir && !blue;
-    for (const b of this.banks) { b.visible = !ir; (b.material as THREE.SpriteMaterial).color.set(blue ? 0x1a2030 : golden ? 0xb8aa9c : 0xf0f2f4); }
-    for (const m of this.marine) m.visible = !ir && day;
+    this.scene.traverse(o => { if (o.name === 'fog') o.visible = !ir; });
+    this.fogLayer.uniforms.mood.value = MOOD_K[mood];
+    this.fogLayer.uniforms.fogCol.value.set(blue ? 0x28324a : golden ? 0xd9c3ae : 0xeef1f4);
     this.ggMat.emissive.set(blue ? 0xff9a3c : 0x000000); this.ggMat.emissiveIntensity = blue ? 0.5 : 0;
     this.bbMat.emissive.set(blue ? 0xdfe6ff : 0x000000); this.bbMat.emissiveIntensity = blue ? 0.35 : 0;
     this.scene.traverse(o => { if (o.name === 'night') o.visible = !ir && !day; });
     const wl = this.wheel.getObjectByName('lights'); if (wl) wl.visible = !ir && !day;
     const sunDir = blue ? SUN_NIGHT : golden ? SUN_DUSK : SUN_DAY;
     this.sky.uniforms.sunDir.value.copy(sunDir); this.sky.uniforms.mood.value = MOOD_K[mood];
+    this.fogLayer.uniforms.sunDir.value.copy(sunDir);
     this.water.uniforms.sunDir.value.copy(sunDir); this.water.uniforms.mood.value = MOOD_K[mood];
     this.sun.position.copy(sunDir).multiplyScalar(4000);
     if (ir) {
@@ -676,10 +826,10 @@ export class SanFrancisco {
       this.sun.color.set(0x6a7fc0); this.sun.intensity = 0.3; this.hemi.color.set(0x1e2a4c); this.hemi.groundColor.set(0x0e0c12); this.hemi.intensity = 0.75;
     } else if (golden) {
       this.scene.background = null; this.fog.color.set(0x8a7d78); this.fog.density = 0.00042;
-      this.sun.color.set(0xffc48a); this.sun.intensity = 2.2; this.hemi.color.set(0x8ea8d8); this.hemi.groundColor.set(0x4a3a2c); this.hemi.intensity = 1.3;
+      this.sun.color.set(0xffc48a); this.sun.intensity = 2.8; this.hemi.color.set(0x8ea8d8); this.hemi.groundColor.set(0x4a3a2c); this.hemi.intensity = 0.8;
     } else {
-      this.scene.background = null; this.fog.color.set(0x9fb6cc); this.fog.density = 0.00014;
-      this.sun.color.set(0xfff4e6); this.sun.intensity = 2.6; this.hemi.color.set(0xbcd4f0); this.hemi.groundColor.set(0x8a8070); this.hemi.intensity = 1.4;
+      this.scene.background = null; this.fog.color.set(0xa9bfd4); this.fog.density = 0.00013;
+      this.sun.color.set(0xfff4e6); this.sun.intensity = 2.3; this.hemi.color.set(0xbcd4f0); this.hemi.groundColor.set(0x8a8070); this.hemi.intensity = 0.75;
     }
     this.lightMat.opacity = blue ? 1 : 0.85; this.lightMat.size = blue ? 11 : 8;
     this.sunDisc.position.copy(sunDir).multiplyScalar(7800);
@@ -691,7 +841,7 @@ export class SanFrancisco {
   update(dt: number) {
     this.t += dt;
     this.water.uniforms.time.value = this.t;
-    for (const b of [...this.banks, ...this.marine]) { b.position.x = b.userData.x0 + ((this.t * b.userData.drift) % 900); if (b.position.x > b.userData.x0 + 600) b.position.x -= 900; }
+    this.fogLayer.uniforms.time.value = this.t;
     // The container ship crosses the strait into the Bay; the speedboat runs out toward Alcatraz; the wheel turns.
     { const u = (this.t * 6) % 1700; this.ship.position.set(-4100 + u * 0.88, 0.5, -2650 + u * 0.35); this.ship.rotation.y = -Math.atan2(0.35, 0.88); }
     { const u = (this.t * 14) % 1500, a = new THREE.Vector3(250, 0.4, -600), b = new THREE.Vector3(-650, 0.4, -1950); this.boat.position.copy(a).lerp(b, u / 1500); this.boat.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x); }
@@ -736,6 +886,13 @@ export class SanFrancisco {
     cam.lookAt(o.look);
     cam.up.set(0, 1, 0);
     cam.updateMatrixWorld();
+    // Shadows cover the ground the shot is looking at: where the line of sight meets the city, or the look point.
+    const dirV = o.look.clone().sub(o.pos).normalize();
+    const tHit = dirV.y < -0.05 ? Math.min(o.pos.y / -dirV.y, 900) : 350;
+    const focus = o.pos.clone().addScaledVector(dirV, tHit).setY(0);
+    const sd0 = (this.forcedNight || shot.mood === 'BLUE' ? SUN_NIGHT : shot.mood === 'GOLDEN' ? SUN_DUSK : SUN_DAY);
+    this.sun.target.position.copy(focus); this.sun.position.copy(focus).addScaledVector(sd0, 3000);
+    this.sun.target.updateMatrixWorld();
     const mood: Mood = this.forcedNight ? 'BLUE' : shot.mood;
     const sunDir = mood === 'BLUE' ? SUN_NIGHT : mood === 'GOLDEN' ? SUN_DUSK : SUN_DAY;
     const sd = sunDir.clone().multiplyScalar(7800).project(cam);

@@ -293,7 +293,7 @@ class Engine {
   }
 
   private sfWorld() {
-    if (!this.sf) this.sf = new SanFrancisco(this.renderer.capabilities.getMaxAnisotropy(), glowTex());
+    if (!this.sf) this.sf = new SanFrancisco(this.renderer.capabilities.getMaxAnisotropy(), glowTex(), this.renderer);
     return this.sf;
   }
 
