@@ -1,6 +1,6 @@
 ---
 name: scroll-reveal
-description: "The hero where scrolling drives a transformation — an empty venue dressing itself, a house building itself, a bare product assembling. Load it whenever a landing page needs a hero that earns attention, whenever a request mentions scroll-triggered, scrollytelling, scroll animation or a timelapse on a site, and whenever a video is about to be used as a hero. It holds: the one rule that decides whether a generated clip is safe to use here or will wreck the brand; the three sources of frames ranked by control; the exact Higgsfield/Seedance call for a backwards transformation from a single photo; why scrubbing an MP4 breaks on mobile Safari and what to do instead; the frame-conversion command; the proven scrub implementation with the four things that stop it stuttering; the measured weight budget; and recipes for All in 1 Events and client work. Use it before building any scroll-driven hero and before putting a video on a landing page. Skip it for app surfaces, dashboards and anything behind a login."
+description: "The hero where scrolling drives a transformation — an empty venue dressing itself, a house building itself, a bare product assembling. Load it whenever a landing page needs a hero that earns attention, whenever a request mentions scroll-triggered, scrollytelling, scroll animation or a timelapse on a site, and whenever a video is about to be used as a hero. It holds: the one rule that decides whether a generated clip is safe to use here or will wreck the brand; the three sources of frames ranked by control; the exact Higgsfield/Seedance call that anchors a transformation on a real photo of the finished state, and the tempting parameter that fails; why scrubbing an MP4 breaks on mobile Safari and what to do instead; the frame-conversion command; the proven scrub implementation with the four things that stop it stuttering; the measured weight budget; and recipes for All in 1 Events and client work. Use it before building any scroll-driven hero and before putting a video on a landing page. Skip it for app surfaces, dashboards and anything behind a login."
 ---
 
 # Scroll as the playhead
@@ -38,14 +38,24 @@ photograph it instead. Do not prompt harder; the category will not bend.
 
 ## Generating the transformation
 
-Via **Higgsfield**, which is connected. The trick is to start from a photo of
-the *finished* state and run it **backwards**, because the finished state is
-the one that has to be right.
+Via **Higgsfield**, which is connected. The finished state is the one that has
+to be right, so **anchor on it**: pass the photo of the finished setup as the
+**`end_image`** and prompt for the process that arrives there. The model
+generates toward your real photo, so the last frame is guaranteed to be
+something you shot rather than something it invented.
 
 | Model | Use |
 |---|---|
-| `seedance_2_5` | `mode: "video_extension"` + `extension_mode: "backward"`, up to 30s, max 1080p |
-| `seedance_2_0` | `mode: "std"`, **4K**, `supports_unlim` on some allowances |
+| `seedance_2_5` | `mode: "omni_reference"`, finished photo as `end_image`, 4–30s, max 1080p |
+| `seedance_2_0` | finished photo as `end_image`, `mode: "std"` for **4K** |
+
+**Do not use `video_extension` for this.** Its `extension_mode: "backward"`
+looks like the obvious fit and is not: it extends an existing *reference
+video*, so it cannot start from a single photo. It is the right tool only once
+you already have a clip and want more of it.
+
+Confirm model ids with `models_explore` before spending — Higgsfield's
+catalogue changes.
 
 Set `generate_audio: false` — a hero is muted, and the audio is wasted spend.
 Keep the camera locked: a moving camera plus a scrubbing playhead reads as
@@ -119,7 +129,7 @@ Never commit frames to git — they regenerate.
 
 - **All in 1 Events** — bare room, house lights up, folded tables. Scroll and
   the event assembles: uplighting, lounge set, drape, dance floor, photo booth.
-  Start from a photo of a real finished setup and run it backwards.
+  A photo of a real finished setup is the `end_image`.
 - **A venue or wedding client** — empty hall to full reception.
 - **A construction or trades client** — the original: finished build backwards
   to foundations.
