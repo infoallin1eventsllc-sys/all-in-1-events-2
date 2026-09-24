@@ -22,10 +22,11 @@ SITL / benchmark / radio / FAA-waiver labs — sits one click further in, under
 ## Portfolio demo
 
 Opened with no aircraft, the console is a working demo (a Meridian Interface case
-study). **Overview** is the front door: a cinematic hero (a fleet of quadcopters in a
-dark sky that re-forms as the page scrolls, rendered live in Three.js with bloom and
-light trails; a still frame under reduced motion), the three products and what sits
-underneath. **Take the tour** (or press
+study). **Overview** is the front door: a cinematic scroll-reveal hero (a fleet of
+quadcopters in a dark sky, rendered live in Three.js with bloom and light trails; the
+stage pins while the visitor scrolls, the headline lifts away, the light show, survey
+and patrol each take the screen, and the fleet re-forms with the same scroll; a static
+hero under reduced motion), the three products and what sits underneath. **Take the tour** (or press
 `t`) walks through each screen and can press the one button that brings it to life.
 A first visit gets labelled sample content so no page is empty: three recorded
 flights with paths, three months of fleet history, and health reports where motor 3
@@ -42,6 +43,16 @@ free Pexels API key (`PEXELS_KEY` for the script, `VITE_PEXELS_KEY` for the buil
 resolves exact files. If a clip can't load, the feed falls back to a 3D city
 simulation with traffic, people and thermal signatures, which is also the offline
 option. The clip list is `src/dashboards/feed/footage.ts`. When the footage can't play, the San Francisco feed shows the **opening take** instead (`src/dashboards/feed/sf.ts`): one continuous flight rendered live, low round the Salesforce Tower and the Transamerica Pyramid, out over the Embarcadero, the Golden Gate through rolling fog into the sunset as the hero reveal, then back over the Victorian rooftops and cable-car wires, with a feature grade (teal shadows, warm highlights, grain, lens flare) in the sensor stage. It is also a choice under Video source, and the thermal and night-vision modes run on it.
+
+**Fleet lab.** `lab/fleet.html` (dev server only, not part of the build) shows six
+more airframes in the hero's scene, lighting and grade: a cinema heavy-lift
+hexacopter, a freestyle FPV quad, an enterprise security quad with thermal and a
+searchlight, a light-show drone, a VTOL fixed-wing mapper and a heavy-lift cargo X8.
+They are in `src/components/hero/droneVariants.ts`; the app still flies the
+Mavic-class model. Open `/drone/lab/fleet.html?v=cinema` (or `fpv`, `enterprise`,
+`show`, `vtol`, `cargo`) under `npm run dev`. With `&capture`, the page renders any
+moment of the shot on request (`window.__shot(t)` returns a PNG), which is how the
+clips in `portfolio/fleet/` were made.
 
 ## Operators, the record and the server
 
