@@ -230,7 +230,8 @@ function frame(t: number) {
   if (id === 'fpv') tg.add(crafts[0].holder.position);           // the fast one: the camera keeps it framed
   cam.position.set(tg.x + Math.sin(az) * d, tg.y + shot.lift + Math.sin(t * 0.37) * 0.06, tg.z + Math.cos(az) * d);
   cam.lookAt(tg.x, tg.y + Math.sin(t * 0.23) * 0.03, tg.z);
-  kicker.position.copy(cam.position).add(new THREE.Vector3(3, 5, 1));
+  // The kicker follows the camera's side of the subject but keeps the hero's distance (about 14), so highlights stay small and sharp.
+  kicker.position.copy(cam.position).sub(tg).setLength(14).add(tg).add(new THREE.Vector3(3, 5, 1));
   beams.forEach(({ b, rz }, k) => { b.rotation.z = rz + Math.sin(t * 0.08 + k) * 0.05; });
 
   const pos = moteGeo.getAttribute('position') as THREE.BufferAttribute;
@@ -248,6 +249,7 @@ declare global { interface Window { __shot?: (t: number) => string; __still?: nu
 if (capture) {
   window.__shot = (t: number) => { frame(t); return renderer.domElement.toDataURL('image/png'); };
   window.__still = shot.still; window.__duration = DURATION; window.__ready = true;
+  (window as unknown as { __mats: typeof M }).__mats = M;          // lets a capture script isolate a material while tuning
 } else {
   const t0 = performance.now();
   const loop = (now: number) => { frame(((now - t0) / 1000) % DURATION); requestAnimationFrame(loop); };

@@ -118,10 +118,10 @@ function carbonTexture(): THREE.Texture {
 export function variantMaterials(): Record<string, THREE.Material> {
   const weave = carbonTexture();
   return {
-    weave: new THREE.MeshPhysicalMaterial({ map: weave, color: 0xffffff, metalness: 0.3, roughness: 0.38, clearcoat: 0.7, clearcoatRoughness: 0.18 }),
-    gunmetal: new THREE.MeshPhysicalMaterial({ color: 0x3b4048, metalness: 0.65, roughness: 0.34, clearcoat: 0.4, clearcoatRoughness: 0.3 }),
+    weave: new THREE.MeshPhysicalMaterial({ map: weave, color: 0xffffff, metalness: 0.15, roughness: 0.62, clearcoat: 0.25, clearcoatRoughness: 0.5 }),   // satin: a big flat plate must not mirror the rim light
+    gunmetal: new THREE.MeshPhysicalMaterial({ color: 0x3b4048, metalness: 0.5, roughness: 0.46, clearcoat: 0.25, clearcoatRoughness: 0.5 }),
     copper: new THREE.MeshStandardMaterial({ color: 0xb8703f, metalness: 0.92, roughness: 0.3 }),
-    gloss: new THREE.MeshPhysicalMaterial({ color: 0xc3c8ce, metalness: 0.02, roughness: 0.4, clearcoat: 0.7, clearcoatRoughness: 0.2 }),
+    gloss: new THREE.MeshPhysicalMaterial({ color: 0xb2b7be, metalness: 0.02, roughness: 0.48, clearcoat: 0.45, clearcoatRoughness: 0.35 }),
     enterprise: new THREE.MeshPhysicalMaterial({ color: 0x2a2e34, metalness: 0.2, roughness: 0.6, clearcoat: 0.15, clearcoatRoughness: 0.6 }),
     enterpriseTop: new THREE.MeshPhysicalMaterial({ color: 0x565c65, metalness: 0.2, roughness: 0.5, clearcoat: 0.3, clearcoatRoughness: 0.4 }),
     matte: new THREE.MeshStandardMaterial({ color: 0x1b1d21, metalness: 0.1, roughness: 0.78 }),
