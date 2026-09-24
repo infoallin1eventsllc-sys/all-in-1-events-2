@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, ScanLine, Eye, HeartPulse, BarChart3, Archive, Radio, Smartphone, ShieldCheck, Cpu, ArrowRight } from 'lucide-react';
+import { Sparkles, ScanLine, Eye, HeartPulse, BarChart3, Archive, Radio, Smartphone, ShieldCheck, Cpu, ArrowRight, Gamepad2 } from 'lucide-react';
 import { ScrollHero } from './hero/ScrollHero';
 
 /**
@@ -10,20 +10,21 @@ import { ScrollHero } from './hero/ScrollHero';
  * renderer flying 100 aircraft, not a picture), and hand them a guided tour.
  */
 
-type Target = 'LIGHT_SHOW_OPS' | 'SURVEY_OPS' | 'SURVEILLANCE_OPS' | 'HEALTH' | 'ANALYTICS' | 'RECORDS' | 'PLATFORM';
+type Target = 'LIGHT_SHOW_OPS' | 'SURVEY_OPS' | 'SURVEILLANCE_OPS' | 'HEALTH' | 'CONTROL' | 'ANALYTICS' | 'RECORDS' | 'PLATFORM';
 
 interface Props { onOpen: (t: Target) => void; onTour: () => void }
 
 const BASE = import.meta.env.BASE_URL;
 
 const PRODUCTS: { id: Target; icon: React.ReactNode; name: string; line: string; facts: string[]; img: string; accent: string }[] = [
-  { id: 'LIGHT_SHOW_OPS', icon: <Sparkles />, name: 'Light shows', line: 'Conduct a 100-aircraft show from the front of house, with the pre-flight checks that hold the launch.', facts: ['Eleven living formations: phoenix, lotus, fireworks, wedding rings, a countdown, any name in lights', 'One-button abort: lights out, controlled descent', 'Export to the show-control stack'], img: 'show', accent: '#5b5bd6' },
+  { id: 'LIGHT_SHOW_OPS', icon: <Sparkles />, name: 'Light shows', line: 'Conduct a show of up to 500 aircraft from the front of house, with the pre-flight checks that hold the launch.', facts: ['Eleven living formations: phoenix, lotus, fireworks, wedding rings, a countdown, any name in lights', 'Fleet health for 100, 250 or 500 aircraft on one screen', 'One-button abort: lights out, controlled descent'], img: 'show', accent: '#5b5bd6' },
   { id: 'SURVEY_OPS', icon: <ScanLine />, name: 'Site survey', line: 'Map a venue before the build: plan from the camera maths, watch the site develop, re-fly the weak spots.', facts: ['Orthomosaic, 3D model or inspection orbit', 'Coverage checked in flight, not back at the office', 'Mission upload and a processing package'], img: 'survey', accent: '#c2410c' },
   { id: 'SURVEILLANCE_OPS', icon: <Eye />, name: 'Security patrol', line: 'Overnight patrols with thermal video from four aircraft, detections queued for the security team.', facts: ['Night protocol switches every camera to thermal', 'Gimbal, zoom, spotlight on the real aircraft', 'Patrol route uploaded as a mission'], img: 'patrol', accent: '#0d9488' },
 ];
 
 const INSIDE: { id: Target; icon: React.ReactNode; name: string; line: string; img: string }[] = [
-  { id: 'HEALTH', icon: <HeartPulse />, name: 'Aircraft health', line: 'Which part is failing, in flight and after landing: a chipped prop, a worn motor, a twisted arm.', img: 'health' },
+  { id: 'HEALTH', icon: <HeartPulse />, name: 'Aircraft health', line: 'Which part is failing, for one aircraft or the whole fleet: a chipped prop, a worn motor, a twisted arm.', img: 'health' },
+  { id: 'CONTROL', icon: <Gamepad2 />, name: 'Control', line: 'Fly one aircraft, or command up to 500 at once: take off, hold, go to, return home, each command acknowledged.', img: 'control' },
   { id: 'ANALYTICS', icon: <BarChart3 />, name: 'Analytics', line: 'Flight hours by product, which aircraft are due for service, and what went wrong.', img: 'analytics' },
   { id: 'RECORDS', icon: <Archive />, name: 'Flight records', line: 'Every flight with its path and every command given: the record for an insurer or a venue.', img: 'records' },
 ];
@@ -32,7 +33,7 @@ const PROOF: { icon: React.ReactNode; title: string; body: string }[] = [
   { icon: <Radio />, title: 'Flies real aircraft', body: 'Speaks MAVLink to ArduPilot and PX4 flight controllers over Bluetooth, a USB radio or the network. The protocol is checked byte for byte against the reference implementation.' },
   { icon: <Smartphone />, title: 'Phone, tablet or laptop', body: 'Installs to the home screen and reopens offline at a venue with no signal. iPhone and iPad connect through a small bridge on the aircraft.' },
   { icon: <ShieldCheck />, title: 'Safety is built in', body: 'Pre-flight gates hold the arm button, a fault in the air reaches whatever screen is open, and every command is on the record.' },
-  { icon: <Cpu />, title: 'Tested like flight software', body: 'Seven automated test suites and end-to-end runs against a stand-in autopilot through the real bridge, on every change.' },
+  { icon: <Cpu />, title: 'Tested like flight software', body: 'Twelve automated test suites and end-to-end runs against a stand-in autopilot through the real bridge, on every change.' },
 ];
 
 /** The hero: the actual show renderer, cycling formations. */
@@ -79,7 +80,7 @@ export const OverviewView: React.FC<Props> = ({ onOpen, onTour }) => (
     <section aria-labelledby="ov-inside">
       <h2 id="ov-inside" className="text-[22px] font-semibold tracking-[-0.01em] text-ink">Behind every flight</h2>
       <p className="mt-1 mb-4 text-[14px] text-ink-2">What keeps the fleet flying and the business honest.</p>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {INSIDE.map(p => (
           <button key={p.id} onClick={() => onOpen(p.id)} className="group text-left bg-surface border border-line rounded-[var(--radius-card)] overflow-hidden hover:border-line-2 transition-colors">
             <div className="aspect-[16/9] overflow-hidden bg-surface-2 border-b border-line"><Shot name={p.img} alt={`${p.name} screen`} /></div>

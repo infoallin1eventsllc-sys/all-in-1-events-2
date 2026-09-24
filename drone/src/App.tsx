@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { useSwarmSimulation } from './hooks/useSwarmSimulation';
 import { RadarCanvas } from './components/RadarCanvas';
 import { FleetControls } from './components/FleetControls';
@@ -11,25 +11,45 @@ import { ProtocolBenchmarkModal } from './components/ProtocolBenchmarkModal';
 import { SecurityProtocolModal } from './components/SecurityProtocolModal';
 import { DatabaseArchitectureModal } from './components/DatabaseArchitectureModal';
 import { GazeboSITLModal } from './components/GazeboSITLModal';
-import { LightShowStudioView } from './components/lightshow/LightShowStudioView';
-import { LiveDroneCockpitView } from './components/cockpit/LiveDroneCockpitView';
 import { WebSerialRadioBridgeModal } from './components/production/WebSerialRadioBridgeModal';
 import { RegulatoryComplianceModal } from './components/production/RegulatoryComplianceModal';
-import { LightShowDashboard } from './dashboards/LightShowDashboard';
-import { SurveyDashboard } from './dashboards/SurveyDashboard';
-import { SurveillanceDashboard } from './dashboards/SurveillanceDashboard';
 import { LinkButton } from './link/LinkButton';
-import { PlatformView } from './dashboards/PlatformView';
-import { RecordsView } from './dashboards/RecordsView';
-import { AnalyticsView } from './dashboards/AnalyticsView';
-import { HealthView } from './dashboards/HealthView';
-import { ControlView } from './dashboards/control/ControlView';
 import { OverviewView } from './dashboards/OverviewView';
 import { DemoTour, type TourView } from './dashboards/DemoTour';
 import { useHealth } from './diagnostics/useHealth';
 import { InstallButton } from './dashboards/InstallButton';
 import { OperatorMenu } from './operator/OperatorMenu';
 import { ErrorBoundary } from './dashboards/ErrorBoundary';
+
+// The heavier views load on first use, so the landing page (Overview) opens fast; once the page is idle
+// every view is fetched in the background, so they are cached for offline use (public/sw.js).
+const VIEWS = {
+  LightShowDashboard: () => import('./dashboards/LightShowDashboard'),
+  SurveyDashboard: () => import('./dashboards/SurveyDashboard'),
+  SurveillanceDashboard: () => import('./dashboards/SurveillanceDashboard'),
+  PlatformView: () => import('./dashboards/PlatformView'),
+  RecordsView: () => import('./dashboards/RecordsView'),
+  AnalyticsView: () => import('./dashboards/AnalyticsView'),
+  HealthView: () => import('./dashboards/HealthView'),
+  ControlView: () => import('./dashboards/control/ControlView'),
+  LightShowStudioView: () => import('./components/lightshow/LightShowStudioView'),
+  LiveDroneCockpitView: () => import('./components/cockpit/LiveDroneCockpitView'),
+};
+const LightShowDashboard = lazy(() => VIEWS.LightShowDashboard().then(m => ({ default: m.LightShowDashboard })));
+const SurveyDashboard = lazy(() => VIEWS.SurveyDashboard().then(m => ({ default: m.SurveyDashboard })));
+const SurveillanceDashboard = lazy(() => VIEWS.SurveillanceDashboard().then(m => ({ default: m.SurveillanceDashboard })));
+const PlatformView = lazy(() => VIEWS.PlatformView().then(m => ({ default: m.PlatformView })));
+const RecordsView = lazy(() => VIEWS.RecordsView().then(m => ({ default: m.RecordsView })));
+const AnalyticsView = lazy(() => VIEWS.AnalyticsView().then(m => ({ default: m.AnalyticsView })));
+const HealthView = lazy(() => VIEWS.HealthView().then(m => ({ default: m.HealthView })));
+const ControlView = lazy(() => VIEWS.ControlView().then(m => ({ default: m.ControlView })));
+const LightShowStudioView = lazy(() => VIEWS.LightShowStudioView().then(m => ({ default: m.LightShowStudioView })));
+const LiveDroneCockpitView = lazy(() => VIEWS.LiveDroneCockpitView().then(m => ({ default: m.LiveDroneCockpitView })));
+
+/** Shown for the moment a view's code is loading. */
+const ViewLoading: React.FC = () => (
+  <div role="status" aria-live="polite" className="flex-1 min-h-[40vh] grid place-items-center text-[13px] text-ink-3">Loading…</div>
+);
 import { 
   Compass, 
   Layers, 
@@ -99,6 +119,13 @@ export default function App() {
   useEffect(() => { window.scrollTo({ top: 0 }); }, [activeTab]);
   const [showShortcuts, setShowShortcuts] = useState<boolean>(false);
   // Light by default (client-facing); dark for night operations. Persisted per browser.
+  // Fetch every view's code once the page is idle, so they open instantly and are cached for offline use.
+  useEffect(() => {
+    const go = () => { for (const load of Object.values(VIEWS)) load().catch(() => { /* offline: loads on first use */ }); };
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+    const id = w.requestIdleCallback ? w.requestIdleCallback(go, { timeout: 6000 }) : window.setTimeout(go, 4000);
+    return () => { if (!w.requestIdleCallback) window.clearTimeout(id); };
+  }, []);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     try { return (localStorage.getItem(THEME_KEY) as 'light' | 'dark') || 'light'; } catch { return 'light'; }
   });
@@ -508,6 +535,7 @@ export default function App() {
 
       {/* 3. Main Dynamic Content Area */}
       <main id="main" className={`flex-1 w-full mx-auto flex flex-col gap-6 ${isClient ? 'max-w-[1600px] px-5 py-5' : 'max-w-7xl p-4 lg:p-6'}`}>
+        <Suspense fallback={<ViewLoading />}>
         {/* Flight records */}
         {isRecords && (
           <ErrorBoundary name="Flight records"><RecordsView /></ErrorBoundary>
@@ -670,6 +698,7 @@ export default function App() {
             onSelectDrone={setSelectedDroneId}
           />
         )}
+        </Suspense>
       </main>
 
       {/* 4. Modals */}
