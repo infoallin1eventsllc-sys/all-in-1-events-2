@@ -544,7 +544,7 @@ function buildCargo(M: Record<string, THREE.Material>, blurTex: THREE.Texture): 
 
 /* ------------------------------------------------------------------ registry */
 
-/** The orange glow look of the Mavic-class airframe (droneModel.ts), as a lab variant. Its own materials, whatever the shared set is. */
+/** Ember, the original orange racer (droneModel.ts), as a lab variant. Its own materials, whatever the shared set is. */
 function buildOrange(_m: Record<string, THREE.Material>, blurTex: THREE.Texture): Airframe {
   const d = buildGlowDrone(orangeGlowMaterials(), blurTex);
   return { group: d.group, props: d.props, blur: d.blur, strobes: [], parts: {} };
@@ -556,6 +556,6 @@ export const VARIANTS: VariantInfo[] = [
   { id: 'enterprise', name: 'Enterprise security quad', role: 'Night patrol and inspection', features: ['Zoom, wide and thermal sensors', 'Searchlight on a second gimbal', 'Dual RTK antennas, strobe', 'Weather-sealed folding airframe'], build: buildEnterprise },
   { id: 'show', name: 'Light-show drone', role: 'Choreographed night-sky shows', features: ['Frosted RGB light dome', 'Ducted prop guards', 'Light enough to fly hundreds', 'Per-aircraft colour'], build: buildShow },
   { id: 'vtol', name: 'VTOL fixed-wing mapper', role: 'Large-site survey and mapping', features: ['Vertical take-off, wing-borne cruise', 'Four lift rotors, rear pusher', 'Nadir survey camera', 'Twin booms and twin fins'], build: buildVtol },
-  { id: 'orange', name: 'Orange racer', role: 'Sample for the hero, from a reference image', features: ['Sculpted orange shell, dark glass canopy', 'Glowing cyan eye on the nose', 'Curved orange-over-navy arms with grilles', 'Cyan-lit motor pods, steel-blue props'], build: buildOrange },
+  { id: 'orange', name: 'Ember racer', role: 'Sample look for the hero', features: ['Arrowhead orange shell, glass visor', 'Cyan chevron and light seam', 'Tapered arms with cyan strips', 'Open prop guards, three-blade props'], build: buildOrange },
   { id: 'cargo', name: 'Heavy-lift cargo X8', role: 'Equipment delivery on site', features: ['Eight props on coaxial pairs', 'Winch with a slung cargo pod', 'Parachute canister', 'Tall splayed landing gear'], build: buildCargo },
 ];

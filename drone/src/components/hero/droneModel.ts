@@ -117,115 +117,139 @@ export function droneMaterials(): Record<string, THREE.Material> {
   return mats;
 }
 
-/** Perforated grille for the arm side panels: dark with rows of orange-lit holes. */
-function meshTexture(): THREE.Texture {
-  const c = document.createElement('canvas'); c.width = 128; c.height = 32;
-  const g = c.getContext('2d')!;
-  g.fillStyle = '#0c1522'; g.fillRect(0, 0, 128, 32);
-  for (let y = 0; y < 4; y++) for (let x = 0; x < 16; x++) {
-    const cx = 4 + x * 8 + (y % 2) * 4, cy = 4 + y * 8;
-    const gr = g.createRadialGradient(cx, cy, 0, cx, cy, 3.2); gr.addColorStop(0, '#ffb35a'); gr.addColorStop(0.6, '#c9561a'); gr.addColorStop(1, 'rgba(12,21,34,0)');
-    g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, 3.2, 0, Math.PI * 2); g.fill();
-  }
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 1); return t;
-}
-
 /**
- * Materials for the orange racer (buildGlowDrone): candy-orange clearcoat, deep
- * navy gloss, dark glass, gunmetal, steel-blue props, and a cyan light that
- * blooms. Same keys the hero reads (white, graphite, blade, ledFront ...), so it
- * drops into the hero as a sample look.
+ * Materials for Ember (buildGlowDrone): candy-orange clearcoat, deep navy gloss,
+ * dark glass, gunmetal, steel-blue props, and a cyan light that blooms. Same keys
+ * the hero reads (white, graphite, blade, ledFront ...), so it drops into the
+ * hero as a sample look.
  */
 export function orangeGlowMaterials(): Record<string, THREE.Material> {
   const m = droneMaterials();
-  const cyan = new THREE.Color(0.35, 1.55, 2.9);
-  m.white = new THREE.MeshPhysicalMaterial({ color: 0xf07318, metalness: 0.05, roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.06 });
-  m.graphite = new THREE.MeshPhysicalMaterial({ color: 0x0c1830, metalness: 0.45, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.1 });
-  m.glass = new THREE.MeshPhysicalMaterial({ color: 0x0a1c36, metalness: 0.3, roughness: 0.04, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 2.2 });
-  m.gunmetal = new THREE.MeshStandardMaterial({ color: 0x626a74, metalness: 0.85, roughness: 0.32 });
-  m.blade = new THREE.MeshPhysicalMaterial({ color: 0x7196b8, metalness: 0.55, roughness: 0.28, clearcoat: 0.8, side: THREE.DoubleSide });
+  const cyan = new THREE.Color(0.22, 1.0, 1.9);
+  m.white = new THREE.MeshPhysicalMaterial({ color: 0xf05a00, emissive: 0x301000, metalness: 0.0, roughness: 0.55, specularIntensity: 0.35, clearcoat: 0.2, clearcoatRoughness: 0.4 });
+  m.graphite = new THREE.MeshPhysicalMaterial({ color: 0x0f1c34, metalness: 0.3, roughness: 0.5, clearcoat: 0.3, clearcoatRoughness: 0.35 });
+  m.glass = new THREE.MeshPhysicalMaterial({ color: 0x0a1a30, metalness: 0.2, roughness: 0.14, clearcoat: 0.6, clearcoatRoughness: 0.1, envMapIntensity: 0.8 });
+  m.gunmetal = new THREE.MeshStandardMaterial({ color: 0x5d6570, metalness: 0.85, roughness: 0.34 });
+  m.blade = new THREE.MeshPhysicalMaterial({ color: 0x4f6f8e, metalness: 0.2, roughness: 0.45, clearcoat: 0.3, side: THREE.DoubleSide });
   m.glow = new THREE.MeshBasicMaterial({ color: cyan, toneMapped: false });
-  m.tube = new THREE.MeshPhysicalMaterial({ color: 0x19c4ff, emissive: new THREE.Color(0x0a8fd8), emissiveIntensity: 1.6, roughness: 0.15, clearcoat: 1, transparent: true, opacity: 0.85 });
-  m.grille = new THREE.MeshStandardMaterial({ map: meshTexture(), metalness: 0.4, roughness: 0.45 });
   m.ledFront = m.glow; m.ledGreen = m.glow; m.ledRed = m.glow;
   return m;
 }
 
+/** A plan-view outline (x forward, y = right) extruded upward: local y from 0 to about depth + 2 * bevel. */
+function slab(shape: THREE.Shape, depth: number, bevel: number, segs = 5): THREE.BufferGeometry {
+  const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel * 0.8, bevelSegments: segs, curveSegments: 40 });
+  geo.rotateX(-Math.PI / 2); geo.translate(0, bevel, 0);
+  return geo;
+}
+
+/** Ember's fuselage outline: a rounded arrowhead, widest just ahead of centre, a squared tail. Scaled about the origin. */
+function emberOutline(k = 1, dx = 0): THREE.Shape {
+  const p = (x: number, y: number): [number, number] => [x * k + dx, y * k];
+  const s = new THREE.Shape();
+  s.moveTo(...p(0.54, 0));
+  s.quadraticCurveTo(...p(0.47, 0.15), ...p(0.22, 0.215));
+  s.quadraticCurveTo(...p(0, 0.25), ...p(-0.3, 0.2));
+  s.quadraticCurveTo(...p(-0.47, 0.18), ...p(-0.47, 0.09));
+  s.lineTo(...p(-0.47, -0.09));
+  s.quadraticCurveTo(...p(-0.47, -0.18), ...p(-0.3, -0.2));
+  s.quadraticCurveTo(...p(0, -0.25), ...p(0.22, -0.215));
+  s.quadraticCurveTo(...p(0.47, -0.15), ...p(0.54, 0));
+  return s;
+}
+
 /**
- * The orange racer from the reference image: a sculpted orange shell like a
- * helmet with a dark glass canopy and two antennas; a big glowing cyan eye in a
- * dark bezel on the nose with round sensors either side; four thick curved arms,
- * orange over navy, with perforated grilles down their sides; orange motor pods
- * with gunmetal bands, glowing cyan rings and cyan hoses underneath; long
- * steel-blue two-blade props. Local axes as buildDrone: +x forward, +y up, +z right.
+ * Ember, an original racing quad for the hero sample: a low arrowhead fuselage in
+ * candy orange over a navy hull, a dark glass visor and a cyan chevron on the
+ * nose, a cyan light seam wrapping the front, straight tapered arms each carrying
+ * a cyan strip, gunmetal motors with cyan rings, open orange prop guards on the
+ * outside of each rotor, steel-blue three-blade props, a camera ball under the
+ * nose and navy landing skids. Local axes as buildDrone: +x forward, +y up, +z right.
  */
 export function buildGlowDrone(M: Record<string, THREE.Material>, blurTex: THREE.Texture): { group: THREE.Group; props: THREE.Group[]; blur: THREE.Mesh[] } {
   const g = new THREE.Group();
   const UP = new THREE.Vector3(0, 1, 0);
-  const ell = (m: THREE.Material, x: number, y: number, z: number, sx: number, sy: number, sz: number, seg = 40) => {
-    const o = new THREE.Mesh(new THREE.SphereGeometry(1, seg, Math.round(seg * 0.7)), m); o.position.set(x, y, z); o.scale.set(sx, sy, sz); g.add(o); return o;
+  const add = (geo: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z: number, rx = 0, ry = 0, rz = 0, parent: THREE.Object3D = g) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.rotation.set(rx, ry, rz); parent.add(o); return o; };
+  const rod = (m: THREE.Material, r: number, a: THREE.Vector3, b: THREE.Vector3) => {
+    const o = new THREE.Mesh(new THREE.CylinderGeometry(r, r, a.distanceTo(b), 10), m);
+    o.position.copy(a).add(b).multiplyScalar(0.5); o.quaternion.setFromUnitVectors(UP, b.clone().sub(a).normalize()); g.add(o); return o;
   };
-  const add = (geo: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z: number, rx = 0, ry = 0, rz = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.rotation.set(rx, ry, rz); g.add(o); return o; };
-  const along = (o: THREE.Object3D, a: THREE.Vector3, b: THREE.Vector3) => { o.position.copy(a).add(b).multiplyScalar(0.5); o.quaternion.setFromUnitVectors(UP, b.clone().sub(a).normalize()); g.add(o); return o; };
 
-  // Fuselage: navy belly, orange helmet shell with a raised spine, a bulging nose.
-  ell(M.graphite, -0.02, -0.1, 0, 0.44, 0.16, 0.27);
-  ell(M.white, 0, 0.02, 0, 0.46, 0.25, 0.29);
-  ell(M.white, 0.04, 0.12, 0, 0.36, 0.17, 0.16);
-  ell(M.white, 0.34, -0.05, 0, 0.21, 0.19, 0.2);
+  // Fuselage: navy hull, orange shell, a raised orange deck behind a glass visor.
+  add(slab(emberOutline(0.95), 0.06, 0.03), M.graphite, 0, -0.15, 0);
+  add(slab(emberOutline(1), 0.07, 0.045), M.white, 0, -0.06, 0);
+  add(slab(emberOutline(0.62, -0.1), 0.012, 0.022), M.white, 0, 0.055, 0);
+  const visor = new THREE.Shape();                                   // a swept glass wedge on the front of the deck
+  visor.moveTo(0.4, 0); visor.quadraticCurveTo(0.33, 0.1, 0.16, 0.13); visor.lineTo(0.12, 0.1); visor.quadraticCurveTo(0.26, 0.06, 0.3, 0);
+  visor.quadraticCurveTo(0.26, -0.06, 0.12, -0.1); visor.lineTo(0.16, -0.13); visor.quadraticCurveTo(0.33, -0.1, 0.4, 0);
+  add(slab(visor, 0.012, 0.014, 3), M.glass, 0, 0.082, 0);
+  add(slab(emberOutline(0.36, -0.12), 0.004, 0.008, 2), M.glass, 0, 0.1, 0);      // glass panel let into the deck
+  // Cyan chevron on the nose, pointing forward.
+  for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.075, 0.006, 0.014), M.glow, 0.31, 0.124, s * 0.05, 0, s * 0.62, 0);
+  // Light seam: a cyan line wrapping the front along the shell/hull join.
+  const seam: THREE.Vector3[] = [];
+  const rim = emberOutline(1).getSpacedPoints(160);
+  rim.forEach((pt, i) => {
+    const a = rim[(i + rim.length - 1) % rim.length], b = rim[(i + 1) % rim.length];
+    const n = new THREE.Vector2(b.y - a.y, a.x - b.x).normalize(); if (n.dot(pt) < 0) n.negate();   // outward, clear of the shell's bevel
+    if (pt.x > -0.1) seam.push(new THREE.Vector3(pt.x + n.x * 0.041, 0.0, -(pt.y + n.y * 0.041)));
+  });
+  seam.sort((a, b) => a.z - b.z);
+  g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(seam), 90, 0.011, 8), M.glow));
+  // Tail lights and side vents.
   for (const s of [-1, 1]) {
-    ell(M.white, 0.3, -0.1, s * 0.13, 0.16, 0.13, 0.08);                        // cheeks sweeping down
-    const panel = add(new THREE.CapsuleGeometry(0.05, 0.36, 8, 16), M.graphite, -0.04, -0.03, s * 0.275, 0, 0, Math.PI / 2); panel.scale.set(1, 1, 0.55);  // dark side panel
-    for (let k = 0; k < 3; k++) add(new THREE.BoxGeometry(0.06, 0.008, 0.012), M.gunmetal, -0.14 + k * 0.08, -0.05, s * 0.302);            // intake slats
-    // Round sensors either side of the eye, and the machinery under the chin.
-    add(new THREE.CylinderGeometry(0.048, 0.052, 0.05, 28), M.gunmetal, 0.43, -0.13, s * 0.15, 0, 0, Math.PI / 2);
-    add(new THREE.CylinderGeometry(0.034, 0.034, 0.012, 24), M.glass, 0.457, -0.13, s * 0.15, 0, 0, Math.PI / 2);
-    add(new THREE.CylinderGeometry(0.018, 0.018, 0.14, 12), M.gunmetal, 0.3, -0.21, s * 0.08, 0, 0, Math.PI / 2.6);
-    add(new THREE.CylinderGeometry(0.03, 0.03, 0.05, 16), M.graphite, 0.24, -0.2, s * 0.12);
+    add(new THREE.BoxGeometry(0.012, 0.03, 0.07), M.glow, -0.475, -0.02, s * 0.11);
+    for (let k = 0; k < 3; k++) add(new THREE.BoxGeometry(0.075, 0.012, 0.01), M.graphite, -0.08 - k * 0.07, 0.0, s * 0.235, 0, s * 0.3, 0.35);
   }
-  // Canopy of dark glass on top, two antennas behind it.
-  ell(M.glass, 0.02, 0.19, 0, 0.22, 0.1, 0.13);
-  ell(M.glass, 0.18, 0.13, 0, 0.12, 0.06, 0.09);
-  for (const s of [-1, 1]) along(new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.009, 0.2, 8), M.graphite), new THREE.Vector3(-0.04, 0.26, s * 0.05), new THREE.Vector3(-0.1, 0.45, s * 0.065));
-  // The eye: dark bezel, glowing cyan lens, a hot core.
-  add(new THREE.TorusGeometry(0.078, 0.024, 16, 40), M.graphite, 0.52, -0.1, 0, 0, Math.PI / 2);
-  add(new THREE.CylinderGeometry(0.068, 0.068, 0.02, 40), M.glow, 0.525, -0.1, 0, 0, 0, Math.PI / 2);
-  add(new THREE.SphereGeometry(0.03, 20, 14), M.glow, 0.54, -0.1, 0);
+  // Camera ball under the nose.
+  add(new THREE.CylinderGeometry(0.035, 0.035, 0.03, 16), M.graphite, 0.36, -0.17, 0);
+  add(new THREE.SphereGeometry(0.065, 28, 20), M.gunmetal, 0.36, -0.22, 0);
+  add(new THREE.CylinderGeometry(0.036, 0.036, 0.02, 24), M.glass, 0.418, -0.22, 0, 0, 0, Math.PI / 2);
+  // Landing skids.
+  for (const s of [-1, 1]) {
+    const z = s * 0.15;
+    g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(-0.34, -0.29, z), new THREE.Vector3(0.2, -0.3, z), new THREE.Vector3(0.33, -0.28, z), new THREE.Vector3(0.38, -0.24, z)]), 24, 0.013, 8), M.graphite));
+    rod(M.graphite, 0.011, new THREE.Vector3(0.14, -0.17, s * 0.1), new THREE.Vector3(0.18, -0.3, z));
+    rod(M.graphite, 0.011, new THREE.Vector3(-0.2, -0.17, s * 0.1), new THREE.Vector3(-0.24, -0.3, z));
+  }
 
-  // Arms: thick and curved, orange over navy, a perforated grille down the outer side, out to the motor pods.
+  // Arms, motors, guards and props.
   const props: THREE.Group[] = [], blur: THREE.Mesh[] = [];
+  const R = 0.36;
   const bladeShape = new THREE.Shape();
-  bladeShape.moveTo(0.03, -0.028); bladeShape.quadraticCurveTo(0.26, -0.06, 0.5, -0.016); bladeShape.lineTo(0.5, 0.01); bladeShape.quadraticCurveTo(0.26, 0.045, 0.03, 0.028); bladeShape.closePath();
-  const bladeGeo = new THREE.ExtrudeGeometry(bladeShape, { depth: 0.008, bevelEnabled: false }).rotateX(-Math.PI / 2);
-  const discGeo = new THREE.CircleGeometry(0.51, 48);
+  bladeShape.moveTo(0.025, -0.022); bladeShape.quadraticCurveTo(0.2, -0.05, R, -0.012); bladeShape.lineTo(R, 0.008); bladeShape.quadraticCurveTo(0.2, 0.036, 0.025, 0.022); bladeShape.closePath();
+  const bladeGeo = new THREE.ExtrudeGeometry(bladeShape, { depth: 0.007, bevelEnabled: false }).rotateX(-Math.PI / 2);
+  const discGeo = new THREE.CircleGeometry(R + 0.01, 48);
   for (const [fx, fz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
-    const root = new THREE.Vector3(fx * 0.12, 0.02, fz * 0.22);
-    const tip = new THREE.Vector3(fx * 0.58, 0.07, fz * 0.74);
-    const mid = root.clone().lerp(tip, 0.5).add(new THREE.Vector3(0, 0.05, 0));       // the arm arches up a little
-    const curve = new THREE.QuadraticBezierCurve3(root, mid, tip);
-    const top = new THREE.Mesh(new THREE.TubeGeometry(curve, 24, 0.066, 18), M.white); top.scale.y = 1; g.add(top);
-    const under = new THREE.Mesh(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(root.clone().add(new THREE.Vector3(0, -0.035, 0)), mid.clone().add(new THREE.Vector3(0, -0.04, 0)), tip.clone().add(new THREE.Vector3(0, -0.035, 0))), 24, 0.06, 18), M.graphite); g.add(under);
-    // Grille: a thin curved strip along the arm's outer flank.
-    const out = new THREE.Vector3(-(tip.z - root.z), 0, tip.x - root.x).normalize().multiplyScalar(fz * fx > 0 ? 0.062 : -0.062);
-    if ((out.x * fx + out.z * fz) < 0) out.multiplyScalar(-1);
-    const gr = new THREE.Mesh(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(root.clone().lerp(tip, 0.18).add(out), mid.clone().add(out).add(new THREE.Vector3(0, -0.02, 0)), root.clone().lerp(tip, 0.82).add(out)), 16, 0.03, 10), M.grille);
-    gr.scale.set(1, 1, 1); g.add(gr);
-    // Motor pod: orange housing and dome, gunmetal band, navy base, cyan ring and hoses underneath.
-    add(new THREE.CylinderGeometry(0.105, 0.1, 0.09, 32), M.white, tip.x, tip.y, tip.z);
-    const dome = add(new THREE.SphereGeometry(0.105, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), M.white, tip.x, tip.y + 0.045, tip.z); dome.scale.y = 0.45;
-    add(new THREE.TorusGeometry(0.105, 0.012, 10, 40), M.gunmetal, tip.x, tip.y + 0.005, tip.z, Math.PI / 2);
-    add(new THREE.CylinderGeometry(0.095, 0.085, 0.07, 32), M.graphite, tip.x, tip.y - 0.075, tip.z);
-    add(new THREE.TorusGeometry(0.082, 0.02, 12, 40), M.glow, tip.x, tip.y - 0.115, tip.z, Math.PI / 2);
-    const hose = add(new THREE.TorusGeometry(0.13, 0.018, 10, 32, Math.PI), M.tube, tip.x, tip.y - 0.06, tip.z, 0, Math.atan2(tip.x - root.x, tip.z - root.z), Math.PI);
-    void hose;
-    add(new THREE.CylinderGeometry(0.03, 0.035, 0.05, 16), M.gunmetal, tip.x, tip.y + 0.085, tip.z);
+    const root = new THREE.Vector3(fx * 0.1, -0.02, fz * 0.16);
+    const tip = new THREE.Vector3(fx * 0.52, 0.02, fz * 0.58);
+    const d = tip.clone().sub(root), L = Math.hypot(d.x, d.z);
+    const arm = new THREE.Group(); arm.position.copy(root); arm.rotation.set(0, Math.atan2(-d.z, d.x), Math.atan2(d.y, L)); g.add(arm);
+    const taper = new THREE.Shape();
+    taper.moveTo(0, -0.06); taper.lineTo(L, -0.038); taper.lineTo(L, 0.038); taper.lineTo(0, 0.06); taper.closePath();
+    add(slab(taper, 0.03, 0.016, 3), M.white, 0, -0.005, 0, 0, 0, 0, arm);
+    add(slab(taper, 0.012, 0.012, 3), M.graphite, 0, -0.04, 0, 0, 0, 0, arm);
+    add(new THREE.BoxGeometry(L * 0.55, 0.005, 0.014), M.glow, L * 0.5, 0.058, 0, 0, 0, 0, arm);
+    // Motor: navy pad, orange collar, cyan ring, gunmetal bell.
+    add(new THREE.CylinderGeometry(0.085, 0.08, 0.05, 32), M.graphite, tip.x, tip.y - 0.01, tip.z);
+    add(new THREE.CylinderGeometry(0.074, 0.08, 0.03, 32), M.white, tip.x, tip.y + 0.03, tip.z);
+    add(new THREE.TorusGeometry(0.073, 0.008, 10, 40), M.glow, tip.x, tip.y + 0.047, tip.z, Math.PI / 2);
+    add(new THREE.CylinderGeometry(0.058, 0.062, 0.06, 28), M.gunmetal, tip.x, tip.y + 0.075, tip.z);
+    // Open guard round the outside of the rotor, on two struts.
+    const out = Math.atan2(fz, fx), arc = 1.2 * Math.PI, gy = tip.y + 0.105, gr = R + 0.05;
+    const guard = new THREE.Group(); guard.position.set(tip.x, gy, tip.z); guard.rotation.y = arc / 2 - out; g.add(guard);
+    add(new THREE.TorusGeometry(gr, 0.014, 10, 72, arc), M.white, 0, 0, 0, Math.PI / 2, 0, 0, guard);
+    for (const t of [0.1, arc - 0.1]) {
+      const a = t - guard.rotation.y;
+      rod(M.graphite, 0.009, new THREE.Vector3(tip.x, tip.y + 0.01, tip.z), new THREE.Vector3(tip.x + gr * Math.cos(a), gy, tip.z + gr * Math.sin(a)));
+    }
+    // Three-blade prop.
     const prop = new THREE.Group(); prop.position.set(tip.x, tip.y + 0.115, tip.z);
-    const b1 = new THREE.Mesh(bladeGeo, M.blade); b1.rotation.x = 0.2;
-    const b2 = new THREE.Mesh(bladeGeo, M.blade); b2.rotation.set(0.2, Math.PI, 0);
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.032, 16, 10), M.white); cap.scale.y = 0.7;
+    for (let k = 0; k < 3; k++) { const b = new THREE.Mesh(bladeGeo, M.blade); b.rotation.set(0.18, (k * 2 * Math.PI) / 3, 0, 'YXZ'); prop.add(b); }
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.03, 16, 10), M.white); cap.scale.y = 0.7; prop.add(cap);
     const disc = new THREE.Mesh(discGeo, new THREE.MeshBasicMaterial({ map: blurTex, color: 0x7fa6c8, transparent: true, opacity: 0.18, depthWrite: false }));
     disc.rotation.x = -Math.PI / 2; disc.position.y = 0.004;
-    prop.add(b1, b2, cap, disc); g.add(prop); props.push(prop); blur.push(disc);
+    prop.add(disc); g.add(prop); props.push(prop); blur.push(disc);
   }
   return { group: g, props, blur };
 }

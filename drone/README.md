@@ -49,8 +49,8 @@ more airframes in the hero's scene, lighting and grade: a cinema heavy-lift
 hexacopter, a freestyle FPV quad, an enterprise security quad with thermal and a
 searchlight, a light-show drone, a VTOL fixed-wing mapper and a heavy-lift cargo X8.
 They are in `src/components/hero/droneVariants.ts`; the app still flies the
-Mavic-class model. An orange glow look of the hero's own airframe (orange shell,
-blue light seam, motor rings and nose lights) is there too, and `lab/hero.html`
+Mavic-class model. Ember, an original orange racer (arrowhead shell, glass visor,
+cyan light seam and arm strips, open prop guards), is there too, and `lab/hero.html`
 shows the real Overview hero flown by it, with a switch back to the current
 hero, so a new look can be judged in place before anything changes. Open `/drone/lab/fleet.html?v=cinema` (or `fpv`, `enterprise`,
 `show`, `vtol`, `cargo`) under `npm run dev`. With `&capture`, the page renders any

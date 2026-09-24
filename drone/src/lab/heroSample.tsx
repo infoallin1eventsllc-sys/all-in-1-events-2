@@ -6,7 +6,7 @@ import '../index.css';
 
 /**
  * A sample of the Overview hero with another drone look, for comparing before
- * changing anything: lab/hero.html (the orange glow quad), #classic or
+ * changing anything: lab/hero.html (Ember, the orange racer), #classic or
  * ?look=classic for the hero as shipped. The app itself is untouched.
  */
 type Look = 'orange' | 'classic';
@@ -22,7 +22,7 @@ const Sample: React.FC = () => {
         <span className="w-8 h-8 shrink-0 grid place-items-center rounded-lg bg-ink text-bg"><Compass className="w-4 h-4" /></span>
         <span className="text-[14px] font-semibold truncate">All in 1 · Drone Command</span>
         <div className="ml-auto flex items-center gap-1 rounded-full border border-line p-0.5 text-[12px]" role="group" aria-label="Drone look">
-          {([['orange', 'Orange glow (sample)'], ['classic', 'Current hero']] as [Look, string][]).map(([id, label]) => (
+          {([['orange', 'Ember (sample)'], ['classic', 'Current hero']] as [Look, string][]).map(([id, label]) => (
             <button key={id} type="button" aria-pressed={look === id} onClick={() => { history.replaceState(null, '', id === 'classic' ? '#classic' : '#orange'); setLook(id); }}
               className={`h-7 px-3 rounded-full ${look === id ? 'bg-ink text-bg font-medium' : 'text-ink-2 hover:text-ink'}`}>{label}</button>
           ))}
