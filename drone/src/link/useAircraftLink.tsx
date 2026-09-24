@@ -262,7 +262,7 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const ap = () => autopilotOf(telem.current);
   const returnToLaunch = useCallback(() => send(encodeCommandLong(MAV_CMD.RETURN_TO_LAUNCH, [], sysId())), [send]);
   const land = useCallback(() => send(encodeCommandLong(MAV_CMD.LAND, [], sysId())), [send]);
-  const arm = useCallback((on: boolean) => send(encodeArm(on)), [send]);
+  const arm = useCallback((on: boolean) => send(encodeArm(on, false, sysId())), [send]);
   const setFlightMode = useCallback(async (mode: FlightMode) => { const b = encodeFlightMode(ap(), mode, sysId()); if (b) await send(b); }, [send]);
   /** Resolve once the autopilot's heartbeat reports `mode`, or after `ms` (found flying real ArduCopter SITL). */
   const awaitMode = useCallback((mode: FlightMode, ms = 2000) => new Promise<boolean>(resolve => {

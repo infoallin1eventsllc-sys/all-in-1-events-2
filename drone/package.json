@@ -11,7 +11,7 @@
     "clean": "rm -rf dist",
     "footage": "node scripts/fetch_footage.mjs",
     "lint": "tsc --noEmit",
-    "test": "node scripts/mavlink.test.mjs && node scripts/export.test.mjs && node scripts/record.test.mjs && node scripts/survey.test.mjs && node scripts/analytics.test.mjs && node scripts/diagnostics.test.mjs && node scripts/fleet.test.mjs && node scripts/server.test.mjs && node scripts/sync.test.mjs",
+    "test": "node scripts/mavlink.test.mjs && node scripts/export.test.mjs && node scripts/record.test.mjs && node scripts/survey.test.mjs && node scripts/analytics.test.mjs && node scripts/diagnostics.test.mjs && node scripts/fleet.test.mjs && node scripts/control.test.mjs && node scripts/server.test.mjs && node scripts/sync.test.mjs",
     "plates": "node scripts/plates.mjs"
   },
   "dependencies": {

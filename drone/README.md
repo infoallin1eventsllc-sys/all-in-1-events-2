@@ -263,6 +263,44 @@ The fleet simulation only runs while the fleet view is open or the fleet is
 flying. Tested in `scripts/fleet.test.mjs`, including no false alarms on the
 healthy aircraft of a 500-aircraft fleet.
 
+## Control: one aircraft or 500
+
+**Control** (app bar, or press `c`) flies one aircraft or a whole show fleet over
+the same dispatcher (`src/control/`).
+
+- **Fleet.** The field from above and from the side, every aircraft at its real
+  position. Select by dragging a box, by launch row, or by state (all, ready, in
+  the air, on the ground), then *Take off* (row by row, a set number of seconds
+  apart), *Hold position*, *Move or climb* (the whole formation by the same offset),
+  *Return home*, *Land* or *Disarm*.
+- **One aircraft.** Pick it or click it on the map. Take off, hold, land, return
+  home, arm or disarm, nudge it 5 m or 2 m at a time, or click the field to send it
+  there. Its readings and its health verdict sit beside the map.
+- **Every answer tracked.** Each aircraft's COMMAND_ACK comes back by system id:
+  accepted, refused with the autopilot's own reason (e.g. a pre-arm failure), no
+  response after retries, or held back before sending. *Retry the ones that
+  failed* and *Select these* work on any command. Every command is logged in the
+  flight record.
+- **Safety.** Take off, arm and stop motors are press-and-hold. *Land everything
+  now* is one press and goes to every aircraft in the air, whatever is selected.
+  *Stop motors* (a forced disarm) also needs a tick to say the aircraft will fall.
+  Interlocks keep aircraft with a fault, packs under 40% and aircraft not reporting
+  on the ground unless switched off; they never delay landing, holding or stopping.
+  A newer command to an aircraft cancels anything older still waiting for it.
+
+How it talks to the aircraft: each command becomes MAVLink steps, and each step
+waits for that aircraft's acknowledgement before the next. ArduCopter takes off
+only in GUIDED, so *Take off* is GUIDED, then arm, then TAKEOFF (PX4: arm, then
+TAKEOFF). Each aircraft arms just before its own takeoff because a staggered launch
+of 500 takes longer than the 10 s ArduCopter waits before disarming an idle
+aircraft. A lost acknowledgement is retried, and a refused retry of something the
+aircraft has already done ("already flying") counts as done. Sending is limited
+to 200 commands a second so a radio link is not swamped. With no aircraft
+connected, the simulated show fleet answers the same commands with ArduCopter's
+rules, a realistic radio delay and the odd lost packet, and the health checks see
+it fly. Tested in `scripts/control.test.mjs` (500 aircraft, lost packets, silent
+and refused aircraft, row-staggered launch, a Land replacing a waiting Hold).
+
 ## Analytics
 
 **Analytics** (app bar, or press `a`) answers four questions from the flight

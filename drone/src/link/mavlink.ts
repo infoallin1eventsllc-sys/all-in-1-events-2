@@ -250,8 +250,8 @@ export function encodeCommandLong(cmd: number, params: number[] = [], targetSys 
 export function encodeSetMode(customMode: number): Uint8Array {
   return encodeCommandLong(MAV_CMD.DO_SET_MODE, [MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, customMode]);
 }
-export function encodeArm(arm: boolean, force = false): Uint8Array {
-  return encodeCommandLong(MAV_CMD.COMPONENT_ARM_DISARM, [arm ? 1 : 0, force ? 21196 : 0]);
+export function encodeArm(arm: boolean, force = false, targetSys = 1): Uint8Array {
+  return encodeCommandLong(MAV_CMD.COMPONENT_ARM_DISARM, [arm ? 1 : 0, force ? 21196 : 0], targetSys);
 }
 export function encodeTakeoff(altM: number): Uint8Array {
   return encodeCommandLong(MAV_CMD.TAKEOFF, [0, 0, 0, NaN, NaN, NaN, altM]);

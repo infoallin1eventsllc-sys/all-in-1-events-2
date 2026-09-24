@@ -30,6 +30,9 @@ interface FleetApi {
   report: (id: string) => HealthReport | null;
   /** Mark the fleet view as open (it runs the simulation while any caller holds it). */
   useActive: () => void;
+  /** The simulated fleet (null on a live link), and a counter that changes whenever it is replaced. */
+  sim: () => FleetSim | null;
+  simGen: number;
 }
 
 const Ctx = createContext<FleetApi | null>(null);
@@ -47,6 +50,7 @@ export const FleetHealthProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [active, setActive] = useState(0);
   const fleet = useRef(new FleetHealth());
   const sim = useRef<FleetSim | null>(null);
+  const [simGen, setSimGen] = useState(0);
 
   // Real aircraft keep their post-flight reports, like a single aircraft does. The simulated fleet's
   // hundreds of practice flights are not written, so they never crowd the real history.
@@ -60,7 +64,7 @@ export const FleetHealthProvider: React.FC<{ children: React.ReactNode }> = ({ c
     fleet.current.source = source;
     if (source === 'SIMULATION') { sim.current = new FleetSim(size); sim.current.seed(fleet.current); }
     else sim.current = null;
-    setFlying(false); setFlightT(0); setList(fleet.current.summary());
+    setFlying(false); setFlightT(0); setList(fleet.current.summary()); setSimGen(g => g + 1);
   }, [source, size]);
 
   const running = active > 0 || flying;
@@ -116,7 +120,8 @@ export const FleetHealthProvider: React.FC<{ children: React.ReactNode }> = ({ c
     useEffect(() => { setActive(a => a + 1); return () => setActive(a => a - 1); }, []);
   };
 
-  const api: FleetApi = { source, size, setSize, speed, setSpeed, flying, flightT, takeoff, land, list, stats, report, useActive };
+  const getSim = useCallback(() => sim.current, []);
+  const api: FleetApi = { source, size, setSize, speed, setSpeed, flying, flightT, takeoff, land, list, stats, report, useActive, sim: getSim, simGen };
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
 };
 

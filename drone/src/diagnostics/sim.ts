@@ -44,6 +44,14 @@ export class HealthSim {
   private rand: () => number;
   private sentVersion = false;
   alt = 0; speed = 0; roll = 0; pitch = 0;
+  /**
+   * When set, the aircraft flies whatever it is told (armed, height, speed and climb
+   * from a flight simulation driven by the control screen) instead of its own
+   * two-minute test flight. Packs then last about ten minutes of flying.
+   */
+  ext: { armed: boolean; alt: number; speed: number; vz: number } | null = null;
+  /** Charge left, % (the BATTERY_STATUS it reports). */
+  get remainingPct() { return Math.max(0, Math.round(96 - this.cellWear * 70)); }
 
   /** `wear` 0–1 starts the pack part-used (fleet simulations fly packs of different ages and charge). */
   constructor(seed = 7, wear = 0) { this.rand = rng(seed); this.cellWear = wear; }
@@ -62,7 +70,14 @@ export class HealthSim {
   step(dt: number): { state: VehicleState; msgs: HealthMsg[] } {
     const msgs: HealthMsg[] = [];
     this.clock += dt; this.acc += dt;
-    if (this.armed) {
+    if (this.ext) {
+      const e = this.ext;
+      if (e.armed && !this.armed) this.t = 0;
+      this.armed = e.armed; this.alt = e.alt; this.speed = e.speed;
+      if (this.armed) { this.t += dt; this.cellWear += dt / (SIM_FLIGHT_S * 5); }
+      this.pitch = -Math.min(12, this.speed * 1.4) + this.noise(0.8);
+      this.roll = this.noise(this.speed > 3 ? 3 : 1.2);
+    } else if (this.armed) {
       this.t += dt;
       const T = this.t;
       if (T < 10) { this.alt = Math.min(30, T * 3); this.speed = 0.5; }
@@ -92,7 +107,8 @@ export class HealthSim {
 
       // Motor command: hover ~48%, more to climb, less to descend; transit tilts load onto the rear motors.
       const T = this.t;
-      const base = this.armed ? (flying ? (T < 10 ? 60 : T >= SIM_FLIGHT_S - 14 ? 40 : 48) : 22) : 0;
+      const climb = this.ext ? (this.ext.vz > 0.5 ? 'UP' : this.ext.vz < -0.5 ? 'DOWN' : 'LEVEL') : T < 10 ? 'UP' : T >= SIM_FLIGHT_S - 14 ? 'DOWN' : 'LEVEL';
+      const base = this.armed ? (flying ? (climb === 'UP' ? 60 : climb === 'DOWN' ? 40 : 48) : 22) : 0;
       const fwd = this.speed > 6 ? 3.5 : this.speed * 0.3;
       const mult = [1, 1, 1, 1];
       if (f === 'PROP') { mult[2] = 1.25; mult[0] = mult[1] = mult[3] = 0.98; }

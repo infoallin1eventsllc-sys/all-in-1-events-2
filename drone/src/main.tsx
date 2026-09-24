@@ -4,6 +4,7 @@ import App from './App.tsx';
 import { AircraftLinkProvider } from './link/useAircraftLink';
 import { HealthProvider } from './diagnostics/useHealth';
 import { FleetHealthProvider } from './diagnostics/useFleetHealth';
+import { ControlProvider } from './control/useControl';
 import { OperatorProvider } from './operator/operator';
 import { recorder } from './record/recorder';
 import { seedDemo } from './demo/seed';
@@ -15,9 +16,11 @@ createRoot(document.getElementById('root')!).render(
     <AircraftLinkProvider>
       <HealthProvider>
       <FleetHealthProvider>
+      <ControlProvider>
         <OperatorProvider>
           <App />
         </OperatorProvider>
+      </ControlProvider>
       </FleetHealthProvider>
       </HealthProvider>
     </AircraftLinkProvider>
