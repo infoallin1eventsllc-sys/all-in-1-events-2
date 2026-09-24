@@ -337,6 +337,8 @@ validated for colour-blind separation and contrast in both themes.
 
 ## Light show handoff
 
+The show stage flies **Ember** airframes (the white-and-carbon sample aircraft from the hero lab): each of up to 512 aircraft is a low-detail Ember drawn in a handful of instanced meshes, tilted into its direction of travel, with its show colour in the LED pod under the belly and in the light bar, and spinning props as blur discs. From the audience's distance you see the lights, as a real show looks; scroll in (to about 18 m) and the airframes carry them through the formation. `emberFleet` in `src/components/hero/droneModel.ts` builds it.
+
 **Cues → Export show package** downloads a zip with one CSV per aircraft
 (`Time [msec],x,y,z,Red,Green,Blue`, z up) and a manifest — the format Skybrush
 Studio / Blender and Verge Aero import. The show-control stack flies it.

@@ -7,6 +7,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { Sparkles, RotateCcw } from 'lucide-react';
 import { LightShowDrone } from '../../types/lightShowTypes';
+import { emberFleet } from '../hero/droneModel';
 
 /**
  * The show stage.
@@ -39,6 +40,8 @@ type Preset = 'AUDIENCE' | 'ISOMETRIC' | 'TOP_DOWN';
 const CAPACITY = 512;            // max aircraft the buffers hold
 const TRAIL = 16;                // trail samples per aircraft
 const SHOW_CENTRE = new THREE.Vector3(0, 52, 0);
+const AIRFRAME = 0.85;            // Ember airframe scale (about 1.6 m tip to tip, props included)
+const LED_DROP = 0.22 * AIRFRAME; // the show LED pod under the belly
 
 const PRESETS: Record<Preset, { radius: number; theta: number; phi: number }> = {
   AUDIENCE: { radius: 122, theta: -Math.PI / 2, phi: Math.PI / 2.4 },
@@ -111,7 +114,7 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
   // Everything the render loop touches lives in refs so React renders never rebuild the scene.
   const scene = useRef<{
     renderer: THREE.WebGLRenderer; composer: EffectComposer; bloom: UnrealBloomPass; camera: THREE.PerspectiveCamera;
-    cores: THREE.InstancedMesh; halos: THREE.Points; floorGlow: THREE.Points; trails: THREE.LineSegments; targets: THREE.LineSegments; fence: THREE.LineSegments;
+    cores: THREE.InstancedMesh; fleet: ReturnType<typeof emberFleet>; halos: THREE.Points; floorGlow: THREE.Points; trails: THREE.LineSegments; targets: THREE.LineSegments; fence: THREE.LineSegments;
     history: Float32Array; historyHead: number;
   } | null>(null);
   const dronesRef = useRef(drones); dronesRef.current = drones;
@@ -182,6 +185,10 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
     // Aircraft cores
     const cores = new THREE.InstancedMesh(new THREE.SphereGeometry(0.6, 10, 10), new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }), CAPACITY);
     cores.count = 0; cores.instanceMatrix.setUsage(THREE.DynamicDrawUsage); s.add(cores);
+    // The aircraft themselves: an Ember airframe per drone, lit by a low moon so the white shells read against the sky.
+    const fleet = emberFleet(CAPACITY); s.add(fleet.group);
+    s.add(new THREE.HemisphereLight(0x8a9cc8, 0x0b0d14, 0.9));
+    const moon = new THREE.DirectionalLight(0xb8c6ff, 1.5); moon.position.set(-60, 140, -90); s.add(moon);
 
     // LED halos — the thing bloom grabs.
     const halo = makeGlowSprite(0.18), soft = makeGlowSprite(0.05);
@@ -192,7 +199,8 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
       g.setDrawRange(0, 0);
       return new THREE.Points(g, new THREE.PointsMaterial({ size, map, transparent: true, opacity, blending: THREE.AdditiveBlending, vertexColors: true, depthWrite: false, sizeAttenuation: true, toneMapped: false }));
     };
-    const halos = mkPoints(5.6, 1, halo); s.add(halos);
+    // The glow is light in the air round each drone: it shows through the airframes rather than being hidden by them.
+    const halos = mkPoints(3.4, 1, halo); (halos.material as THREE.PointsMaterial).depthTest = false; s.add(halos);
     const floorGlow = mkPoints(54, 0.06, soft); s.add(floorGlow);
 
     // Trails: TRAIL-1 segments per aircraft, colour fades with age.
@@ -219,10 +227,15 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
     composer.addPass(bloom);
     composer.addPass(new OutputPass());
 
-    scene.current = { renderer, composer, bloom, camera, cores, halos, floorGlow, trails, targets, fence, history: new Float32Array(CAPACITY * TRAIL * 3), historyHead: 0 };
+    // These buffers start empty, so their bounding volumes sit at the origin: never cull them, or zooming in on the
+    // formation (the ground origin out of view) would switch every light off.
+    for (const o of [cores, halos, floorGlow, trails, targets]) o.frustumCulled = false;
+    scene.current = { renderer, composer, bloom, camera, cores, fleet, halos, floorGlow, trails, targets, fence, history: new Float32Array(CAPACITY * TRAIL * 3), historyHead: 0 };
 
     // ---- render loop --------------------------------------------------------
     const dummy = new THREE.Object3D(); const col = new THREE.Color();
+    const yaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);   // noses toward the audience
+    const tilt = new THREE.Quaternion(), axis = new THREE.Vector3(), frame4 = new THREE.Matrix4(), at = new THREE.Vector3(), scl = new THREE.Vector3(AIRFRAME, AIRFRAME, AIRFRAME);
     let raf = 0, last = performance.now(), frame = 0;
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
@@ -256,10 +269,17 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
         const r = Math.min(1, (d.color.r + d.color.w * 0.45) / 255), gch = Math.min(1, (d.color.g + d.color.w * 0.45) / 255), b = Math.min(1, (d.color.b + d.color.w * 0.45) / 255);
         const lit = r + gch + b > 0.05;
         const sel = d.id === selectedDroneId;
-        dummy.position.set(p.x, p.y, p.z); const sc = sel ? 1.9 : 1; dummy.scale.set(sc, sc, sc); dummy.updateMatrix();
+        // Airframe: level in a hover, tilted into its direction of travel when moving.
+        const vx = d.velocity?.x ?? 0, vz = d.velocity?.z ?? 0, vh = Math.hypot(vx, vz);
+        if (vh > 0.05) tilt.setFromAxisAngle(axis.set(vz / vh, 0, -vx / vh), Math.min(0.3, vh * 0.035)); else tilt.identity();
+        frame4.compose(at.set(p.x, p.y, p.z), tilt.multiply(yaw), scl);
+        for (const part of st.fleet.parts) part.setMatrixAt(i, frame4);
+        col.setRGB(lit ? r : 0.05, lit ? gch : 0.06, lit ? b : 0.08); st.fleet.glow.setColorAt(i, col);
+        // The show LED: a small dome under the belly.
+        dummy.position.set(p.x, p.y - LED_DROP, p.z); const sc = sel ? 0.7 : 0.45; dummy.scale.set(sc, sc, sc); dummy.updateMatrix();
         st.cores.setMatrixAt(i, dummy.matrix);
         col.setRGB(lit ? r : 0.06, lit ? gch : 0.07, lit ? b : 0.09); st.cores.setColorAt(i, col);
-        hp[i * 3] = p.x; hp[i * 3 + 1] = p.y; hp[i * 3 + 2] = p.z;
+        hp[i * 3] = p.x; hp[i * 3 + 1] = p.y - LED_DROP; hp[i * 3 + 2] = p.z;
         hc[i * 3] = r * (sel ? 1.6 : 1); hc[i * 3 + 1] = gch * (sel ? 1.6 : 1); hc[i * 3 + 2] = b * (sel ? 1.6 : 1);
         // Floor glow fades with altitude — a light 100 m up barely touches the ground.
         const k = Math.max(0, 1 - p.y / 90) * 0.9;
@@ -279,6 +299,8 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
         }
       }
       st.cores.count = n; st.cores.instanceMatrix.needsUpdate = true; if (st.cores.instanceColor) st.cores.instanceColor.needsUpdate = true;
+      for (const part of st.fleet.parts) { part.count = n; part.instanceMatrix.needsUpdate = true; }
+      if (st.fleet.glow.instanceColor) st.fleet.glow.instanceColor.needsUpdate = true;
       st.halos.geometry.setDrawRange(0, n); st.halos.geometry.attributes.position.needsUpdate = true; st.halos.geometry.attributes.color.needsUpdate = true;
       st.floorGlow.geometry.setDrawRange(0, n); st.floorGlow.geometry.attributes.position.needsUpdate = true; st.floorGlow.geometry.attributes.color.needsUpdate = true;
       st.targets.geometry.setDrawRange(0, tgtCount * 2); st.targets.geometry.attributes.position.needsUpdate = true; st.targets.geometry.attributes.color.needsUpdate = true;
@@ -348,7 +370,7 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
     const g = orbitGoal.current; g.theta -= dx * 0.006; g.phi = Math.max(0.05, Math.min(Math.PI / 2 - 0.02, g.phi - dy * 0.006));
   };
   const onPointerUp = () => { dragging.current = false; lastInteraction.current = performance.now(); };
-  const onWheel = (e: React.WheelEvent) => { lastInteraction.current = performance.now(); orbitGoal.current.radius = Math.max(45, Math.min(320, orbitGoal.current.radius + e.deltaY * 0.15)); };
+  const onWheel = (e: React.WheelEvent) => { lastInteraction.current = performance.now(); orbitGoal.current.radius = Math.max(18, Math.min(320, orbitGoal.current.radius + e.deltaY * 0.15)); };
   const applyPreset = (p: Preset) => { setPreset(p); orbitGoal.current = { ...PRESETS[p] }; lastInteraction.current = performance.now(); };
   const onClick = (e: React.MouseEvent) => {
     // Pick the nearest aircraft to the click in screen space; a miss clears the selection.
