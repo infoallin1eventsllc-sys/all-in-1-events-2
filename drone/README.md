@@ -51,8 +51,8 @@ searchlight, a light-show drone, a VTOL fixed-wing mapper and a heavy-lift cargo
 They are in `src/components/hero/droneVariants.ts`; the app still flies the
 Mavic-class model. Open `/drone/lab/fleet.html?v=cinema` (or `fpv`, `enterprise`,
 `show`, `vtol`, `cargo`) under `npm run dev`. With `&capture`, the page renders any
-moment of the shot on request (`window.__shot(t)` returns a PNG), which is how the
-clips in `portfolio/fleet/` were made.
+moment of the shot on request (`window.__shot(t)` returns a PNG). That is how the
+stills and the 34-second reel in `portfolio/fleet/` were made (1080p, 24 fps).
 
 ## Operators, the record and the server
 
