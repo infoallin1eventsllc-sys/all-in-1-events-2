@@ -4,6 +4,8 @@ import { useHealth } from '../diagnostics/useHealth';
 import { LIMITS, PARTS, motorTrend, partsLife, type Action, type Finding, type FlightHealth, type Level, type MotorState, type HealthReport } from '../diagnostics/health';
 import { SIM_FAULTS, SIM_FLIGHT_S, type SimFault } from '../diagnostics/sim';
 import { Headline, Card, Section, Chip, Dot, Tabs, Segmented, ToolButton, Activity, Sparkline, type Tone } from './ui';
+import { HoloAirframe } from './health/HoloAirframe';
+import { BatteryRing, MagScatter, MarginTrace, MotorLoad, SensorRadar, VibeDial } from './health/Instruments';
 
 /**
  * Aircraft health: what is wrong with the aircraft, which part, and what to do.
@@ -161,21 +163,60 @@ const Verdict: React.FC<{ report: HealthReport }> = ({ report: r }) => {
 
 const NowTab: React.FC<{ report: HealthReport }> = ({ report: r }) => {
   const h = useHealth();
-  const armIssue = r.findings.find(f => f.part === 'arms');
+  const bodyFinding = r.findings.find(f => !f.motor && f.part);
+  const flying = r.phase === 'FLYING';
   return (
     <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
-      <Card className="xl:col-span-5" id="health-airframe">
-        <Section title="Motors" right={r.balanceSamples ? `balance from ${Math.round(r.balanceSamples / 4)} s of steady flight` : r.phase === 'FLYING' ? 'collecting steady flight…' : 'live command'}>
-          {r.motors.length ? <>
-            <AircraftDiagram motors={r.motors} armLevel={armIssue?.level ?? 'OK'} />
-            <MotorTable motors={r.motors} />
-          </> : <p className="text-[13px] text-ink-3 py-6">{r.frame.kind === 'PLANE' ? 'Fixed-wing aircraft: motor balance does not apply; the other checks do.' : 'Waiting for motor outputs.'}</p>}
-        </Section>
-      </Card>
+      {/* The diagnostic deck: the aircraft as a hologram and the four instruments that matter most in the air. */}
+      <section id="health-deck" aria-label="Diagnostic scan" className="holo-deck xl:col-span-12 p-3 sm:p-4 grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4">
+        <div className="relative lg:col-span-7 min-h-[340px] sm:min-h-[460px] rounded-[14px] overflow-hidden" id="health-airframe">
+          {r.motors.length || r.frame.kind === 'PLANE' || r.frame.kind === 'VTOL'
+            ? <HoloAirframe motors={r.motors} frame={r.frame} findings={r.findings} flying={flying} />
+            : <div className="absolute inset-0 grid place-items-center text-[13px] text-[#7f93ad]">Waiting for motor outputs.</div>}
+          <div className="absolute left-4 top-3.5 pointer-events-none">
+            <div className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-[#5ad2ff]">Diagnostic scan</div>
+            <div className="mt-0.5 text-[13px] text-[#dbe7f5]">{r.frame.label}{r.motors.length ? ` · ${r.motors.length} motors` : ''}</div>
+            <div className="text-[11px] text-[#62778f]">{r.balanceSamples ? `balance from ${Math.round(r.balanceSamples / 4)} s of steady flight` : flying ? 'collecting steady flight' : 'live motor command'}</div>
+          </div>
+          <div className="absolute right-4 top-3.5 pointer-events-none text-right" style={{ font: '500 10.5px "JetBrains Mono", monospace', color: '#9fb2c9' }}>
+            <div className="uppercase tracking-[0.14em]" style={{ color: r.overall === 'FAULT' ? '#f87171' : r.overall === 'WATCH' ? '#fbbf24' : r.overall === 'OK' ? '#4ade80' : '#62778f' }}>{r.overall === 'UNKNOWN' ? 'No data' : r.overall === 'OK' ? 'All clear' : r.overall === 'WATCH' ? 'Watch' : 'Fault'}</div>
+            <div>{flying ? `airborne ${mmss(r.flightS)}` : r.phase === 'LANDED' ? 'landed' : 'on the ground'}</div>
+            {bodyFinding && <div className="mt-0.5 max-w-[200px] truncate text-[#dbe7f5]">{bodyFinding.title}</div>}
+          </div>
+          <div className="absolute left-4 bottom-3 pointer-events-none flex flex-wrap gap-x-3 gap-y-1" style={{ font: '500 10px "JetBrains Mono", monospace', color: '#9fb2c9' }} aria-hidden>
+            <span><span className="inline-block w-3 h-3 rounded-full border-2 align-[-2px] mr-1" style={{ borderColor: '#4ade80' }} />OK</span>
+            <span><span className="inline-block w-3 h-3 rounded-full border-2 border-dashed align-[-2px] mr-1" style={{ borderColor: '#fbbf24' }} />Watch</span>
+            <span><span className="inline-block w-3 h-3 rounded-full border-[3px] align-[-2px] mr-1" style={{ borderColor: '#f87171' }} />Fault</span>
+            <span className="hidden sm:inline">· arc: motor output · drag to turn</span>
+          </div>
+        </div>
+        <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-3 content-start">
+          <VibeDial vibe={r.vibe} />
+          <BatteryRing battery={r.battery} cells={r.cellsV} />
+          <MotorLoad motors={r.motors} />
+          <SensorRadar nav={r.nav} />
+        </div>
+      </section>
 
       <Card className="xl:col-span-7" id="health-findings">
         <Section title="What needs attention" right={r.findings.length ? `${r.findings.length} found` : undefined}>
           <FindingList findings={r.findings} empty={r.phase === 'NO_DATA' ? 'No aircraft data yet.' : 'Nothing wrong found.'} onReplace={(f) => h.markReplaced(f.part!, f.title)} />
+        </Section>
+      </Card>
+      <Card className="xl:col-span-5" id="health-motors">
+        <Section title="Motors" right="rpm, temperature and current from ESC telemetry">
+          {r.motors.length ? <MotorTable motors={r.motors} /> : <p className="text-[13px] text-ink-3 py-6">{r.frame.kind === 'PLANE' ? 'Fixed-wing aircraft: motor balance does not apply; the other checks do.' : 'Waiting for motor outputs.'}</p>}
+        </Section>
+      </Card>
+
+      <Card className="xl:col-span-7" id="health-margin">
+        <Section title="Closest to a limit" right="every reading scaled so watch is 50% and fault 100%">
+          <MarginTrace stress={r.stress} />
+        </Section>
+      </Card>
+      <Card className="xl:col-span-5" id="health-mag">
+        <Section title="Compass against motor current" right="this flight">
+          <MagScatter mag={r.mag} source={r.nav?.source ?? null} />
         </Section>
       </Card>
 
@@ -209,49 +250,6 @@ const NowTab: React.FC<{ report: HealthReport }> = ({ report: r }) => {
         </Section>
       </Card>
     </div>
-  );
-};
-
-/** Top-down airframe: arms and motors in the autopilot's own numbering, coloured by state. */
-const AircraftDiagram: React.FC<{ motors: MotorState[]; armLevel: Level }> = ({ motors, armLevel }) => {
-  const S = 320, c = S / 2, L = 112, R = 34;
-  const armStroke = armLevel === 'OK' ? 'var(--color-line-2)' : LEVEL_VAR[armLevel][0];
-  return (
-    <svg viewBox={`0 0 ${S} ${S}`} className="w-full max-w-[340px] mx-auto block" role="img"
-      aria-label={`Airframe seen from above. ${motors.map(m => `Motor ${m.n}: ${LEVEL[m.level].label}`).join('. ')}`}>
-      <text x={c} y={16} textAnchor="middle" className="fill-[var(--color-ink-3)]" style={{ font: '600 11px Inter, sans-serif', letterSpacing: '0.08em' }}>FRONT</text>
-      <path d={`M${c - 7} 26 L${c} 18 L${c + 7} 26`} fill="none" stroke="var(--color-ink-3)" strokeWidth={1.5} />
-      {motors.map(m => {
-        const a = (m.angleDeg * Math.PI) / 180, x = c + Math.sin(a) * L, y = c - Math.cos(a) * L;
-        return <line key={`arm${m.n}`} x1={c} y1={c} x2={x} y2={y} stroke={armStroke} strokeWidth={9} strokeLinecap="round" />;
-      })}
-      <rect x={c - 30} y={c - 38} width={60} height={76} rx={14} fill="var(--color-surface-2)" stroke="var(--color-line-2)" strokeWidth={1.5} />
-      <rect x={c - 16} y={c - 26} width={32} height={20} rx={4} fill="none" stroke="var(--color-ink-3)" strokeWidth={1} />
-      <text x={c} y={c + 22} textAnchor="middle" className="fill-[var(--color-ink-3)]" style={{ font: '500 9px Inter, sans-serif' }}>FC</text>
-      {motors.map(m => {
-        const a = (m.angleDeg * Math.PI) / 180, x = c + Math.sin(a) * L, y = c - Math.cos(a) * L;
-        const [fg, bg] = LEVEL_VAR[m.level];
-        const dir = m.spin === 'CW' ? 1 : -1;
-        // spin arrow: an arc outside the prop disc
-        const r2 = R + 7, a0 = -0.9, a1 = 0.9;
-        const p0 = [x + Math.cos(a0) * r2, y + Math.sin(a0) * r2 * dir], p1 = [x + Math.cos(a1) * r2, y + Math.sin(a1) * r2 * dir];
-        return (
-          <g key={`m${m.n}`}>
-            <circle cx={x} cy={y} r={R + 7} fill="none" stroke={fg} strokeOpacity={0.35} strokeDasharray="3 4" />
-            <path d={`M${p0[0]} ${p0[1]} A ${r2} ${r2} 0 0 ${dir > 0 ? 1 : 0} ${p1[0]} ${p1[1]}`} fill="none" stroke="var(--color-ink-3)" strokeWidth={1.2} markerEnd="url(#spin-arrow)" />
-            <circle cx={x} cy={y} r={R} fill={bg} stroke={fg} strokeWidth={m.level === 'OK' || m.level === 'UNKNOWN' ? 1.5 : 3} />
-            <text x={x} y={y - 6} textAnchor="middle" style={{ font: '700 13px Inter, sans-serif', fill: 'var(--color-ink)' }}>M{m.n}</text>
-            <text x={x} y={y + 10} textAnchor="middle" className="num" style={{ font: '500 12px "JetBrains Mono", monospace', fill: 'var(--color-ink-2)' }}>{m.outputPct != null ? `${Math.round(m.outputPct)}%` : '—'}</text>
-            <text x={x} y={y + 23} textAnchor="middle" style={{ font: '500 9px Inter, sans-serif', fill: 'var(--color-ink-3)' }}>{m.spin === 'CW' ? 'CW' : 'CCW'}</text>
-          </g>
-        );
-      })}
-      <defs>
-        <marker id="spin-arrow" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-          <path d="M0 0 L6 3 L0 6 z" fill="var(--color-ink-3)" />
-        </marker>
-      </defs>
-    </svg>
   );
 };
 

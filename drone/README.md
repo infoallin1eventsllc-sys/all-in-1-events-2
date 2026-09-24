@@ -195,11 +195,23 @@ It reads the autopilot's own telemetry (`src/diagnostics/`), and needs no extra 
 | Motor at full power | output saturated, or ArduPilot's "Potential Thrust Loss" | *Motor N ran out of power — Land* |
 | Weak battery cell | cells more than 0.1 V apart, a cell under 3.4 V under load | *Battery cells are out of balance — Retire this pack* |
 | Sensor, compass, GPS, power rail | SYS_STATUS health bits, EKF / estimator variance, POWER_STATUS | named sensor + *Calibrate* / *Check* |
+| Power lead or ESC too close to the compass | compass variance rises and falls with the battery current (correlation over 0.7) | *Compass is disturbed by motor current — Move power wires away* |
 | Old or test firmware | AUTOPILOT_VERSION | *Firmware is out of date — Update firmware* |
 
-- **Now.** Top-down airframe with each motor coloured by state (autopilot motor
-  numbering and spin), a per-motor table (command against the average, rpm,
-  temperature, current), the findings with their action, nine system tiles,
+- **Now.** A diagnostic deck: the aircraft as a hologram (its own frame type,
+  drawn as glowing edges and vertex points over a blueprint floor, with a scan
+  line sweeping through it). Each motor has a floor ring, a light column and an
+  arc for its output; rings are solid for OK, dashed for Watch, thick and pulsing
+  for Fault, and every callout says the level, so colour is never the only signal.
+  A finding about another part (compass, battery, frame) lights the body and gets
+  a callout. Drag to turn it. Beside it are four instruments: a vibration dial, motor
+  load bars, a battery ring with the cells, and sensor agreement (the navigation
+  filter's check of compass, position, height and velocity as a radar, with its
+  watch and failsafe rings). Below: the findings with their action, the per-motor
+  table (command against the average, rpm, temperature, current), **Closest to a
+  limit** (every reading scaled so watch is 50% and fault 100%, the tightest one
+  each second, and which it is), **Compass against motor current** (the
+  compass-motor check as a scatter with a fitted line), nine system tiles,
   vibration and battery cells, and the autopilot's own warnings.
 - **After landing.** A report per flight is saved on disarm (IndexedDB). A motor
   trend across flights flags a motor that is working a little harder every flight,

@@ -203,3 +203,43 @@ input[type="range"] { accent-color: var(--color-accent); }
   transition: background 0.5s ease-in-out, box-shadow 0.5s ease-in-out, border-color 0.5s ease-in-out;
 }
 .hero-cta:hover { background: rgba(255, 255, 255, 0.15); border-color: rgba(255, 255, 255, 0.4); box-shadow: 0 0 36px rgba(130, 175, 255, 0.38); }
+
+/* ---- Aircraft health: the diagnostic deck (a dark instrument surface in both themes) ---- */
+.holo-deck {
+  --deck-line: rgba(90, 210, 255, 0.14);
+  color-scheme: dark;
+  background:
+    radial-gradient(90% 70% at 35% 30%, rgba(38, 104, 196, 0.22) 0%, rgba(5, 10, 19, 0) 70%),
+    linear-gradient(rgba(90, 210, 255, 0.035) 1px, transparent 1px) 0 0 / 28px 28px,
+    linear-gradient(90deg, rgba(90, 210, 255, 0.035) 1px, transparent 1px) 0 0 / 28px 28px,
+    #050a13;
+  border: 1px solid var(--deck-line);
+  border-radius: 18px;
+}
+.holo-panel {
+  background: linear-gradient(180deg, rgba(12, 26, 46, 0.78), rgba(7, 15, 28, 0.78));
+  border: 1px solid var(--deck-line);
+}
+.holo-panel::before, .holo-panel::after {
+  content: ''; position: absolute; width: 10px; height: 10px; pointer-events: none;
+  border-color: rgba(90, 210, 255, 0.7); border-style: solid;
+}
+.holo-panel::before { top: -1px; left: -1px; border-width: 1.5px 0 0 1.5px; border-top-left-radius: 12px; }
+.holo-panel::after { bottom: -1px; right: -1px; border-width: 0 1.5px 1.5px 0; border-bottom-right-radius: 12px; }
+.holo-tag {
+  position: absolute; left: 0; top: 0; white-space: nowrap;
+  font: 500 11px/1.2 "JetBrains Mono", ui-monospace, monospace; color: #dbe7f5;
+  background: rgba(5, 12, 24, 0.8); border: 1px solid rgba(90, 210, 255, 0.35); border-radius: 6px;
+  padding: 3px 7px; backdrop-filter: blur(4px); will-change: transform;
+}
+.holo-tag:empty { display: none; }
+.holo-tag b { color: #5ad2ff; font-weight: 700; }
+.holo-tag span { color: #9fb2c9; }
+.holo-tag em { font-style: normal; text-transform: uppercase; letter-spacing: 0.08em; font-size: 10px; font-weight: 700; }
+.holo-tag em[data-l="WATCH"] { color: #fbbf24; }
+.holo-tag em[data-l="FAULT"] { color: #f87171; }
+.holo-tag[data-level="WATCH"] { border-color: rgba(251, 191, 36, 0.7); }
+.holo-tag[data-level="FAULT"] { border-color: rgba(248, 113, 113, 0.85); box-shadow: 0 0 14px rgba(248, 113, 113, 0.35); }
+.holo-tag-body b { color: #dbe7f5; }
+.holo-scanline { background: linear-gradient(90deg, transparent, rgba(90, 210, 255, 0.55), transparent); height: 1px; }
+.dial-needle { transition: transform 0.4s ease; }

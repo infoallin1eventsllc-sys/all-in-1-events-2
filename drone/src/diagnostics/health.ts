@@ -90,7 +90,46 @@ export interface HealthReport {
   /** Seconds airborne in the current (or last) flight, and how many of those gave motor-balance data. */
   flightS: number;
   balanceSamples: number;
+  /**
+   * Margin to limits: every reading scaled so its watch line is 0.5 and its fault line 1.0,
+   * the worst of them each second of aircraft time, and which reading it was.
+   */
+  stress: { now: number; worst: string | null; history: number[] };
+  /** Pack readings for the instruments. */
+  battery: { remainingPct: number | null; packV: number | null; currentA: number | null; tempC: number | null } | null;
+  /** The navigation filter's check of each sensor against the others (ArduPilot EKF variance or PX4 test ratio). */
+  nav: { source: 'EKF' | 'ESTIMATOR'; velocity: number; posHoriz: number; posVert: number; compass: number } | null;
+  /** Compass against motor current this flight: [amps, compass variance] pairs and how they move together. */
+  mag: MagCheck & { points: [number, number][] } | null;
 }
+
+/** r: correlation of compass variance with battery current; lo / hi: fitted variance at low and high current. */
+export interface MagCheck { r: number | null; lo: number; hi: number; n: number }
+
+/**
+ * Does the compass get worse as the motors draw more current? The field round a
+ * power lead grows with the current in it, so a compass mounted too close shows
+ * a disturbance that rises and falls with the throttle (what ArduPilot's
+ * compass-motor calibration measures). A disturbance that does not follow the
+ * current is the surroundings instead: rebar, a vehicle, a steel roof.
+ */
+export function magCorrelation(pairs: [number, number][]): MagCheck | null {
+  const n = pairs.length;
+  if (n < 4) return null;
+  const ma = pairs.reduce((s, p) => s + p[0], 0) / n, mc = pairs.reduce((s, p) => s + p[1], 0) / n;
+  let sab = 0, saa = 0, scc = 0;
+  for (const [a, c] of pairs) { sab += (a - ma) * (c - mc); saa += (a - ma) ** 2; scc += (c - mc) ** 2; }
+  const sdA = Math.sqrt(saa / n);
+  const r = sdA < 1 || scc === 0 ? null : sab / Math.sqrt(saa * scc);   // under 1 A of spread there is nothing to correlate
+  // lo / hi: the fitted variance at low and high current (10th and 90th percentile of this flight's current).
+  const amps = pairs.map(p => p[0]).sort((x, y) => x - y);
+  const a10 = amps[Math.floor((n - 1) * 0.1)], a90 = amps[Math.floor((n - 1) * 0.9)];
+  const slope = saa ? sab / saa : 0;
+  return { r, lo: mc + slope * (a10 - ma), hi: mc + slope * (a90 - ma), n };
+}
+
+/** Scale a reading so the watch line lands on 0.5 and the fault line on 1.0. */
+export const toMargin = (v: number, watch: number, fault: number) => (v <= watch ? 0.5 * Math.max(0, v) / watch : 0.5 + 0.5 * (v - watch) / (fault - watch));
 
 /** One flight's health, kept after landing (IndexedDB `health` store). */
 export interface FlightHealth {
@@ -145,6 +184,8 @@ export const LIMITS = {
   dropWatchPct: 5, dropFaultPct: 20,
   /** Minimum samples (4 Hz outputs) before judging motor balance. */
   minBalanceSamples: 20,
+  /** Compass against motor current: correlation and rise in variance (low-current half to high-current half) that point at a power wire. */
+  magCorr: 0.7, magRise: 0.12, magMinSamples: 30,
 } as const;
 
 /** Oldest firmware this app recommends. Not "the latest" — the app works offline and cannot check that. */
@@ -329,6 +370,8 @@ interface FlightAcc {
   vibeMax: { x: number; y: number; z: number } | null; clipStart: number | null; clipNow: number;
   minCell: number | null; maxSpread: number | null; maxBattTemp: number | null;
   latched: Map<string, Finding>;
+  /** [battery amps, compass variance] each time the navigation filter reports. */
+  mag: [number, number][];
 }
 
 const EMA = (prev: number | null, v: number, k: number) => (prev == null ? v : prev + (v - prev) * k);
@@ -357,6 +400,9 @@ export class HealthMonitor {
   private lastTick = 0;
   private everFlew = false;
   private benchLatched = new Map<string, { f: Finding; at: number }>();
+  private stressHist: number[] = [];
+  private stressNow: { v: number; k: string | null } = { v: 0, k: null };
+  private stressClock = 0;
 
   /** Called with every completed flight (at disarm). */
   onFlightEnd: ((r: FlightHealth) => void) | null = null;
@@ -378,6 +424,12 @@ export class HealthMonitor {
     this.state = s; this.stateAt = t;
     if (s.armed && !was) this.startFlight(t);
     if (this.flight && this.airborne()) { this.flight.airborneS += dt; this.everFlew = true; }
+    this.stressClock += dt;
+    if (this.stressClock >= 1) {
+      this.stressClock = 0;
+      this.stressNow = this.margin();
+      this.stressHist.push(this.stressNow.v); if (this.stressHist.length > 180) this.stressHist.shift();
+    }
     if (!s.armed && was && this.flight) this.endFlight(t);
   }
 
@@ -386,7 +438,7 @@ export class HealthMonitor {
     this.flight = {
       startedAt: t, airborneS: 0, outSum: Array(n).fill(0), outN: 0, satN: Array(n).fill(0), outAll: Array(n).fill(0), allN: 0,
       rpmSum: Array(n).fill(0), rpmN: Array(n).fill(0), curSum: Array(n).fill(0), curN: Array(n).fill(0), maxTemp: Array(n).fill(null),
-      vibeMax: null, clipStart: null, clipNow: 0, minCell: null, maxSpread: null, maxBattTemp: null, latched: new Map(),
+      vibeMax: null, clipStart: null, clipNow: 0, minCell: null, maxSpread: null, maxBattTemp: null, latched: new Map(), mag: [],
     };
     this.pushEvent(t, 'OK', 'Armed: flight health recording started');
   }
@@ -454,7 +506,12 @@ export class HealthMonitor {
         break;
       }
       case 'SENSORS': this.sensors = m; break;
-      case 'NAV': this.nav = m; break;
+      case 'NAV': {
+        this.nav = m;
+        const amps = this.batt?.currentA ?? this.sensors?.currentA ?? null;
+        if (f && amps != null && amps >= 0) { f.mag.push([amps, m.compass]); if (f.mag.length > 1200) f.mag.splice(0, f.mag.length - 1200); }
+        break;
+      }
       case 'POWER': this.power = m; break;
       case 'VERSION': this.version = m; break;
       case 'TEXT': {
@@ -469,6 +526,26 @@ export class HealthMonitor {
         break;
       }
     }
+  }
+
+  /** The live reading closest to its limit, scaled by toMargin. */
+  private margin(): { v: number; k: string | null } {
+    const cand: [number, string][] = [];
+    const n = this.frame.kind === 'PLANE' ? 0 : this.frame.motors;
+    const outs = this.out.slice(0, n);
+    const avg = mean(outs.filter((v): v is number => v != null));
+    if (this.airborne() && avg > 5) outs.forEach((o, i) => { if (o != null) cand.push([toMargin(Math.abs(o - avg) / avg * 100, LIMITS.motorWatchPct, LIMITS.motorFaultPct), `Motor ${i + 1} balance`]); });
+    if (this.vibe) cand.push([toMargin(Math.max(this.vibe.x, this.vibe.y, this.vibe.z), LIMITS.vibeWatch, LIMITS.vibeFault), 'Vibration']);
+    this.temp.slice(0, n).forEach((tc, i) => { if (tc != null && tc > 0) cand.push([toMargin(tc - 30, LIMITS.escWatchC - 30, LIMITS.escFaultC - 30), `Motor ${i + 1} temperature`]); });
+    const nv = this.nav;
+    if (nv) {
+      const [w, fl] = nv.source === 'EKF' ? [LIMITS.ekfWatch, LIMITS.ekfFault] : [LIMITS.estWatch, LIMITS.estFault];
+      ([[nv.compass, 'Compass'], [nv.posHoriz, 'Position estimate'], [nv.velocity, 'Velocity estimate'], [nv.posVert, 'Height estimate']] as const).forEach(([v, k]) => cand.push([toMargin(v, w, fl), k]));
+    }
+    if (this.cells.length > 1) cand.push([toMargin(Math.max(...this.cells) - Math.min(...this.cells), LIMITS.cellSpreadWatchV, LIMITS.cellSpreadFaultV), 'Cell balance']);
+    if (!cand.length) return { v: 0, k: null };
+    const top = cand.reduce((a, b) => (b[0] > a[0] ? b : a));
+    return { v: Math.min(1.5, top[0]), k: top[1] };
   }
 
   // ---- reports --------------------------------------------------------------
@@ -558,6 +635,10 @@ export class HealthMonitor {
       for (const [v, label, part, action] of parts) if (v >= w) out.push({ id: `nav-${part}-${label}`, level: v >= fl ? 'FAULT' : 'WATCH', system: 'NAVIGATION', part, title: `${label} estimate disagrees with the sensors`, detail: `${nv.source === 'EKF' ? 'EKF variance' : 'Estimator test ratio'} ${v.toFixed(2)} (limit ${fl}). ${label === 'Compass' ? 'Magnetic interference or a compass that needs calibrating.' : label === 'Height' ? 'Barometer disturbed by prop wash or sunlight; cover it with foam.' : 'GPS multipath or a glitch.'}`, action, actionText: action === 'CALIBRATE' ? 'Calibrate compass' : 'Watch position hold' });
     }
 
+    // Compass disturbed by motor current (a power lead too close to it)
+    const mg = acc ? magCorrelation(acc.mag) : null;
+    if (mg && mg.r != null && mg.n >= LIMITS.magMinSamples && mg.r >= LIMITS.magCorr && mg.hi - mg.lo >= LIMITS.magRise) out.push({ id: 'mag-current', level: 'WATCH', system: 'SENSORS', part: 'compass', title: 'Compass is disturbed by motor current', detail: `Compass variance rises from ${mg.lo.toFixed(2)} to ${mg.hi.toFixed(2)} as the battery current goes up (correlation ${mg.r.toFixed(2)}). The field round the power leads or ESCs is reaching the compass: route them away from the GPS mast, twist the battery leads together, then run the compass-motor calibration.`, action: 'INSPECT', actionText: 'Move power wires away' });
+
     // Power rail
     const pw = this.power;
     if (pw && pw.vccV > 0) {
@@ -629,6 +710,10 @@ export class HealthMonitor {
       cellsV: this.cells,
       firmware: this.version && st ? fwName(st.autopilot, this.version) : null,
       flightS: acc?.airborneS ?? 0, balanceSamples: samples,
+      battery: stale || (!this.batt && !this.sensors) ? null : { remainingPct: this.batt?.remainingPct ?? null, packV: this.batt?.packV ?? this.sensors?.packV ?? null, currentA: this.batt?.currentA ?? this.sensors?.currentA ?? null, tempC: this.batt?.tempC ?? null },
+      nav: stale || !this.nav ? null : { source: this.nav.source, velocity: this.nav.velocity, posHoriz: this.nav.posHoriz, posVert: this.nav.posVert, compass: this.nav.compass },
+      stress: { now: stale ? 0 : this.stressNow.v, worst: stale ? null : this.stressNow.k, history: this.stressHist.slice() },
+      mag: acc && acc.mag.length >= 4 ? { ...magCorrelation(acc.mag)!, points: acc.mag.filter((_, i) => i % Math.max(1, Math.ceil(acc.mag.length / 160)) === 0) } : null,
     };
   }
 

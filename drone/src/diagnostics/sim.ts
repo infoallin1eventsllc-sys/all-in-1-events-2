@@ -89,8 +89,9 @@ export class HealthSim {
       const tick = Math.round(this.clock * 4);
       const f = this.fault;
 
-      // Motor command: hover ~48%, transit tilts load onto the rear motors.
-      const base = this.armed ? (flying ? 48 : 22) : 0;
+      // Motor command: hover ~48%, more to climb, less to descend; transit tilts load onto the rear motors.
+      const T = this.t;
+      const base = this.armed ? (flying ? (T < 10 ? 60 : T >= SIM_FLIGHT_S - 14 ? 40 : 48) : 22) : 0;
       const fwd = this.speed > 6 ? 3.5 : this.speed * 0.3;
       const mult = [1, 1, 1, 1];
       if (f === 'PROP') { mult[2] = 1.25; mult[0] = mult[1] = mult[3] = 0.98; }
@@ -102,6 +103,9 @@ export class HealthSim {
         return Math.max(0, Math.min(100, (base + tilt) * mult[i] + this.noise(1.2)));
       });
       const us = [...outPct.map(p => (this.armed ? Math.round(1000 + p * 10) : 1000)), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+      // Each motor's current goes with the square of its command; the battery supplies all of them plus the avionics.
+      const escA = outPct.map((p, i) => (this.armed ? Math.round((0.3 + (p / 100) ** 2 * 24) * (f === 'MOTOR' && i === 1 ? 1.3 : 1) * 100) / 100 : 0));
+      const packA = this.armed ? escA.reduce((s, a) => s + a, 0) + 0.8 : 0.4;
       msgs.push({ k: 'OUTPUTS', us });
 
       if (tick % 2 === 0) {
@@ -113,15 +117,15 @@ export class HealthSim {
         msgs.push({ k: 'VIBE', x: Math.abs(v), y: Math.abs(v * 0.9 + this.noise(2)), z: Math.abs(vz), clip: [this.clip, 0, 0] });
 
         // ESC telemetry: rpm, current, temperature.
-        const rpmMult = [1, 1, 1, 1], curMult = [1, 1, 1, 1], hot = [0, 0, 0, 0];
+        const rpmMult = [1, 1, 1, 1], hot = [0, 0, 0, 0];
         if (f === 'PROP') rpmMult[2] = 1.09;            // spins faster: less thrust per turn
-        if (f === 'MOTOR') { rpmMult[1] = 0.985; curMult[1] = 1.3; hot[1] = 21; }
+        if (f === 'MOTOR') { rpmMult[1] = 0.985; hot[1] = 21; }
         msgs.push({
           k: 'ESC', first: 0,
           // Speed follows the thrust actually needed, not the extra command: a weak prop
           // needs more turns for the same thrust, a dragging motor needs more current for the same turns.
           rpm: outPct.map((p, i) => (this.armed ? Math.round((1800 + (f === 'ARM' ? p : p / mult[i]) * 98) * rpmMult[i] + this.noise(40)) : 0)),
-          currentA: outPct.map((p, i) => (this.armed ? Math.round((0.3 + (p / 100) ** 2 * 24) * curMult[i] * 100) / 100 : 0)),
+          currentA: escA,
           voltageV: outPct.map(() => 15.6),
           tempC: outPct.map((p, i) => Math.round(31 + (flying ? Math.min(1, this.t / 60) * (p * 0.28) : 0) + hot[i] * (flying ? Math.min(1, this.t / 40) : 0))),
         });
@@ -136,10 +140,11 @@ export class HealthSim {
           if (f === 'CELL' && i === 2) c -= 0.05 + load * 0.2;
           return Math.round(c * 1000) / 1000;
         });
-        const current = flying ? 21 + this.noise(1.5) : this.armed ? 4 : 0.4;
+        const current = Math.round((packA + this.noise(0.6)) * 10) / 10;
         msgs.push({ k: 'BATTERY', cellsV: cells, packV: cells.reduce((s, v) => s + v, 0), tempC: 27 + this.cellWear * 13, currentA: current, remainingPct: Math.round(96 - this.cellWear * 70), faults: 0 });
         msgs.push({ k: 'SENSORS', present: SENSORS_ALL, enabled: SENSORS_ALL, health: SENSORS_ALL, dropRatePct: 0.4, packV: cells.reduce((s, v) => s + v, 0), currentA: current });
-        const comp = f === 'COMPASS' && flying ? 0.56 + Math.abs(this.noise(0.14)) : 0.06 + Math.abs(this.noise(0.05));
+        // A power lead near the compass: the disturbance follows the current in it.
+        const comp = f === 'COMPASS' && this.armed ? 0.06 + 0.5 * (current / 23) + Math.abs(this.noise(0.06)) : 0.06 + Math.abs(this.noise(0.05));
         msgs.push({ k: 'NAV', source: 'EKF', velocity: 0.08 + Math.abs(this.noise(0.05)), posHoriz: 0.07 + Math.abs(this.noise(0.05)), posVert: 0.05 + Math.abs(this.noise(0.03)), compass: comp, flags: 0x1ff });
         msgs.push({ k: 'POWER', vccV: 5.12 + this.noise(0.02), servoV: 0, flags: 1 });
         if (!this.sentVersion) {

@@ -141,6 +141,31 @@ function fly(fault, { seconds = S.SIM_FLIGHT_S + 5, texts = [] } = {}) {
 {
   const r = fly('COMPASS');
   assert.ok(r.mid.findings.some(x => x.system === 'NAVIGATION' && x.action === 'CALIBRATE'), `compass variance: ${r.mid.findings.map(x => x.id)}`);
+  // The disturbance follows the motor current: a power lead near the compass, told apart from the surroundings.
+  const m = r.flight.findings.find(x => x.id === 'mag-current');
+  assert.ok(m, `compass follows current: ${r.flight.findings.map(x => x.id)}`); assert.equal(m.part, 'compass'); assert.equal(m.action, 'INSPECT');
+  assert.ok(r.mid.mag && r.mid.mag.r > 0.7, `strong correlation in flight: ${r.mid.mag && r.mid.mag.r}`);
+}
+{
+  // A healthy aircraft: the compass does not follow the current, and the margin trace stays under the watch line.
+  const r = fly('NONE');
+  assert.ok(!r.flight.findings.some(x => x.id === 'mag-current'));
+  assert.ok(r.mid.mag && r.mid.mag.r != null && r.mid.mag.r < 0.4, `no correlation: ${r.mid.mag && r.mid.mag.r}`);
+  assert.ok(r.mid.stress.history.length > 30, 'a margin sample each second');
+  assert.ok(r.mid.stress.now < 0.5, `healthy margin under watch: ${r.mid.stress.now} (${r.mid.stress.worst})`);
+  assert.ok(r.mid.battery && r.mid.battery.currentA > 10, 'pack current reported'); assert.equal(r.mid.nav.source, 'EKF');
+}
+{
+  // The margin trace names the tightest reading: a chipped prop puts motor 3 over the fault line.
+  const r = fly('PROP');
+  assert.ok(r.mid.stress.now >= 1, `prop fault at the limit: ${r.mid.stress.now}`); assert.match(r.mid.stress.worst, /Motor 3/);
+}
+{
+  // Correlation needs the current to vary: a steady current says nothing either way.
+  assert.equal(H.magCorrelation([[20, 0.1], [20.2, 0.5], [20.1, 0.2], [20, 0.3], [20.3, 0.1]]).r, null);
+  const c = H.magCorrelation([[5, 0.1], [10, 0.2], [20, 0.4], [30, 0.6], [40, 0.8]]);
+  close(c.r, 1, 1e-9, 'perfect correlation'); assert.ok(c.hi > c.lo);
+  close(H.toMargin(30, 30, 60), 0.5, 1e-9, 'watch line at 0.5'); close(H.toMargin(60, 30, 60), 1, 1e-9, 'fault line at 1');
 }
 {
   const r = fly('FIRMWARE');
