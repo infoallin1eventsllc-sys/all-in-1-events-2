@@ -1,6 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Circle, Maximize2, Crosshair as CrosshairIcon, Thermometer } from 'lucide-react';
 import { feedEngine, FEED_W, FEED_H, THUMB_W, THUMB_H, type Lock, type World } from './feed/engine';
+
+/** The rendered worlds: HUD badge, caption and a plain description. */
+const WORLD_LABEL: Partial<Record<World, { badge: string; caption: string; title: string }>> = {
+  SF: { badge: '3D · SF TOUR', caption: 'San Francisco, California · aerial tour, rendered live', title: 'the rendered San Francisco aerial tour' },
+  SF_FLY: { badge: '3D · SF FPV', caption: 'San Francisco, California · FPV fly-through, rendered live', title: 'the rendered San Francisco fly-through' },
+  LA_FLY: { badge: '3D · LA FPV', caption: 'Los Angeles, California · FPV fly-through, rendered live', title: 'the rendered Los Angeles fly-through' },
+  NY_FLY: { badge: '3D · NYC FPV', caption: 'New York, New York · FPV fly-through, rendered live', title: 'the rendered New York fly-through' },
+};
 import { playlist, sources, type Place, type Source } from './feed/footage';
 import { loadPlates } from './feed/plates';
 import type { PatrolDrone, SensorMode } from '../hooks/useSurveillanceSimulation';
@@ -85,7 +93,9 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = fal
   }, [clip, compact]);
   const src = srcs?.[srcIdx] ?? null;
   const useFootage = !!clip && !failed && !videoStream;
-  const simWorld: World = world ?? (footage === 'SAN_FRANCISCO' ? 'SF' : 'CITY');
+  // A city's recorded footage falls back to its rendered FPV fly-through; anywhere else, to the 3D venue city.
+  const simWorld: World = world ?? (footage === 'SAN_FRANCISCO' ? 'SF_FLY' : footage === 'LOS_ANGELES' ? 'LA_FLY' : footage === 'NEW_YORK' ? 'NY_FLY' : 'CITY');
+  const rendered = WORLD_LABEL[simWorld];
   const glVideo = useFootage && !!src?.sameOrigin;   // same-origin: WebGL reads the frames, full sensor stage
   const nextSource = () => {
     if (srcs && srcIdx + 1 < srcs.length) { setSrcIdx(srcIdx + 1); return; }
@@ -168,7 +178,7 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = fal
               <span className="hidden sm:inline px-1.5 py-0.5 rounded bg-black/60 text-slate-300">{drone.model}</span>
               <span className={`px-1.5 py-0.5 rounded bg-black/60 font-bold ${videoStream ? 'text-sky-300' : thermal ? 'text-rose-300' : drone.sensorMode === 'NIGHT_VISION' ? 'text-lime-300' : 'text-emerald-300'}`}>{videoStream ? (videoLabel ?? 'LIVE VIDEO') : MODE_LABEL[drone.sensorMode]}</span>
               <span className="px-1.5 py-0.5 rounded bg-black/60 text-amber-300">{drone.zoom.toFixed(1)}×</span>
-              {footage && failed && !videoStream && <span className="hidden sm:inline px-1.5 py-0.5 rounded bg-black/60 text-slate-400" title={simWorld === 'SF' ? 'The recorded footage could not be loaded; showing the rendered San Francisco take' : 'The recorded footage could not be loaded; showing the 3D simulation'}>{simWorld === 'SF' ? '3D · SF' : '3D SIM'}</span>}
+              {footage && failed && !videoStream && <span className="hidden sm:inline px-1.5 py-0.5 rounded bg-black/60 text-slate-400" title={`The recorded footage could not be loaded; showing ${rendered ? rendered.title : 'the 3D simulation'}`}>{rendered ? rendered.badge : '3D SIM'}</span>}
             </div>
             <div className="flex items-center gap-2">
               {!offline && <span className="hidden sm:flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/60"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />LIVE · {drone.rttMs} ms</span>}
@@ -231,8 +241,8 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = fal
           {useFootage && clip && !offline && (
             <div className="absolute bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] text-slate-300/70">Recorded flight · {clip.title} · {clip.by} · Pexels</div>
           )}
-          {!useFootage && !videoStream && !offline && simWorld === 'SF' && (
-            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] text-slate-300/70">{plates ? 'San Francisco, California · aerial tour · AI-generated imagery' : 'San Francisco, California · aerial tour, rendered live'}</div>
+          {!useFootage && !videoStream && !offline && rendered && (
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] text-slate-300/70">{simWorld === 'SF' && plates ? 'San Francisco, California · aerial tour · AI-generated imagery' : rendered.caption}</div>
           )}
           {!offline && !videoStream && !useFootage && isNight && !thermal && drone.sensorMode !== 'NIGHT_VISION' && (
             <div className="absolute left-1/2 top-12 -translate-x-1/2 px-2 py-1 rounded bg-amber-500/20 border border-amber-400/50 text-amber-200 flex items-center gap-1.5">

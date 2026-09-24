@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { City, P, wrap, EVENT_CENTER, type Look } from './city';
-import { SanFrancisco } from './sf';
+import { SanFrancisco, type Reel } from './sf';
+import type { Aerial } from './metro';
+import { newYork } from './ny';
+import { losAngeles } from './la';
 import { platesNow, loadPlates } from './plates';
 import { glowTex } from './textures';
 import type { PatrolDrone } from '../../hooks/useSurveillanceSimulation';
@@ -22,8 +25,8 @@ export interface View {
   onLock?: (l: Lock | null) => void;
   /** Real footage: the sensor stage runs on this video's frames instead of the 3D city. */
   video?: HTMLVideoElement;
-  /** Which rendered world: the venue's city (default) or the San Francisco dusk take. */
-  world?: 'CITY' | 'SF';
+  /** Which rendered world: the venue's city (default), the San Francisco aerial tour, or an FPV fly-through of San Francisco, Los Angeles or New York. */
+  world?: 'CITY' | 'SF' | 'SF_FLY' | 'LA_FLY' | 'NY_FLY';
 }
 export type World = NonNullable<View['world']>;
 
@@ -159,6 +162,7 @@ class Engine {
   private snow: HTMLCanvasElement;
   private videoTex = new WeakMap<HTMLVideoElement, THREE.VideoTexture>();
   private sf: SanFrancisco | null = null;
+  private metros: Partial<Record<'LA' | 'NY', Aerial>> = {};
   private sfRt: THREE.WebGLRenderTarget | null = null;
   private sfDepth: THREE.WebGLRenderTarget | null = null;
   private depthMat = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
@@ -216,7 +220,9 @@ class Engine {
     if (this.slow > 1 / 32 && this.level < LEVELS.length - 1 && this.settled > 90) { this.level++; this.settled = 0; }
     else if (this.slow < 1 / 56 && this.level > 0 && this.settled > 600) { this.level--; this.settled = 0; }
     this.city.update(dt);
-    for (const v of this.views) if (v.world === 'SF' && !v.video) { const sf = this.sfWorld(); sf.update(dt); sf.setDetail(this.level); break; }
+    const live = new Set<Aerial>();
+    for (const v of this.views) if (!v.video && v.world && v.world !== 'CITY') { const a = this.aerial(v.world); if (a) live.add(a.w); }
+    for (const w of live) { w.update(dt); w.setDetail(this.level); }
     const moved = new Set<string>();
     for (const v of this.views) {
       const d = v.get().drone;
@@ -232,7 +238,7 @@ class Engine {
       const { drone } = v.get();
       if (drone.status === 'OFFLINE') this.drawSnow(v);
       else if (v.video) this.renderVideo(v, now / 1000);
-      else if (v.world === 'SF') this.renderSF(v, now / 1000, dt);
+      else if (v.world && v.world !== 'CITY') this.renderAerial(v, now / 1000);
       else this.render(v, now / 1000);
     }
     this.raf = requestAnimationFrame(this.tick);
@@ -327,12 +333,24 @@ class Engine {
     return this.sf;
   }
 
-  /** The San Francisco feed: the AI plate reel when it has loaded, otherwise the rendered city. */
-  private renderSF(v: View, time: number, dt: number) {
+  /** The rendered world and reel a view plays; built on first use. */
+  private aerial(world: World): { w: Aerial; reel: Reel } | null {
+    const aniso = this.renderer.capabilities.getMaxAnisotropy();
+    if (world === 'SF') return { w: this.sfWorld(), reel: 'TOUR' };
+    if (world === 'SF_FLY') return { w: this.sfWorld(), reel: 'FLY' };
+    if (world === 'LA_FLY') return { w: (this.metros.LA ??= losAngeles(aniso, glowTex(), this.renderer)), reel: 'FLY' };
+    if (world === 'NY_FLY') return { w: (this.metros.NY ??= newYork(aniso, glowTex(), this.renderer)), reel: 'FLY' };
+    return null;
+  }
+
+  /** A rendered aerial feed: the San Francisco tour (or its AI plate reel when installed), or a city's FPV fly-through. */
+  private renderAerial(v: View, time: number) {
     const { drone: d, night } = v.get();
-    const plates = platesNow();
+    const plates = v.world === 'SF' ? platesNow() : null;
     if (plates) { this.renderPlate(v, plates, time); return; }
-    const sf = this.sfWorld();
+    const a = this.aerial(v.world!);
+    if (!a) return;
+    const sf = a.w;
     const q = LEVELS[this.level], w = v.compact ? THUMB_W : q.w, h = v.compact ? THUMB_H : q.h;
     const thermal = d.sensorMode === 'THERMAL_WHITE_HOT' || d.sensorMode === 'THERMAL_IRONBOW';
     const nv = d.sensorMode === 'NIGHT_VISION';
@@ -340,9 +358,8 @@ class Engine {
     // Each aircraft plays the reel from its own point in it.
     const seed = [...d.id].reduce((a, c) => a + c.charCodeAt(0), 0);
     const at = time + (seed % 7) * 41;
-    sf.applyLook(look, sf.shotAt(at).shot.mood);
-    const { sun, fade, mood } = sf.pose(this.cam, at, d.zoom);
-    void dt;
+    sf.applyLook(look, sf.shotAt(at, a.reel).shot.mood);
+    const { sun, fade, mood } = sf.pose(this.cam, at, d.zoom, a.reel);
     if (!this.sfRt) {
       this.sfRt = new THREE.WebGLRenderTarget(FEED_W, FEED_H, { samples: 4, type: THREE.HalfFloatType });
       this.sfDepth = new THREE.WebGLRenderTarget(FEED_W, FEED_H, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter });
@@ -459,7 +476,7 @@ class Engine {
 
   private near(x: number, px: number, wrapped: boolean) { if (!wrapped) return x; let d = x - px; d -= Math.round(d / P) * P; return px + d; }
 
-  private screen(kind: 'PERSON' | 'VEHICLE', idx: number, p: { x: number; z: number }, world: City | SanFrancisco) {
+  private screen(kind: 'PERSON' | 'VEHICLE', idx: number, p: { x: number; z: number }, world: City | Aerial) {
     const o = kind === 'PERSON' ? world.walkers[idx] : world.cars[idx];
     if (!o) return null;
     const wrapped = world === this.city;
@@ -478,7 +495,7 @@ class Engine {
     return { cx, cy, x0, y0, x1, y1 };
   }
 
-  private lock(v: View, p: { x: number; z: number }, world: City | SanFrancisco = this.city): Lock | null {
+  private lock(v: View, p: { x: number; z: number }, world: City | Aerial = this.city): Lock | null {
     let cur = this.locks.get(v);
     let s = cur ? this.screen(cur.kind, cur.idx, p, world) : null;
     const wrapped = world === this.city;

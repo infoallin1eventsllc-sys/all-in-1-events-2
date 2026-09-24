@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Geo, type Look, type Car } from './city';
 import * as T from './textures';
+import { FlyRoute, spiral, type P3 } from './fly';
 
 /**
  * San Francisco for the patrol feed: an aerial tour cut like a 4K drone film.
@@ -20,6 +21,12 @@ import * as T from './textures';
  * origin; distances across the Bay are compressed. The thermal and night-vision
  * sensor stages run on the same scene through `applyLook`, and when the console
  * is in night operations every shot plays at blue hour.
+ *
+ * The same city also carries an FPV fly-through (the 'FLY' reel): one unbroken
+ * take skimming the Bay to the Ferry Building, straight up its clock tower, down
+ * Market Street, north through the Financial District's canyons, round the
+ * Transamerica Pyramid and up in a climbing orbit of the Salesforce Tower that
+ * ends on the Bay Bridge. Buildings the take would clip are built lower.
  */
 
 type V = [number, number, number];
@@ -33,7 +40,32 @@ const MOOD_K: Record<Mood, number> = { DAY: 0, GOLDEN: 1, BLUE: 2 };
 /** What the engine needs from a shot: the sun on screen for the flare, the fade to black, the mood for the grade. */
 export interface ShotState { sun: THREE.Vector2 | null; fade: number; mood: Mood }
 
-interface Shot { dur: number; mood: Mood; fov?: number; pose: (_t: number, u: number, o: { pos: THREE.Vector3; look: THREE.Vector3; roll: number }, w: SanFrancisco) => void }
+interface Shot { dur: number; mood: Mood; fov?: number; pose: (_t: number, u: number, o: { pos: THREE.Vector3; look: THREE.Vector3; roll: number; up?: THREE.Vector3 }, w: SanFrancisco) => void }
+/** Which edit plays: the eighteen-shot aerial tour or the continuous FPV fly-through. */
+export type Reel = 'TOUR' | 'FLY';
+
+/** The fly-through's route, in world metres. */
+export function flySpec() {
+  const SALES: [number, number] = [180, -260];
+  const pre: P3[] = [
+    [1100, 7, -60], [700, 7, -40], [470, 12, -12], [398, 60, 0], [362, 112, 6], [250, 62, 26], [-40, 42, 60], [-280, 40, 100],
+    [-335, 46, 40], [-330, 60, -200], [-330, 78, -450], [-300, 92, -548], [-120, 100, -560], [-110, 120, -690], [-220, 148, -730], [-250, 190, -500], [-150, 215, -330],
+  ];
+  const orbit = spiral(SALES[0], SALES[1], 118, 150, 235, 470, -2.93, 1.0, 12);
+  const post: P3[] = [[40, 490, -470], [120, 505, -620]];
+  const points = [...pre, ...orbit, ...post];
+  const speed = [0.55, 1.3, 1.25, 0.85, 0.55, 1.05, 1.4, 1.45, 1.25, 1.35, 1.35, 1.2, 1.15, 1.05, 1.0, 1.1, 1.05, ...orbit.map(() => 0.95), 0.8, 0.65];
+  return {
+    points, speed, dur: 66, easeIn: 2.5, fov: 76, lookAhead: 50, bank: 0.75, maxBank: 0.62,
+    holds: [
+      { from: 12.5, to: 14.5, at: [-180, 110, -620] as P3, weight: 0.55 },
+      { from: pre.length + 1, to: pre.length + orbit.length - 1, at: [SALES[0], 315, SALES[1]] as P3, weight: 0.72 },
+      { from: pre.length + orbit.length - 0.5, to: points.length - 1, at: [1250, 60, -300] as P3, weight: 0.8 },
+    ],
+  };
+}
+let FLY: FlyRoute | null = null;
+const flyRoute = () => (FLY ??= new FlyRoute(flySpec()));
 const ease = (u: number) => u * u * (3 - 2 * u);
 
 // ---- Lie of the land -----------------------------------------------------------
@@ -119,6 +151,7 @@ export class SanFrancisco {
   private boat!: THREE.Group;
   private wheel!: THREE.Group;
   private shots: Shot[] = [];
+  private flyShots: Shot[] = [];
   private total = 0;
   private mood: Mood = 'DAY';
   private forcedNight = false;
@@ -255,6 +288,10 @@ export class SanFrancisco {
     const building = (x0: number, z0: number, x1: number, z1: number, floors: number, style: T.FacadeStyle) => {
       const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
       let y0 = Infinity; for (const [px, pz] of [[x0, z0], [x0, z1], [x1, z0], [x1, z1], [cx, cz]]) y0 = Math.min(y0, sfHeight(px, pz)); y0 -= 1.5;
+      // Keep the fly-through's route clear: a building it would clip stands lower, or not at all.
+      const cap = flyRoute().clearance(x0, z0, x1, z1);
+      if (cap < y0 + 2 * T.FLOOR) return;
+      floors = Math.min(floors, Math.floor((cap - y0) / T.FLOOR));
       const tone = 0.86 + rng() * 0.22, tint: V = [tone, tone * (0.98 + rng() * 0.04), tone * (0.96 + rng() * 0.06)];
       const H = floors * T.FLOOR, w = x1 - x0, d = z1 - z0;
       if (floors < 18 || Math.min(w, d) < 30) { mass(x0, z0, x1, z1, y0, y0 + H, style, tint); return; }
@@ -660,6 +697,8 @@ export class SanFrancisco {
     }
 
     this.shots = SanFrancisco.shotList();
+    const fly = flyRoute();
+    this.flyShots = [{ dur: fly.spec.dur, mood: 'DAY', fov: fly.spec.fov, pose: (t, _u, o) => { const p = fly.pose(t); o.pos.copy(p.pos); o.look.copy(p.look); o.up = p.up.clone(); } }];
     this.total = this.shots.reduce((a, sh) => a + sh.dur, 0);
 
   }
@@ -919,7 +958,12 @@ export class SanFrancisco {
   }
 
   /** The shot playing at this moment of the take, with the time into it. */
-  shotAt(time: number): { shot: Shot; t: number; u: number; index: number } {
+  shotAt(time: number, reel: Reel = 'TOUR'): { shot: Shot; t: number; u: number; index: number } {
+    if (reel === 'FLY') {
+      const sh = this.flyShots[0], dbgT = (globalThis as { __flyT?: number }).__flyT;
+      const t = typeof dbgT === 'number' ? Math.min(sh.dur, dbgT) : ((time % sh.dur) + sh.dur) % sh.dur;
+      return { shot: sh, t, u: t / sh.dur, index: 0 };
+    }
     const dbg = (globalThis as { __sfShot?: number }).__sfShot;
     if (typeof dbg === 'number' && this.shots[dbg]) { const sh = this.shots[dbg]; return { shot: sh, t: sh.dur * 0.55, u: 0.55, index: dbg }; }
     let t = ((time % this.total) + this.total) % this.total;
@@ -1007,9 +1051,10 @@ export class SanFrancisco {
    * Place the camera for this moment of the edit. Returns the sun's place on
    * screen for the flare, the fade to black at the end of the reel, and the mood.
    */
-  pose(cam: THREE.PerspectiveCamera, time: number, zoom: number): ShotState {
-    const { shot, t, u, index } = this.shotAt(time);
-    const o = { pos: new THREE.Vector3(), look: new THREE.Vector3(), roll: 0 };
+  pose(cam: THREE.PerspectiveCamera, time: number, zoom: number, reel: Reel = 'TOUR'): ShotState {
+    const { shot, t, u, index } = this.shotAt(time, reel);
+    const shots = reel === 'FLY' ? this.flyShots : this.shots;
+    const o: { pos: THREE.Vector3; look: THREE.Vector3; roll: number; up?: THREE.Vector3 } = { pos: new THREE.Vector3(), look: new THREE.Vector3(), roll: 0 };
     shot.pose(t, u, o, this);
     cam.position.copy(o.pos);
     cam.near = 2; cam.far = SF_CAMERA_FAR;
@@ -1017,7 +1062,7 @@ export class SanFrancisco {
     cam.updateProjectionMatrix();
     // Looking straight down needs a reference for "up": north, turned by the shot's roll.
     const down = Math.abs(o.look.y - o.pos.y) > 0.98 * o.look.distanceTo(o.pos);
-    if (down) cam.up.set(Math.sin(o.roll), 0, -Math.cos(o.roll)); else cam.up.set(Math.sin(o.roll), Math.cos(o.roll), 0);
+    if (o.up) cam.up.copy(o.up); else if (down) cam.up.set(Math.sin(o.roll), 0, -Math.cos(o.roll)); else cam.up.set(Math.sin(o.roll), Math.cos(o.roll), 0);
     cam.lookAt(o.look);
     cam.up.set(0, 1, 0);
     cam.updateMatrixWorld();
@@ -1034,7 +1079,7 @@ export class SanFrancisco {
     const sun = sd.z > 1 || Math.abs(sd.x) > 1.3 || Math.abs(sd.y) > 1.3 ? null : new THREE.Vector2((sd.x + 1) / 2, (sd.y + 1) / 2);
     // The reel fades out over its last two seconds and in over its first.
     let fade = 1;
-    if (index === this.shots.length - 1) fade = Math.min(1, (shot.dur - t) / 2);
+    if (index === shots.length - 1) fade = Math.min(1, (shot.dur - t) / 2);
     if (index === 0) fade = Math.min(fade, t / 1);
     return { sun, fade: Math.max(0, fade), mood };
   }
