@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Play, Pause, RotateCcw, AlertOctagon, ShieldCheck, Layers, Clock, ListChecks, Scale, Download } from 'lucide-react';
+import { Play, Pause, RotateCcw, AlertOctagon, ShieldCheck, Layers, Clock, ListChecks, Scale, Download, HeartPulse, ChevronRight } from 'lucide-react';
+import { openTab, setHealthMode } from '../diagnostics/healthMode';
 import { downloadShowPackage } from '../lightshow/exportShow';
 import { useLightShowSimulation } from '../hooks/useLightShowSimulation';
 import { LightShowCanvas3D } from '../components/lightshow/LightShowCanvas3D';
@@ -62,12 +63,17 @@ export const LightShowDashboard: React.FC = () => {
 
   // Flight record: a show is the case an insurer reads afterwards. Sample the
   // fleet each second and log every state change the conductor makes.
-  useRecorder('LIGHT_SHOW', `Show · ${droneCount} aircraft`, 'SIMULATION', () =>
-    drones.slice(0, 40).map(d => ({   // a representative sample; 500 rows/s would be noise
+  // Every aircraft is recorded, a quarter of the fleet each second, so each one is sampled every
+  // 4 s (inside the rollup's 5 s gap limit) and Analytics sees all 100–500 of them, not a sample.
+  const slice = useRef(0);
+  useRecorder('LIGHT_SHOW', `Show · ${droneCount} aircraft`, 'SIMULATION', () => {
+    const k = slice.current++ % 4;
+    return drones.filter((_, i) => i % 4 === k).map(d => ({
       t: Date.now(), aircraft: d.id,
       altM: d.position.y, speedMps: Math.hypot(d.velocity.x, d.velocity.y, d.velocity.z), headingDeg: 0, batteryPct: d.battery,
       extra: { status: d.status, deviationM: Number(d.deviationMeters.toFixed(2)), sats: d.gpsSatellites, syncMs: Number(d.syncOffsetMs.toFixed(2)) },
-    })));
+    }));
+  });
 
   const lastStatus = useRef(cs.status);
   useEffect(() => {
@@ -235,6 +241,11 @@ export const LightShowDashboard: React.FC = () => {
                     <p className="mt-1.5 text-[11px] text-ink-3">Show trajectories fly from the show controller; Abort lands every connected aircraft.</p>
                   </Section>
                 )}
+                <button type="button" id="ls-fleet-health" onClick={() => { setHealthMode('FLEET'); openTab('HEALTH'); }}
+                  className="w-full flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2.5 text-left hover:border-line-2 hover:bg-surface-2">
+                  <span className="flex items-center gap-2.5"><HeartPulse className="w-4 h-4 text-accent" /><span><span className="block text-[13px] font-medium text-ink">Fleet health</span><span className="block text-[11px] text-ink-3">Every aircraft: readiness, battery, faults, launch grid</span></span></span>
+                  <ChevronRight className="w-4 h-4 text-ink-3" />
+                </button>
                 <div className="grid grid-cols-3 gap-3">
                   <Stat label="In formation" value={fleet.inFormation} tone="ok" />
                   <Stat label="Moving" value={fleet.moving} />

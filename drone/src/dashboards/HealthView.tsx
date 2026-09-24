@@ -6,6 +6,9 @@ import { SIM_FAULTS, SIM_FLIGHT_S, type SimFault } from '../diagnostics/sim';
 import { Headline, Card, Section, Chip, Dot, Tabs, Segmented, ToolButton, Activity, Sparkline, type Tone } from './ui';
 import { HoloAirframe } from './health/HoloAirframe';
 import { BatteryRing, MagScatter, MarginTrace, MotorLoad, SensorRadar, VibeDial } from './health/Instruments';
+import { FleetHealthView } from './health/FleetHealthView';
+import { readHealthMode, setHealthMode, type HealthMode } from '../diagnostics/healthMode';
+import { useFleetHealth } from '../diagnostics/useFleetHealth';
 
 /**
  * Aircraft health: what is wrong with the aircraft, which part, and what to do.
@@ -46,6 +49,24 @@ const LevelIcon: React.FC<{ level: Level; className?: string }> = ({ level, clas
 // ---------------------------------------------------------------------------
 
 export const HealthView: React.FC = () => {
+  const [mode, setMode] = useState<HealthMode>(readHealthMode);
+  useEffect(() => { const on = (e: Event) => setMode((e as CustomEvent<HealthMode>).detail); window.addEventListener('a1-health-mode', on); return () => window.removeEventListener('a1-health-mode', on); }, []);
+  const fleet = useFleetHealth();
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-2" id="health-mode">
+        <Segmented value={mode} onChange={v => setHealthMode(v as HealthMode)}
+          items={[{ id: 'FLEET', label: `Whole fleet · ${fleet.stats.n || fleet.size}` }, { id: 'ONE', label: 'One aircraft' }]} />
+        <span className="text-[12px] text-ink-3">{mode === 'FLEET' ? 'Every aircraft at once: readiness, battery, faults and analytics across the fleet.' : 'One aircraft in depth: motors, vibration, battery cells, sensors and firmware.'}</span>
+      </div>
+      {mode === 'FLEET'
+        ? <FleetHealthView renderAircraft={(report, onReplace) => <NowTab report={report} onReplace={onReplace} />} />
+        : <OneAircraft />}
+    </div>
+  );
+};
+
+const OneAircraft: React.FC = () => {
   const h = useHealth();
   const r = h.report;
   const [tab, setTab] = useState<'NOW' | 'AFTER' | 'PARTS'>('NOW');
@@ -161,8 +182,9 @@ const Verdict: React.FC<{ report: HealthReport }> = ({ report: r }) => {
 // Now
 // ---------------------------------------------------------------------------
 
-const NowTab: React.FC<{ report: HealthReport }> = ({ report: r }) => {
+const NowTab: React.FC<{ report: HealthReport; onReplace?: (part: string, note: string) => void }> = ({ report: r, onReplace }) => {
   const h = useHealth();
+  const replace = onReplace ?? h.markReplaced;
   const bodyFinding = r.findings.find(f => !f.motor && f.part);
   const flying = r.phase === 'FLYING';
   return (
@@ -200,7 +222,7 @@ const NowTab: React.FC<{ report: HealthReport }> = ({ report: r }) => {
 
       <Card className="xl:col-span-7" id="health-findings">
         <Section title="What needs attention" right={r.findings.length ? `${r.findings.length} found` : undefined}>
-          <FindingList findings={r.findings} empty={r.phase === 'NO_DATA' ? 'No aircraft data yet.' : 'Nothing wrong found.'} onReplace={(f) => h.markReplaced(f.part!, f.title)} />
+          <FindingList findings={r.findings} empty={r.phase === 'NO_DATA' ? 'No aircraft data yet.' : 'Nothing wrong found.'} onReplace={(f) => replace(f.part!, f.title)} />
         </Section>
       </Card>
       <Card className="xl:col-span-5" id="health-motors">

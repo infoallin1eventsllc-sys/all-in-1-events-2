@@ -45,7 +45,8 @@ export class HealthSim {
   private sentVersion = false;
   alt = 0; speed = 0; roll = 0; pitch = 0;
 
-  constructor(seed = 7) { this.rand = rng(seed); }
+  /** `wear` 0–1 starts the pack part-used (fleet simulations fly packs of different ages and charge). */
+  constructor(seed = 7, wear = 0) { this.rand = rng(seed); this.cellWear = wear; }
 
   takeoff() { if (!this.armed) { this.armed = true; this.t = 0; } }
   land() { if (this.armed && this.t < SIM_FLIGHT_S - 14) this.t = SIM_FLIGHT_S - 14; }
@@ -141,7 +142,7 @@ export class HealthSim {
           return Math.round(c * 1000) / 1000;
         });
         const current = Math.round((packA + this.noise(0.6)) * 10) / 10;
-        msgs.push({ k: 'BATTERY', cellsV: cells, packV: cells.reduce((s, v) => s + v, 0), tempC: 27 + this.cellWear * 13, currentA: current, remainingPct: Math.round(96 - this.cellWear * 70), faults: 0 });
+        msgs.push({ k: 'BATTERY', cellsV: cells, packV: cells.reduce((s, v) => s + v, 0), tempC: 27 + this.cellWear * 13, currentA: current, remainingPct: Math.max(0, Math.round(96 - this.cellWear * 70)), faults: 0 });
         msgs.push({ k: 'SENSORS', present: SENSORS_ALL, enabled: SENSORS_ALL, health: SENSORS_ALL, dropRatePct: 0.4, packV: cells.reduce((s, v) => s + v, 0), currentA: current });
         // A power lead near the compass: the disturbance follows the current in it.
         const comp = f === 'COMPASS' && this.armed ? 0.06 + 0.5 * (current / 23) + Math.abs(this.noise(0.06)) : 0.06 + Math.abs(this.noise(0.05));

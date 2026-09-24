@@ -82,6 +82,11 @@ export default function App() {
   const isRecords = activeTab === 'RECORDS';
   const isAnalytics = activeTab === 'ANALYTICS';
   const isHealth = activeTab === 'HEALTH';
+  // Other screens can open one (e.g. the light show's "Open fleet health").
+  useEffect(() => {
+    const on = (e: Event) => setActiveTab((e as CustomEvent<string>).detail as typeof activeTab);
+    window.addEventListener('a1-navigate', on); return () => window.removeEventListener('a1-navigate', on);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const isOverview = activeTab === 'OVERVIEW';
   const [tourOpen, setTourOpen] = useState(() => { try { return new URLSearchParams(location.search).has('tour'); } catch { return false; } });
   const health = useHealth();

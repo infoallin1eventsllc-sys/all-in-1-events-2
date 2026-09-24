@@ -235,6 +235,34 @@ and the firmware version on connect. Thresholds are in `LIMITS` in
 simulated fault is tested end to end in `scripts/diagnostics.test.mjs`. The bench
 vehicle has the same faults: `fake_vehicle.py --fault prop3`.
 
+### Fleet health (100 to 500 aircraft)
+
+**Health → Whole fleet** (also *Fleet health* in the light show's Fleet tab) runs
+the same diagnosis on every aircraft at once, one monitor per aircraft
+(`src/diagnostics/fleet.ts`). On a live link each MAVLink system id is its own
+aircraft and its messages never mix with another's; with no aircraft connected it
+flies a simulated show fleet of 100, 250 or 500 (`fleetSim.ts`) with the spread a
+real fleet has on the night: packs of different ages, a few faults, mixed firmware
+and an aircraft that drops off the link.
+
+- **Go or hold** for the show, in one sentence: how many to ground and fly spares
+  for, how many packs to swap, who is silent, who is on another firmware.
+- **Launch grid:** one cell per pad (A01, A02 …), coloured by health (with a shape
+  per state: dot, notched ring, cross, dashed ring) or by battery, vibration, motor
+  balance, motor temperature or closeness to a limit. Hover for the readings, click
+  to open that aircraft's full health screen, and step through the ones that need
+  attention with the arrow keys.
+- **Pre-show gates** with the pads that fail each one: every aircraft reporting, no
+  faults, battery above 40%, 3D GPS fix, one firmware version.
+- **Across the fleet:** findings grouped by kind (chipped props, weak cells,
+  compass interference …) with the pads, the battery spread against the show
+  minimum, which systems the problems sit in, firmware versions, props and motors
+  due for service, and a sortable table of every aircraft.
+
+The fleet simulation only runs while the fleet view is open or the fleet is
+flying. Tested in `scripts/fleet.test.mjs`, including no false alarms on the
+healthy aircraft of a 500-aircraft fleet.
+
 ## Analytics
 
 **Analytics** (app bar, or press `a`) answers four questions from the flight

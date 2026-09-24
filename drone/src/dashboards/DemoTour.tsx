@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, ArrowLeft, ArrowRight, Wand2, ExternalLink } from 'lucide-react';
 import { useHealth } from '../diagnostics/useHealth';
+import { setHealthMode } from '../diagnostics/healthMode';
 
 /**
  * The guided tour: a small card that walks a visitor (a prospective client on
@@ -60,7 +61,7 @@ export const DemoTour: React.FC<Props> = ({ open, onClose, view, go }) => {
     if (!step) return;
     if (step.view === 'LIGHT_SHOW_OPS') { clickId('ls-arm'); clickId('ls-play', 400); }
     if (step.view === 'SURVEY_OPS') { clickId('sv-primary'); setTimeout(() => (Array.from(document.querySelectorAll('#survey-dashboard button')).find(b => b.textContent?.trim() === '16×') as HTMLButtonElement | undefined)?.click(), 300); }
-    if (step.view === 'HEALTH') { health.sim.setFault('PROP'); health.sim.setSpeed(10); setTimeout(() => health.sim.takeoff(), 100); }
+    if (step.view === 'HEALTH') { setHealthMode('ONE'); health.sim.setFault('PROP'); health.sim.setSpeed(10); setTimeout(() => health.sim.takeoff(), 100); }
     setDone(s => new Set(s).add(i));
   };
 

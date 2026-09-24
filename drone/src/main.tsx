@@ -3,6 +3,7 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import { AircraftLinkProvider } from './link/useAircraftLink';
 import { HealthProvider } from './diagnostics/useHealth';
+import { FleetHealthProvider } from './diagnostics/useFleetHealth';
 import { OperatorProvider } from './operator/operator';
 import { recorder } from './record/recorder';
 import { seedDemo } from './demo/seed';
@@ -13,9 +14,11 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AircraftLinkProvider>
       <HealthProvider>
+      <FleetHealthProvider>
         <OperatorProvider>
           <App />
         </OperatorProvider>
+      </FleetHealthProvider>
       </HealthProvider>
     </AircraftLinkProvider>
   </StrictMode>,
