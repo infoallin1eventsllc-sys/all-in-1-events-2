@@ -66,7 +66,8 @@ interface Drone {
   nav: THREE.Mesh[];
 }
 
-export const DroneHero: React.FC<{ className?: string }> = ({ className = '' }) => {
+/** progress: scroll progress 0..1 from a parent that pins the hero; without it the hero reads the page scroll itself. */
+export const DroneHero: React.FC<{ className?: string; progress?: { current: number } }> = ({ className = '', progress }) => {
   const ref = useRef<HTMLDivElement>(null);
   const [ok, setOk] = useState(true);
 
@@ -156,9 +157,11 @@ export const DroneHero: React.FC<{ className?: string }> = ({ className = '' }) 
     // Edge anti-aliasing after tone mapping: crisp arms and blades at every pixel ratio.
     const smaa = new SMAAPass(); composer.addPass(smaa);
 
+    let spread = 1;
     const size = () => {
       const w = el.clientWidth, h = el.clientHeight;
       cam.aspect = w / h; cam.updateProjectionMatrix();
+      spread = Math.min(1, Math.max(0.38, cam.aspect / 1.55));      // portrait screens: pull the fleet in so it stays in frame
       renderer.setSize(w, h, false); composer.setSize(w, h);
     };
     size();
@@ -169,7 +172,7 @@ export const DroneHero: React.FC<{ className?: string }> = ({ className = '' }) 
     const onScroll = () => { const h = el.offsetHeight || 1; target = Math.min(1, Math.max(0, (window.scrollY - el.offsetTop + 40) / (h * 0.55))); };
     const onMove = (e: PointerEvent) => { const r = el.getBoundingClientRect(); mx = ((e.clientX - r.left) / r.width - 0.5) * 2; my = ((e.clientY - r.top) / r.height - 0.5) * 2; };
     const onLeave = () => { mx = 0; my = 0; };
-    window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
+    if (!progress) { window.addEventListener('scroll', onScroll, { passive: true }); onScroll(); }
     el.addEventListener('pointermove', onMove); el.addEventListener('pointerleave', onLeave);
 
     let visible = true, raf = 0, last = performance.now();
@@ -188,7 +191,7 @@ export const DroneHero: React.FC<{ className?: string }> = ({ className = '' }) 
       const swell = 1 + Math.sin(t * 0.23) * 0.035, sway = Math.sin(t * 0.17) * 0.35;
       x = x * swell + sway * (y * 0.12); z = z * swell;
       // Hover: a wander round the slot, plus the fine bob a real aircraft never loses.
-      x += d.wander.x; y += d.wander.y; z += d.wander.z;
+      x = x * spread + d.wander.x; y += d.wander.y; z += d.wander.z;
       y += Math.sin(t * 0.9 + d.phase) * 0.06 + Math.sin(t * 1.7 + d.phase * 2) * 0.02;
       d.group.position.set(x, y, z);
     };
@@ -198,6 +201,7 @@ export const DroneHero: React.FC<{ className?: string }> = ({ className = '' }) 
       if (!visible || document.hidden) return;
       const dt = Math.min(0.05, (now - last) / 1000); last = now;
       const t = now / 1000;
+      if (progress) target = progress.current;
       p += (target - p) * (1 - Math.exp(-dt * 2.6));
       px += (mx - px) * (1 - Math.exp(-dt * 2)); py += (my - py) * (1 - Math.exp(-dt * 2));
       cam.position.set(px * 0.9 + Math.sin(t * 0.11) * 0.3, 6.2 - py * 0.6 + Math.sin(t * 0.17) * 0.15, 18.5 - p * 3.2);
@@ -227,8 +231,14 @@ export const DroneHero: React.FC<{ className?: string }> = ({ className = '' }) 
         // Light trail: recent positions, fading, brighter the faster the aircraft moves.
         d.history.pop(); d.history.unshift(d.group.position.clone());
         const pos = d.trail.geometry.getAttribute('position') as THREE.BufferAttribute, col = d.trail.geometry.getAttribute('color') as THREE.BufferAttribute;
-        const strength = THREE.MathUtils.clamp((vel.length() - 1.2) / 10, 0, 1);
-        d.history.forEach((h, k) => { pos.setXYZ(k, h.x, h.y - 0.05, h.z); const f = strength * (1 - k / d.history.length) * 0.8; col.setXYZ(k, d.ledColor.r * f, d.ledColor.g * f, d.ledColor.b * f); });
+        const strength = THREE.MathUtils.clamp((vel.length() - 1.2) / 10, 0, 1) * 0.5;
+        let broken = false;
+        d.history.forEach((h, k) => {
+          pos.setXYZ(k, h.x, h.y - 0.05, h.z);
+          if (k > 0 && h.distanceTo(d.history[k - 1]) > 0.9) broken = true;        // a slow frame: no long straight streak
+          const f = broken ? 0 : strength * (1 - k / d.history.length) * 0.8;
+          col.setXYZ(k, d.ledColor.r * f, d.ledColor.g * f, d.ledColor.b * f);
+        });
         pos.needsUpdate = true; col.needsUpdate = true;
       });
       if (bokeh) { bokeh.enabled = gov.level === 0; (bokeh.uniforms as { focus: { value: number } }).focus.value += (nearest - (bokeh.uniforms as { focus: { value: number } }).focus.value) * 0.1; }

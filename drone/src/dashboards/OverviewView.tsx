@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Sparkles, ScanLine, Eye, HeartPulse, BarChart3, Archive, Radio, Smartphone, ShieldCheck, Cpu, ArrowRight, PlayCircle } from 'lucide-react';
-import { DroneHero } from './hero/DroneHero';
+import { Sparkles, ScanLine, Eye, HeartPulse, BarChart3, Archive, Radio, Smartphone, ShieldCheck, Cpu, ArrowRight } from 'lucide-react';
+import { ScrollHero } from './hero/ScrollHero';
 
 /**
  * Overview: the front door of the demo.
@@ -45,28 +45,8 @@ const Shot: React.FC<{ name: string; alt: string }> = ({ name, alt }) => {
 
 export const OverviewView: React.FC<Props> = ({ onOpen, onTour }) => (
   <div id="overview" className="flex flex-col gap-10 pb-4">
-    {/* Hero: a fleet in a dark sky that re-forms as the page scrolls; the copy is short and stays out of its way. */}
-    <section className="relative overflow-hidden rounded-[18px] bg-[#05070c] min-h-[620px] lg:min-h-[740px] flex items-center justify-center">
-      <DroneHero />
-      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(52%_46%_at_50%_44%,rgba(5,7,12,0.62)_0%,rgba(5,7,12,0)_100%)]" />
-      <div className="relative z-10 flex flex-col items-center text-center gap-5 px-6 sm:px-10 py-16 max-w-[820px] pointer-events-none">
-        <h1 className="text-[40px] sm:text-[62px] lg:text-[78px] leading-[1.02] font-light tracking-[-0.028em] text-white text-balance">
-          Every drone job.<br />One console.
-        </h1>
-        <p className="text-[16px] sm:text-[18px] lg:text-[20px] leading-relaxed font-light text-white/70 max-w-[560px]">
-          Light shows, site surveys, night patrols and aircraft health, flown from a browser on any device.
-        </p>
-        <div className="mt-3 flex flex-col items-center gap-4 pointer-events-auto">
-          <button id="overview-tour" onClick={onTour} className="hero-cta inline-flex items-center gap-2 h-12 px-7 rounded-full text-white text-[15px] font-medium">
-            <PlayCircle className="w-4.5 h-4.5" />Take the two-minute tour
-          </button>
-          <button onClick={() => onOpen('LIGHT_SHOW_OPS')} className="inline-flex items-center gap-1.5 text-[14px] text-white/60 hover:text-white transition-colors duration-500">
-            Explore on your own<ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-      <p className="absolute bottom-4 inset-x-0 text-center text-[12px] text-white/40 px-6 pointer-events-none">Working demo on simulated aircraft and sample data. Connect a real flight controller from the link menu and the same screens fly it.</p>
-    </section>
+    {/* Hero: pinned while the visitor scrolls; the headline lifts away and the three jobs reveal in turn. */}
+    <ScrollHero onTour={onTour} onExplore={() => onOpen('LIGHT_SHOW_OPS')} />
 
     <section aria-labelledby="ov-products">
       <div className="flex items-end justify-between gap-4 mb-4">
