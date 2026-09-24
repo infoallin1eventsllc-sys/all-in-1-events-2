@@ -117,22 +117,38 @@ export function droneMaterials(): Record<string, THREE.Material> {
   return mats;
 }
 
+/** Twill carbon weave for Ember's side panels and arm undersides: satin, so it reads as texture, not glare. */
+function carbonTexture(): THREE.Texture {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#15171b'; g.fillRect(0, 0, 64, 64);
+  for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
+    const along = (x + y) % 2 === 0;
+    const gr = along ? g.createLinearGradient(x * 8, 0, x * 8 + 8, 0) : g.createLinearGradient(0, y * 8, 0, y * 8 + 8);
+    gr.addColorStop(0, '#1b1e23'); gr.addColorStop(0.5, '#2e3239'); gr.addColorStop(1, '#1b1e23');
+    g.fillStyle = gr; g.fillRect(x * 8 + 0.5, y * 8 + 0.5, 7, 7);
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(6, 6); t.anisotropy = 4; return t;
+}
+
 /**
- * Materials for Ember (buildGlowDrone): candy-orange clearcoat, deep navy gloss,
- * dark glass, gunmetal, steel-blue props, and a cyan light that blooms. Same keys
- * the hero reads (white, graphite, blade, ledFront ...), so it drops into the
- * hero as a sample look.
+ * Materials for Ember (buildEmber): gloss white paint, satin carbon, black
+ * composite props with white tip stripes, dark glass, gunmetal, and a blue LED
+ * light. Same keys the hero reads (white, graphite, blade, ledFront ...), so it
+ * drops into the hero as a sample look.
  */
-export function orangeGlowMaterials(): Record<string, THREE.Material> {
+export function emberMaterials(): Record<string, THREE.Material> {
   const m = droneMaterials();
-  const cyan = new THREE.Color(0.22, 1.0, 1.9);
-  m.white = new THREE.MeshPhysicalMaterial({ color: 0xf05a00, emissive: 0x301000, metalness: 0.0, roughness: 0.55, specularIntensity: 0.35, clearcoat: 0.2, clearcoatRoughness: 0.4 });
-  m.graphite = new THREE.MeshPhysicalMaterial({ color: 0x0f1c34, metalness: 0.3, roughness: 0.5, clearcoat: 0.3, clearcoatRoughness: 0.35 });
-  m.glass = new THREE.MeshPhysicalMaterial({ color: 0x0a1a30, metalness: 0.2, roughness: 0.14, clearcoat: 0.6, clearcoatRoughness: 0.1, envMapIntensity: 0.8 });
-  m.gunmetal = new THREE.MeshStandardMaterial({ color: 0x5d6570, metalness: 0.85, roughness: 0.34 });
-  m.blade = new THREE.MeshPhysicalMaterial({ color: 0x4f6f8e, metalness: 0.2, roughness: 0.45, clearcoat: 0.3, side: THREE.DoubleSide });
-  m.glow = new THREE.MeshBasicMaterial({ color: cyan, toneMapped: false });
-  m.ledFront = m.glow; m.ledGreen = m.glow; m.ledRed = m.glow;
+  const blue = new THREE.Color(0.25, 0.62, 2.6);
+  m.white = new THREE.MeshPhysicalMaterial({ color: 0xc6cacf, metalness: 0, roughness: 0.5, specularIntensity: 0.32, clearcoat: 0.22, clearcoatRoughness: 0.35 });
+  m.graphite = new THREE.MeshPhysicalMaterial({ color: 0x1c1f24, metalness: 0.1, roughness: 0.55, clearcoat: 0.25, clearcoatRoughness: 0.4 });
+  m.carbon = new THREE.MeshPhysicalMaterial({ map: carbonTexture(), metalness: 0.15, roughness: 0.62, clearcoat: 0.25, clearcoatRoughness: 0.35 });
+  m.glass = new THREE.MeshPhysicalMaterial({ color: 0x07090d, metalness: 0.2, roughness: 0.12, clearcoat: 0.8, clearcoatRoughness: 0.08, envMapIntensity: 0.9 });
+  m.gunmetal = new THREE.MeshStandardMaterial({ color: 0x3c4148, metalness: 0.8, roughness: 0.38 });
+  m.blade = new THREE.MeshPhysicalMaterial({ color: 0x121417, metalness: 0.05, roughness: 0.45, clearcoat: 0.4, clearcoatRoughness: 0.3, side: THREE.DoubleSide });
+  m.stripe = new THREE.MeshStandardMaterial({ color: 0xc6cacf, roughness: 0.5, side: THREE.DoubleSide });
+  m.glow = new THREE.MeshBasicMaterial({ color: blue, toneMapped: false });
+  m.ledFront = m.glow;
   return m;
 }
 
@@ -159,95 +175,99 @@ function emberOutline(k = 1, dx = 0): THREE.Shape {
 }
 
 /**
- * Ember, an original racing quad for the hero sample: a low arrowhead fuselage in
- * candy orange over a navy hull, a dark glass visor and a cyan chevron on the
- * nose, a cyan light seam wrapping the front, straight tapered arms each carrying
- * a cyan strip, gunmetal motors with cyan rings, open orange prop guards on the
- * outside of each rotor, steel-blue three-blade props, a camera ball under the
- * nose and navy landing skids. Local axes as buildDrone: +x forward, +y up, +z right.
+ * Ember, an original quad for the hero sample, finished like a production
+ * aircraft: a gloss-white arrowhead shell over a carbon belly with a panel seam
+ * between them, a raised dorsal hump with a sensor window, carbon side panels
+ * and cooling slots, a gimballed camera with a blue-coated lens under the nose
+ * and a blue LED bar beneath it, hinged arms (white over carbon) out to white
+ * motor housings with finned motors, folding black props with white tip stripes,
+ * a landing leg with a rubber foot under each motor, and red and green
+ * navigation lights at the back. Local axes as buildDrone: +x forward, +y up, +z right.
  */
-export function buildGlowDrone(M: Record<string, THREE.Material>, blurTex: THREE.Texture): { group: THREE.Group; props: THREE.Group[]; blur: THREE.Mesh[] } {
+export function buildEmber(M: Record<string, THREE.Material>, blurTex: THREE.Texture): { group: THREE.Group; props: THREE.Group[]; blur: THREE.Mesh[] } {
   const g = new THREE.Group();
   const UP = new THREE.Vector3(0, 1, 0);
   const add = (geo: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z: number, rx = 0, ry = 0, rz = 0, parent: THREE.Object3D = g) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.rotation.set(rx, ry, rz); parent.add(o); return o; };
-  const rod = (m: THREE.Material, r: number, a: THREE.Vector3, b: THREE.Vector3) => {
-    const o = new THREE.Mesh(new THREE.CylinderGeometry(r, r, a.distanceTo(b), 10), m);
-    o.position.copy(a).add(b).multiplyScalar(0.5); o.quaternion.setFromUnitVectors(UP, b.clone().sub(a).normalize()); g.add(o); return o;
+  const rod = (m: THREE.Material, r0: number, r1: number, a: THREE.Vector3, b: THREE.Vector3, parent: THREE.Object3D = g) => {
+    const o = new THREE.Mesh(new THREE.CylinderGeometry(r1, r0, a.distanceTo(b), 14), m);
+    o.position.copy(a).add(b).multiplyScalar(0.5); o.quaternion.setFromUnitVectors(UP, b.clone().sub(a).normalize()); parent.add(o); return o;
   };
 
-  // Fuselage: navy hull, orange shell, a raised orange deck behind a glass visor.
-  add(slab(emberOutline(0.95), 0.06, 0.03), M.graphite, 0, -0.15, 0);
-  add(slab(emberOutline(1), 0.07, 0.045), M.white, 0, -0.06, 0);
-  add(slab(emberOutline(0.62, -0.1), 0.012, 0.022), M.white, 0, 0.055, 0);
-  const visor = new THREE.Shape();                                   // a swept glass wedge on the front of the deck
-  visor.moveTo(0.4, 0); visor.quadraticCurveTo(0.33, 0.1, 0.16, 0.13); visor.lineTo(0.12, 0.1); visor.quadraticCurveTo(0.26, 0.06, 0.3, 0);
-  visor.quadraticCurveTo(0.26, -0.06, 0.12, -0.1); visor.lineTo(0.16, -0.13); visor.quadraticCurveTo(0.33, -0.1, 0.4, 0);
-  add(slab(visor, 0.012, 0.014, 3), M.glass, 0, 0.082, 0);
-  add(slab(emberOutline(0.36, -0.12), 0.004, 0.008, 2), M.glass, 0, 0.1, 0);      // glass panel let into the deck
-  // Cyan chevron on the nose, pointing forward.
-  for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.075, 0.006, 0.014), M.glow, 0.31, 0.124, s * 0.05, 0, s * 0.62, 0);
-  // Light seam: a cyan line wrapping the front along the shell/hull join.
-  const seam: THREE.Vector3[] = [];
-  const rim = emberOutline(1).getSpacedPoints(160);
-  rim.forEach((pt, i) => {
-    const a = rim[(i + rim.length - 1) % rim.length], b = rim[(i + 1) % rim.length];
-    const n = new THREE.Vector2(b.y - a.y, a.x - b.x).normalize(); if (n.dot(pt) < 0) n.negate();   // outward, clear of the shell's bevel
-    if (pt.x > -0.1) seam.push(new THREE.Vector3(pt.x + n.x * 0.041, 0.0, -(pt.y + n.y * 0.041)));
-  });
-  seam.sort((a, b) => a.z - b.z);
-  g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(seam), 90, 0.011, 8), M.glow));
-  // Tail lights and side vents.
-  for (const s of [-1, 1]) {
-    add(new THREE.BoxGeometry(0.012, 0.03, 0.07), M.glow, -0.475, -0.02, s * 0.11);
-    for (let k = 0; k < 3; k++) add(new THREE.BoxGeometry(0.075, 0.012, 0.01), M.graphite, -0.08 - k * 0.07, 0.0, s * 0.235, 0, s * 0.3, 0.35);
-  }
-  // Camera ball under the nose.
-  add(new THREE.CylinderGeometry(0.035, 0.035, 0.03, 16), M.graphite, 0.36, -0.17, 0);
-  add(new THREE.SphereGeometry(0.065, 28, 20), M.gunmetal, 0.36, -0.22, 0);
-  add(new THREE.CylinderGeometry(0.036, 0.036, 0.02, 24), M.glass, 0.418, -0.22, 0, 0, 0, Math.PI / 2);
-  // Landing skids.
-  for (const s of [-1, 1]) {
-    const z = s * 0.15;
-    g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(-0.34, -0.29, z), new THREE.Vector3(0.2, -0.3, z), new THREE.Vector3(0.33, -0.28, z), new THREE.Vector3(0.38, -0.24, z)]), 24, 0.013, 8), M.graphite));
-    rod(M.graphite, 0.011, new THREE.Vector3(0.14, -0.17, s * 0.1), new THREE.Vector3(0.18, -0.3, z));
-    rod(M.graphite, 0.011, new THREE.Vector3(-0.2, -0.17, s * 0.1), new THREE.Vector3(-0.24, -0.3, z));
-  }
+  // Fuselage: carbon belly, white shell, a thin dark seam where they meet.
+  add(slab(emberOutline(0.94), 0.05, 0.03), M.carbon, 0, -0.14, 0);
+  add(slab(emberOutline(0.965), 0.004, 0.004, 1), M.seam, 0, -0.066, 0);
+  add(slab(emberOutline(1), 0.06, 0.05, 6), M.white, 0, -0.062, 0);
+  // Dorsal hump: a long rounded ridge, with a small dark sensor window on its brow.
+  const hump = add(new THREE.SphereGeometry(1, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2), M.white, -0.06, 0.07, 0); hump.scale.set(0.34, 0.075, 0.15);
+  const win = add(new THREE.SphereGeometry(1, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), M.glass, 0.19, 0.108, 0, 0, 0, -0.5); win.scale.set(0.05, 0.02, 0.05);
+  // Forward obstacle sensors: a pair of dark glass pills set into the nose.
+  for (const s of [-1, 1]) { const pill = add(new THREE.CapsuleGeometry(0.014, 0.03, 6, 16), M.glass, 0.562, 0.02, s * 0.06, Math.PI / 2, s * 0.35, 0); pill.scale.set(0.6, 1, 1); }
+  // Carbon side panels on the flanks, cooling slots across the tail deck.
+  for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.3, 0.04, 0.006), M.carbon, -0.02, 0.018, s * 0.293, 0, s * 0.05, 0);
+  for (let k = 0; k < 4; k++) add(new THREE.BoxGeometry(0.009, 0.004, 0.13 - k * 0.012), M.seam, -0.3 - k * 0.032, 0.0985, 0);
+  // Gimbal under the nose: yoke, camera housing, lens in a blue-coated ring.
+  add(new THREE.CylinderGeometry(0.03, 0.036, 0.04, 20), M.graphite, 0.4, -0.15, 0);
+  for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.03, 0.08, 0.012), M.graphite, 0.42, -0.2, s * 0.058);
+  const cam = add(new THREE.SphereGeometry(0.058, 32, 24), M.white, 0.43, -0.215, 0); cam.scale.set(1.05, 0.92, 0.95);
+  add(new THREE.CylinderGeometry(0.036, 0.04, 0.03, 32), M.graphite, 0.482, -0.215, 0, 0, 0, Math.PI / 2);
+  add(new THREE.TorusGeometry(0.028, 0.004, 10, 32), M.coating, 0.498, -0.215, 0, 0, Math.PI / 2, 0);
+  add(new THREE.CylinderGeometry(0.026, 0.026, 0.006, 32), M.lens, 0.497, -0.215, 0, 0, 0, Math.PI / 2);
+  // LED bar under the chin: a dark housing with a row of blue lamps.
+  add(new RoundedBoxGeometry(0.05, 0.03, 0.24, 3, 0.01), M.graphite, 0.4, -0.285, 0);
+  for (let k = 0; k < 6; k++) add(new THREE.SphereGeometry(0.009, 12, 8), M.glow, 0.426, -0.287, -0.1 + k * 0.04);
+  // Navigation lights at the back corners, a status lamp on the tail.
+  add(new THREE.SphereGeometry(0.012, 12, 8), M.ledRed, -0.47, -0.03, -0.1);
+  add(new THREE.SphereGeometry(0.012, 12, 8), M.ledGreen, -0.47, -0.03, 0.1);
+  add(new THREE.BoxGeometry(0.004, 0.012, 0.05), M.glow, -0.478, 0.0, 0);
+  // Screws on the belly plate.
+  for (const [x, z] of [[0.25, 0.14], [0.25, -0.14], [-0.3, 0.13], [-0.3, -0.13]]) add(new THREE.CylinderGeometry(0.008, 0.008, 0.004, 10), M.metal, x, -0.142, z);
 
-  // Arms, motors, guards and props.
+  // Arms, motors, legs and props.
   const props: THREE.Group[] = [], blur: THREE.Mesh[] = [];
-  const R = 0.36;
+  const R = 0.4;
   const bladeShape = new THREE.Shape();
-  bladeShape.moveTo(0.025, -0.022); bladeShape.quadraticCurveTo(0.2, -0.05, R, -0.012); bladeShape.lineTo(R, 0.008); bladeShape.quadraticCurveTo(0.2, 0.036, 0.025, 0.022); bladeShape.closePath();
-  const bladeGeo = new THREE.ExtrudeGeometry(bladeShape, { depth: 0.007, bevelEnabled: false }).rotateX(-Math.PI / 2);
+  bladeShape.moveTo(0.03, -0.018); bladeShape.bezierCurveTo(0.12, -0.05, 0.3, -0.036, R, -0.01); bladeShape.quadraticCurveTo(R + 0.006, 0.004, R - 0.01, 0.012);
+  bladeShape.bezierCurveTo(0.3, 0.022, 0.12, 0.032, 0.03, 0.018); bladeShape.closePath();
+  const bladeGeo = new THREE.ExtrudeGeometry(bladeShape, { depth: 0.006, bevelEnabled: true, bevelThickness: 0.002, bevelSize: 0.002, bevelSegments: 2, curveSegments: 24 }).rotateX(-Math.PI / 2);
+  { // a little twist: pitch falls off towards the tip
+    const pos = bladeGeo.attributes.position as THREE.BufferAttribute, v = new THREE.Vector3();
+    for (let i = 0; i < pos.count; i++) { v.fromBufferAttribute(pos, i); const a = 0.28 * (1 - v.x / R); const c = Math.cos(a), sn = Math.sin(a); pos.setXYZ(i, v.x, v.y * c + v.z * sn, -v.y * sn + v.z * c); }
+    bladeGeo.computeVertexNormals();
+  }
+  const stripeGeo = new THREE.BoxGeometry(0.018, 0.009, 0.034);
   const discGeo = new THREE.CircleGeometry(R + 0.01, 48);
   for (const [fx, fz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
-    const root = new THREE.Vector3(fx * 0.1, -0.02, fz * 0.16);
-    const tip = new THREE.Vector3(fx * 0.52, 0.02, fz * 0.58);
+    const root = new THREE.Vector3(fx * 0.14, -0.03, fz * 0.17);
+    const tip = new THREE.Vector3(fx * 0.52, 0.0, fz * 0.58);
     const d = tip.clone().sub(root), L = Math.hypot(d.x, d.z);
     const arm = new THREE.Group(); arm.position.copy(root); arm.rotation.set(0, Math.atan2(-d.z, d.x), Math.atan2(d.y, L)); g.add(arm);
     const taper = new THREE.Shape();
-    taper.moveTo(0, -0.06); taper.lineTo(L, -0.038); taper.lineTo(L, 0.038); taper.lineTo(0, 0.06); taper.closePath();
-    add(slab(taper, 0.03, 0.016, 3), M.white, 0, -0.005, 0, 0, 0, 0, arm);
-    add(slab(taper, 0.012, 0.012, 3), M.graphite, 0, -0.04, 0, 0, 0, 0, arm);
-    add(new THREE.BoxGeometry(L * 0.55, 0.005, 0.014), M.glow, L * 0.5, 0.058, 0, 0, 0, 0, arm);
-    // Motor: navy pad, orange collar, cyan ring, gunmetal bell.
-    add(new THREE.CylinderGeometry(0.085, 0.08, 0.05, 32), M.graphite, tip.x, tip.y - 0.01, tip.z);
-    add(new THREE.CylinderGeometry(0.074, 0.08, 0.03, 32), M.white, tip.x, tip.y + 0.03, tip.z);
-    add(new THREE.TorusGeometry(0.073, 0.008, 10, 40), M.glow, tip.x, tip.y + 0.047, tip.z, Math.PI / 2);
-    add(new THREE.CylinderGeometry(0.058, 0.062, 0.06, 28), M.gunmetal, tip.x, tip.y + 0.075, tip.z);
-    // Open guard round the outside of the rotor, on two struts.
-    const out = Math.atan2(fz, fx), arc = 1.2 * Math.PI, gy = tip.y + 0.105, gr = R + 0.05;
-    const guard = new THREE.Group(); guard.position.set(tip.x, gy, tip.z); guard.rotation.y = arc / 2 - out; g.add(guard);
-    add(new THREE.TorusGeometry(gr, 0.014, 10, 72, arc), M.white, 0, 0, 0, Math.PI / 2, 0, 0, guard);
-    for (const t of [0.1, arc - 0.1]) {
-      const a = t - guard.rotation.y;
-      rod(M.graphite, 0.009, new THREE.Vector3(tip.x, tip.y + 0.01, tip.z), new THREE.Vector3(tip.x + gr * Math.cos(a), gy, tip.z + gr * Math.sin(a)));
+    taper.moveTo(0, -0.055); taper.quadraticCurveTo(L * 0.5, -0.04, L, -0.034); taper.lineTo(L, 0.034); taper.quadraticCurveTo(L * 0.5, 0.04, 0, 0.055); taper.closePath();
+    add(slab(taper, 0.022, 0.016, 4), M.white, 0, -0.004, 0, 0, 0, 0, arm);
+    add(slab(taper, 0.012, 0.01, 2), M.carbon, 0, -0.034, 0, 0, 0, 0, arm);
+    add(new THREE.CylinderGeometry(0.02, 0.02, 0.07, 18), M.gunmetal, 0.05, 0.0, 0, 0, 0, 0, arm);       // fold hinge
+    add(new THREE.CylinderGeometry(0.022, 0.022, 0.004, 18), M.metal, 0.05, 0.037, 0, 0, 0, 0, arm);
+    // Motor: white housing flaring into the arm, dark band, finned gunmetal bell, hub.
+    add(new THREE.CylinderGeometry(0.066, 0.078, 0.07, 36), M.white, tip.x, tip.y, tip.z);
+    add(new THREE.CylinderGeometry(0.067, 0.067, 0.008, 36), M.graphite, tip.x, tip.y + 0.038, tip.z);
+    add(new THREE.CylinderGeometry(0.056, 0.06, 0.05, 36), M.gunmetal, tip.x, tip.y + 0.066, tip.z);
+    for (let k = 0; k < 12; k++) { const a = (k / 12) * Math.PI * 2; add(new THREE.BoxGeometry(0.004, 0.036, 0.012), M.graphite, tip.x + Math.cos(a) * 0.058, tip.y + 0.066, tip.z + Math.sin(a) * 0.058, 0, -a, 0); }
+    add(new THREE.TorusGeometry(0.057, 0.004, 8, 36), M.stripe, tip.x, tip.y + 0.09, tip.z, Math.PI / 2);
+    // Landing leg under the motor, splayed a little outward, with a rubber foot.
+    const foot = new THREE.Vector3(tip.x + fx * 0.025, -0.27, tip.z + fz * 0.03);
+    rod(M.graphite, 0.026, 0.015, new THREE.Vector3(tip.x, tip.y - 0.03, tip.z), foot);
+    const f = add(new THREE.SphereGeometry(0.021, 16, 10), M.rubber, foot.x, foot.y, foot.z); f.scale.set(1, 0.7, 1);
+    // Front motors carry a small white-blue lamp under the housing.
+    if (fx > 0) add(new THREE.SphereGeometry(0.01, 10, 8), M.glow, tip.x, tip.y - 0.038, tip.z);
+    // Folding two-blade prop: black composite, white tip stripes, a hub and clamp.
+    const prop = new THREE.Group(); prop.position.set(tip.x, tip.y + 0.105, tip.z);
+    for (let k = 0; k < 2; k++) {
+      const b = new THREE.Mesh(bladeGeo, M.blade); b.rotation.y = k * Math.PI; prop.add(b);
+      const st = new THREE.Mesh(stripeGeo, M.stripe); st.position.set(R - 0.045, 0.004, 0); b.add(st);
     }
-    // Three-blade prop.
-    const prop = new THREE.Group(); prop.position.set(tip.x, tip.y + 0.115, tip.z);
-    for (let k = 0; k < 3; k++) { const b = new THREE.Mesh(bladeGeo, M.blade); b.rotation.set(0.18, (k * 2 * Math.PI) / 3, 0, 'YXZ'); prop.add(b); }
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.03, 16, 10), M.white); cap.scale.y = 0.7; prop.add(cap);
-    const disc = new THREE.Mesh(discGeo, new THREE.MeshBasicMaterial({ map: blurTex, color: 0x7fa6c8, transparent: true, opacity: 0.18, depthWrite: false }));
+    add(new THREE.CylinderGeometry(0.03, 0.034, 0.014, 24), M.graphite, 0, 0, 0, 0, 0, 0, prop);
+    const cap = add(new THREE.SphereGeometry(0.02, 16, 10), M.metal, 0, 0.008, 0, 0, 0, 0, prop); cap.scale.y = 0.6;
+    const disc = new THREE.Mesh(discGeo, new THREE.MeshBasicMaterial({ map: blurTex, color: 0x9aa4b0, transparent: true, opacity: 0.14, depthWrite: false }));
     disc.rotation.x = -Math.PI / 2; disc.position.y = 0.004;
     prop.add(disc); g.add(prop); props.push(prop); blur.push(disc);
   }

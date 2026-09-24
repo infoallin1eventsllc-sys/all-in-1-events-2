@@ -28,7 +28,7 @@ const CLOSE = 0.86;
 const clamp = (x: number) => Math.min(1, Math.max(0, x));
 const ease = (x: number) => { const u = clamp(x); return u * u * (3 - 2 * u); };
 
-export const ScrollHero: React.FC<{ onTour: () => void; onExplore: () => void; look?: 'classic' | 'orange' }> = ({ onTour, onExplore, look = 'classic' }) => {
+export const ScrollHero: React.FC<{ onTour: () => void; onExplore: () => void; look?: 'classic' | 'ember' }> = ({ onTour, onExplore, look = 'classic' }) => {
   const section = useRef<HTMLElement>(null);
   const stick = useRef<HTMLDivElement>(null);
   const intro = useRef<HTMLDivElement>(null);

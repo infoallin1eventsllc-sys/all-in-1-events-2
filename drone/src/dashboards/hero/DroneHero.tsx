@@ -7,7 +7,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js';
-import { buildDrone, buildGlowDrone, droneMaterials, orangeGlowMaterials, radialTexture } from '../../components/hero/droneModel';
+import { buildDrone, buildEmber, droneMaterials, emberMaterials, radialTexture } from '../../components/hero/droneModel';
 import { FrameGovernor } from '../../lib/quality';
 
 /**
@@ -67,8 +67,8 @@ interface Drone {
 }
 
 /** progress: scroll progress 0..1 from a parent that pins the hero; without it the hero reads the page scroll itself. */
-/** look: 'classic' is the hero as shipped; 'orange' is a sample styling (lab/hero.html), not used by the app. */
-export const DroneHero: React.FC<{ className?: string; progress?: { current: number }; look?: 'classic' | 'orange' }> = ({ className = '', progress, look = 'classic' }) => {
+/** look: 'classic' is the hero as shipped; 'ember' is a sample aircraft (lab/hero.html), not used by the app. */
+export const DroneHero: React.FC<{ className?: string; progress?: { current: number }; look?: 'classic' | 'ember' }> = ({ className = '', progress, look = 'classic' }) => {
   const ref = useRef<HTMLDivElement>(null);
   const [ok, setOk] = useState(true);
 
@@ -125,15 +125,15 @@ export const DroneHero: React.FC<{ className?: string; progress?: { current: num
     }
 
     // Materials: anodised metal, dark glass, LEDs bright enough to bloom.
-    const mats = look === 'orange' ? orangeGlowMaterials() : droneMaterials();
+    const mats = look === 'ember' ? emberMaterials() : droneMaterials();
     const blurTex = radialTexture();
     const n = phone ? 7 : 12;
     const [K0, K1, K2] = formations(n);
     const drones: Drone[] = [];
     const rnd = seeded(7);
     for (let i = 0; i < n; i++) {
-      const ledColor = look === 'orange' ? new THREE.Color(0.3, 0.9, 2.2) : new THREE.Color(0.45, 0.8, 1.6);
-      const { group, props, blur } = look === 'orange' ? buildGlowDrone(mats, blurTex) : buildDrone(mats, blurTex);
+      const ledColor = look === 'ember' ? new THREE.Color(0.3, 0.65, 2.2) : new THREE.Color(0.45, 0.8, 1.6);
+      const { group, props, blur } = look === 'ember' ? buildEmber(mats, blurTex) : buildDrone(mats, blurTex);
       group.position.set(...(reduced ? K1[i] : K0[i]));
       group.scale.setScalar(1.35);
       scene.add(group);
