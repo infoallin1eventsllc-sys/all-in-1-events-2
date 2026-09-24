@@ -15,7 +15,7 @@
  * If none of them plays, the feed falls back to the 3D city simulation.
  */
 
-export type Place = 'SAN_FRANCISCO' | 'LOS_ANGELES' | 'NEW_YORK' | 'MOUNTAINS' | 'STREETS';
+export type Place = 'SAN_FRANCISCO' | 'LOS_ANGELES' | 'NEW_YORK' | 'GIZA' | 'MOUNTAINS' | 'STREETS';
 
 export interface Clip {
   id: number;               // Pexels video id
@@ -23,10 +23,14 @@ export interface Clip {
   by: string;               // videographer, credited in the HUD
   place: Place;
   night?: boolean;
+  /** A generated clip served from public/footage/veo: its file, a 360p file for thumbnails, and the model that made it. */
+  file?: string;
+  sd?: string;
+  ai?: string;
 }
 
 export const PLACE_LABEL: Record<Place, string> = {
-  SAN_FRANCISCO: 'San Francisco', LOS_ANGELES: 'Los Angeles', NEW_YORK: 'New York', MOUNTAINS: 'Mountains', STREETS: 'City streets',
+  SAN_FRANCISCO: 'San Francisco', LOS_ANGELES: 'Los Angeles', NEW_YORK: 'New York', GIZA: 'Giza, Egypt', MOUNTAINS: 'Mountains', STREETS: 'City streets',
 };
 
 /** The clip library. Titles and credits as published on pexels.com/video/<id>. */
@@ -56,10 +60,16 @@ export const CLIPS: Clip[] = [
   { id: 7068548, title: 'City at night', by: 'Laura Tancredi', place: 'STREETS', night: true },
 ];
 
-export const PLACES: Place[] = ['SAN_FRANCISCO', 'LOS_ANGELES', 'NEW_YORK', 'MOUNTAINS', 'STREETS'];
+export const PLACES: Place[] = ['SAN_FRANCISCO', 'LOS_ANGELES', 'NEW_YORK', 'GIZA', 'MOUNTAINS', 'STREETS'];
 
-/** Clips for one place and time of day (a place with no night clips uses the streets at night). */
-export function playlist(place: Place, night: boolean): Clip[] {
+/**
+ * Clips for one place and time of day. Generated clips installed for the place come first and alone
+ * (they are served by this site, so they play wherever the app is hosted); otherwise the recorded
+ * clips, and a place with none for this time of day uses the streets.
+ */
+export function playlist(place: Place, night: boolean, generated: Clip[] = []): Clip[] {
+  const gen = generated.filter(c => c.place === place);
+  if (gen.length) { const tod = gen.filter(c => !!c.night === night); return tod.length ? tod : gen; }
   const own = CLIPS.filter(c => c.place === place && !!c.night === night);
   if (own.length) return own;
   return CLIPS.filter(c => !!c.night === night && (c.place === 'STREETS' || c.place === place));
@@ -99,8 +109,25 @@ function viaApi(id: number, maxWidth: number): Promise<string | null> {
   return p;
 }
 
+/**
+ * Generated drone footage installed in public/footage/veo by `npm run veo` (see scripts/veo.mjs):
+ * the manifest lists each clip's file, place and model. Empty when none are installed.
+ */
+let gen: Promise<Clip[]> | null = null;
+export function loadGenerated(): Promise<Clip[]> {
+  if (!gen) {
+    gen = fetch(`${BASE}footage/veo/manifest.json`, { cache: 'no-cache' })
+      .then(r => (r.ok ? r.json() : { clips: [] }))
+      .then((m: { clips?: { file: string; sd?: string; title: string; place: Place; night?: boolean; model?: string }[] }) =>
+        (m.clips ?? []).filter(c => c.file && PLACES.includes(c.place)).map((c, i) => ({ id: -(i + 1), title: c.title, by: 'AI-generated', place: c.place, night: c.night, file: c.file, sd: c.sd, ai: c.model ?? 'AI' })))
+      .catch(() => []);
+  }
+  return gen;
+}
+
 /** Candidate URLs for a clip, best first; the player tries them in turn. */
 export async function sources(clip: Clip, thumb: boolean): Promise<Source[]> {
+  if (clip.file) return [{ url: `${BASE}footage/veo/${thumb && clip.sd ? clip.sd : clip.file}`, sameOrigin: true }];
   const out: Source[] = [];
   if ((await localClips()).has(clip.id)) out.push({ url: `${BASE}footage/${clip.id}${thumb ? '-sd' : ''}.mp4`, sameOrigin: true });
   const api = await viaApi(clip.id, thumb ? 700 : 1300);

@@ -9,7 +9,7 @@ const WORLD_LABEL: Partial<Record<World, { badge: string; caption: string; title
   LA_FLY: { badge: '3D · LA FPV', caption: 'Los Angeles, California · FPV fly-through, rendered live', title: 'the rendered Los Angeles fly-through' },
   NY_FLY: { badge: '3D · NYC FPV', caption: 'New York, New York · FPV fly-through, rendered live', title: 'the rendered New York fly-through' },
 };
-import { playlist, sources, type Place, type Source } from './feed/footage';
+import { playlist, sources, loadGenerated, type Clip, type Place, type Source } from './feed/footage';
 import { loadPlates } from './feed/plates';
 import type { PatrolDrone, SensorMode } from '../hooks/useSurveillanceSimulation';
 
@@ -76,7 +76,9 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = fal
   const usePlates = plates && footage === 'SAN_FRANCISCO' && !videoStream;
 
   // --- Footage playlist: one clip after another; each clip's file from the best source that plays ---
-  const clips = useMemo(() => (footage && !usePlates ? playlist(footage, isNight) : []), [footage, isNight, usePlates]);
+  const [generated, setGenerated] = useState<Clip[]>([]);
+  useEffect(() => { let on = true; loadGenerated().then(g => { if (on) setGenerated(g); }); return () => { on = false; }; }, []);
+  const clips = useMemo(() => (footage && !usePlates ? playlist(footage, isNight, generated) : []), [footage, isNight, usePlates, generated]);
   const [clipIdx, setClipIdx] = useState(0);
   const [srcs, setSrcs] = useState<Source[] | null>(null);
   const [srcIdx, setSrcIdx] = useState(0);
@@ -142,6 +144,8 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = fal
       {videoStream && <video ref={videoRef} autoPlay muted playsInline className="w-full h-full block object-cover bg-black" aria-label={`Live video from ${drone.id}`} />}
       {useFootage && src && (
         <video key={src.url} ref={clipRef} src={src.url} autoPlay muted playsInline preload="auto" loop={clips.length === 1}
+          // React sets `muted` after the browser's autoplay check, so start the (muted) clip ourselves once it can play.
+          onCanPlay={e => { const v = e.currentTarget; v.muted = true; if (v.paused) v.play().catch(() => { /* the watchdog moves on */ }); }}
           onPlaying={() => { setPlaying(true); misses.current = 0; }} onError={nextSource} onStalled={() => { /* keep waiting; the browser retries */ }}
           onEnded={() => setClipIdx(i => i + 1)}
           className={`w-full h-full block object-cover bg-black ${glVideo ? 'hidden' : ''}`}
@@ -239,7 +243,7 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = fal
             </div>
           )}
           {useFootage && clip && !offline && (
-            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] text-slate-300/70">Recorded flight · {clip.title} · {clip.by} · Pexels</div>
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] text-slate-300/70">{clip.file ? `AI-generated drone footage · ${clip.title} · ${clip.ai}` : `Recorded flight · ${clip.title} · ${clip.by} · Pexels`}</div>
           )}
           {!useFootage && !videoStream && !offline && rendered && (
             <div className="absolute bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] text-slate-300/70">{simWorld === 'SF' && plates ? 'San Francisco, California · aerial tour · AI-generated imagery' : rendered.caption}</div>
