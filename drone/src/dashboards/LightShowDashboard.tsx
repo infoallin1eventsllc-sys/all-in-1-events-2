@@ -216,9 +216,11 @@ export const LightShowDashboard: React.FC = () => {
                       placeholder="ALL IN 1" className="mt-1 w-full h-8 rounded-lg border border-line bg-surface px-2 text-[13px] text-ink uppercase tracking-wide" />
                   </label>
                 </Section>
-                <Divider />
-                <div className="flex flex-wrap gap-2">
+                {/* The hand-off actions stay in view while the cue list scrolls under them. */}
+                <div className="sticky bottom-0 z-[1] -mx-1 px-1 pt-3 pb-1 bg-surface border-t border-line">
                   <ToolButton size="sm" primary icon={<Download />} label={`Export show package (${droneCount})`} onClick={() => downloadShowPackage('All in 1 show', droneCount)} title="CSV per aircraft + manifest, for Skybrush Studio / Blender or Verge Aero" />
+                </div>
+                <div className="flex flex-wrap gap-2">
                   <ToolButton size="sm" icon={<Layers />} label="Choreography engine" onClick={() => setModal('CHOREO')} />
                   <ToolButton size="sm" icon={<ListChecks />} label="Launch pads" onClick={() => setModal('PADS')} />
                 </div>

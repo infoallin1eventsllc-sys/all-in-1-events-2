@@ -372,9 +372,9 @@ const DeckNumber: React.FC<{ id: string; label: string; unit: string; value: num
 
 const DeckButton: React.FC<{ id: string; icon: React.ReactNode; label: string; onClick: () => void; disabled?: boolean; active?: boolean; compact?: boolean }> = ({ id, icon, label, onClick, disabled, active, compact }) => (
   <button id={id} type="button" onClick={onClick} disabled={disabled}
-    className={`inline-flex items-center gap-2 rounded-lg ${compact ? 'h-8 px-2.5 text-[12px]' : 'h-11 px-3 text-[13px]'} font-medium border transition-colors disabled:opacity-35 disabled:cursor-not-allowed hover:bg-[rgba(90,210,255,0.08)] [&_svg]:w-4 [&_svg]:h-4`}
+    className={`inline-flex items-center gap-2 rounded-lg ${compact ? 'h-8 px-2.5 text-[12px]' : 'min-h-11 py-1.5 px-3 text-[13px] text-left leading-tight'} font-medium border transition-colors disabled:opacity-35 disabled:cursor-not-allowed hover:bg-[rgba(90,210,255,0.08)] [&_svg]:w-4 [&_svg]:h-4`}
     style={{ color: DECK.ink, borderColor: active ? DECK.holo : DECK.line, background: active ? 'rgba(90,210,255,0.1)' : 'transparent' }}>
-    {icon}<span className="truncate">{label}</span>
+    {icon}<span className={compact ? 'truncate' : 'min-w-0'}>{label}</span>
   </button>
 );
 
@@ -414,10 +414,10 @@ const HoldButton: React.FC<{ id: string; icon: React.ReactNode; label: string; h
       onKeyDown={e => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); start(); } }}
       onKeyUp={e => { if (e.key === ' ' || e.key === 'Enter') stop(); }}
       aria-label={`${label}: ${hint}`}
-      className="relative overflow-hidden inline-flex items-center gap-2 h-11 px-3 rounded-lg text-[13px] font-semibold border disabled:opacity-35 disabled:cursor-not-allowed [&_svg]:w-4 [&_svg]:h-4 touch-none"
+      className="relative overflow-hidden inline-flex items-center gap-2 min-h-11 py-1.5 px-3 rounded-lg text-[13px] leading-tight text-left font-semibold border disabled:opacity-35 disabled:cursor-not-allowed [&_svg]:w-4 [&_svg]:h-4 touch-none"
       style={{ color: DECK.ink, borderColor: col, background: `${col}14` }}>
       <span className="absolute inset-y-0 left-0" style={{ width: `${p * 100}%`, background: `${col}55` }} aria-hidden />
-      <span className="relative inline-flex items-center gap-2 min-w-0">{icon}<span className="truncate">{label}</span></span>
+      <span className="relative inline-flex items-center gap-2 min-w-0">{icon}<span className="min-w-0">{label}</span></span>
       <span className="relative ml-auto text-[10px] font-medium uppercase tracking-[0.1em] hidden sm:inline" style={{ color: DECK.ink2 }}>{p > 0 ? `${Math.round(p * 100)}%` : hint}</span>
     </button>
   );

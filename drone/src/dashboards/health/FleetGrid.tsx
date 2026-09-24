@@ -56,6 +56,7 @@ export const FleetGrid: React.FC<{ list: AircraftHealth[]; colorBy: ColorBy; fil
   const n = list.length, cols = gridCols(n || 1), rows = Math.ceil(n / cols);
   const LW = 26, TH = 18;
   const cell = Math.max(9, Math.min(38, Math.floor((width - LW) / cols)));
+  const X0 = LW + Math.max(0, Math.floor((width - LW - cols * cell) / 2));   // centre the grid when cells hit their size cap
   const H = TH + rows * cell + 4;
 
   useEffect(() => {
@@ -76,13 +77,13 @@ export const FleetGrid: React.FC<{ list: AircraftHealth[]; colorBy: ColorBy; fil
     g.textBaseline = 'middle';
     // Column numbers every 5, row letters.
     g.fillStyle = DECK.ink3; g.textAlign = 'center';
-    for (let cI = 0; cI < cols; cI++) if (cI === 0 || (cI + 1) % 5 === 0) g.fillText(String(cI + 1), LW + cI * cell + cell / 2, TH / 2);
+    for (let cI = 0; cI < cols; cI++) if (cI === 0 || (cI + 1) % 5 === 0) g.fillText(String(cI + 1), X0 + cI * cell + cell / 2, TH / 2);
     g.textAlign = 'right';
     const step = cell < 14 ? 2 : 1;
-    for (let r = 0; r < rows; r++) if (r % step === 0) g.fillText(list[r * cols]?.pad.replace(/\d+$/, '') ?? '', LW - 6, TH + r * cell + cell / 2);
+    for (let r = 0; r < rows; r++) if (r % step === 0) g.fillText(list[r * cols]?.pad.replace(/\d+$/, '') ?? '', X0 - 6, TH + r * cell + cell / 2);
 
     list.forEach((a, i) => {
-      const x = LW + (i % cols) * cell, y = TH + Math.floor(i / cols) * cell;
+      const x = X0 + (i % cols) * cell, y = TH + Math.floor(i / cols) * cell;
       const cx = x + cell / 2, cy = y + cell / 2, R = cell * 0.36;
       const on = matchesFilter(a, filter);
       g.globalAlpha = on ? 1 : 0.16;
@@ -121,7 +122,7 @@ export const FleetGrid: React.FC<{ list: AircraftHealth[]; colorBy: ColorBy; fil
 
   const at = (e: React.MouseEvent) => {
     const b = canvas.current!.getBoundingClientRect();
-    const x = e.clientX - b.left - LW, y = e.clientY - b.top - TH;
+    const x = e.clientX - b.left - X0, y = e.clientY - b.top - TH;
     if (x < 0 || y < 0) return null;
     const i = Math.floor(y / cell) * cols + Math.floor(x / cell);
     return Math.floor(x / cell) < cols && list[i] ? { a: list[i], x: e.clientX - b.left, y: e.clientY - b.top } : null;

@@ -133,7 +133,7 @@ export const FleetHealthView: React.FC<{ renderAircraft: RenderAircraft }> = ({ 
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
         <Card className="xl:col-span-7" id="fleet-issues">
-          <Section title="What is wrong across the fleet" right={stats.issues.length ? `${stats.issues.reduce((s, g) => s + g.ids.length, 0)} findings on ${stats.n - stats.counts.READY - stats.counts.SILENT} aircraft` : undefined}>
+          <Section title="What is wrong across the fleet" right={stats.issues.length ? (() => { const f = stats.issues.reduce((s, g) => s + g.ids.length, 0); return `${f} finding${f === 1 ? '' : 's'} on ${stats.n - stats.counts.READY - stats.counts.SILENT} aircraft`; })() : undefined}>
             {stats.issues.length === 0 ? <p className="flex items-center gap-2 py-2 text-[13px] text-ink-2"><CircleCheck className="w-4 h-4 text-ok" />Nothing found on any aircraft.</p> : (
               <ul className="divide-y divide-line">
                 {stats.issues.map(g => (
@@ -343,7 +343,7 @@ const FleetTable: React.FC<{ list: AircraftHealth[]; filter: Filter; onFilter: (
           </tbody>
         </table>
       </div>
-      {rows.length > limit && <button type="button" onClick={() => setLimit(l => l + 100)} className="mt-2 px-1 text-[12px] font-medium text-accent hover:underline">Show {Math.min(100, rows.length - limit)} more of {rows.length - limit}</button>}
+      {rows.length > limit && <button type="button" onClick={() => setLimit(l => l + 100)} className="mt-2 px-1 text-[12px] font-medium text-accent hover:underline">{rows.length - limit <= 100 ? `Show the other ${rows.length - limit}` : `Show 100 more of ${rows.length - limit}`}</button>}
     </div>
   );
 };
