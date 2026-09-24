@@ -114,6 +114,10 @@ export const SurveillanceDashboard: React.FC = () => {
   const feed = (
     <DroneFeedCanvas key={d.id} drone={d} isNight={isNight} footage={placeFor(drones.findIndex(x => x.id === d.id) - Math.max(0, drones.findIndex(x => x.id === selectedDroneId)))} world={simWorld} onSetSensorMode={payload.sensor} onSetZoom={payload.zoom} className="w-full h-full" videoStream={video.stream} videoLabel={videoLabel} />
   );
+  // In the picture-in-picture the camera is compact (no controls of its own): a click there only swaps the views.
+  const feedPip = (
+    <DroneFeedCanvas key={`${d.id}-pip`} drone={d} isNight={isNight} footage={placeFor(drones.findIndex(x => x.id === d.id) - Math.max(0, drones.findIndex(x => x.id === selectedDroneId)))} world={simWorld} videoStream={video.stream} videoLabel={videoLabel} compact />
+  );
   const map = (
     <SurveillanceMapCanvas drones={drones} detections={detections} selectedDroneId={selectedDroneId} onSelectDrone={setSelectedDroneId} onSelectWaypoint={sendToWaypoint} />
   );
@@ -168,7 +172,7 @@ export const SurveillanceDashboard: React.FC = () => {
               className="hidden md:block absolute bottom-14 right-3 w-[26%] min-w-[180px] rounded-lg overflow-hidden border border-white/25 shadow-xl bg-imagery group"
               style={{ aspectRatio: hero === 'CAMERA' ? '5 / 3' : '16 / 9' }}
             >
-              <div className="absolute inset-0 pointer-events-none [&>canvas]:w-full [&>canvas]:h-full [&>canvas]:object-cover">{hero === 'CAMERA' ? map : feed}</div>
+              <div className="absolute inset-0 pointer-events-none [&>canvas]:w-full [&>canvas]:h-full [&>canvas]:object-cover">{hero === 'CAMERA' ? map : feedPip}</div>
               <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
                 {hero === 'CAMERA' ? <><MapIcon className="w-3 h-3" />Map</> : <><Video className="w-3 h-3" />Camera</>}
               </span>

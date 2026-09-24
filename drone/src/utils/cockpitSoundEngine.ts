@@ -205,6 +205,13 @@ class CockpitSoundEngine {
     }
   }
 
+  /** Stop the rotor hum (leaving the cockpit). */
+  public stopAmbientRotor(): void {
+    try { (this.rotorNoiseNode as AudioBufferSourceNode | null)?.stop(); } catch { /* already stopped */ }
+    this.rotorNoiseNode?.disconnect(); this.rotorGain?.disconnect();
+    this.rotorNoiseNode = null; this.rotorGain = null;
+  }
+
   /**
    * Optional Real Mic Ingest using getUserMedia
    */

@@ -175,11 +175,12 @@ export const ControlProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (!origin.current && first) origin.current = { lat: first[1].lat, lon: first[1].lon };
         const o = origin.current ?? { lat: 0, lon: 0 };
         setVehicles(entries.map(([sys, t]) => {
-          const id = `Aircraft ${sys}`, h = health.get(id), p = toLocal(o, t.lat, t.lon);
+          // No GPS fix yet reports 0,0: keep the aircraft on its pad rather than thousands of km away.
+          const fix = !!(t.lat || t.lon), id = `Aircraft ${sys}`, h = health.get(id), p = fix ? toLocal(o, t.lat, t.lon) : { x: 0, y: 0 };
           const airborne = t.armed && t.altRelM > 0.5, stale = !t.heartbeatMs || Date.now() - t.heartbeatMs > 3000;
           return {
             id, pad: h?.pad ?? `#${sys}`, x: p.x, y: p.y, alt: t.altRelM, vx: t.vyMps, vy: t.vxMps, vz: t.climbMps, armed: t.armed, airborne,
-            mode: modeName(t), doing: stale ? 'Not reporting' : airborne ? `Flying · ${modeName(t).toLowerCase()}` : t.armed ? 'Armed, waiting' : 'On the ground',
+            mode: modeName(t), doing: stale ? 'Not reporting' : !fix ? 'Waiting for GPS' : airborne ? `Flying · ${modeName(t).toLowerCase()}` : t.armed ? 'Armed, waiting' : 'On the ground',
             battery: t.batteryPct >= 0 ? t.batteryPct : null, health: h ? readiness(h) : 'SILENT', home: { x: 0, y: 0 }, target: null, crashed: false,
           };
         }));

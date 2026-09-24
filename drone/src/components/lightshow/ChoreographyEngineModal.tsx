@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Layers, ArrowRight, Download, Cpu, ShieldCheck } from 'lucide-react';
 import { SHOW_FORMATIONS } from '../../data/lightShowFormations';
 import { SafetyValidationReport } from '../../types/lightShowTypes';
+import { useDialog } from '../../lib/useDialog';
 
 interface ChoreographyEngineModalProps {
   droneCount: number;
@@ -16,6 +17,7 @@ export const ChoreographyEngineModal: React.FC<ChoreographyEngineModalProps> = (
   onClose,
   onSelectFormation,
 }) => {
+  const dialog = useDialog(onClose);
   const [sourceIndex, setSourceIndex] = useState<number>(currentFormationIndex);
   const [targetIndex, setTargetIndex] = useState<number>((currentFormationIndex + 1) % SHOW_FORMATIONS.length);
   const [altitudeTieringEnabled, setAltitudeTieringEnabled] = useState<boolean>(true);
@@ -56,7 +58,7 @@ export const ChoreographyEngineModal: React.FC<ChoreographyEngineModalProps> = (
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md" role="dialog" aria-modal="true" aria-label="Choreography engine & 4D trajectory deconfliction" ref={dialog}>
       <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-slate-800 bg-slate-950">
@@ -75,7 +77,7 @@ export const ChoreographyEngineModal: React.FC<ChoreographyEngineModalProps> = (
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100 transition-colors"
+            aria-label="Close" className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>

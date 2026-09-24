@@ -5,6 +5,7 @@ import {
   X, 
   FileText, 
   Scale} from 'lucide-react';
+import { useDialog } from '../../lib/useDialog';
 
 interface RegulatoryComplianceModalProps {
   droneCount: number;
@@ -12,6 +13,7 @@ interface RegulatoryComplianceModalProps {
 }
 
 export const RegulatoryComplianceModal: React.FC<RegulatoryComplianceModalProps> = ({ droneCount, onClose }) => {
+  const dialog = useDialog(onClose);
   const [jurisdiction, setJurisdiction] = useState<'FAA_PART_107' | 'EASA_SORA'>('FAA_PART_107');
   const [maxAltitudeAglMeters, setMaxAltitudeAglMeters] = useState<number>(120); // 120m / 400ft AGL
   const [airframeMassKg, setAirframeMassKg] = useState<number>(0.48); // 480g light show drone
@@ -99,7 +101,7 @@ Signature: __________________________    Date: ______________
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md" role="dialog" aria-modal="true" aria-label="FAA Part 107 / EASA SORA airspace regulatory compliance" ref={dialog}>
       <div className="bg-slate-900 border border-slate-700 w-full max-w-5xl max-h-[92vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-200">
         
         {/* Modal Header */}
@@ -124,7 +126,7 @@ Signature: __________________________    Date: ______________
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-100 transition-colors"
+            aria-label="Close" className="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-100 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>

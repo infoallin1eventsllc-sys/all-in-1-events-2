@@ -74,9 +74,11 @@ export const TacticalMap: React.FC<Props> = ({ vehicles, updatedAt, selected, fo
       g.clearRect(0, 0, w, height);
       // Field grid: 5 m, stronger every 25 m.
       const [fx0, fy1] = toField(0, 0), [fx1, fy0] = toField(w, mapH);
-      const step = s < 2 ? 25 : 5;
-      for (let gx = Math.floor(fx0 / step) * step; gx <= fx1; gx += step) { const [sx] = toScreen(gx, 0); g.strokeStyle = gx % 25 === 0 ? 'rgba(90,210,255,0.12)' : 'rgba(90,210,255,0.05)'; g.beginPath(); g.moveTo(sx, 0); g.lineTo(sx, mapH); g.stroke(); }
-      for (let gy = Math.floor(fy0 / step) * step; gy <= fy1; gy += step) { const [, sy] = toScreen(0, gy); g.strokeStyle = gy % 25 === 0 ? 'rgba(90,210,255,0.12)' : 'rgba(90,210,255,0.05)'; g.beginPath(); g.moveTo(0, sy); g.lineTo(w, sy); g.stroke(); }
+      // Coarsen the grid as the view widens, so no frame ever draws more than about 200 lines.
+      let step = s < 2 ? 25 : 5;
+      while ((fx1 - fx0) / step + (fy1 - fy0) / step > 200) step *= 5;
+      for (let gx = Math.floor(fx0 / step) * step; gx <= fx1; gx += step) { const [sx] = toScreen(gx, 0); g.strokeStyle = gx % (step * 5) === 0 || (step === 5 && gx % 25 === 0) ? 'rgba(90,210,255,0.12)' : 'rgba(90,210,255,0.05)'; g.beginPath(); g.moveTo(sx, 0); g.lineTo(sx, mapH); g.stroke(); }
+      for (let gy = Math.floor(fy0 / step) * step; gy <= fy1; gy += step) { const [, sy] = toScreen(0, gy); g.strokeStyle = gy % (step * 5) === 0 || (step === 5 && gy % 25 === 0) ? 'rgba(90,210,255,0.12)' : 'rgba(90,210,255,0.05)'; g.beginPath(); g.moveTo(0, sy); g.lineTo(w, sy); g.stroke(); }
       const r = Math.max(2.2, Math.min(9, s * 0.9));
       // Pads.
       g.fillStyle = 'rgba(90,210,255,0.08)';

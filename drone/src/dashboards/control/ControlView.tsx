@@ -106,6 +106,7 @@ export const ControlView: React.FC = () => {
 const FleetControl: React.FC<{ sel: Set<string>; setSel: (s: Set<string>) => void; onOpen: (id: string) => void }> = ({ sel, setSel, onOpen }) => {
   const c = useControl();
   const vs = c.vehicles;
+  const picked = useRef<string | null>(null);         // the aircraft last clicked on the map
   const [alt, setAlt] = useState(20);
   const [stagger, setStagger] = useState(1);
   const [il, setIl] = useState({ grounded: true, lowBattery: true, silent: true });
@@ -131,8 +132,9 @@ const FleetControl: React.FC<{ sel: Set<string>; setSel: (s: Set<string>) => voi
           </div>
           <Legend />
         </div>
-        <div onDoubleClick={() => { const last = [...sel].pop(); if (last) onOpen(last); }}>
-          <TacticalMap vehicles={vs} updatedAt={c.updatedAt} selected={sel}
+        {/* Double-click opens the aircraft under the pointer (the clicks themselves toggle it in and out of the selection). */}
+        <div onDoubleClick={() => { if (picked.current) onOpen(picked.current); }}>
+          <TacticalMap vehicles={vs} updatedAt={c.updatedAt} selected={sel} onPick={id => { picked.current = id; }}
             onSelect={(list, add) => { if (list.length === 1 && add) { const n = new Set(sel); if (n.has(list[0])) n.delete(list[0]); else n.add(list[0]); setSel(n); } else setSel(add ? new Set([...sel, ...list]) : new Set(list)); }} />
         </div>
       </div>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, BarChart2, Zap} from 'lucide-react';
+import { useDialog } from '../lib/useDialog';
 
 interface ProtocolBenchmarkModalProps {
   onClose: () => void;
@@ -7,6 +8,7 @@ interface ProtocolBenchmarkModalProps {
 }
 
 export const ProtocolBenchmarkModal: React.FC<ProtocolBenchmarkModalProps> = ({ onClose, droneCount }) => {
+  const dialog = useDialog(onClose);
   const [selectedHz, setSelectedHz] = useState<number>(20);
 
   // Protocols data
@@ -62,7 +64,7 @@ export const ProtocolBenchmarkModal: React.FC<ProtocolBenchmarkModalProps> = ({ 
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200" role="dialog" aria-modal="true" aria-label="Swarm Protocol & Bandwidth Scalability Benchmark" ref={dialog}>
       <div 
         id="protocol-benchmark-modal"
         className="w-full max-w-3xl bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col text-xs text-slate-300 max-h-[90vh]"
@@ -78,7 +80,7 @@ export const ProtocolBenchmarkModal: React.FC<ProtocolBenchmarkModalProps> = ({ 
               <p className="text-[11px] text-slate-400">Quantitative comparison of pub/sub architectures under 100–500 unit load</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100">
+          <button onClick={onClose} aria-label="Close" className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100">
             <X className="w-4 h-4" />
           </button>
         </div>

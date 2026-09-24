@@ -7,6 +7,7 @@ import {
   Check
 } from 'lucide-react';
 import { GazeboSITLConfig } from '../types';
+import { useDialog } from '../lib/useDialog';
 
 interface GazeboSITLModalProps {
   onClose: () => void;
@@ -23,6 +24,7 @@ export const GazeboSITLModal: React.FC<GazeboSITLModalProps> = ({
   onToggleSITL,
   droneCount,
 }) => {
+  const dialog = useDialog(onClose);
   const [activeTab, setActiveTab] = useState<'CONTROLS' | 'ARCHITECTURE' | 'ROS2_BRIDGE'>('CONTROLS');
   const [copied, setCopied] = useState<boolean>(false);
 
@@ -33,7 +35,7 @@ export const GazeboSITLModal: React.FC<GazeboSITLModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-in fade-in duration-200" role="dialog" aria-modal="true" aria-label="Gazebo & PX4 SITL Multi-Vehicle Simulation Engine" ref={dialog}>
       <div 
         id="gazebo-sitl-modal"
         className="w-full max-w-4xl bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col text-xs text-slate-300 max-h-[90vh]"
@@ -66,7 +68,7 @@ export const GazeboSITLModal: React.FC<GazeboSITLModalProps> = ({
           </div>
           <button 
             onClick={onClose} 
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100 transition-colors"
+            aria-label="Close" className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>

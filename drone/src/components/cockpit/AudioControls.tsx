@@ -32,6 +32,9 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
   const [, setIsSpacePressed] = useState<boolean>(false);   // held for the key handlers below
   const [usingRealMic, setUsingRealMic] = useState<boolean>(false);
 
+  // Leaving the cockpit silences it: siren, rotor hum and the microphone all stop.
+  useEffect(() => () => { cockpitAudio.stopSiren(); cockpitAudio.stopAmbientRotor(); cockpitAudio.stopRealMic(); }, []);
+
   // Sync ambient rotor noise with downlink state
   useEffect(() => {
     cockpitAudio.updateAmbientRotor(audioState.downlinkVolume, audioState.downlinkMuted);
@@ -69,8 +72,9 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
   // Keyboard shortcut: Spacebar for Push-to-Talk
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // If user is typing in an input, ignore
-      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
+      // Space still types in fields and presses focused buttons and menus; push-to-talk is Space anywhere else.
+      const t = e.target as HTMLElement | null;
+      if (t && (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(t.tagName) || t.isContentEditable || t.closest('[role="button"],[role="menuitem"],[role="tab"]'))) return;
       if (e.code === 'Space' && !e.repeat && !audioState.uplinkOpenMic) {
         e.preventDefault();
         setIsSpacePressed(true);
@@ -79,6 +83,8 @@ export const AudioControls: React.FC<AudioControlsProps> = ({
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(t.tagName) || t.isContentEditable || t.closest('[role="button"],[role="menuitem"],[role="tab"]'))) return;
       if (e.code === 'Space' && !audioState.uplinkOpenMic) {
         e.preventDefault();
         setIsSpacePressed(false);

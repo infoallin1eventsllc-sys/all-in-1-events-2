@@ -1,6 +1,7 @@
 import React from 'react';
 import { DroneState, Task } from '../types';
 import { X, Battery, Radio, Shield, Navigation, AlertTriangle, CheckCircle2, RotateCcw, Cpu } from 'lucide-react';
+import { useDialog } from '../lib/useDialog';
 
 interface DroneDetailModalProps {
   drone: DroneState | null;
@@ -17,10 +18,11 @@ export const DroneDetailModal: React.FC<DroneDetailModalProps> = ({
   onCommandRth,
   onCommandEmergencyLand,
 }) => {
+  const dialog = useDialog(onClose);
   if (!drone) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200" role="dialog" aria-modal="true" aria-label="Aircraft details" ref={dialog}>
       <div 
         id="drone-detail-modal"
         className="w-full max-w-2xl bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col text-xs text-slate-300 max-h-[90vh]"
@@ -58,7 +60,7 @@ export const DroneDetailModal: React.FC<DroneDetailModalProps> = ({
           <button
             id="close-drone-modal"
             onClick={onClose}
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100 transition-colors"
+            aria-label="Close" className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>

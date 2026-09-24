@@ -13,6 +13,7 @@ import { PARKED_CARS, SITE, TREES, WORLD_M, heightAt, siteImagery, structureAt }
 import { GOOD_VIEWS, type CoverageGrid, type Leg, type SurveyPlan } from '../../survey/plan';
 import { buildDrone, droneMaterials, radialTexture } from '../hero/droneModel';
 import { FrameGovernor } from '../../lib/quality';
+import { release3d } from '../../lib/release3d';
 import type { Photo, SurveyAircraft, Phase } from '../../hooks/useSurveyMission';
 
 /**
@@ -218,7 +219,8 @@ export const SurveyScanCanvas3D: React.FC<Props> = (props) => {
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(FOG, FOG_DENSITY);
     const pmrem = new THREE.PMREMGenerator(renderer);
-    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    const room = new RoomEnvironment();
+    scene.environment = pmrem.fromScene(room, 0.04).texture; room.dispose();
     scene.environmentIntensity = 0.35;
     const camera = new THREE.PerspectiveCamera(38, w / h, 1, 5000);
     camRef.current = camera;
@@ -697,7 +699,7 @@ export const SurveyScanCanvas3D: React.FC<Props> = (props) => {
       place(homeRef.current, SITE.home.x, hy + 6, SITE.home.y);
 
       composer.render();
-      if (gov.tick(dt * 1000)) { renderer.setPixelRatio(gov.pixelRatio(2)); const cw = host.clientWidth, ch = host.clientHeight; renderer.setSize(cw, ch); composer.setSize(cw, ch); bloom.setSize(cw, ch); }
+      if (gov.tick(dt * 1000)) { renderer.setPixelRatio(gov.pixelRatio(2)); const cw = host.clientWidth, ch = host.clientHeight; if (cw && ch) { camera.aspect = cw / ch; camera.updateProjectionMatrix(); renderer.setSize(cw, ch); composer.setSize(cw, ch); bloom.setSize(cw, ch); } }
     };
     raf = requestAnimationFrame(tick);
 
@@ -708,12 +710,7 @@ export const SurveyScanCanvas3D: React.FC<Props> = (props) => {
     ro.observe(host);
     return () => {
       cancelAnimationFrame(raf); ro.disconnect();
-      scene.traverse(obj => {
-        const m = obj as THREE.Mesh; m.geometry?.dispose();
-        const mat = m.material as THREE.Material | THREE.Material[] | undefined;
-        if (Array.isArray(mat)) mat.forEach(x => x.dispose()); else mat?.dispose();
-      });
-      ortho.dispose(); glow.dispose(); pmrem.dispose(); composer.dispose(); renderer.dispose();
+      release3d(scene, renderer, composer, [ortho, glow, pmrem]);
     };
   }, []);
 
@@ -734,7 +731,13 @@ export const SurveyScanCanvas3D: React.FC<Props> = (props) => {
     goal.current.theta += dx * 0.005; goal.current.phi = Math.max(0.02, Math.min(1.45, goal.current.phi - dy * 0.005));
   };
   const onPointerUp = () => { drag.current = null; };
-  const onWheel = (e: React.WheelEvent) => { lastInput.current = performance.now(); if (viewRef.current === 'CINEMATIC') { setView('OVERVIEW'); viewRef.current = 'OVERVIEW'; } goal.current.radius = Math.max(90, Math.min(1100, goal.current.radius * (1 + e.deltaY * 0.001))); };
+  // Wheel zooms the scene, not the page (React's wheel handler is passive, so this is a native listener).
+  useEffect(() => {
+    const el = hostRef.current; if (!el) return;
+    const wheel = (e: WheelEvent) => { e.preventDefault(); lastInput.current = performance.now(); if (viewRef.current === 'CINEMATIC') { setView('OVERVIEW'); viewRef.current = 'OVERVIEW'; } goal.current.radius = Math.max(90, Math.min(1100, goal.current.radius * (1 + e.deltaY * 0.001))); };
+    el.addEventListener('wheel', wheel, { passive: false });
+    return () => el.removeEventListener('wheel', wheel);
+  }, []);
 
   const a = props.aircraft;
   const chip = 'rounded-lg bg-black/55 backdrop-blur';
@@ -743,7 +746,7 @@ export const SurveyScanCanvas3D: React.FC<Props> = (props) => {
   const film = view === 'CINEMATIC';
   return (
     <div id="survey-stage" className="relative w-full h-full bg-imagery select-none overflow-hidden">
-      <div ref={hostRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} onWheel={onWheel}
+      <div ref={hostRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
         className="w-full h-full cursor-grab active:cursor-grabbing" role="img" aria-label={`3D view of ${SITE.name}, ${coveredPct.toFixed(0)}% photographed`} />
 
       {/* Film: letterbox and the cut between shots */}

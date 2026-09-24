@@ -13,6 +13,7 @@ import {
   Layers,
   Search
 } from 'lucide-react';
+import { useDialog } from '../../lib/useDialog';
 
 interface PadDroneSlot {
   padId: string;
@@ -36,6 +37,7 @@ interface LaunchPadProvisioningModalProps {
 }
 
 export const LaunchPadProvisioningModal: React.FC<LaunchPadProvisioningModalProps> = ({ droneCount, onClose }) => {
+  const dialog = useDialog(onClose);
   const gridDim = Math.ceil(Math.sqrt(droneCount));
   const spacing = 3.5; // 3.5m spacing
 
@@ -102,7 +104,7 @@ export const LaunchPadProvisioningModal: React.FC<LaunchPadProvisioningModalProp
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md" role="dialog" aria-modal="true" aria-label="Launch pad provisioning & pre-flight qualification gate" ref={dialog}>
       <div className="bg-slate-900 border border-slate-700 w-full max-w-6xl max-h-[92vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-200">
         
         {/* Modal Header */}
@@ -127,7 +129,7 @@ export const LaunchPadProvisioningModal: React.FC<LaunchPadProvisioningModalProp
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-100 transition-colors"
+            aria-label="Close" className="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-100 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>

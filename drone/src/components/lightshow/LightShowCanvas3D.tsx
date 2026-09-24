@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { FrameGovernor } from '../../lib/quality';
+import { release3d } from '../../lib/release3d';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -331,7 +332,7 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
 
       st.bloom.enabled = glow;
       if (glow && gov.level < 2) st.composer.render(); else st.renderer.render(s, camera);
-      if (gov.tick(dt * 1000)) { renderer.setPixelRatio(gov.pixelRatio(2)); const cw = container.clientWidth, ch = container.clientHeight; renderer.setSize(cw, ch); composer.setSize(cw, ch); bloom.setSize(cw, ch); }
+      if (gov.tick(dt * 1000)) { renderer.setPixelRatio(gov.pixelRatio(2)); const cw = container.clientWidth, ch = container.clientHeight; if (cw && ch) { camera.aspect = cw / ch; camera.updateProjectionMatrix(); renderer.setSize(cw, ch); composer.setSize(cw, ch); bloom.setSize(cw, ch); } }
     };
     raf = requestAnimationFrame(tick);
 
@@ -344,12 +345,7 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
 
     return () => {
       cancelAnimationFrame(raf); ro.disconnect();
-      s.traverse(obj => {
-        const m = obj as THREE.Mesh; if (m.geometry) m.geometry.dispose();
-        const mat = (m as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
-        if (Array.isArray(mat)) mat.forEach(x => x.dispose()); else mat?.dispose();
-      });
-      composer.dispose(); renderer.dispose(); scene.current = null;
+      release3d(s, renderer, composer); scene.current = null;
     };
   }, []);
 
@@ -362,24 +358,34 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
   }, [drones.length]);
 
   // ---- interaction ---------------------------------------------------------
-  const onPointerDown = (e: React.PointerEvent) => { dragging.current = true; lastPointer.current = { x: e.clientX, y: e.clientY }; lastInteraction.current = performance.now(); (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); };
+  const moved = useRef(0);   // pixels dragged since the pointer went down: a drag to orbit is not a click
+  const onPointerDown = (e: React.PointerEvent) => { dragging.current = true; moved.current = 0; lastPointer.current = { x: e.clientX, y: e.clientY }; lastInteraction.current = performance.now(); (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); };
   const onPointerMove = (e: React.PointerEvent) => {
     if (!dragging.current) return;
     const dx = e.clientX - lastPointer.current.x, dy = e.clientY - lastPointer.current.y;
+    moved.current += Math.abs(dx) + Math.abs(dy);
     lastPointer.current = { x: e.clientX, y: e.clientY }; lastInteraction.current = performance.now();
     const g = orbitGoal.current; g.theta -= dx * 0.006; g.phi = Math.max(0.05, Math.min(Math.PI / 2 - 0.02, g.phi - dy * 0.006));
   };
   const onPointerUp = () => { dragging.current = false; lastInteraction.current = performance.now(); };
-  const onWheel = (e: React.WheelEvent) => { lastInteraction.current = performance.now(); orbitGoal.current.radius = Math.max(18, Math.min(320, orbitGoal.current.radius + e.deltaY * 0.15)); };
+  // Wheel zooms the stage, not the page (React's wheel handler is passive, so this is a native listener).
+  useEffect(() => {
+    const el = containerRef.current; if (!el || bare) return;
+    const wheel = (e: WheelEvent) => { e.preventDefault(); lastInteraction.current = performance.now(); orbitGoal.current.radius = Math.max(18, Math.min(320, orbitGoal.current.radius + e.deltaY * 0.15)); };
+    el.addEventListener('wheel', wheel, { passive: false });
+    return () => el.removeEventListener('wheel', wheel);
+  }, [bare]);
   const applyPreset = (p: Preset) => { setPreset(p); orbitGoal.current = { ...PRESETS[p] }; lastInteraction.current = performance.now(); };
   const onClick = (e: React.MouseEvent) => {
-    // Pick the nearest aircraft to the click in screen space; a miss clears the selection.
+    // Pick the nearest aircraft to the click in screen space; a miss clears the selection. A drag to orbit is not a click.
+    if (moved.current > 4) return;
     const st = scene.current; const el = containerRef.current; if (!st || !el) return;
     const rect = el.getBoundingClientRect();
     const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1, ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
     const v = new THREE.Vector3(); let best: string | null = null, bestD = 0.035;
     for (const d of drones) {
       v.set(d.position.x, d.position.y, d.position.z).project(st.camera);
+      if (v.z > 1) continue;                 // behind the camera
       const dd = Math.hypot(v.x - nx, v.y - ny);
       if (dd < bestD) { bestD = dd; best = d.id; }
     }
@@ -393,7 +399,7 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
       <div
         ref={containerRef}
         onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
-        onWheel={bare ? undefined : onWheel} onClick={bare ? undefined : onClick}
+        onClick={bare ? undefined : onClick}
         className={`w-full h-full ${bare ? '' : 'cursor-grab active:cursor-grabbing'}`}
         role="img" aria-label={`Three-dimensional view of the ${formationName} formation with ${drones.length} aircraft`}
       />

@@ -9,6 +9,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js';
 import { buildDrone, buildEmber, droneMaterials, emberMaterials, radialTexture } from '../../components/hero/droneModel';
 import { FrameGovernor } from '../../lib/quality';
+import { release3d } from '../../lib/release3d';
 
 /**
  * The Overview hero: a fleet of quadcopters in a dark, hazy sky, hovering with a
@@ -90,7 +91,8 @@ export const DroneHero: React.FC<{ className?: string; progress?: { current: num
     scene.background = new THREE.Color(0x05070c);
     scene.fog = new THREE.Fog(0x05070c, 16, 58);
     const pmrem = new THREE.PMREMGenerator(renderer);
-    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    const room = new RoomEnvironment();
+    scene.environment = pmrem.fromScene(room, 0.04).texture; room.dispose();
     scene.environmentIntensity = 0.55;
     const cam = new THREE.PerspectiveCamera(42, 16 / 9, 0.5, 1500);
 
@@ -262,8 +264,8 @@ export const DroneHero: React.FC<{ className?: string; progress?: { current: num
       cancelAnimationFrame(raf); ro.disconnect(); io.disconnect();
       window.removeEventListener('scroll', onScroll); el.removeEventListener('pointermove', onMove); el.removeEventListener('pointerleave', onLeave);
       document.removeEventListener('visibilitychange', onVis);
-      scene.traverse(o => { const m = o as THREE.Mesh; if (m.geometry) m.geometry.dispose(); });
-      Object.values(mats).forEach(m => m.dispose()); blurTex.dispose(); pmrem.dispose(); composer.dispose(); renderer.dispose();
+      // Materials not in the scene at unmount (the other look's set) go too.
+      release3d(scene, renderer, composer, [...Object.values(mats), blurTex, pmrem]);
       renderer.domElement.remove();
       void tmp;
     };

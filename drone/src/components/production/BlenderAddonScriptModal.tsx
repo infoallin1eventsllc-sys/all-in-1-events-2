@@ -180,12 +180,14 @@ def unregister():
 if __name__ == "__main__":
     register()
 `;
+import { useDialog } from '../../lib/useDialog';
 
 interface BlenderAddonScriptModalProps {
   onClose: () => void;
 }
 
 export const BlenderAddonScriptModal: React.FC<BlenderAddonScriptModalProps> = ({ onClose }) => {
+  const dialog = useDialog(onClose);
   const [copied, setCopied] = useState<boolean>(false);
 
   const handleCopy = () => {
@@ -207,7 +209,7 @@ export const BlenderAddonScriptModal: React.FC<BlenderAddonScriptModalProps> = (
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md" role="dialog" aria-modal="true" aria-label="Native Blender 4.x choreography exporter addon" ref={dialog}>
       <div className="bg-slate-900 border border-slate-700 w-full max-w-5xl max-h-[92vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-200">
         
         {/* Modal Header */}
@@ -232,7 +234,7 @@ export const BlenderAddonScriptModal: React.FC<BlenderAddonScriptModalProps> = (
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-100 transition-colors"
+            aria-label="Close" className="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-100 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>

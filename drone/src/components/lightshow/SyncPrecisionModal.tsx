@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Clock, Radio, Activity} from 'lucide-react';
+import { useDialog } from '../../lib/useDialog';
 
 interface SyncPrecisionModalProps {
   droneCount: number;
@@ -10,6 +11,7 @@ export const SyncPrecisionModal: React.FC<SyncPrecisionModalProps> = ({
   droneCount,
   onClose,
 }) => {
+  const dialog = useDialog(onClose);
   const [activeSyncProtocol, setActiveSyncProtocol] = useState<'GPS_1PPS' | 'PTP_IEEE_1588' | 'STANDARD_NTP'>('GPS_1PPS');
 
   const protocols = [
@@ -40,7 +42,7 @@ export const SyncPrecisionModal: React.FC<SyncPrecisionModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md" role="dialog" aria-modal="true" aria-label="Precision timing & sub-millisecond synchronization" ref={dialog}>
       <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-xs">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-slate-800 bg-slate-950">
@@ -59,7 +61,7 @@ export const SyncPrecisionModal: React.FC<SyncPrecisionModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100 transition-colors"
+            aria-label="Close" className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>

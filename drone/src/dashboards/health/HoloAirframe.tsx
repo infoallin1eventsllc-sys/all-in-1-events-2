@@ -8,6 +8,7 @@ import { buildDrone, droneMaterials, radialTexture } from '../../components/hero
 import { VARIANTS, variantMaterials } from '../../components/hero/droneVariants';
 import type { Finding, FrameInfo, Level, MotorState } from '../../diagnostics/health';
 import { FrameGovernor } from '../../lib/quality';
+import { release3d } from '../../lib/release3d';
 
 /**
  * The aircraft as a diagnostic hologram: its own airframe drawn as glowing
@@ -255,7 +256,7 @@ export const HoloAirframe: React.FC<Props> = ({ motors, frame, findings, flying 
 
     const BODY_PARTS: Record<string, string> = { compass: 'Compass', gps: 'GPS', battery: 'Battery', 'fc-mount': 'Flight controller mount', frame: 'Frame', arms: 'Arms', payload: 'Payload balance', esc: 'ESCs', 'power-module': 'Power module', firmware: 'Firmware', radio: 'Telemetry radio', barometer: 'Barometer', props: 'Propellers' };
     const proj = new THREE.Vector3();
-    let visible = true, raf = 0, last = performance.now(), t = 0;
+    let visible = true, disposed = false, raf = 0, last = performance.now(), t = 0;
     const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting; if (visible && !raf) { last = performance.now(); raf = requestAnimationFrame(frameFn); } });
     io.observe(el);
 
@@ -298,6 +299,7 @@ export const HoloAirframe: React.FC<Props> = ({ motors, frame, findings, flying 
 
     function frameFn(now: number) {
       raf = 0;
+      if (disposed) return;
       if (!visible || document.hidden) return;
       const dt = Math.min(0.05, (now - last) / 1000); last = now; t += dt;
       applyState();
@@ -336,18 +338,17 @@ export const HoloAirframe: React.FC<Props> = ({ motors, frame, findings, flying 
       bloom.enabled = gov.level < 2;
       composer.render();
       if (gov.tick(dt * 1000)) { renderer.setPixelRatio(gov.pixelRatio(2)); size(); }
-      raf = reduced ? window.setTimeout(() => requestAnimationFrame(frameFn), 400) as unknown as number : requestAnimationFrame(frameFn);
+      raf = reduced ? window.setTimeout(() => { if (!disposed) raf = requestAnimationFrame(frameFn); }, 400) as unknown as number : requestAnimationFrame(frameFn);
     }
     raf = requestAnimationFrame(frameFn);
     const onVis = () => { if (!document.hidden && visible && !raf) { last = performance.now(); raf = requestAnimationFrame(frameFn); } };
     document.addEventListener('visibilitychange', onVis);
 
     return () => {
-      cancelAnimationFrame(raf); clearTimeout(raf); ro.disconnect(); io.disconnect();
+      disposed = true; cancelAnimationFrame(raf); clearTimeout(raf); ro.disconnect(); io.disconnect();
       document.removeEventListener('visibilitychange', onVis);
       renderer.domElement.removeEventListener('pointerdown', down); window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up);
-      scene.traverse(o => { const m = o as THREE.Mesh; if (m.geometry) m.geometry.dispose(); const mat = m.material as THREE.Material | undefined; if (mat && 'dispose' in mat) mat.dispose(); });
-      blurTex.dispose(); dotTex.dispose(); composer.dispose(); renderer.dispose();
+      release3d(scene, renderer, composer, [blurTex, dotTex]);
       renderer.domElement.remove(); lab.innerHTML = '';
     };
   }, [shape]); // eslint-disable-line react-hooks/exhaustive-deps
