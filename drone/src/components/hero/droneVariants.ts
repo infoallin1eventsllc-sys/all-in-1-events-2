@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { buildGlowDrone, orangeGlowMaterials } from './droneModel';
 
 /**
  * A family of airframes beyond the Mavic-class quad in droneModel.ts, built the
@@ -543,11 +544,18 @@ function buildCargo(M: Record<string, THREE.Material>, blurTex: THREE.Texture): 
 
 /* ------------------------------------------------------------------ registry */
 
+/** The orange glow look of the Mavic-class airframe (droneModel.ts), as a lab variant. Its own materials, whatever the shared set is. */
+function buildOrange(_m: Record<string, THREE.Material>, blurTex: THREE.Texture): Airframe {
+  const d = buildGlowDrone(orangeGlowMaterials(), blurTex);
+  return { group: d.group, props: d.props, blur: d.blur, strobes: [], parts: {} };
+}
+
 export const VARIANTS: VariantInfo[] = [
   { id: 'cinema', name: 'Cinema heavy-lift hexacopter', role: 'Aerial cinematography', features: ['Six folding carbon arms', 'Full-size cinema camera and long lens', 'Three-axis gimbal with matte box', 'Twin hot-swap batteries, GPS mast'], build: buildHex },
   { id: 'fpv', name: 'Freestyle FPV quad', role: 'Fast chase shots and fly-throughs', features: ['Stretched-X carbon frame', 'Action camera on a neon mount', 'Tri-blade translucent props', 'Underglow and lollipop antennas'], build: buildFpv },
   { id: 'enterprise', name: 'Enterprise security quad', role: 'Night patrol and inspection', features: ['Zoom, wide and thermal sensors', 'Searchlight on a second gimbal', 'Dual RTK antennas, strobe', 'Weather-sealed folding airframe'], build: buildEnterprise },
   { id: 'show', name: 'Light-show drone', role: 'Choreographed night-sky shows', features: ['Frosted RGB light dome', 'Ducted prop guards', 'Light enough to fly hundreds', 'Per-aircraft colour'], build: buildShow },
   { id: 'vtol', name: 'VTOL fixed-wing mapper', role: 'Large-site survey and mapping', features: ['Vertical take-off, wing-borne cruise', 'Four lift rotors, rear pusher', 'Nadir survey camera', 'Twin booms and twin fins'], build: buildVtol },
+  { id: 'orange', name: 'Orange glow quad', role: 'Sample styling for the hero', features: ['Glossy orange shell', 'Blue light seam and motor rings', 'Blue nose lights and belly light', 'Same airframe as the hero'], build: buildOrange },
   { id: 'cargo', name: 'Heavy-lift cargo X8', role: 'Equipment delivery on site', features: ['Eight props on coaxial pairs', 'Winch with a slung cargo pod', 'Parachute canister', 'Tall splayed landing gear'], build: buildCargo },
 ];

@@ -116,3 +116,34 @@ export function droneMaterials(): Record<string, THREE.Material> {
   };
   return mats;
 }
+
+/**
+ * A second look for the same airframe: a glossy orange shell with blue light,
+ * the way a show or consumer drone is styled with light strips. Same keys as
+ * droneMaterials(), plus `glow`. A sample only: the app flies the white look.
+ */
+export function orangeGlowMaterials(): Record<string, THREE.Material> {
+  const m = droneMaterials();
+  const blue = new THREE.Color(0.45, 1.5, 4.2);
+  m.white = new THREE.MeshPhysicalMaterial({ color: 0xd4561c, metalness: 0.08, roughness: 0.36, clearcoat: 0.75, clearcoatRoughness: 0.2 });
+  m.graphite = new THREE.MeshPhysicalMaterial({ color: 0x1b1e23, metalness: 0.25, roughness: 0.5, clearcoat: 0.35, clearcoatRoughness: 0.4 });
+  m.logo = new THREE.MeshBasicMaterial({ color: blue, toneMapped: false });
+  m.ledFront = new THREE.MeshBasicMaterial({ color: blue, toneMapped: false });
+  m.ledGreen = new THREE.MeshBasicMaterial({ color: blue, toneMapped: false });
+  m.ledRed = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.5, 0.9, 3.0), toneMapped: false });
+  m.glow = new THREE.MeshBasicMaterial({ color: blue, toneMapped: false });
+  return m;
+}
+
+/** The airframe from buildDrone with its light strips: a blue seam round the shell, rings under the motors, eyes on the nose. */
+export function buildGlowDrone(mats: Record<string, THREE.Material>, blurTex: THREE.Texture) {
+  const d = buildDrone(mats, blurTex);
+  const g = d.group, glow = mats.glow;
+  const add = (geo: THREE.BufferGeometry, x: number, y: number, z: number, rx = 0) => { const o = new THREE.Mesh(geo, glow); o.position.set(x, y, z); o.rotation.x = rx; g.add(o); return o; };
+  add(new THREE.BoxGeometry(0.95, 0.02, 0.43), 0, -0.03, 0);                                   // seam light
+  for (const p of d.props) add(new THREE.TorusGeometry(0.09, 0.016, 8, 32), p.position.x, p.position.y - 0.125, p.position.z, Math.PI / 2);
+  for (const zz of [-0.07, 0.07]) add(new THREE.BoxGeometry(0.012, 0.022, 0.06), 0.69, 0.06, zz); // nose eyes
+  const disc = add(new THREE.CircleGeometry(0.09, 32), 0, -0.147, 0, Math.PI / 2);                // belly light
+  disc.scale.set(1.3, 1, 1);
+  return d;
+}

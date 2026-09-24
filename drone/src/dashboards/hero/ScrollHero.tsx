@@ -28,7 +28,7 @@ const CLOSE = 0.86;
 const clamp = (x: number) => Math.min(1, Math.max(0, x));
 const ease = (x: number) => { const u = clamp(x); return u * u * (3 - 2 * u); };
 
-export const ScrollHero: React.FC<{ onTour: () => void; onExplore: () => void }> = ({ onTour, onExplore }) => {
+export const ScrollHero: React.FC<{ onTour: () => void; onExplore: () => void; look?: 'classic' | 'orange' }> = ({ onTour, onExplore, look = 'classic' }) => {
   const section = useRef<HTMLElement>(null);
   const stick = useRef<HTMLDivElement>(null);
   const intro = useRef<HTMLDivElement>(null);
@@ -99,7 +99,7 @@ export const ScrollHero: React.FC<{ onTour: () => void; onExplore: () => void }>
   return (
     <section ref={section} aria-label="All in 1 Drone Command" className={reduced ? 'relative' : 'relative h-[300vh] sm:h-[340vh]'}>
       <div ref={stick} className={`${reduced ? 'relative min-h-[620px] lg:min-h-[740px]' : 'sticky'} overflow-clip rounded-[18px] bg-[#05070c] flex items-center justify-center`}>
-        <DroneHero progress={reduced ? undefined : progress} />
+        <DroneHero progress={reduced ? undefined : progress} look={look} />
         <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(52%_46%_at_50%_44%,rgba(5,7,12,0.62)_0%,rgba(5,7,12,0)_100%)]" />
 
         {/* The headline, risen line by line on load. */}

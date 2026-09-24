@@ -49,7 +49,10 @@ more airframes in the hero's scene, lighting and grade: a cinema heavy-lift
 hexacopter, a freestyle FPV quad, an enterprise security quad with thermal and a
 searchlight, a light-show drone, a VTOL fixed-wing mapper and a heavy-lift cargo X8.
 They are in `src/components/hero/droneVariants.ts`; the app still flies the
-Mavic-class model. Open `/drone/lab/fleet.html?v=cinema` (or `fpv`, `enterprise`,
+Mavic-class model. An orange glow look of the hero's own airframe (orange shell,
+blue light seam, motor rings and nose lights) is there too, and `lab/hero.html`
+shows the real Overview hero flown by it, with a switch back to the current
+hero, so a new look can be judged in place before anything changes. Open `/drone/lab/fleet.html?v=cinema` (or `fpv`, `enterprise`,
 `show`, `vtol`, `cargo`) under `npm run dev`. With `&capture`, the page renders any
 moment of the shot on request (`window.__shot(t)` returns a PNG). That is how the
 stills and the 34-second reel in `portfolio/fleet/` were made (1080p, 24 fps).
