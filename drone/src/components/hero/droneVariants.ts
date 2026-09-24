@@ -556,6 +556,6 @@ export const VARIANTS: VariantInfo[] = [
   { id: 'enterprise', name: 'Enterprise security quad', role: 'Night patrol and inspection', features: ['Zoom, wide and thermal sensors', 'Searchlight on a second gimbal', 'Dual RTK antennas, strobe', 'Weather-sealed folding airframe'], build: buildEnterprise },
   { id: 'show', name: 'Light-show drone', role: 'Choreographed night-sky shows', features: ['Frosted RGB light dome', 'Ducted prop guards', 'Light enough to fly hundreds', 'Per-aircraft colour'], build: buildShow },
   { id: 'vtol', name: 'VTOL fixed-wing mapper', role: 'Large-site survey and mapping', features: ['Vertical take-off, wing-borne cruise', 'Four lift rotors, rear pusher', 'Nadir survey camera', 'Twin booms and twin fins'], build: buildVtol },
-  { id: 'orange', name: 'Orange glow quad', role: 'Sample styling for the hero', features: ['Glossy orange shell', 'Blue light seam and motor rings', 'Blue nose lights and belly light', 'Same airframe as the hero'], build: buildOrange },
+  { id: 'orange', name: 'Orange racer', role: 'Sample for the hero, from a reference image', features: ['Sculpted orange shell, dark glass canopy', 'Glowing cyan eye on the nose', 'Curved orange-over-navy arms with grilles', 'Cyan-lit motor pods, steel-blue props'], build: buildOrange },
   { id: 'cargo', name: 'Heavy-lift cargo X8', role: 'Equipment delivery on site', features: ['Eight props on coaxial pairs', 'Winch with a slung cargo pod', 'Parachute canister', 'Tall splayed landing gear'], build: buildCargo },
 ];

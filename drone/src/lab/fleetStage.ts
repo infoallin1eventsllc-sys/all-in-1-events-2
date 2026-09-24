@@ -45,8 +45,7 @@ const SHOTS: Record<string, Shot> = {
   show: { size: 2.3, yaw: -0.5, orbit: [-0.28, 0.12], dist: 5.6, lift: -1.55, fov: 36, target: [0, 0.2, 0], still: 2.2, aperture: 0.00028, companions: [] },
   vtol: { size: 4.4, yaw: 0, orbit: [0.62, 0.3], dist: 8.0, lift: 3.1, fov: 32, target: [-0.4, 0, 0], still: 3.2, aperture: 0.0002,
     companions: [{ at: [-5.2, 0.7, -4.2], size: 4.4, yaw: 0 }, { at: [-10.4, 1.4, -8.4], size: 4.4, yaw: 0 }] },
-  orange: { size: 3.2, yaw: -0.62, orbit: [-0.6, -0.2], dist: 6.0, lift: 0.9, fov: 32, target: [0, 0, 0], still: 3.0, aperture: 0.00022,
-    companions: [{ at: [-6, 1.2, -9], size: 3.0, yaw: -0.3 }, { at: [7.5, -0.5, -14], size: 3.0, yaw: -0.9 }] },
+  orange: { size: 3.6, yaw: -Math.PI / 2, orbit: [-0.1, 0.1], dist: 6.2, lift: 1.25, fov: 32, target: [0, -0.1, 0], still: 3.0, aperture: 0.00012, companions: [] },
   cargo: { size: 3.9, yaw: -0.6, orbit: [-0.42, -0.02], dist: 8.8, lift: 0.5, fov: 32, target: [0, -0.9, 0], still: 3.0, aperture: 0.0002,
     companions: [{ at: [8.5, 1.6, -15], size: 3.6, yaw: -0.8 }] },
 };
