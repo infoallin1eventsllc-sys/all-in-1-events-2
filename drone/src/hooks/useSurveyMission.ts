@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  planSurvey, gapFillLines, CoverageGrid, fromLatLon, projectOnSegment, polygonArea, CAMERAS,
+  planSurvey, gapFillLines, CoverageGrid, fromLatLon, toLatLon, projectOnSegment, polygonArea, CAMERAS,
   type SurveyParams, type SurveyPlan, type Leg, type Pt, type GeoOrigin, type ItemRole, type ResumePoint, type FlightLine,
 } from '../survey/plan';
-import { DEMO_SITE, type SurveySite } from '../survey/boundary';
+import {
+  DEMO_SITE, usesDemoGeometry, checkBoundary, checkLocal, siteFromRing, withBoundary, emptyHistory, historyPush, historyUndo, historyRedo,
+  type SurveySite, type EditHistory,
+} from '../survey/boundary';
+import { demoTerrain, loadTerrain, terrainBox, terrainZoom, terrainRelief, type Terrain } from '../survey/terrain';
+import { tilesCovering } from '../survey/tiles';
 import { modeName, type Telemetry } from '../link/mavlink';
 
 /**
@@ -52,6 +57,19 @@ const SITE_KEY = 'a1-survey-site';
 function savedSite(): SurveySite | null {
   try { const j = JSON.parse(localStorage.getItem(SITE_KEY) ?? 'null'); return j && Array.isArray(j.boundary) && j.boundary.length >= 3 ? j : null; } catch { return null; }
 }
+const TERRAIN_KEY = 'a1-survey-terrain';
+export type TerrainMethod = 'PLANNED' | 'AUTOPILOT';
+function savedFollow(): { on: boolean; method: TerrainMethod } {
+  try { const j = JSON.parse(localStorage.getItem(TERRAIN_KEY) ?? 'null'); if (j && typeof j.on === 'boolean') return { on: j.on, method: j.method === 'AUTOPILOT' ? 'AUTOPILOT' : 'PLANNED' }; } catch { /* storage unavailable */ }
+  return { on: false, method: 'PLANNED' };
+}
+/** Terrain already fetched this session, by site origin and tile set: an edit that stays on the same tiles reuses it. */
+const terrainCache = new Map<string, Promise<Terrain>>();
+
+export type EditMode = 'OFF' | 'EDIT' | 'DRAW';
+export interface BoundaryEditState { mode: EditMode; selected: number | null; history: EditHistory; draw: Pt[]; msg: { errors: string[]; warnings: string[] } }
+const NO_MSG = { errors: [] as string[], warnings: [] as string[] };
+
 /** Coverage cells: 5 m, coarser on very large sites so the grid stays small. */
 const cellFor = (boundary: Pt[]) => Math.max(5, Math.ceil(Math.sqrt(polygonArea(boundary)) / 200));
 
@@ -209,19 +227,98 @@ export function useSurveyMission() {
   }, []);
 
   // ---- sites ------------------------------------------------------------------
-  /** Survey a different site. Only on the ground: clears the capture and re-plans. */
-  const setSite = useCallback((next: SurveySite) => {
-    const ph = phaseRef.current;
-    if (ph !== 'READY' && ph !== 'COMPLETE' && ph !== 'HELD') return false;
+  const onGroundNow = () => { const ph = phaseRef.current; return ph === 'READY' || ph === 'COMPLETE' || ph === 'HELD'; };
+  /** Adopt a site (or a new outline of this one): clears the capture and re-plans. An edit keeps the orbit centre. */
+  const adoptSite = useCallback((next: SurveySite, edit: boolean) => {
     siteRef.current = next; setSiteState(next);
     gridRef.current = new CoverageGrid(next.boundary, cellFor(next.boundary));
     photosRef.current = []; acRef.current = freshAircraft(next.home);
     liveMission.current = null; setLiveResume(null); resumeRef.current = null;
-    setParamsState(p => ({ ...p, orbit: { ...p.orbit, center: next.orbitCenter } }));
-    try { if (next.kind === 'IMPORTED' || next.kind === 'WALKED') localStorage.setItem(SITE_KEY, JSON.stringify(next)); else localStorage.removeItem(SITE_KEY); } catch { /* storage unavailable */ }
-    go('READY'); log('INFO', `Site: ${next.name}`);
+    if (!edit) setParamsState(p => ({ ...p, orbit: { ...p.orbit, center: next.orbitCenter } }));
+    try { if (!usesDemoGeometry(next)) localStorage.setItem(SITE_KEY, JSON.stringify(next)); else localStorage.removeItem(SITE_KEY); } catch { /* storage unavailable */ }
+    go('READY');
+  }, [go]);
+  /** Survey a different site. Only on the ground: clears the capture and re-plans. */
+  const setSite = useCallback((next: SurveySite) => {
+    if (!onGroundNow()) return false;
+    adoptSite(next, false); log('INFO', `Site: ${next.name}`);
+    setEdit(e => ({ ...e, mode: e.mode === 'DRAW' || usesDemoGeometry(next) ? 'OFF' : e.mode, selected: null, history: emptyHistory(), draw: [], msg: NO_MSG }));
     return true;
-  }, [go, log]);
+  }, [adoptSite, log]);
+
+  // ---- editing the boundary on the map ---------------------------------------------
+  const [edit, setEdit] = useState<BoundaryEditState>({ mode: 'OFF', selected: null, history: emptyHistory(), draw: [], msg: NO_MSG });
+  const editRef = useRef(edit); editRef.current = edit;
+  /** A new outline for this site, checked first; `merge` folds a run of nudges into one undo step. False (with the reason shown) when it can't be flown. */
+  const commitBoundary = useCallback((next: Pt[], merge?: string) => {
+    const S = siteRef.current;
+    if (!onGroundNow() || usesDemoGeometry(S)) return false;
+    const c = checkLocal(S.origin, next);
+    if (c.errors.length) { setEdit(e => ({ ...e, msg: { errors: c.errors, warnings: c.warnings } })); return false; }
+    setEdit(e => ({ ...e, history: historyPush(e.history, S.boundary, merge), msg: { errors: [], warnings: c.warnings } }));
+    adoptSite(withBoundary(S, next), true);
+    return true;
+  }, [adoptSite]);
+  const stepHistory = useCallback((dir: -1 | 1) => {
+    const S = siteRef.current, e = editRef.current;
+    if (!onGroundNow() || usesDemoGeometry(S)) return;
+    const r = dir < 0 ? historyUndo(e.history, S.boundary) : historyRedo(e.history, S.boundary);
+    if (!r) return;
+    setEdit({ ...e, history: r.h, selected: e.selected !== null && e.selected < r.boundary.length ? e.selected : null, msg: { errors: [], warnings: checkLocal(S.origin, r.boundary).warnings } });
+    adoptSite(withBoundary(S, r.boundary), true);
+  }, [adoptSite]);
+  const finishDraw = useCallback(() => {
+    const S = siteRef.current, pts = editRef.current.draw;
+    const ring = pts.map(p => toLatLon(S.origin, p)), c = checkBoundary(ring);
+    if (c.errors.length) { setEdit(e => ({ ...e, msg: { errors: c.errors, warnings: c.warnings } })); return false; }
+    if (!setSite(siteFromRing(`Drawn site ${new Date().toLocaleDateString()}`, ring, 'DRAWN'))) return false;
+    setEdit(e => ({ ...e, mode: 'EDIT', msg: { errors: [], warnings: c.warnings } }));
+    return true;
+  }, [setSite]);
+  const boundaryEdit = useMemo(() => ({
+    ...edit,
+    canEdit: !usesDemoGeometry(site),
+    /** Only on the ground: the boundary is what the fence and mission are built from. */
+    allowed: phase === 'READY' || phase === 'COMPLETE' || phase === 'HELD',
+    setMode: (mode: EditMode) => setEdit(e => ({ ...e, mode: mode === 'EDIT' && usesDemoGeometry(siteRef.current) ? 'OFF' : mode, selected: null, draw: [], msg: NO_MSG })),
+    select: (i: number | null) => setEdit(e => (e.selected === i ? e : { ...e, selected: i })),
+    showCheck: (msg: { errors: string[]; warnings: string[] }) => setEdit(e => ({ ...e, msg })),
+    commit: commitBoundary,
+    undo: () => stepHistory(-1), redo: () => stepHistory(1),
+    setDraw: (draw: Pt[]) => setEdit(e => ({ ...e, draw, msg: NO_MSG })),
+    finishDraw,
+  }), [edit, site, phase, commitBoundary, stepHistory, finishDraw]);
+
+  // ---- terrain ------------------------------------------------------------------
+  const [follow, setFollowState] = useState(savedFollow);
+  const setFollow = useCallback((next: Partial<{ on: boolean; method: TerrainMethod }>) => {
+    if (!onGroundNow()) return;
+    setFollowState(f => { const v = { ...f, ...next }; try { localStorage.setItem(TERRAIN_KEY, JSON.stringify(v)); } catch { /* storage unavailable */ } return v; });
+  }, []);
+  // The demo venue has its own ground; a real site fetches the tiles round it (again only when an edit reaches new tiles).
+  const terrainKey = useMemo(() => {
+    if (site.kind === 'DEMO') return 'DEMO';
+    const box = terrainBox(site), z = terrainZoom(box);
+    return `${site.origin.lat},${site.origin.lon}|${z}|${tilesCovering(box, z).map(t => `${t.x}/${t.y}`).join(',')}`;
+  }, [site]);
+  const [terrainLoad, setTerrainLoad] = useState<{ key: string; state: 'LOADING' | 'READY' | 'FAILED'; model: Terrain | null; error: string }>({ key: '', state: 'LOADING', model: null, error: '' });
+  const [terrainTry, setTerrainTry] = useState(0);
+  useEffect(() => {
+    if (terrainKey === 'DEMO') { setTerrainLoad({ key: terrainKey, state: 'READY', model: demoTerrain(), error: '' }); return; }
+    let live = true;
+    // Same origin, more tiles: keep the old model meanwhile (it covers most of the site).
+    setTerrainLoad(t => ({ key: terrainKey, state: 'LOADING', model: t.key.split('|')[0] === terrainKey.split('|')[0] ? t.model : null, error: '' }));
+    let job = terrainCache.get(terrainKey);
+    if (!job) { job = loadTerrain(siteRef.current); terrainCache.set(terrainKey, job); }
+    job.then(model => { if (live) setTerrainLoad({ key: terrainKey, state: 'READY', model, error: '' }); })
+      .catch(e => { terrainCache.delete(terrainKey); if (live) setTerrainLoad({ key: terrainKey, state: 'FAILED', model: null, error: e instanceof Error ? e.message : String(e) }); });
+    return () => { live = false; };
+  }, [terrainKey, terrainTry]);
+  const relief = useMemo(() => (terrainLoad.model ? terrainRelief(terrainLoad.model, site.boundary) : null), [terrainLoad.model, site.boundary]);
+  const terrain = useMemo(() => ({
+    state: terrainLoad.state, model: terrainLoad.model, error: terrainLoad.error, relief,
+    follow: follow.on, method: follow.method, setFollow, retry: () => setTerrainTry(n => n + 1),
+  }), [terrainLoad, relief, follow, setFollow]);
 
   // ---- real aircraft --------------------------------------------------------
   /**
@@ -514,7 +611,7 @@ export function useSurveyMission() {
     legs, legIndex: L.index, legProgressM: L.progressM, currentLine, linesDone,
     flightS: snap.flightS, remainingS, batteriesUsed: snap.batteries,
     simSpeed, setSimSpeed, events, live: !!liveRef.current, origin,
-    site, setSite, setLiveMission, liveResume, gapLines, liveStarted: !!liveMission.current?.started,
+    site, setSite, setLiveMission, liveResume, gapLines, liveStarted: !!liveMission.current?.started, boundaryEdit, terrain,
     camera: CAMERAS[(active ? planRef.current : plan).params.camera],
     start, pause, returnHome, reflyGaps, reset, applyLive, releaseLive,
     isRefly: refly.current,
