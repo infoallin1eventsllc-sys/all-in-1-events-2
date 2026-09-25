@@ -8,6 +8,7 @@ import {
   Sparkles} from 'lucide-react';
 import { SHOW_FORMATIONS } from '../../data/lightShowFormations';
 import { ShowConductorState } from '../../types/lightShowTypes';
+import { useShowComplianceGates } from '../../compliance/useCompliance';
 
 interface LightShowConductorProps {
   conductorState: ShowConductorState;
@@ -42,6 +43,8 @@ export const LightShowConductor: React.FC<LightShowConductorProps> = ({
 }) => {
   // The show starts only once armed and resumes only from a hold; an abort is reset with Rewind.
   const canPlay = conductorState.status === 'ARMED' || conductorState.status === 'PAUSED' || conductorState.status === 'RUNNING';
+  // Same Part 107 gates as the operator dashboard: no waiver for this fleet, no arm.
+  const faaHold = useShowComplianceGates(droneCount).filter(g => !g.ok);
   const formatTime = (secs: number) => {
     const mins = Math.floor(secs / 60);
     const s = Math.floor(secs % 60);
@@ -97,7 +100,9 @@ export const LightShowConductor: React.FC<LightShowConductorProps> = ({
             <button
               id="arm-show-btn"
               onClick={onArmShow}
-              className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono font-bold flex items-center gap-2 shadow-lg shadow-amber-500/20 transition-all"
+              disabled={faaHold.length > 0}
+              title={faaHold.length ? `Hold: ${faaHold.map(g => `${g.label} (${g.detail})`).join('; ')}` : undefined}
+              className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-mono font-bold flex items-center gap-2 shadow-lg shadow-amber-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ShieldCheck className="w-4 h-4" />
               <span>ARM SHOW SEQUENCE</span>
@@ -115,6 +120,12 @@ export const LightShowConductor: React.FC<LightShowConductorProps> = ({
           </button>
         </div>
       </div>
+
+      {conductorState.status === 'PRE_FLIGHT' && faaHold.length > 0 && (
+        <ul role="alert" className="-mt-2 space-y-1 rounded-xl border border-rose-800 bg-rose-950/60 px-3 py-2 text-[11px] text-rose-200">
+          {faaHold.map(g => <li key={g.id}><span className="font-bold">Arm held · {g.cite}:</span> {g.label} — {g.detail}</li>)}
+        </ul>
+      )}
 
       {/* 2. Timeline Scrubbing Bar & Timecode */}
       <div className="space-y-2">

@@ -15,6 +15,8 @@ import { useRecorder } from '../record/useRecorder';
 import { recorder } from '../record/recorder';
 import { useAircraftLink } from '../link/useAircraftLink';
 import { encodeCommandLong, MAV_CMD, modeName } from '../link/mavlink';
+import { useWithShowCompliance } from '../compliance/useCompliance';
+import { CheckCircle2, XCircle, ShieldCheck as Paper } from 'lucide-react';
 
 type RailTab = 'CUES' | 'FLEET' | 'PREFLIGHT';
 
@@ -117,7 +119,10 @@ export const LightShowDashboard: React.FC = () => {
   // holds the launch on their real state, and aborts them all at once.
   const link = useAircraftLink();
   const live = link.live ? Object.entries(link.vehicles).map(([sys, t]) => ({ sys: Number(sys), t })) : [];
-  const simGates = useShowGates(drones, wind.mps, cs.clockJitterMs);
+  // Part 107 paperwork (107.35 waiver for the fleet, night lighting, insurance, pilot recency) holds the launch too;
+  // sunset is computed where the real aircraft are, else at the show site on file.
+  const liveFix = live.find(v => v.t.lat && v.t.lon)?.t;
+  const simGates = useWithShowCompliance(useShowGates(drones, wind.mps, cs.clockJitterMs), droneCount, liveFix ? { lat: liveFix.lat, lon: liveFix.lon } : undefined);
   const gates = useMemo(() => {
     if (!live.length) return simGates;
     const stale = live.filter(v => !v.t.heartbeatMs || Date.now() - v.t.heartbeatMs > 3000).length;
@@ -194,7 +199,7 @@ export const LightShowDashboard: React.FC = () => {
               <div className="flex items-center gap-2">
                 <IconButton icon={<RotateCcw />} label="Rewind to start" onClick={rewind} />
                 <ToolButton command="fly" id="ls-play" icon={status === 'RUNNING' ? <Pause /> : <Play />} label={status === 'RUNNING' ? 'Hold' : status === 'PAUSED' ? 'Resume' : 'Start show'} primary disabled={!canPlay} onClick={togglePlay} title={canPlay ? undefined : status === 'PRE_FLIGHT' ? 'Arm the fleet first' : 'Rewind to reset after an abort'} />
-                {status === 'PRE_FLIGHT' && <ToolButton command="fly" id="ls-arm" icon={<ShieldCheck />} label="Arm fleet" disabled={!allGatesPass} onClick={armShow} title={allGatesPass ? 'All pre-flight gates pass' : 'Pre-flight gates not satisfied'} />}
+                {status === 'PRE_FLIGHT' && <ToolButton command="fly" id="ls-arm" icon={<ShieldCheck />} label="Arm fleet" disabled={!allGatesPass} onClick={armShow} title={allGatesPass ? 'All pre-flight gates pass' : `Hold: ${gates.filter(g => !g.ok).map(g => g.label).join('; ')}`} />}
               </div>
               <div className="flex-1 min-w-[260px]">
                 <div className="flex items-baseline justify-between">
@@ -307,10 +312,24 @@ export const LightShowDashboard: React.FC = () => {
               <div className="space-y-5">
                 <Section title="Gates" right={<Chip tone={allGatesPass ? 'ok' : 'warn'}>{allGatesPass ? 'Go' : 'Hold'}</Chip>}>
                   <ul className="divide-y divide-line">
-                    {gates.map(g => (
+                    {gates.filter(g => !g.id.startsWith('faa-')).map(g => (
                       <li key={g.id} className="flex items-center justify-between gap-3 py-2 text-[13px]">
                         <span className="flex items-center gap-2.5 min-w-0"><Dot tone={g.ok ? 'ok' : 'warn'} /><span className="text-ink-2 truncate">{g.label}</span></span>
                         <span className="num text-[11px] text-ink-3 shrink-0">{g.detail}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </Section>
+                <Section title="FAA Part 107" right={<button type="button" id="ls-open-compliance" onClick={() => openTab('COMPLIANCE')} className="inline-flex items-center gap-1 font-medium text-accent hover:underline"><Paper className="w-3.5 h-3.5" />Compliance</button>}>
+                  {/* Paperwork gates wrap rather than truncate: the reason is the point. */}
+                  <ul id="ls-faa-gates" className="divide-y divide-line">
+                    {gates.filter(g => g.id.startsWith('faa-')).map(g => (
+                      <li key={g.id} className="flex items-start gap-2.5 py-2">
+                        <span className={`mt-0.5 shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${g.ok ? 'text-ok' : 'text-bad'}`} aria-hidden>{g.ok ? <CheckCircle2 /> : <XCircle />}</span>
+                        <span className="min-w-0">
+                          <span className="block text-[13px] text-ink-2">{g.label}<span className="sr-only">{g.ok ? ': pass' : ': hold'}</span></span>
+                          <span className={`block text-[11px] ${g.ok ? 'text-ink-3' : 'text-bad'}`}>{(g as { cite?: string }).cite && <span className="num">{(g as { cite?: string }).cite} · </span>}{g.detail}</span>
+                        </span>
                       </li>
                     ))}
                   </ul>

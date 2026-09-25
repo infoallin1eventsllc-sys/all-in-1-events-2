@@ -173,6 +173,25 @@ export const RecordsView: React.FC = () => {
               <Stat label="Critical events" value={summary.criticalEvents} tone={summary.criticalEvents ? 'bad' : 'neutral'} />
             </div>
 
+            {selected.compliance && (
+              <>
+                <Divider className="my-4" />
+                <Section title="Flown under" right="FAA Part 107 records at the start">
+                  <dl id="record-compliance" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-x-6 gap-y-3 text-[13px]">
+                    {([
+                      ['Remote pilot', selected.compliance.pilot ? `${selected.compliance.pilot} · certificate ${selected.compliance.pilotCert || '—'}` : 'Not on file'],
+                      ['Aircraft registration', selected.compliance.aircraft.length ? selected.compliance.aircraft.slice(0, 4).map(a => `${a.name} ${a.reg || '—'}`).join(', ') + (selected.compliance.aircraft.length > 4 ? ` +${selected.compliance.aircraft.length - 4}` : '') : 'Not on file'],
+                      ...(selected.vertical === 'LIGHT_SHOW' ? [['Waiver', selected.compliance.waiver ?? 'None on file']] : []),
+                      ...(selected.compliance.authorization ? [['Airspace authorization', selected.compliance.authorization]] : []),
+                      ['Insurance', selected.compliance.insurance ?? 'Not on file'],
+                    ] as [string, string][]).map(([k, v]) => (
+                      <div key={k} className="min-w-0"><dt className="text-[11px] text-ink-3">{k}</dt><dd className="num text-ink break-words">{v}</dd></div>
+                    ))}
+                  </dl>
+                </Section>
+              </>
+            )}
+
             {samples.some(r => r.lat != null) && (
               <>
                 <Divider className="my-4" />

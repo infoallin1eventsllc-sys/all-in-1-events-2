@@ -10,19 +10,20 @@ import { setHealthMode } from '../diagnostics/healthMode';
  * visitor can click around between steps.
  */
 
-export type TourView = 'OVERVIEW' | 'LIGHT_SHOW_OPS' | 'SURVEY_OPS' | 'SURVEILLANCE_OPS' | 'HEALTH' | 'CONTROL' | 'ANALYTICS' | 'RECORDS';
+export type TourView = 'OVERVIEW' | 'LIGHT_SHOW_OPS' | 'SURVEY_OPS' | 'SURVEILLANCE_OPS' | 'HEALTH' | 'CONTROL' | 'ANALYTICS' | 'RECORDS' | 'COMPLIANCE';
 
 interface Step { view: TourView; title: string; body: string; action?: string; target?: string }
 
 const STEPS: Step[] = [
   { view: 'OVERVIEW', title: 'A working console, not a mock-up', body: 'Everything here runs: a show renderer for up to 500 aircraft, survey planning from real camera maths, a MAVLink link to real flight controllers. The aircraft are simulated so you can try it anywhere.' },
-  { view: 'LIGHT_SHOW_OPS', title: 'Conduct a light show', body: 'Pre-flight gates (sync, wind, clock) must all pass before the fleet will arm. Arm it and start the show: eleven formations that breathe, turn, burst and spell out a name, with one-button abort.', action: 'Arm and start the show', target: 'ls-play' },
+  { view: 'LIGHT_SHOW_OPS', title: 'Conduct a light show', body: 'Pre-flight gates (sync, wind, clock, and the FAA waiver for the fleet) must all pass before the fleet will arm. Arm it and start the show: eleven formations that breathe, turn, burst and spell out a name, with one-button abort.', action: 'Arm and start the show', target: 'ls-play' },
   { view: 'SURVEY_OPS', title: 'Survey the venue', body: 'Pick a map, a 3D model or an inspection; height, spacing and flight time follow from the camera. Watch the grounds develop from blueprint to photo as the aircraft flies its lines.', action: 'Fly the survey at 16×', target: 'sv-primary' },
   { view: 'SURVEILLANCE_OPS', title: 'Patrol overnight', body: 'Four aircraft on a patrol loop with live thermal video. Detections queue for the security team; night protocol switches every camera to thermal. Under Video, the drone fly-throughs of San Francisco, Los Angeles and New York.', target: 'surveillance-dashboard' },
   { view: 'HEALTH', title: 'Know which part is failing', body: 'The motors that work hardest give away a chipped prop, a worn bearing or a twisted arm. Fly a test flight with a damaged propeller and watch it get caught.', action: 'Fly with a chipped prop', target: 'health-verdict' },
   { view: 'CONTROL', title: 'Command one aircraft or the fleet', body: 'Fly one aircraft from the map, or send a whole fleet the same command: take off, hold, go to, return home. Every aircraft acknowledges it; the ones that miss are retried and named.', target: 'control-view' },
   { view: 'ANALYTICS', title: 'Run the business on it', body: 'Three months of sample history: flight hours by product, aircraft coming due for service, a battery that is wearing out, and every alert.' },
-  { view: 'RECORDS', title: 'Keep the record', body: 'Every flight is recorded with its path, telemetry and each command given. Print it for an insurer or export it for an investigator.', target: 'flight-report' },
+  { view: 'RECORDS', title: 'Keep the record', body: 'Every flight is recorded with its path, telemetry and each command given, and the certificate, registration and waiver it flew under. Print it for an insurer or export it for an investigator.', target: 'flight-report' },
+  { view: 'COMPLIANCE', title: 'Keep the paperwork current', body: 'The pilot\u2019s certificate and recurrent training, each aircraft\u2019s registration and Remote ID, and the waiver that lets one pilot fly a hundred aircraft, each with its expiry. The same records hold the show\u2019s Arm button. A record-keeping aid, not legal advice.', target: 'compliance-status' },
 ];
 
 interface Props { open: boolean; onClose: () => void; view: string; go: (v: TourView) => void }
