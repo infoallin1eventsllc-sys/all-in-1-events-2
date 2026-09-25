@@ -86,7 +86,7 @@ Install, for reference — pinned per house rules, never `@latest`:
 
 ## Tools once recorded as absent — RE-VERIFY, DO NOT REPEAT
 
-**This section has now been wrong four times.** Of its six original
+**This section has now been wrong five times.** Of its six original
 entries, Higgsfield, `frontend-design`, Nano Banana and 21st.dev all turned out to exist,
 and each wrong answer sent Otis away from something real. Treat every line here
 as a dated observation, never as a standing fact. **Before repeating any of it,
@@ -100,7 +100,7 @@ did not exist in August frequently exists now.
 | **Nano Banana** | **WAS WRONG.** Google ships no MCP, but community servers wrap it — see below |
 | **Google Stitch MCP** | Checked Aug 2026: Stitch is real, shipped no MCP server. Its Figma export is the bridge. **Re-verify before repeating** |
 | **`motion.dev` skill** | Checked Aug 2026: none found. For animation use the Figma motion skills. **Re-verify before repeating** |
-| **21st.dev connector** | **WAS WRONG (4th correction, 18 Sep 2026).** 21st MCP is real and hosted — see its own section below |
+| **21st.dev connector** | **WAS WRONG TWICE.** Real, hosted, and OAuth — connectable from the browser. See its own section below |
 
 ## Nano Banana — community MCP servers, not connected
 
@@ -195,22 +195,21 @@ connected and already cover scripted, branded and edited video. Higgsfield's
 distinct value is cinematic camera control on a single generated shot. Worth it
 for hero footage; not a replacement for the four already loaded.
 
-## 21st.dev — real, hosted, but the auth shape blocks the browser path
+## 21st.dev — real, hosted, and connectable from the browser
 
-Checked 18 Sep 2026, correcting a fourth wrong "not found". 21st.dev is a
-library of 12,000+ React/Tailwind components, and **Magic MCP is now the 21st
-MCP**. It is not in Anthropic's connector directory.
+Re-checked 25 Sep 2026 on the vendor's own page (reached through Composio's
+sandbox), **correcting the 18 Sep entry**, which said a static-header auth
+probably blocked the browser path. It does not. 21st.dev is a library of
+12,000+ React/Tailwind components; Magic MCP is now the 21st MCP.
 
-It does publish a hosted HTTP endpoint, `https://21st.dev/api/mcp` — but it
-authenticates with a static `x-api-key` header, not OAuth. claude.ai's **Add
-custom connector** dialog takes a URL and runs an OAuth flow; it has no field
-for a static header. So unlike Raylight and Higgsfield, this one probably
-cannot be added from the browser. Say "probably" — `21st.dev` is blocked by
-this sandbox's egress proxy, so the endpoint above came from search results,
-not the vendor's page.
+- Endpoint (Streamable HTTP): `https://21st.dev/api/mcp`
+- Read-only endpoint: `https://21st.dev/api/mcp/readonly`
+- Auth: **OAuth 2.1 with dynamic client registration**, or an API key as
+  `x-api-key` / Bearer
 
-What still works for Otis without any connector: the components are browsable
-and copyable at 21st.dev by hand. The MCP only saves the copy-paste.
+OAuth means claude.ai → Settings → Connectors → **Add custom connector** works,
+same as Raylight and Higgsfield. Prefer the read-only endpoint unless he needs
+to publish components. Not in Anthropic's directory.
 
 ## Framer Motion is a library, not a plugin
 
@@ -277,6 +276,35 @@ the GLB renders in Three.js in the visitor's browser.
 
 **Codex is not needed for any of this.** It is OpenAI's equivalent of Claude
 Code. Tutorials that say "Codex + Blender" work the same with Claude Code.
+
+## Composio — a hub, not an app
+
+Connected 25 Sep 2026. One connector that fronts 500+ apps, but **each app
+inside it needs its own sign-in**, done through `COMPOSIO_MANAGE_CONNECTIONS`,
+which returns a link Otis clicks. At install, **no apps were signed in** —
+Instagram, TikTok, LinkedIn, Firecrawl and every other one checked came back
+inactive.
+
+What it adds that nothing else here does:
+- **Posting where he has no direct connector** — Instagram Business/Creator,
+  TikTok, LinkedIn company pages, Facebook, X, Discord.
+- **Scraping** — Firecrawl, Scrapfly, ScrapingBee toolkits (each needs its own
+  account).
+- **A second cloud machine with open internet** (`COMPOSIO_REMOTE_BASH_TOOL`,
+  `COMPOSIO_REMOTE_WORKBENCH`). Works with no sign-in. It reached TikTok,
+  21st.dev, strix.ai and ffmpeg-micro.com, all blocked by this session's
+  proxy. **Use it to verify vendor pages before recording a claim here** — it
+  is how the 21st.dev entry got corrected.
+
+Rules:
+- **Prefer a direct connector when one exists.** Gmail, Drive, Calendar,
+  Figma, Canva, Notion, monday, Shopify, Vercel, GitHub and Supabase are all
+  connected directly; routing them through Composio adds a middleman holding
+  the same keys.
+- **It concentrates access.** Every app signed in through Composio hands it an
+  OAuth token. Connect only what he will use.
+- **Its sandbox is Composio's machine.** Fine for public pages; never put
+  client code under NDA, secrets, or credentials there.
 
 ## Real, but not installable from a browser session
 
