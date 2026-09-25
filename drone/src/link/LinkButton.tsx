@@ -2,13 +2,24 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Bluetooth, Usb, Cpu, Link2, Link2Off, Satellite, Radio, ShieldCheck, Plane, ArrowDownToLine, Wifi } from 'lucide-react';
 import { useAircraftLink, type Transport } from './useAircraftLink';
 import { FIX_NAMES, MODE_LABEL, modeName } from './mavlink';
+import { PREFLIGHT_PARAMS } from './paramChecks';
 import { Chip, Dot, ToolButton, type Tone } from '../dashboards/ui';
 
 /** App-bar control: shows link state, opens the transport picker. */
 export const LinkButton: React.FC = () => {
   const link = useAircraftLink();
   const [open, setOpen] = useState(false);
-  const [netUrl, setNetUrl] = useState(() => { try { return localStorage.getItem('a1-bridge-url') || ''; } catch { return ''; } });
+  const [netUrl, setNetUrl] = useState(() => {
+    // The companion installer prints the dashboard address with #bridge=wss://…?token=…: a fragment, so the token
+    // never reaches the web server. Taken once, kept like a typed address, and dropped from the address bar.
+    const fromHash = typeof location !== 'undefined' ? new URLSearchParams(location.hash.replace(/^#/, '')).get('bridge') : null;
+    if (fromHash && /^wss?:\/\//i.test(fromHash)) {
+      try { localStorage.setItem('a1-bridge-url', fromHash); } catch { /* private mode */ }
+      history.replaceState(null, '', location.pathname + location.search);
+      return fromHash;
+    }
+    try { return localStorage.getItem('a1-bridge-url') || ''; } catch { return ''; }
+  });
   const saveUrl = (v: string) => { setNetUrl(v); try { localStorage.setItem('a1-bridge-url', v); } catch { /* private mode */ } };
   const noLocalRadio = !(link.support.bluetooth && link.support.secure) && !(link.support.serial && link.support.secure);
   const ref = useRef<HTMLDivElement>(null);
@@ -77,9 +88,13 @@ export const LinkButton: React.FC = () => {
                 <div className="flex items-center justify-between"><span className="text-[12px] font-semibold text-ink">Pre-flight</span><Chip tone={link.preflight.ok ? 'ok' : 'warn'}>{link.preflight.ok ? 'Go' : 'Hold'}</Chip></div>
                 <ul className="mt-1 divide-y divide-line">
                   {link.preflight.checks.map(c => (
-                    <li key={c.id} className="flex items-center justify-between gap-2 py-1 text-[12px]"><span className="flex items-center gap-2 text-ink-2"><Dot tone={c.ok ? 'ok' : 'warn'} />{c.label}</span><span className="num text-[11px] text-ink-3">{c.detail}</span></li>
+                    <li key={c.id} className="flex items-center justify-between gap-2 py-1 text-[12px]"><span className="flex items-center gap-2 text-ink-2"><Dot tone={c.ok ? 'ok' : c.advisory ? 'warn' : 'bad'} />{c.label}</span><span className="num text-[11px] text-ink-3 text-right">{c.detail}</span></li>
                   ))}
                 </ul>
+                {link.autopilot !== 'UNKNOWN' && link.preflight.checks.some(c => /not read/.test(c.detail)) && (
+                  <button type="button" className="mt-1 text-[11px] text-accent hover:underline" onClick={() => void link.readParams(PREFLIGHT_PARAMS[link.autopilot as 'ARDUPILOT' | 'PX4'])}>Some settings did not answer · read again</button>
+                )}
+                <p className="mt-1 text-[11px] text-ink-3">Amber items are read from the aircraft's settings and do not hold the gate: the crew decides.</p>
               </div>
               <div className="flex flex-wrap gap-2 pt-1">
                 {!t.armed

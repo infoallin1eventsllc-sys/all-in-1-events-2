@@ -4,6 +4,39 @@ Three services. On the aircraft: the **MAVLink bridge** (fly from any phone, tab
 or laptop) and the **video streamer**. At the venue: the optional **Remote ID
 receiver**. They can share a Pi on the bench.
 
+## Install: one command (Raspberry Pi OS Bookworm, 64-bit)
+
+```bash
+git clone --depth 1 https://github.com/infoallin1eventsllc-sys/all-in-1-events-2.git
+sudo all-in-1-events-2/drone/hardware/companion-pi/install.sh --uart     # aircraft Pi; then sudo reboot
+sudo all-in-1-events-2/drone/hardware/companion-pi/install.sh --services remoteid   # venue Pi
+```
+
+[`install.sh`](install.sh) installs the bridge, video streamer and Remote ID receiver
+into `/opt/a1` (Python in `/opt/a1/venv`), creates the `a1` system user they run as,
+generates the bridge token into `/opt/a1/token` (root-only, handed to the bridge as a
+systemd credential) and a self-signed certificate if there is none, installs the
+systemd units and starts the chosen services (`--services bridge,video` by default).
+It prints the token and a dashboard link with this Pi's address filled in
+(`…/drone/#bridge=wss://…`; the token rides in the `#` fragment, which never reaches
+the web server). Run it again after pulling changes: it only touches what differs,
+keeps the token and certificate, and restarts a service only when its code changed.
+
+| Flag | |
+| --- | --- |
+| `--uart` | the Pi's PL011 UART for the flight controller: `enable_uart=1`, `dtoverlay=disable-bt`, serial console off (backs up `config.txt` and `cmdline.txt`; reboot) — see *Flight controller UART* below |
+| `--uart-keep-bt` | the same with `dtoverlay=miniuart-bt` and `core_freq=250`, for a Pi that also runs Remote ID |
+| `--services bridge,video,remoteid` | which to enable and start |
+| `--dashboard URL` | where your console is served (default `https://allin1events.com/drone/`) |
+| `--dry-run` | print every action, change nothing |
+
+By hand, the same thing: `apt install python3-venv ffmpeg bluez libavdevice-dev libavfilter-dev
+libopus-dev libvpx-dev`, `python3 -m venv /opt/a1/venv && /opt/a1/venv/bin/pip install -r
+requirements.txt`, copy `bridge/ video/ remoteid/` to `/opt/a1/`, `useradd --system a1` (in
+`dialout`, `video`, `bluetooth`), write the token, copy `systemd/*.service` to
+`/etc/systemd/system/` and `systemctl enable --now a1-bridge a1-video` (`a1-remoteid` on
+the venue Pi). `journalctl -u a1-bridge -f` shows what the bridge is doing.
+
 ## Parts
 
 | Role | Part | ~Price |
@@ -14,25 +47,6 @@ receiver**. They can share a Pi on the bench.
 | | Air-side data link: 5.8 GHz Wi-Fi bridge (Ubiquiti / Mikrotik) or LTE HAT with a SIM | $80–150 |
 | Venue Remote ID | Raspberry Pi 4 (onboard BLE) + external BLE 5 dongle for long range | $60 + $15 |
 | | Weatherproof box, PoE splitter or 5 V supply | $30 |
-
-## Install (Raspberry Pi OS Bookworm, 64-bit)
-
-```bash
-sudo apt update && sudo apt install -y python3-pip python3-venv libavdevice-dev libavfilter-dev libopus-dev libvpx-dev ffmpeg bluez
-python3 -m venv ~/a1 && source ~/a1/bin/activate
-pip install -r requirements.txt
-```
-
-Copy this folder to `/opt/a1/` on the Pi, then:
-
-```bash
-sudo cp systemd/a1-bridge.service systemd/a1-video.service systemd/a1-remoteid.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now a1-bridge     # aircraft Pi: MAVLink for phones and tablets
-sudo systemctl enable --now a1-video      # aircraft Pi
-sudo systemctl enable --now a1-remoteid   # venue Pi
-journalctl -u a1-video -f
-```
 
 ## MAVLink bridge → dashboard (phones, tablets, laptops)
 
@@ -93,6 +107,9 @@ anywhere. Setup, deploy (Fly.io, Render, any VPS) and security notes:
 **Bench test with no drone:** `bridge/fake_vehicle.py` is a stand-in autopilot
 (ArduCopter by default, `--px4` for PX4). It answers arming, modes, takeoff, go-to,
 missions, gimbal, zoom, camera source, relay and photos, and prints every command.
+It answers parameter reads and writes for the fence, battery failsafe and RTL
+altitude with the firmware defaults (`--param FENCE_RADIUS=150` to start from
+another value) and enforces the fence and failsafe the way the firmware does.
 It also sends the health telemetry a real ArduCopter does (motor outputs, vibration,
 ESC telemetry, cells, sensors, EKF, firmware version) and can fake a mechanical fault:
 

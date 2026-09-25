@@ -4,13 +4,13 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-User=pi
+User=a1
 WorkingDirectory=/opt/a1/video
 # Anyone who can reach :8080 can watch unless /offer needs a token. To require one (the dashboard URL
 # becomes http://<pi>:8080/?token=…): `openssl rand -hex 16 | sudo tee /opt/a1/video-token`, then uncomment
 # LoadCredential and add `--token-file %d/video-token` (and `--allow-origin https://<dashboard host>`) below.
 #LoadCredential=video-token:/opt/a1/video-token
-ExecStart=/home/pi/a1/bin/python3 /opt/a1/video/stream.py --device /dev/video0 --size 1280x720 --fps 30 --mjpeg --port 8080
+ExecStart=/opt/a1/venv/bin/python3 /opt/a1/video/stream.py --device /dev/video0 --size 1280x720 --fps 30 --mjpeg --port 8080
 Restart=always
 RestartSec=3
 

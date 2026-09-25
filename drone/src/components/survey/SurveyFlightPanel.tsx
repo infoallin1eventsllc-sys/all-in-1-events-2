@@ -1,6 +1,6 @@
 import React from 'react';
-import { CircleCheck, CircleX, TriangleAlert, ShieldCheck } from 'lucide-react';
-import { Section, Row, Toggle, Chip } from '../../dashboards/ui';
+import { CircleCheck, CircleX, TriangleAlert, ShieldCheck, Wrench } from 'lucide-react';
+import { Section, Row, Toggle, Chip, HoldButton } from '../../dashboards/ui';
 import { MODE_LABEL, modeName } from '../../link/mavlink';
 import type { useSurveyFlight } from './useSurveyFlight';
 import type { useAircraftLink } from '../../link/useAircraftLink';
@@ -15,10 +15,22 @@ export const SurveyFlightPanel: React.FC<{ flight: ReturnType<typeof useSurveyFl
       <Section title="Before take-off" right={flight.gateOk ? <Chip tone="ok">Ready</Chip> : <Chip tone="warn">Not yet</Chip>}>
         <ul className="space-y-1.5">
           {flight.checks.map(c => (
-            <li key={c.id} className="flex items-start gap-2 text-[12.5px]">
-              {c.ok ? <CircleCheck className="w-4 h-4 text-ok shrink-0 mt-px" /> : c.advisory ? <TriangleAlert className="w-4 h-4 text-warn shrink-0 mt-px" /> : <CircleX className="w-4 h-4 text-bad shrink-0 mt-px" />}
-              <span className="flex-1 text-ink-2">{c.label}</span>
-              <span className="num text-[11px] text-ink-3 text-right">{c.detail}</span>
+            <li key={c.id} className="text-[12.5px]">
+              <div className="flex items-start gap-2">
+                {c.ok ? <CircleCheck className="w-4 h-4 text-ok shrink-0 mt-px" /> : c.advisory ? <TriangleAlert className="w-4 h-4 text-warn shrink-0 mt-px" /> : <CircleX className="w-4 h-4 text-bad shrink-0 mt-px" />}
+                <span className="flex-1 min-w-0 text-ink-2">{c.label}</span>
+                <span className="num text-[11px] text-ink-3 text-right max-w-[50%]">{c.detail}</span>
+              </div>
+              {c.id === 'fence-params' && flight.fenceFixes.length > 0 && (
+                // Sets only what the check names (a limit raised to what the flight needs, or a fence type), then reads it back.
+                <div className="mt-1.5 ml-6 flex flex-wrap items-center gap-2">
+                  <HoldButton id="sv-fence-fix" icon={<Wrench />} label={flight.fix.state === 'FIXING' ? 'Setting…' : 'Fix on the aircraft'} disabled={flight.fix.state === 'FIXING' || !link.live} onFire={() => void flight.fixFence()}
+                    title={`Sets ${flight.fenceFixes.map(f => `${f.name} ${f.value}`).join(', ')} on the aircraft`} />
+                  <span className="num text-[11px] text-ink-3">{flight.fenceFixes.map(f => `${f.name} → ${f.value}`).join(' · ')}</span>
+                </div>
+              )}
+              {c.id === 'fence-params' && flight.fix.state === 'FAILED' && <p role="alert" className="mt-1 ml-6 text-[11px] text-bad">{flight.fix.msg}</p>}
+              {c.id === 'fence-params' && flight.fix.state === 'DONE' && c.ok && <p className="mt-1 ml-6 text-[11px] text-ok">Set on the aircraft: {flight.fix.msg}</p>}
             </li>
           ))}
         </ul>
@@ -31,7 +43,7 @@ export const SurveyFlightPanel: React.FC<{ flight: ReturnType<typeof useSurveyFl
         {upload.state === 'READY' && flight.useFence && (
           <div className={`mt-2 flex items-center gap-1.5 text-[12px] ${upload.fence === 'ON' ? 'text-ok' : 'text-warn'}`}>
             <ShieldCheck className="w-3.5 h-3.5" />
-            {upload.fence === 'ON' ? 'Fence on the aircraft and enabled' : upload.fence === 'UNCONFIRMED' ? 'Fence uploaded; the autopilot did not confirm enabling it (check FENCE_ENABLE / GF_ACTION)' : 'Fence upload failed: this autopilot may not take polygon fences'}
+            {upload.fence === 'ON' ? 'Fence on the aircraft and enabled' : upload.fence === 'UNCONFIRMED' ? (link.autopilot === 'PX4' ? 'Fence uploaded; PX4 enforces it only when GF_ACTION is not 0, and GF_ACTION reads 0 or did not answer' : 'Fence uploaded; the autopilot did not confirm enabling it (is the polygon in FENCE_TYPE?)') : 'Fence upload failed: this autopilot may not take polygon fences'}
           </div>
         )}
       </Section>

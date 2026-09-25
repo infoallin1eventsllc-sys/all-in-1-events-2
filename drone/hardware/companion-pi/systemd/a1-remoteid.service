@@ -4,10 +4,10 @@ After=bluetooth.target network-online.target
 Wants=bluetooth.target
 
 [Service]
-User=pi
+User=a1
 AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
 WorkingDirectory=/opt/a1/remoteid
-ExecStart=/home/pi/a1/bin/python3 /opt/a1/remoteid/receiver.py --port 8765
+ExecStart=/opt/a1/venv/bin/python3 /opt/a1/remoteid/receiver.py --port 8765
 Restart=always
 RestartSec=3
 
