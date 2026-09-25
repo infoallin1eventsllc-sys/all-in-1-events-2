@@ -268,19 +268,18 @@ export const HoldButton: React.FC<{ icon?: React.ReactNode; label: string; onFir
   const op = useOperator();
   const blocked = command === 'fly' ? !op.canCommand : !op.canAbort;
   const [p, setP] = React.useState(0);
-  const t0 = React.useRef(0), raf = React.useRef(0), fired = React.useRef(false);
-  const stop = () => { cancelAnimationFrame(raf.current); t0.current = 0; setP(0); };
+  const t0 = React.useRef(0), raf = React.useRef(0), timer = React.useRef(0);
+  const fire = React.useRef(onFire); fire.current = onFire;
+  const stop = () => { cancelAnimationFrame(raf.current); clearTimeout(timer.current); t0.current = 0; setP(0); };
   const start = () => {
     if (disabled || blocked || t0.current) return;
-    fired.current = false; t0.current = performance.now();
-    const tick = () => {
-      const k = Math.min(1, (performance.now() - t0.current) / ms); setP(k);
-      if (k >= 1) { if (!fired.current) { fired.current = true; onFire(); } stop(); return; }
-      raf.current = requestAnimationFrame(tick);
-    };
+    t0.current = performance.now();
+    // A timer decides, not the animation: on a busy device frames can be far apart, and a full hold must still fire.
+    timer.current = window.setTimeout(() => { stop(); fire.current(); }, ms);
+    const tick = () => { if (!t0.current) return; setP(Math.min(1, (performance.now() - t0.current) / ms)); raf.current = requestAnimationFrame(tick); };
     raf.current = requestAnimationFrame(tick);
   };
-  React.useEffect(() => () => cancelAnimationFrame(raf.current), []);
+  React.useEffect(() => () => { cancelAnimationFrame(raf.current); clearTimeout(timer.current); }, []);
   const off = disabled || blocked;
   return (
     <button id={id} type="button" disabled={off} title={blocked ? `${ROLE_LABEL[op.role]}: only the pilot in command can do this` : title}

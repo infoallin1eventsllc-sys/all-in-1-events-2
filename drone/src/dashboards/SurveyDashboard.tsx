@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Play, Pause, Home, Upload, Download, RefreshCw, Minus, Plus, Map as MapIcon, Box, Maximize2, RotateCcw,
 } from 'lucide-react';
@@ -6,6 +6,12 @@ import { SurveySitePanel } from '../components/survey/SurveySitePanel';
 import { SurveyFlightPanel } from '../components/survey/SurveyFlightPanel';
 import { useSurveyFlight } from '../components/survey/useSurveyFlight';
 import { usesDemoGeometry } from '../survey/boundary';
+import { SurveyResultsViewer, type Measured, type ResultsLayer, type Tool } from '../components/survey/SurveyResultsViewer';
+import { SurveyResultsPanel } from '../components/survey/SurveyResultsPanel';
+import { measureArea, measureLine, type Annotation } from '../survey/measure';
+import { demoMeasurements } from '../survey/demoMeasurements';
+import { surfaceAt, SITE_DATUM_M } from '../survey/site';
+import { polygonArea as areaOf } from '../survey/plan';
 import { useSurveyMission, type Phase } from '../hooks/useSurveyMission';
 import { SurveyScanCanvas3D, type SurveyLayer } from '../components/survey/SurveyScanCanvas3D';
 import { SurveyMapCanvas } from '../components/survey/SurveyMapCanvas';
@@ -75,7 +81,50 @@ export const SurveyDashboard: React.FC = () => {
   const rootRef = useRef<HTMLDivElement>(null);
   const accent = useAccentHex(rootRef, '#c2410c');
   const [rail, setRail] = useState<RailTab>('PLAN');
-  const [hero, setHero] = useState<'3D' | 'MAP'>('3D');
+  const [hero, setHero] = useState<'3D' | 'MAP' | 'RESULTS'>('3D');
+  // ---- results viewer: the processed model and the crew's measurements ----
+  const [notes, setNotes] = useState<Annotation[]>(demoMeasurements);
+  const [noteSel, setNoteSel] = useState<string | null>('m-pile');
+  const [tool, setTool] = useState<Tool>(null);
+  const [mDraft, setMDraft] = useState<Pt[]>([]);
+  const [resLayer, setResLayer] = useState<ResultsLayer>('PHOTO');
+  const [contours, setContours] = useState(false);
+  const [focus, setFocus] = useState<{ id: string; seq: number } | null>(null);
+  const measured: Measured[] = useMemo(() => notes.map(a => {
+    if (a.kind === 'LINE') return { a, line: measureLine(a.pts, surfaceAt, 0.5) };
+    if (a.kind === 'AREA') return { a, area: measureArea(a.pts, surfaceAt, a.base ?? { kind: 'PLANE' }, Math.max(0.5, Math.sqrt(areaOf(a.pts)) / 220)) };
+    return { a };
+  }), [notes]);
+  const selectNote = (id: string | null) => { setNoteSel(id); if (id) setFocus(f => ({ id, seq: (f?.seq ?? 0) + 1 })); };
+  const finishDraft = () => {
+    if (!tool || tool === 'POINT') return;
+    const need = tool === 'AREA' ? 3 : 2; if (mDraft.length < need) return;
+    const n = notes.filter(x => x.kind === tool).length + 1;
+    const a: Annotation = { id: `m-${Date.now().toString(36)}`, name: tool === 'AREA' ? `Area ${n}` : `Line ${n}`, kind: tool, pts: mDraft, visible: true, ...(tool === 'AREA' ? { base: { kind: 'PLANE' as const }, density: 1.6 } : {}) };
+    setNotes(ns => [...ns, a]); setMDraft([]); setTool(null); setNoteSel(a.id);
+  };
+  const pickPoint = (p: Pt) => {
+    if (tool === 'POINT') { const n = notes.filter(x => x.kind === 'POINT').length + 1; const a: Annotation = { id: `m-${Date.now().toString(36)}`, name: `Spot height ${n}`, kind: 'POINT', pts: [p], visible: true }; setNotes(ns => [...ns, a]); setNoteSel(a.id); setTool(null); return; }
+    setMDraft(d => [...d, p]);
+  };
+  useEffect(() => {
+    if (!tool) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setTool(null); setMDraft([]); } else if (e.key === 'Enter') finishDraft(); else if (e.key === 'Backspace' && (e.target as HTMLElement).tagName !== 'INPUT') setMDraft(d => d.slice(0, -1)); };
+    window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey);
+  }); // eslint-disable-line react-hooks/exhaustive-deps
+  const exportMeasurements = () => {
+    const features = measured.map(({ a, line, area }) => {
+      const ll = a.pts.map(p => { const q = toLatLon(sim.origin, p); return [+q.lon.toFixed(7), +q.lat.toFixed(7)]; });
+      const geometry = a.kind === 'AREA' ? { type: 'Polygon', coordinates: [[...ll, ll[0]]] } : a.kind === 'LINE' ? { type: 'LineString', coordinates: ll } : { type: 'Point', coordinates: ll[0] };
+      const props: Record<string, unknown> = { name: a.name, kind: a.kind, datum: `elevations above sea level (site datum ${SITE_DATUM_M} m)` };
+      if (area) Object.assign(props, { base: a.base?.kind, cut_m3: +area.cutM3.toFixed(1), fill_m3: +area.fillM3.toFixed(1), net_m3: +area.netM3.toFixed(1), density_t_m3: a.density, net_t: +(area.netM3 * (a.density ?? 1.6)).toFixed(1), area_m2: +area.horizontalM2.toFixed(1), surface_m2: +area.surfaceM2.toFixed(1), elev_max_m: +(area.elevMax + SITE_DATUM_M).toFixed(2), elev_min_m: +(area.elevMin + SITE_DATUM_M).toFixed(2) });
+      if (line) Object.assign(props, { length_m: +line.surfaceM.toFixed(2), horizontal_m: +line.horizontalM.toFixed(2), grade_avg_pct: +line.gradeAvgPct.toFixed(2), grade_max_pct: +line.gradeMaxPct.toFixed(2), grade_min_pct: +line.gradeMinPct.toFixed(2), limit_pct: a.limitPct, segment_grades_pct: line.segments.map(g => +g.gradePct.toFixed(2)) });
+      if (a.kind === 'POINT') props.elevation_m = +(surfaceAt(a.pts[0].x, a.pts[0].y) + SITE_DATUM_M).toFixed(2);
+      return { type: 'Feature', geometry, properties: props };
+    });
+    const blob = new Blob([JSON.stringify({ type: 'FeatureCollection', features }, null, 2)], { type: 'application/geo+json' });
+    const el = document.createElement('a'); el.href = URL.createObjectURL(blob); el.download = `${sim.site.name.replace(/[^\w-]+/g, '_')}_measurements.geojson`; document.body.appendChild(el); el.click(); el.remove(); setTimeout(() => URL.revokeObjectURL(el.href), 5000);
+  };
   const [layer, setLayer] = useState<SurveyLayer>('MODEL');
   const onGround = phase === 'READY' || phase === 'COMPLETE';
   const flying = !onGround && phase !== 'HELD' && phase !== 'SWAP';
@@ -185,6 +234,10 @@ export const SurveyDashboard: React.FC = () => {
         {/* ---------------- Stage ---------------- */}
         <div className="space-y-3 min-w-0">
           <div className="relative rounded-[var(--radius-card)] overflow-hidden bg-imagery border border-line" style={{ aspectRatio: '16 / 9' }}>
+            {hero === 'RESULTS' && demoGeo ? (
+              <SurveyResultsViewer items={measured} selectedId={noteSel} onSelect={selectNote} layer={resLayer} contours={contours} tool={tool} draft={mDraft}
+                onPick={pickPoint} onFinish={finishDraft} origin={sim.origin} focus={focus} />
+            ) : <>
             {demoGeo && <div className={hero === '3D' ? HERO : PIP}>{stage}</div>}
             <div className={hero === 'MAP' || !demoGeo ? HERO : PIP}>{map}</div>
             {demoGeo && <button onClick={() => setHero(h => (h === '3D' ? 'MAP' : '3D'))} title={hero === '3D' ? 'Show the plan view full size' : 'Show the 3D view full size'}
@@ -194,11 +247,19 @@ export const SurveyDashboard: React.FC = () => {
               </span>
               <span className="absolute top-1.5 right-1.5 rounded bg-black/60 p-1 text-white opacity-0 group-hover:opacity-100 transition-opacity"><Maximize2 className="w-3 h-3" /></span>
             </button>}
+            </>}
           </div>
 
           {/* Action bar */}
           <Card padded={false} className="px-3 py-2.5">
             <div className="flex flex-wrap items-center gap-2">
+              {demoGeo && (
+                <>
+                  <Segmented size="sm" value={hero === 'RESULTS' ? 'RESULTS' : 'FLIGHT'} onChange={v => { if (v === 'RESULTS') { setHero('RESULTS'); setRail('DELIVERABLES'); if (noteSel) setFocus(f => ({ id: noteSel, seq: (f?.seq ?? 0) + 1 })); } else { setHero('3D'); setTool(null); setMDraft([]); } }}
+                    items={[{ id: 'FLIGHT', label: 'Flight', title: 'The capture: plan, aircraft and coverage' }, { id: 'RESULTS', label: 'Results', title: 'The processed model: measure volumes, grades and heights' }]} />
+                  <span className="w-px h-6 bg-line mx-1" />
+                </>
+              )}
               {sim.live ? livePrimary : <ToolButton command="fly" id="sv-primary" primary icon={primary.icon} label={primary.label} onClick={primary.onClick} disabled={primary.disabled} />}
               {sim.live ? (
                 !flight.onGround && <>
@@ -378,8 +439,23 @@ export const SurveyDashboard: React.FC = () => {
               </div>
             )}
 
-            {rail === 'DELIVERABLES' && (
+            {rail === 'DELIVERABLES' && hero === 'RESULTS' && demoGeo && (
+              <SurveyResultsPanel items={measured} selectedId={noteSel} onSelect={selectNote} layer={resLayer} onLayer={setResLayer} contours={contours} onContours={setContours}
+                tool={tool} onTool={t => { setTool(t); setMDraft([]); }} draftCount={mDraft.length} onFinish={finishDraft} onCancel={() => { setTool(null); setMDraft([]); }}
+                onChange={a => setNotes(ns => ns.map(x => (x.id === a.id ? a : x)))} onDelete={id => { setNotes(ns => ns.filter(x => x.id !== id)); if (noteSel === id) setNoteSel(null); }}
+                onExport={exportMeasurements} />
+            )}
+            {rail === 'DELIVERABLES' && !(hero === 'RESULTS' && demoGeo) && (
               <div className="space-y-5">
+                {demoGeo ? (
+                  <div className="rounded-lg border border-accent/30 bg-accent-soft p-3">
+                    <div className="text-[13px] font-medium text-ink">Measure the processed model</div>
+                    <p className="mt-0.5 text-[12px] leading-relaxed text-ink-2">Stockpile volumes with cut and fill, route grades with a cross-section, spot heights, on the orthophoto or the elevation model.</p>
+                    <ToolButton size="sm" primary className="mt-2" label="Open results" onClick={() => { setHero('RESULTS'); if (noteSel) setFocus(f => ({ id: noteSel, seq: (f?.seq ?? 0) + 1 })); }} />
+                  </div>
+                ) : (
+                  <p className="rounded-lg border border-line p-3 text-[12px] leading-relaxed text-ink-3">Measurements run on the processed elevation model. For this site, process the photos (WebODM, Pix4D or DroneDeploy) and measure there; the demo venue shows the tools on its model.</p>
+                )}
                 <Section title="What the client receives" right={PATTERNS[P.pattern].product}>
                   <ul className="divide-y divide-line">
                     {DELIVERABLES[P.pattern].map(d => (

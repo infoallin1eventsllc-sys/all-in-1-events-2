@@ -161,21 +161,79 @@ works with DJI aircraft too) or to **WebRTC from the aircraft's companion comput
 
 ## Site survey on a real aircraft
 
-The plan is a real mission. **Upload to aircraft** (or **Upload & start** once
-telemetry is live) sends it over the same MAVLink link as everything else:
-`NAV_TAKEOFF` → `DO_CHANGE_SPEED` → `DO_MOUNT_CONTROL` (gimbal pitch) → for every
-line a waypoint, `DO_SET_CAM_TRIGG_DIST` on (one photo now, then every *n* metres),
-the end waypoint, trigger off — so no photos are wasted in the turns — and `RTL`.
-An inspection orbit uses `DO_SET_ROI_LOCATION` to keep the camera on the structure.
-The autopilot fires the camera; the dashboard follows the telemetry and estimates
-the coverage from distance flown in AUTO at survey height.
+**The site.** A real survey flies the real boundary. The **Site** tab imports it
+(KML or KMZ from Google Earth or DJI Pilot 2, GeoJSON, or a list of "lat, lon"
+corners) or builds it by walking the aircraft to each corner and marking it. The
+boundary is checked (three or more corners, no crossing edges, 20 × 20 m to
+25 km²) and kept on the device. The demo venue stays for demonstrations; with an
+aircraft connected, **Bench test here** places its shape around the aircraft's
+home for a simulator or props-off bench.
 
-**Export package** writes what the next tools need: `mission.plan`
-(QGroundControl), `mission.waypoints` (Mission Planner), `geotags.csv` and `geo.txt`
-(Pix4D / WebODM, rejected frames flagged), `coverage.csv` (views per 5 m cell) and a
-manifest. The photos stay on the SD card; processing runs in WebODM, Pix4D,
-DroneDeploy or Metashape. The planning maths, mission and package are unit-tested
-(`scripts/survey.test.mjs`).
+**Before take-off** (the **Aircraft** tab, when an aircraft is live): the link's own
+gate (heartbeat, 3D fix, 10+ satellites, HDOP, battery, radio) plus what a survey
+needs: a real site, the aircraft within 500 m of it, a mission the autopilot can
+hold (700 items), height within 120 m, and, as advisories, wind under 10 m/s and
+battery for the plan (or a note that it will swap and resume).
+
+**Upload** sends the geofence first (the site, every lead-in and home, pushed out
+30 m with rounded corners; mission type 1, then `DO_FENCE_ENABLE`), then the
+mission, built for the autopilot the heartbeat reports:
+`NAV_TAKEOFF` (at home) → `DO_CHANGE_SPEED` → gimbal pitch (`DO_MOUNT_CONTROL` on
+ArduPilot, `DO_GIMBAL_MANAGER_PITCHYAW` on PX4) → for every line a waypoint,
+`DO_SET_CAM_TRIGG_DIST` on (one photo now, then every *n* metres), the end
+waypoint, trigger off (no photos in the turns) → `RTL`. An inspection orbit keeps
+the camera on the structure with `DO_SET_ROI_LOCATION`. The mission protocol
+(`src/link/missionClient.ts`) sends no `MISSION_CLEAR_ALL` (ArduPilot acknowledges
+it, and that ACK can pass for the end of the upload), resends a lost
+`MISSION_COUNT`, answers repeated requests, and only accepts the ACK once every
+item has been asked for.
+
+**Start** is press-and-hold, and runs the sequence each autopilot needs:
+ArduPilot GUIDED → arm → `MISSION_START` (Copter will not arm in AUTO); PX4
+mission mode → arm. If the autopilot refuses, its own words (`PreArm: …`) are shown.
+
+**In flight** the dashboard follows the mission item being flown
+(`MISSION_CURRENT`): taking off, capturing line *n* of *N*, returning, landing.
+Photos come from whatever the aircraft reports (ArduPilot `CAMERA_FEEDBACK`, PX4
+`CAMERA_TRIGGER`, a MAVLink camera's `CAMERA_IMAGE_CAPTURED`), queued so none are
+lost and never counted twice; with none of those they are estimated from distance
+flown with the trigger on, and flagged as estimated in the export. A battery
+return (failsafe or the operator's) records where the survey stopped; after the
+swap, **Upload resume** builds a mission from that point on the line, and **Re-fly
+weak patches** uploads short passes over anything seen by fewer than five photos.
+
+**Bench test.** `node scripts/bench/survey-flight.mjs` (add `--px4` for PX4) flies
+the whole thing against the stand-in autopilot through the network bridge: checks,
+upload, hold to start, a battery failsafe mid-survey, resume, finish. The stand-in
+(`hardware/companion-pi/bridge/fake_vehicle.py`) flies missions the way the
+firmware does: ArduCopter refuses to arm in AUTO and starts on `MISSION_START`,
+PX4 starts when armed in mission mode, the camera fires by distance, and a low
+battery triggers RTL.
+
+**Export package** writes what the next tools need: `mission.plan` (QGroundControl,
+with the geofence), `mission.waypoints` (Mission Planner), `site.kml` (Google Earth,
+or DJI Pilot 2 as a mapping area for DJI aircraft), `geotags.csv` and `geo.txt`
+(Pix4D / WebODM; rejected and estimated frames flagged), `coverage.csv` (views per
+cell) and a manifest. The photos stay on the SD card; processing runs in WebODM,
+Pix4D, DroneDeploy or Metashape.
+
+**Results.** On the demo venue, **Results** opens the processed model: orthophoto
+or elevation (one sequential ramp over the site's own relief), 0.5 m contours, and
+measuring tools. **Area & volume** gives cut, fill and net against a fitted base,
+the lowest edge point or a level you set, with tonnage by material, highest and
+lowest point, horizontal and surface area, and draws the cut/fill heatmap inside
+curtain walls. **Distance & grade** gives each segment's grade (labelled on the
+model, checked against a limit such as 5 % for an accessible route), average,
+steepest and gentlest, lengths, and a cross-section with a table view. **Spot
+height** pins an elevation. Measurements export as GeoJSON. The demo measures the
+gravel stockpile, the accessible route across the swale (two segments over 5 %)
+and a second-stage pad. For a real site, the same measurements run in the
+processing software on its elevation model.
+
+Tests: planning maths, missions, fence, resume, boundaries and package
+(`scripts/survey.test.mjs`); the mission protocol and start sequence against a
+scripted ArduPilot and PX4 (`scripts/mission.test.mjs`); measurements against
+known shapes (`scripts/measure.test.mjs`).
 
 The Defense (counter-UAS) dashboard was retired in favour of Site survey. Flight
 records made with it still open in Records; the Remote ID receiver in `hardware/`

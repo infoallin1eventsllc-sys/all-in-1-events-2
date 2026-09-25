@@ -28,7 +28,7 @@ export const SITE = {
     { id: 'stage', label: 'Main stage', x: 60, y: -70, w: 38, d: 20, h: 15, roof: '#2a2f38', kind: 'stage' },
     { id: 'hall', label: 'Exhibition hall', x: -120, y: -48, w: 72, d: 34, h: 11, roof: '#c9ccd2', kind: 'hall' },
     { id: 'foh', label: 'Front-of-house tower', x: 60, y: 8, w: 7, d: 7, h: 8, roof: '#3b4250', kind: 'tower' },
-    ...Array.from({ length: 6 }, (_, i) => ({ id: `tent-${i + 1}`, label: `Vendor tent ${i + 1}`, x: -160 + i * 22, y: 52, w: 12, d: 12, h: 5, roof: '#f4f4f2', kind: 'tent' as const })),
+    ...Array.from({ length: 6 }, (_, i) => ({ id: `tent-${i + 1}`, label: `Vendor tent ${i + 1}`, x: -200 + i * 22, y: 52, w: 12, d: 12, h: 5, roof: '#f4f4f2', kind: 'tent' as const })),
     ...Array.from({ length: 5 }, (_, i) => ({ id: `truck-${i + 1}`, label: `Food truck ${i + 1}`, x: 118 + i * 14, y: 40, w: 3, d: 8, h: 3.4, roof: ['#d9480f', '#1c7ed6', '#f59f00', '#e8590c', '#2b8a3e'][i], kind: 'truck' as const })),
   ] as Structure[],
   parking: { x0: 96, y0: 72, x1: 214, y1: 138 },
@@ -39,9 +39,19 @@ export const SITE = {
 /** Extent of the rendered world (terrain and imagery), metres, square. */
 export const WORLD_M = 900;
 
+/** Height of the venue floor above sea level at local (0, 0): what the survey's elevations are read against. */
+export const SITE_DATUM_M = 11.4;
+
+/** The gravel stockpile behind the stage (for the volume tool): centre, radius, height. */
+export const STOCKPILE = { x: 172, y: -78, r: 17, h: 7.5 };
+/** A drainage swale across the path from the gate (for the grade tool): a point on it, its direction, depth and half-width. */
+export const SWALE = { x: -60, y: 55, dx: 0.53, dy: 0.85, depth: 0.6, w: 5, len: 70 };
+
 /**
- * Ground height in metres. The venue core is graded flat (it is a festival ground);
- * rolling land rises into hills beyond the boundary, higher to the north-west.
+ * Ground height in metres (relative to the datum). The venue is graded almost
+ * flat (a festival ground): it falls gently to the south-east, a drainage swale
+ * crosses the path from the gate, and a gravel stockpile waits behind the stage.
+ * Rolling land rises into hills beyond the boundary, higher to the north-west.
  */
 export function heightAt(x: number, y: number): number {
   const r = Math.hypot(x, y);
@@ -49,7 +59,24 @@ export function heightAt(x: number, y: number): number {
   const roll = fbm(x * 0.006 + 40, y * 0.006 + 40, 11, 4) * 14 - 6;
   const ridge = Math.max(0, (-(x + y) - 260) / 240) * 38;
   const hills = (fbm(x * 0.004 + 3, y * 0.004 - 7, 29, 5) - 0.35) * 70;
-  return flat * (Math.max(0, hills) + ridge + roll) + (1 - flat) * (fbm(x * 0.02, y * 0.02, 5, 2) - 0.5) * 0.8;
+  // Venue floor: a 0.7 % fall to the south-east, fine unevenness, the swale and the stockpile.
+  const fall = -0.006 * x - 0.004 * y;
+  const along = (x - SWALE.x) * SWALE.dx + (y - SWALE.y) * SWALE.dy, across = (x - SWALE.x) * SWALE.dy - (y - SWALE.y) * SWALE.dx;
+  const swale = -SWALE.depth * Math.exp(-((across / SWALE.w) ** 2)) * Math.max(0, 1 - (along / SWALE.len) ** 2);
+  const d = Math.hypot(x - STOCKPILE.x, y - STOCKPILE.y) / STOCKPILE.r;
+  const pile = d < 1 ? STOCKPILE.h * Math.pow(1 - d * d, 1.5) * (0.92 + 0.16 * fbm(x * 0.3, y * 0.3, 17, 2)) : 0;
+  const floor = fall + swale + pile + (fbm(x * 0.02, y * 0.02, 5, 2) - 0.5) * 0.8;
+  return flat * (Math.max(0, hills) + ridge + roll) + (1 - flat) * floor;
+}
+
+/**
+ * The surface a finished survey measures (a DSM): the ground, plus the roofs of
+ * structures standing on it. Heights relative to the datum.
+ */
+export function surfaceAt(x: number, y: number): number {
+  const g = heightAt(x, y);
+  for (const s of SITE.structures) if (Math.abs(x - s.x) <= s.w / 2 && Math.abs(y - s.y) <= s.d / 2) return heightAt(s.x, s.y) + s.h;
+  return g;
 }
 
 export function structureAt(id: string): Structure | undefined { return SITE.structures.find(s => s.id === id); }
@@ -114,6 +141,14 @@ export function siteImagery(size = 1024): HTMLCanvasElement {
   path([[-20, 30], [120, 60], [150, 100]]);
   // Crowd field in front of the stage: trampled grass.
   ctx.fillStyle = 'rgba(150,140,96,0.35)'; ctx.beginPath(); ctx.ellipse(X(60), Y(-20), 70 * s, 40 * s, 0, 0, Math.PI * 2); ctx.fill();
+
+  // The swale: a damper strip of greener grass along its bed.
+  ctx.save(); ctx.strokeStyle = 'rgba(30,70,32,0.45)'; ctx.lineWidth = 6 * s; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(X(SWALE.x - SWALE.dx * SWALE.len * 0.8), Y(SWALE.y - SWALE.dy * SWALE.len * 0.8)); ctx.lineTo(X(SWALE.x + SWALE.dx * SWALE.len * 0.8), Y(SWALE.y + SWALE.dy * SWALE.len * 0.8)); ctx.stroke(); ctx.restore();
+  // The stockpile: gravel, lit from the north-west, with its toe spilling onto the grass.
+  { const P0 = STOCKPILE; const g2 = ctx.createRadialGradient(X(P0.x - P0.r * 0.25), Y(P0.y - P0.r * 0.25), 0, X(P0.x), Y(P0.y), P0.r * s * 1.08);
+    g2.addColorStop(0, '#b9b2a4'); g2.addColorStop(0.55, '#9a9284'); g2.addColorStop(0.9, '#6f6a60'); g2.addColorStop(1, 'rgba(90,86,76,0)');
+    ctx.fillStyle = g2; ctx.beginPath(); ctx.arc(X(P0.x), Y(P0.y), P0.r * s * 1.08, 0, Math.PI * 2); ctx.fill(); }
 
   // Parking lot with cars.
   const P = SITE.parking;
