@@ -4,6 +4,7 @@ import { frameOf, type FlightHealth, type Finding } from '../diagnostics/health'
 import type { ServiceRecord } from '../analytics/aggregate';
 import { stamp } from '../record/chain';
 import { sampleSnapshot } from '../compliance/sample';
+import { metresPerDegree } from '../lib/geo';
 
 /**
  * Demo content, so every page has something worth looking at the first time a
@@ -18,7 +19,7 @@ import { sampleSnapshot } from '../compliance/sample';
 
 export const DEMO_KEY = 'drone-command-demo-v1';
 const HOME = { lat: 33.7701, lon: -118.1937 };
-const M_LAT = 111_320, M_LON = 111_320 * Math.cos((HOME.lat * Math.PI) / 180);
+const { lat: M_LAT, lon: M_LON } = metresPerDegree(HOME.lat);
 const ll = (x: number, y: number) => ({ lat: HOME.lat - y / M_LAT, lon: HOME.lon + x / M_LON }); // x east, y south (screen)
 
 function rng(seed: number) { let s = seed; return () => ((s = (s * 48271) % 2147483647) / 2147483647); }

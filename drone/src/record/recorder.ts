@@ -2,6 +2,7 @@ import { recordDb, type FlightEvent, type FlightSample, type FlightSession, type
 import { rollupSession } from '../analytics/rollup';
 import { stamp, GENESIS } from './chain';
 import { currentSnapshot } from '../compliance/store';
+import { metresPerDegree } from '../lib/geo';
 
 /**
  * The flight recorder.
@@ -272,7 +273,7 @@ export function summarise(s: FlightSession, samples: FlightSample[], events: Fli
       const a = list[i - 1], b = list[i];
       if (a.lat != null && a.lon != null && b.lat != null && b.lon != null) {
         // Equirectangular is accurate enough over a patrol-sized area.
-        const mPerDegLat = 111320, mPerDegLon = 111320 * Math.cos((a.lat * Math.PI) / 180);
+        const { lat: mPerDegLat, lon: mPerDegLon } = metresPerDegree(a.lat);
         distanceM += Math.hypot((b.lat - a.lat) * mPerDegLat, (b.lon - a.lon) * mPerDegLon);
       } else {
         distanceM += b.speedMps * Math.max(0, (b.t - a.t) / 1000);

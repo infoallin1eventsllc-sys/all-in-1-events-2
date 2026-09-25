@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { modeName } from '../link/mavlink';
+import { metresPerDegree } from '../lib/geo';
 
 /**
  * Surveillance / patrol simulation.
@@ -187,7 +188,7 @@ export function useSurveillanceSimulation() {
     patch(id, d => {
       let x = d.x, y = d.y;
       if (originRef.current && t.lat !== 0) {
-        const mPerDegLat = 111320, mPerDegLon = 111320 * Math.cos((originRef.current.lat * Math.PI) / 180);
+        const { lat: mPerDegLat, lon: mPerDegLon } = metresPerDegree(originRef.current.lat);
         x = SITE.x + ((t.lon - originRef.current.lon) * mPerDegLon) / METERS_PER_PX;
         y = SITE.y - ((t.lat - originRef.current.lat) * mPerDegLat) / METERS_PER_PX;
       }
@@ -214,7 +215,7 @@ export function useSurveillanceSimulation() {
   /** Map pixel → WGS84 using the live origin; null until a real fix has been seen. */
   const pointLatLon = useCallback((x: number, y: number): { lat: number; lon: number } | null => {
     const o = originRef.current; if (!o) return null;
-    const mPerDegLat = 111320, mPerDegLon = 111320 * Math.cos((o.lat * Math.PI) / 180);
+    const { lat: mPerDegLat, lon: mPerDegLon } = metresPerDegree(o.lat);
     return { lat: o.lat - ((y - SITE.y) * METERS_PER_PX) / mPerDegLat, lon: o.lon + ((x - SITE.x) * METERS_PER_PX) / mPerDegLon };
   }, []);
   const waypointLatLon = useCallback((index: number) => { const w = WAYPOINTS[index]; return w ? pointLatLon(w.x, w.y) : null; }, [pointLatLon]);

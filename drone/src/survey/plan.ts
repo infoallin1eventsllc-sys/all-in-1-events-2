@@ -1,3 +1,4 @@
+import { metresPerDegree } from '../lib/geo';
 /**
  * Survey planning: the photogrammetry maths behind the Site survey dashboard.
  *
@@ -354,15 +355,7 @@ export function gapFillLines(grid: CoverageGrid, plan: SurveyPlan, poly: Pt[], m
 
 export interface GeoOrigin { lat: number; lon: number }
 
-/**
- * Metres per degree at a latitude on the WGS84 ellipsoid: the meridional and prime-vertical
- * radii as their standard series. A flat 111 320 m per degree of latitude is 0.4 % short at
- * 34° and 0.3 % long at 60°; this is within millimetres per kilometre.
- */
-export function metresPerDegree(lat: number): { lat: number; lon: number } {
-  const f = (lat * Math.PI) / 180;
-  return { lat: 111132.954 - 559.822 * Math.cos(2 * f) + 1.175 * Math.cos(4 * f), lon: 111412.84 * Math.cos(f) - 93.5 * Math.cos(3 * f) };
-}
+export { metresPerDegree } from '../lib/geo';
 /** Local metres (x east, y south) round an origin: equirectangular with the ellipsoid's scale at the origin. */
 export function toLatLon(o: GeoOrigin, p: Pt): { lat: number; lon: number } {
   const k = metresPerDegree(o.lat);

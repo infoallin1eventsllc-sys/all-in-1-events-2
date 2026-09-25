@@ -5,6 +5,7 @@ import { exportSessionCsv, exportSessionJson, recorder, summarise } from '../rec
 import { verify, type ChainCheck } from '../record/chain';
 import * as sync from '../sync/sync';
 import { Headline, Card, Section, Divider, Stat, Chip, ToolButton, Activity, useAccentHex, formatClock, type Tone } from './ui';
+import { metresPerDegree } from '../lib/geo';
 
 /**
  * Flight records — the evidence trail.
@@ -295,7 +296,7 @@ const FlightPathMap: React.FC<{ rows: FlightSample[]; aircraft: string[]; select
     const pts = rows.filter(r => r.lat != null && r.lon != null);
     if (pts.length < 2) return null;
     const lat0 = pts.reduce((m, r) => m + r.lat!, 0) / pts.length;
-    const mx = 111_320 * Math.cos((lat0 * Math.PI) / 180), my = 111_320;
+    const { lon: mx, lat: my } = metresPerDegree(lat0);
     const xs = pts.map(r => r.lon! * mx), ys = pts.map(r => -r.lat! * my);
     const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
     const span = Math.max(x1 - x0, y1 - y0, 60);

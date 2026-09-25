@@ -1,4 +1,5 @@
 import type { FlightEvent, FlightSample, FlightSession, LinkSource, Vertical } from '../record/db';
+import { metresPerDegree } from '../lib/geo';
 
 /**
  * Flight rollups: the long-term memory behind Analytics.
@@ -56,7 +57,7 @@ const NOTABLE_CAP = 25;
 
 function metresBetween(a: FlightSample, b: FlightSample): number {
   if (a.lat != null && a.lon != null && b.lat != null && b.lon != null) {
-    const mPerDegLat = 111320, mPerDegLon = 111320 * Math.cos((a.lat * Math.PI) / 180);
+    const { lat: mPerDegLat, lon: mPerDegLon } = metresPerDegree(a.lat);
     return Math.hypot((b.lat - a.lat) * mPerDegLat, (b.lon - a.lon) * mPerDegLon);
   }
   return b.speedMps * Math.min(MAX_GAP_S, Math.max(0, (b.t - a.t) / 1000));

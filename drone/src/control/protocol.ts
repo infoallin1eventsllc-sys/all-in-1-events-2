@@ -1,4 +1,5 @@
 import { MAV_CMD, MAV_RESULT, encodeCommandLong, encodeFlightMode, encodeRepositionFor, encodeTakeoffFor, type Autopilot, type FlightMode, type Telemetry } from '../link/mavlink';
+import { metresPerDegree } from '../lib/geo';
 
 /**
  * The control vocabulary, shared by one aircraft and a fleet of 500.
@@ -70,10 +71,12 @@ export function stepsFor(c: Cmd, ap: Autopilot): Step[] {
 
 /** Local metres to latitude / longitude around an origin (flat-earth, fine over a show site). */
 export function toLatLon(origin: { lat: number; lon: number }, x: number, y: number) {
-  return { lat: origin.lat + y / 111320, lon: origin.lon + x / (111320 * Math.cos((origin.lat * Math.PI) / 180)) };
+  const k = metresPerDegree(origin.lat);
+  return { lat: origin.lat + y / k.lat, lon: origin.lon + x / k.lon };
 }
 export function toLocal(origin: { lat: number; lon: number }, lat: number, lon: number) {
-  return { x: (lon - origin.lon) * 111320 * Math.cos((origin.lat * Math.PI) / 180), y: (lat - origin.lat) * 111320 };
+  const k = metresPerDegree(origin.lat);
+  return { x: (lon - origin.lon) * k.lon, y: (lat - origin.lat) * k.lat };
 }
 
 /** One step as bytes for a real aircraft. */

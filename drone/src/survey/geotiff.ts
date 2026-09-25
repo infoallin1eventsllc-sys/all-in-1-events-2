@@ -1,4 +1,5 @@
 import { crsFromEpsg, type Crs } from './projection';
+import { metresPerDegree } from '../lib/geo';
 
 /**
  * A GeoTIFF reader for processed survey results: DSMs and orthophotos from
@@ -381,7 +382,7 @@ export function pixelSizeM(g: GeoTiff, geo: GeoInfo): number {
   // One pixel step along a row and down a column, measured on the ground at the image centre.
   const c = g.main.width / 2, r = g.main.height / 2;
   const ll = (dc: number, dr: number) => geo.crs.inverse(...applyAffine(geo.affine, c + dc, r + dr));
-  const [lon0, lat0] = ll(0, 0), kx = 111320 * Math.cos((lat0 * Math.PI) / 180), ky = geo.crs.epsg === 4326 ? geo.crs.metresPerUnit(lat0) : 110574 + 1110 * Math.sin((lat0 * Math.PI) / 180) ** 2;
+  const [lon0, lat0] = ll(0, 0), { lon: kx, lat: ky } = metresPerDegree(lat0);
   const d = (dc: number, dr: number) => { const [lon, lat] = ll(dc, dr); return Math.hypot((lon - lon0) * kx, (lat - lat0) * ky); };
   return (d(1, 0) + d(0, 1)) / 2;
 }
