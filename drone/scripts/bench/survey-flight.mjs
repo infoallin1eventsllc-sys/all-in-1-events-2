@@ -64,14 +64,18 @@ await page.getByRole('tab', { name: /Aircraft/ }).click();
 // The fence check holds the checklist until the stand-in's fence limits are read, then shows the fix.
 await page.locator('#sv-fence-fix').waitFor({ timeout: 20000 }).catch(() => fail('the fence check did not offer a fix for the default fence limits'));
 if (await page.getByText('Ready', { exact: true }).count()) fail('checklist ready with a fence that would stop the survey');
-const holdFix = async () => { const b = await page.locator('#sv-fence-fix').boundingBox(); await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down(); await page.waitForTimeout(1500); await page.mouse.up(); };
+const holdFix = async () => { await page.locator('#sv-fence-fix').scrollIntoViewIfNeeded(); const b = await page.locator('#sv-fence-fix').boundingBox(); await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down(); await page.waitForTimeout(1500); const a = await page.locator('#sv-fence-fix').boundingBox().catch(() => null); if (process.env.BENCH_DEBUG) console.log('fix button before', JSON.stringify(b), 'after', JSON.stringify(a)); await page.mouse.up(); };
 await holdFix();
-await page.getByText('Ready', { exact: true }).waitFor({ timeout: 20000 }).catch(() => fail('pre-flight checklist not ready after the fence fix'));
+await page.getByText('Ready', { exact: true }).waitFor({ timeout: 20000 }).catch(async () => {
+  // Name the checks that hold it, so a failure says what to fix.
+  const red = [...await page.locator('li:has(svg.text-bad)').allInnerTexts().catch(() => []), ...await page.getByRole('alert').allInnerTexts().catch(() => [])];
+  fail(`pre-flight checklist not ready after the fence fix: ${red.map(t => t.replace(/\s+/g, ' ').trim()).join('; ') || 'no red item found'}`);
+});
 const fixed = vlog.filter(l => /^PARAM set /.test(l));
 if (!fixed.some(l => /PARAM set (FENCE_RADIUS|GF_MAX_HOR_DIST) \d+/.test(l))) fail(`fence fix not set on the aircraft: ${fixed.join('; ') || 'nothing set'}`);
 log(`checklist ready after the fence fix (${fixed.join(', ')})`);
 
-const holdOnce = async () => { const b = await page.locator('#sv-primary').boundingBox(); await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down(); await page.waitForTimeout(1500); await page.mouse.up(); };
+const holdOnce = async () => { await page.locator('#sv-primary').scrollIntoViewIfNeeded(); const b = await page.locator('#sv-primary').boundingBox(); await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down(); await page.waitForTimeout(1500); await page.mouse.up(); };
 // Press and hold Start; the button disables itself if a check drops mid-hold (on a busy machine a late
 // heartbeat can), which cancels the press. Hold again until the autopilot is armed, up to three times.
 const hold = async () => {
