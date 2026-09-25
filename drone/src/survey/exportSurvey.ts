@@ -20,19 +20,36 @@ import { boundaryKml, type SurveySite } from './boundary';
  * DJI_0001.JPG numbering so geotags line up with the files.
  */
 
-const imageName = (id: number) => `DJI_${String(id).padStart(4, '0')}.JPG`;
+const imageName = (n: number) => `DJI_${String(n).padStart(4, '0')}.JPG`;
+
+/**
+ * File number of each photo on the card (0 for a failed capture: no file). Counts one per
+ * photo, or follows the index the aircraft reported so a lost report does not shift every
+ * later name; an index that goes backwards (a reboot on a battery swap) carries on counting.
+ */
+export function imageNumbers(photos: Photo[]): number[] {
+  let n = 0, prev: number | undefined;
+  return photos.map(p => {
+    if (p.reason === 'Capture failed') return 0;
+    n += p.idx !== undefined && prev !== undefined && p.idx > prev ? p.idx - prev : 1;
+    prev = p.idx;
+    return n;
+  });
+}
 
 export function buildSurveyFiles(plan: SurveyPlan, photos: Photo[], grid: CoverageGrid, site: SurveySite, camera: Camera, autopilot: MissionAutopilot = 'ARDUPILOT') {
   const origin = site.origin;
   const enc = new TextEncoder();
   const geotags = ['image,latitude,longitude,altitude_m,yaw_deg,pitch_deg,roll_deg,timestamp_utc,accepted,reject_reason,position_source'];
   const geo = ['EPSG:4326'];
-  for (const p of photos) {
-    const ll = toLatLon(origin, p);
+  const nums = imageNumbers(photos);
+  photos.forEach((p, i) => {
+    if (!nums[i]) return; // a failed capture left no image
+    const name = imageName(nums[i]), ll = toLatLon(origin, p);
     const yaw = ((p.headingDeg + 90) % 360 + 360) % 360; // map heading (east = 0) → compass (north = 0)
-    geotags.push([imageName(p.id), ll.lat.toFixed(7), ll.lon.toFixed(7), p.altM.toFixed(1), yaw.toFixed(1), p.pitchDeg, 0, new Date(p.t).toISOString(), p.ok ? 1 : 0, p.reason ?? '', p.est ? 'estimated' : 'reported'].join(','));
-    if (p.ok && !p.est) geo.push(`${imageName(p.id)} ${ll.lon.toFixed(7)} ${ll.lat.toFixed(7)} ${p.altM.toFixed(1)} ${yaw.toFixed(1)} ${p.pitchDeg} 0`);
-  }
+    geotags.push([name, ll.lat.toFixed(7), ll.lon.toFixed(7), p.altM.toFixed(1), yaw.toFixed(1), p.pitchDeg, 0, new Date(p.t).toISOString(), p.ok ? 1 : 0, p.reason ?? '', p.est ? 'estimated' : 'reported'].join(','));
+    if (p.ok && !p.est) geo.push(`${name} ${ll.lon.toFixed(7)} ${ll.lat.toFixed(7)} ${p.altM.toFixed(1)} ${yaw.toFixed(1)} ${p.pitchDeg} 0`);
+  });
   const cov = ['latitude,longitude,views,quality'];
   for (let r = 0; r < grid.rows; r++) for (let c = 0; c < grid.cols; c++) {
     const i = r * grid.cols + c; if (!grid.inside[i]) continue;
@@ -46,7 +63,7 @@ export function buildSurveyFiles(plan: SurveyPlan, photos: Photo[], grid: Covera
     groundSampleDistanceCm: +plan.gsdCm.toFixed(2), frontOverlap: plan.params.frontOverlap, sideOverlap: plan.params.sideOverlap,
     lineSpacingM: +plan.spacingM.toFixed(1), photoSpacingM: +plan.triggerM.toFixed(1), speedMps: +plan.speedMps.toFixed(1), gimbalPitchDeg: plan.gimbalPitchDeg,
     areaHa: +(plan.areaM2 / 10000).toFixed(2), lines: plan.lines.length,
-    photos: { taken: photos.length, accepted: photos.filter(p => p.ok).length, rejected: photos.filter(p => !p.ok).length, positionsEstimated: photos.filter(p => p.est).length },
+    photos: { taken: photos.length, accepted: photos.filter(p => p.ok).length, rejected: photos.filter(p => !p.ok).length, captureFailed: nums.filter(n => !n).length, positionsEstimated: photos.filter(p => p.est).length },
     coverage: { coveredPct: +st.coveredPct.toFixed(1), goodPct: +st.goodPct.toFixed(1), goodMeans: `at least ${GOOD_VIEWS} photos see the point` },
   };
   const readme = [

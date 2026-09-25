@@ -75,6 +75,16 @@ const dist = (a: Pt, b: Pt) => Math.hypot(b.x - a.x, b.y - a.y);
 /** A flight line, flown from `a` to `b`. `pass` 1 is the crossing pass of a double grid. */
 export interface FlightLine { a: Pt; b: Pt; pass: 0 | 1 }
 
+/** Where the horizontal line at `y` crosses a polygon: its outer extent (concave sites give several spans; one pass flies them all, no hopping). */
+function spanAt(poly: Pt[], y: number): [number, number] | null {
+  const xs: number[] = [];
+  for (let i = 0; i < poly.length; i++) {
+    const p = poly[i], q = poly[(i + 1) % poly.length];
+    if ((p.y <= y && q.y > y) || (q.y <= y && p.y > y)) xs.push(p.x + ((y - p.y) / (q.y - p.y)) * (q.x - p.x));
+  }
+  return xs.length < 2 ? null : [Math.min(...xs), Math.max(...xs)];
+}
+
 /**
  * Parallel lines across a polygon at `angleDeg` (0 = east–west), `spacingM` apart,
  * clipped to the polygon and extended by `leadInM` at both ends so the first and
@@ -88,15 +98,9 @@ export function gridLines(poly: Pt[], spacingM: number, angleDeg: number, leadIn
   const lines: FlightLine[] = [];
   // Start half a spacing in: that line's footprint (wider than the spacing) still reaches the edge.
   for (let y = minY + spacingM / 2; y < maxY; y += spacingM) {
-    const xs: number[] = [];
-    for (let i = 0; i < local.length; i++) {
-      const p = local[i], q = local[(i + 1) % local.length];
-      if ((p.y <= y && q.y > y) || (q.y <= y && p.y > y)) xs.push(p.x + ((y - p.y) / (q.y - p.y)) * (q.x - p.x));
-    }
-    xs.sort((m, n) => m - n);
-    if (xs.length < 2) continue;
-    // Concave sites produce several spans on one line; fly the outer extent (one pass, no hopping).
-    const x0 = xs[0] - leadInM, x1 = xs[xs.length - 1] + leadInM;
+    const span = spanAt(local, y);
+    if (!span) continue;
+    const x0 = span[0] - leadInM, x1 = span[1] + leadInM;
     const fwd = lines.length % 2 === 0;
     const a = rot({ x: fwd ? x0 : x1, y }, ang), b = rot({ x: fwd ? x1 : x0, y }, ang);
     lines.push({ a, b, pass });
@@ -221,6 +225,9 @@ export function capturePoints(plan: SurveyPlan): { p: Pt; headingRad: number; li
 /** Views per point needed for a reliable reconstruction (the usual quality-report threshold). */
 export const GOOD_VIEWS = 5;
 
+/** A connected weak patch: its cells, centre, largest side and bounding box (cell edges). */
+export interface WeakCluster { cells: number; centre: Pt; extentM: number; box: { minX: number; maxX: number; minY: number; maxY: number } }
+
 /**
  * How many photos see each patch of ground inside the site. This is what a
  * photogrammetry quality report shows after processing; computing it during the
@@ -291,9 +298,9 @@ export class CoverageGrid {
    * During a flight, cells no photo has touched yet are not weak — the plan has
    * not reached them — so `includeUnseen` is only set once capture is finished.
    */
-  weakClusters(minCells = 3, includeUnseen = false): { cells: number; centre: Pt; extentM: number }[] {
+  weakClusters(minCells = 3, includeUnseen = false): WeakCluster[] {
     const seen = new Uint8Array(this.views.length);
-    const out: { cells: number; centre: Pt; extentM: number }[] = [];
+    const out: WeakCluster[] = [];
     const weak = (i: number) => this.inside[i] === 1 && this.views[i] < GOOD_VIEWS && (includeUnseen || this.views[i] > 0);
     for (let i = 0; i < this.views.length; i++) {
       if (seen[i] || !weak(i)) continue;
@@ -308,23 +315,39 @@ export class CoverageGrid {
           const j = rr * this.cols + cc; if (!seen[j] && weak(j)) { seen[j] = 1; stack.push(j); }
         }
       }
-      if (n >= minCells) out.push({ cells: n, centre: { x: sx / n, y: sy / n }, extentM: Math.max(maxX - minX, maxY - minY) + this.cellM });
+      const h = this.cellM / 2;
+      if (n >= minCells) out.push({ cells: n, centre: { x: sx / n, y: sy / n }, extentM: Math.max(maxX - minX, maxY - minY) + this.cellM, box: { minX: minX - h, maxX: maxX + h, minY: minY - h, maxY: maxY + h } });
     }
     return out.sort((a, b) => b.cells - a.cells);
   }
 }
 
-/** Short extra capture lines through each weak patch, along the plan's line angle. */
-export function gapFillLines(grid: CoverageGrid, plan: SurveyPlan, minCells = 3): FlightLine[] {
-  const ang = (plan.params.lineAngleDeg * Math.PI) / 180;
-  return grid.weakClusters(minCells, true).slice(0, 8).map(cl => {
-    const half = cl.extentM / 2 + plan.footprint.alongM * 0.6;
-    return {
-      a: { x: cl.centre.x - Math.cos(ang) * half, y: cl.centre.y - Math.sin(ang) * half },
-      b: { x: cl.centre.x + Math.cos(ang) * half, y: cl.centre.y + Math.sin(ang) * half },
-      pass: 0 as const,
-    };
-  });
+/**
+ * Short extra capture lines over each weak patch, along the plan's line angle: as many
+ * as the patch is wide in line spacings, each clipped to the site with the plan's own
+ * lead-in, so they overshoot the boundary no further than the plan's lines do.
+ * Fly them inside a fence built with them (fencePolygon of the plan plus these lines).
+ */
+export function gapFillLines(grid: CoverageGrid, plan: SurveyPlan, poly: Pt[], minCells = 3): FlightLine[] {
+  const ang = (plan.params.lineAngleDeg * Math.PI) / 180, lead = plan.footprint.alongM * 0.6;
+  const local = poly.map(p => rot(p, -ang));
+  const out: FlightLine[] = [];
+  for (const cl of grid.weakClusters(minCells, true).slice(0, 8)) {
+    // The patch's box in the line frame (u along the lines, v across).
+    const { minX, maxX, minY, maxY } = cl.box;
+    const q = [{ x: minX, y: minY }, { x: maxX, y: minY }, { x: maxX, y: maxY }, { x: minX, y: maxY }].map(p => rot(p, -ang));
+    const u0 = Math.min(...q.map(p => p.x)), u1 = Math.max(...q.map(p => p.x)), v0 = Math.min(...q.map(p => p.y)), v1 = Math.max(...q.map(p => p.y));
+    const n = Math.max(1, Math.ceil((v1 - v0) / plan.spacingM));
+    for (let k = 0; k < n; k++) {
+      const v = v0 + ((k + 0.5) * (v1 - v0)) / n;
+      const span = spanAt(local, v); if (!span) continue;
+      const x0 = Math.max(u0 - lead, span[0] - lead), x1 = Math.min(u1 + lead, span[1] + lead);
+      if (x1 - x0 < 1) continue;
+      const fwd = k % 2 === 0; // serpentine within a patch
+      out.push({ a: rot({ x: fwd ? x0 : x1, y: v }, ang), b: rot({ x: fwd ? x1 : x0, y: v }, ang), pass: 0 });
+    }
+  }
+  return out;
 }
 
 // ---- export to the aircraft and to planning tools ---------------------------

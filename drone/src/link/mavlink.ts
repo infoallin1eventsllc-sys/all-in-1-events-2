@@ -136,9 +136,10 @@ export interface Telemetry {
   /**
    * Every reported photo, newest last (the last 64). Readers keep their own count
    * and take the ones past it, so several photos arriving between two UI updates
-   * are never lost. `ok` false: the camera reported a failed capture.
+   * are never lost. `ok` false: the camera reported a failed capture. `idx`: the
+   * image index the message carries (the camera's or autopilot's own count).
    */
-  photoLog: { n: number; lat: number; lon: number; altRelM: number; atMs: number; ok: boolean }[];
+  photoLog: { n: number; lat: number; lon: number; altRelM: number; atMs: number; ok: boolean; idx: number }[];
   /** Which message the photos come from. The first source heard is kept, so a camera and the autopilot reporting the same photo are not counted twice. */
   photoSource: 'NONE' | 'FEEDBACK' | 'TRIGGER' | 'CAMERA';
   /** Wind estimate (ArduPilot WIND); speed −1 until reported. Direction the wind comes from, degrees. */
@@ -165,7 +166,7 @@ function logPhoto(t: Telemetry, source: Telemetry['photoSource'], lat: number, l
   t.photosReported++;
   t.lastPhoto = { idx, lat, lon, altRelM, atMs: Date.now() };
   // Replace the array rather than push: snapshots copied with {...t} must not share a growing list.
-  t.photoLog = [...t.photoLog.slice(-63), { n: t.photosReported, lat, lon, altRelM, atMs: Date.now(), ok }];
+  t.photoLog = [...t.photoLog.slice(-63), { n: t.photosReported, lat, lon, altRelM, atMs: Date.now(), ok, idx }];
 }
 
 const R2D = 180 / Math.PI;

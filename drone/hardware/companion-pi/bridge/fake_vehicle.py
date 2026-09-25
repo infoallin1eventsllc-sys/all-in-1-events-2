@@ -161,6 +161,11 @@ class Vehicle:
                     self.run_do_items()
             elif it.command == m.MAV_CMD_NAV_WAYPOINT:
                 self.target = (it.x / 1e7, it.y / 1e7, it.z)
+            elif it.command == m.MAV_CMD_NAV_RETURN_TO_LAUNCH and self.px4:
+                # PX4 flies a mission RTL item by switching to Return mode (MISSION_CURRENT stays on the item);
+                # ArduCopter flies it inside AUTO. The dashboard must read both as the survey finishing.
+                self.mode = "RTL"
+                say("MIS rtl item: Return mode")
             elif it.command == m.MAV_CMD_NAV_RETURN_TO_LAUNCH:
                 self.target = (HOME[0], HOME[1], 0.0 if self.near_home() else max(self.alt, 15))
         elif self.mode in ("RTL", "LAND"):

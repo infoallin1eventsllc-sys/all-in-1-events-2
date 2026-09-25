@@ -348,7 +348,7 @@ export const SurveyResultsViewer: React.FC<Props> = (props) => {
   }, []);
 
   const P = props;
-  const key = JSON.stringify([P.items.map(i => [i.a.id, i.a.visible, i.a.pts.length, i.a.base, i.area?.cutM3, i.line?.surfaceM]), P.selectedId, P.draft, P.tool]);
+  const key = JSON.stringify([P.items.map(i => [i.a.id, i.a.name, i.a.visible, i.a.pts.length, i.a.base, i.a.limitPct, i.area?.cutM3, i.line?.surfaceM]), P.selectedId, P.draft, P.tool]);
   useEffect(() => { api.current?.rebuild(); }, [key]);
   useEffect(() => { api.current?.setLayer(); }, [P.layer, P.contours]);
   useEffect(() => { if (P.focus) api.current?.frame(P.focus.id); }, [P.focus]);

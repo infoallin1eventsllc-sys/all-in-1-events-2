@@ -417,10 +417,11 @@ export const SurveyScanCanvas3D: React.FC<Props> = (props) => {
     const pathPlanned = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xc8d4ec, transparent: true, opacity: 0.16, depthWrite: false }));
     const pathFlown = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: HOT(1.05), transparent: true, opacity: 0.9 }));
     scene.add(pathPlanned, pathFlown);
-    let pathKey = '';
+    let pathKey = '', pathLegs: Leg[] | null = null;
     const rebuildPath = (legs: Leg[], idx: number, prog: number, alt: number, acx: number, acy: number) => {
-      const key = `${legs.length}:${idx}:${alt}:${Math.round(prog / 6)}`;
-      if (key === pathKey) return; pathKey = key;
+      // Every re-plan makes new legs (an orbit radius keeps their count): compare the array, not its length.
+      const key = `${idx}:${alt}:${Math.round(prog / 6)}`;
+      if (key === pathKey && legs === pathLegs) return; pathKey = key; pathLegs = legs;
       const flown: THREE.Vector3[] = [], planned: THREE.Vector3[] = [];
       legs.forEach((g, i) => {
         if (!g.capture) return;
