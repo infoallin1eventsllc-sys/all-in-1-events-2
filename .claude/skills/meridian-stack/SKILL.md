@@ -306,6 +306,31 @@ Rules:
 - **Its sandbox is Composio's machine.** Fine for public pages; never put
   client code under NDA, secrets, or credentials there.
 
+## Magic Hour — connected through Composio, tested 25 Sep 2026
+
+Account `otis@meridianinterface.com`, **free tier, 400 credits** at connect.
+Runs the same video models as Higgsfield (Seedance 2.5, Kling 3.0, Veo 3.1,
+Sora 2) for less: Creator is $12/mo billed yearly, $19 monthly.
+
+**The free tier is capped at 640px.** 1K and 2K are rejected before any
+charge. Free image models are `flux-2-klein`, `flux-schnell` and
+`z-image-turbo` at about 5 credits each; Nano Banana, GPT Image and Seedream
+need Creator and cost 40–150 credits per image. 640px is fine for judging a
+concept and useless for a hero, which wants about 2400px on the long edge.
+
+First test, `flux-2-klein`, a dressed ballroom in brand orchid and cyan with
+no text or people: it followed the brief closely (uplit drapes, lounge in the
+foreground, dance floor, candlelit tables, haze) and read as a plausible
+event photo. Soft at that size, purple-heavy, and the cyan came out weaker
+than asked.
+
+**Getting generated files back into this session.** Magic Hour's download
+host and Composio's file host are both blocked by this sandbox's proxy, and
+Adobe's `asset_inline_preview` rejects the Magic Hour host. What worked:
+download it in `COMPOSIO_REMOTE_WORKBENCH`, shrink it to about a 13K-character
+base64 JPEG, print that, then write and decode it locally. The file Otis sees
+in his own browser is full quality; only the copy brought here is degraded.
+
 ## Real, but not installable from a browser session
 
 These exist and are not vapor — they are simply outside the claude.ai plugin
