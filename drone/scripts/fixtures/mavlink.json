@@ -122,6 +122,34 @@
   "set_interval_sys2": {
    "msgId": 76,
    "payload": "00000442005043480000000000000000000000000000000000000000ff010201"
+  },
+  "param_read_radius": {
+   "msgId": 20,
+   "payload": "ffff010146454e43455f524144495553"
+  },
+  "param_read_16_chars": {
+   "msgId": 20,
+   "payload": "ffff010146454e43455f414c545f4d41585f5450"
+  },
+  "param_set_ap_radius": {
+   "msgId": 23,
+   "payload": "0000e143010146454e43455f5241444955530000000009"
+  },
+  "param_set_ap_type": {
+   "msgId": 23,
+   "payload": "0000a040010146454e43455f5459504500000000000002"
+  },
+  "param_set_px4_action": {
+   "msgId": 23,
+   "payload": "03000000010147465f414354494f4e0000000000000006"
+  },
+  "param_set_px4_dist": {
+   "msgId": 23,
+   "payload": "0000e143010147465f4d41585f484f525f444953540009"
+  },
+  "fence_enable_polygon": {
+   "msgId": 76,
+   "payload": "0000803f000080400000000000000000000000000000000000000000cf000101"
   }
  },
  "health": {
@@ -242,6 +270,55 @@
     12.75,
     7.5
    ]
+  }
+ },
+ "param": {
+  "ap_fence_type": {
+   "frame": "fd1900000001011600000000e040ba04930146454e43455f54595045000000000000028b75",
+   "name": "FENCE_TYPE",
+   "value": 7,
+   "type": 2,
+   "enc": "CAST"
+  },
+  "ap_fence_radius": {
+   "frame": "fd19000000010116000000009643ba04950146454e43455f5241444955530000000009e454",
+   "name": "FENCE_RADIUS",
+   "value": 300,
+   "type": 9,
+   "enc": "CAST"
+  },
+  "ap_16_chars": {
+   "frame": "fd1900000001011600000000803fba049e0146454e43455f414c545f4d41585f5450020403",
+   "name": "FENCE_ALT_MAX_TP",
+   "value": 1,
+   "type": 2,
+   "enc": "CAST"
+  },
+  "px4_gf_action": {
+   "frame": "fd19000000010116000002000000d403380147465f414354494f4e00000000000000061725",
+   "name": "GF_ACTION",
+   "value": 2,
+   "type": 6,
+   "enc": "BYTEWISE"
+  },
+  "px4_negative": {
+   "frame": "fd190000000101160000ffffffffd4036400434f4d5f464c544d4f4445310000000006a846",
+   "name": "COM_FLTMODE1",
+   "value": -1,
+   "type": 6,
+   "enc": "BYTEWISE"
+  },
+  "px4_float": {
+   "frame": "fd19000000010116000000000000d4033b0147465f4d41585f484f525f4449535400092231",
+   "name": "GF_MAX_HOR_DIST",
+   "value": 0,
+   "type": 9,
+   "enc": "BYTEWISE"
+  },
+  "error_missing": {
+   "frame": "fd150000000101590100ffffffbe52544c5f414c5400000000000000000001772b",
+   "name": "RTL_ALT",
+   "error": 1
   }
  }
 }

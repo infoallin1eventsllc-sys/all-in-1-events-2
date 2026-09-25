@@ -53,6 +53,11 @@ const CRC_EXTRA: Record<number, number> = {
   291: 10,    // ESC_STATUS (PX4)
   11030: 144, // ESC_TELEMETRY_1_TO_4 (ArduPilot)
   11031: 133, // ESC_TELEMETRY_5_TO_8 (ArduPilot)
+  // Parameters
+  20: 214,  // PARAM_REQUEST_READ
+  22: 220,  // PARAM_VALUE
+  23: 168,  // PARAM_SET
+  345: 209, // PARAM_ERROR (common.xml; ArduPilot master and PX4 answer an unknown name with it)
 };
 
 function x25(bytes: Uint8Array, start: number, end: number, seed = 0xffff): number {
@@ -154,6 +159,8 @@ export interface Telemetry {
   home: { lat: number; lon: number; altMslM: number } | null;
   /** Geofence breached right now (FENCE_STATUS). */
   fenceBreached: boolean;
+  /** AUTOPILOT_VERSION.flight_sw_version (major << 24 | minor << 16 | patch << 8 | type), 0 until reported. */
+  swVersion: number;
 }
 
 export const EMPTY_TELEMETRY: Telemetry = {
@@ -163,7 +170,7 @@ export const EMPTY_TELEMETRY: Telemetry = {
   batteryPct: -1, voltageV: 0, currentA: 0, fixType: 0, satellites: 0, hdop: 99,
   radioRssi: 0, radioNoise: 0, radioRemRssi: 0, statusText: '', msgsPerSec: 0, missionCurrent: 0, lastAck: null,
   gimbalPitchDeg: NaN, gimbalYawDeg: NaN, lastPhoto: null, photosReported: 0,
-  photoLog: [], photoSource: 'NONE', windMps: -1, windFromDeg: 0, home: null, fenceBreached: false,
+  photoLog: [], photoSource: 'NONE', windMps: -1, windFromDeg: 0, home: null, fenceBreached: false, swVersion: 0,
 };
 
 function logPhoto(t: Telemetry, source: Telemetry['photoSource'], lat: number, lon: number, altRelM: number, ok: boolean, idx: number) {
@@ -239,6 +246,9 @@ export function decodeInto(t: Telemetry, f: MavFrame): Telemetry {
       break;
     case 242: // HOME_POSITION
       t.home = { lat: p.getInt32(0, true) / 1e7, lon: p.getInt32(4, true) / 1e7, altMslM: p.getInt32(8, true) / 1000 };
+      break;
+    case 148: // AUTOPILOT_VERSION: capabilities u64, uid u64, flight_sw_version u32 at 16
+      t.swVersion = p.getUint32(16, true);
       break;
     case 162: // FENCE_STATUS: breach_time u32, breach_count u16, breach_status u8 at 6, breach_type u8 at 7
       t.fenceBreached = p.getUint8(6) !== 0;
@@ -464,9 +474,11 @@ export function encodeReposition(lat: number, lon: number, altRelM: number, targ
   return encodeCommandInt(MAV_CMD.DO_REPOSITION, [-1, 1, 0, NaN], Math.round(lat * 1e7), Math.round(lon * 1e7), altRelM, MAV_FRAME_GLOBAL_RELATIVE_ALT_INT, targetSys);
 }
 /**
- * DO_REPOSITION for this autopilot. PX4's navigator reads param7 as AMSL whatever the frame
- * (QGC sends it MAV_FRAME_GLOBAL with AMSL), so a height above home would put it into the
- * ground wherever the field is above sea level: send home AMSL + height, like takeoff does.
+ * DO_REPOSITION for this autopilot. PX4 reads z as AMSL whatever the frame: mavlink_receiver.cpp
+ * (handle_message_command_int) looks at the frame only to scale x/y and copies z to param7 as is,
+ * and navigator_main.cpp (VEHICLE_CMD_DO_REPOSITION) sets the setpoint's AMSL alt from param7.
+ * A height above home would put it into the ground wherever the field is above sea level: send
+ * home AMSL + height, like takeoff does, in MAV_FRAME_GLOBAL_INT to say what it is (QGC does too).
  */
 export function encodeRepositionFor(ap: Autopilot, lat: number, lon: number, altRelM: number, t: Pick<Telemetry, 'altMslM' | 'altRelM'>, targetSys = 1): Uint8Array {
   if (ap !== 'PX4') return encodeReposition(lat, lon, altRelM, targetSys);
@@ -514,4 +526,88 @@ export function encodeRelay(instance: number, on: boolean, targetSys = 1): Uint8
 /** One still photo. Param3 = 1 image, param2 interval 0. */
 export function encodeTakePhoto(targetSys = 1): Uint8Array {
   return encodeCommandLong(MAV_CMD.IMAGE_START_CAPTURE, [0, 0, 1, 0], targetSys);
+}
+
+// ---------------------------------------------------------------------------
+// Parameters: PARAM_REQUEST_READ (20), PARAM_VALUE (22), PARAM_SET (23).
+//
+// The value travels in a float32 whatever the parameter's type, and the two
+// autopilots put an integer there differently:
+//   ArduPilot  C cast: an INT8 FENCE_TYPE of 7 is sent as 7.0f, type INT8
+//              (libraries/GCS_MAVLink/GCS_Param.cpp: send_parameter_value takes cast_to_float).
+//   PX4        bytewise: an INT32 GF_ACTION of 3 is the int32's four bytes in the float field
+//              (a denormal if read as a float), type INT32. PARAM_SET must carry the parameter's
+//              own type or it is refused as a type mismatch (src/modules/mavlink/mavlink_parameters.cpp:
+//              send_param memcpy, the PARAM_SET type check; mavlink_main.cpp advertises
+//              MAV_PROTOCOL_CAPABILITY_PARAM_ENCODE_BYTEWISE).
+// param_id is char[16], NUL-terminated only when shorter than 16 (FENCE_ALT_MAX_TP fills it).
+// ---------------------------------------------------------------------------
+
+export const MAV_PARAM_TYPE = { UINT8: 1, INT8: 2, UINT16: 3, INT16: 4, UINT32: 5, INT32: 6, UINT64: 7, INT64: 8, REAL32: 9, REAL64: 10 } as const;
+export type ParamEncoding = 'CAST' | 'BYTEWISE';
+/** PX4 encodes bytewise; ArduPilot (and anything unknown: C cast is the common default) casts. */
+export const paramEncodingOf = (ap: Autopilot): ParamEncoding => (ap === 'PX4' ? 'BYTEWISE' : 'CAST');
+export interface ParamValue { name: string; value: number; type: number; count: number; index: number }
+
+const isIntType = (type: number) => type >= 1 && type <= 8;
+function writeParamId(p: Uint8Array, at: number, name: string) {
+  if (name.length > 16 || !/^[\x20-\x7e]*$/.test(name)) throw new Error(`Bad parameter name ${JSON.stringify(name)}`);
+  for (let i = 0; i < name.length; i++) p[at + i] = name.charCodeAt(i); // shorter names stay NUL-padded
+}
+function readParamId(v: DataView, at: number): string {
+  let s = ''; for (let i = 0; i < 16; i++) { const c = v.getUint8(at + i); if (!c) break; s += String.fromCharCode(c); }
+  return s;
+}
+/** Bytewise puts the integer's own bytes in the float field (little endian, widened to 4). */
+function writeParamValue(v: DataView, at: number, value: number, type: number, enc: ParamEncoding) {
+  if (enc === 'BYTEWISE' && isIntType(type)) {
+    const n = Math.round(value), unsigned = type === MAV_PARAM_TYPE.UINT8 || type === MAV_PARAM_TYPE.UINT16 || type === MAV_PARAM_TYPE.UINT32;
+    if (unsigned) v.setUint32(at, n >>> 0, true); else v.setInt32(at, n | 0, true);
+  } else v.setFloat32(at, isIntType(type) ? Math.round(value) : value, true);
+}
+function readParamValue(v: DataView, at: number, type: number, enc: ParamEncoding): number {
+  if (enc !== 'BYTEWISE' || !isIntType(type)) return v.getFloat32(at, true);
+  switch (type) {
+    case MAV_PARAM_TYPE.UINT8: return v.getUint8(at);
+    case MAV_PARAM_TYPE.INT8: return v.getInt8(at);
+    case MAV_PARAM_TYPE.UINT16: return v.getUint16(at, true);
+    case MAV_PARAM_TYPE.INT16: return v.getInt16(at, true);
+    case MAV_PARAM_TYPE.UINT32: return v.getUint32(at, true);
+    default: return v.getInt32(at, true); // INT32; 64-bit types do not fit the field and arrive truncated
+  }
+}
+
+/** Ask for one parameter by name (param_index −1). */
+export function encodeParamRequestRead(name: string, targetSys = 1, targetComp = 1): Uint8Array {
+  const p = new Uint8Array(20); const v = new DataView(p.buffer);
+  v.setInt16(0, -1, true); p[2] = targetSys; p[3] = targetComp; writeParamId(p, 4, name);
+  return frame(20, p);
+}
+/** Set one parameter; the autopilot answers with a PARAM_VALUE carrying what it now holds. */
+export function encodeParamSet(name: string, value: number, type: number, enc: ParamEncoding, targetSys = 1, targetComp = 1): Uint8Array {
+  const p = new Uint8Array(23); const v = new DataView(p.buffer);
+  writeParamValue(v, 0, value, type, enc); p[4] = targetSys; p[5] = targetComp; writeParamId(p, 6, name); p[22] = type;
+  return frame(23, p);
+}
+export function decodeParamValue(f: MavFrame, enc: ParamEncoding): ParamValue | null {
+  if (f.msgId !== 22) return null;
+  const v = f.payload, type = v.getUint8(24);
+  return { name: readParamId(v, 8), value: readParamValue(v, 0, type, enc), type, count: v.getUint16(4, true), index: v.getUint16(6, true) };
+}
+/** PARAM_ERROR: the named parameter and MAV_PARAM_ERROR (1 does not exist, 2 out of range, 3 denied, 5 read only, 7 type mismatch). */
+export function decodeParamError(f: MavFrame): { name: string; error: number } | null {
+  return f.msgId === 345 ? { name: readParamId(f.payload, 4), error: f.payload.getUint8(20) } : null;
+}
+export const PARAM_ERROR_TEXT: Record<number, string> = { 1: 'does not exist', 2: 'value out of range', 3: 'permission denied', 4: 'component not found', 5: 'read only', 6: 'type unsupported', 7: 'type mismatch', 8: 'read failed' };
+/** The value as the autopilot will hold it: what the PARAM_VALUE echo of a set must show. */
+export function paramStored(value: number, type: number): number { return isIntType(type) ? Math.round(value) : Math.fround(value); }
+
+export const FENCE_TYPE = { ALT_MAX: 1, CIRCLE: 2, POLYGON: 4, ALT_MIN: 8 } as const;
+/**
+ * DO_FENCE_ENABLE. `types` (param2) is a FENCE_TYPE bitmask, 0 = all. ArduPilot 4.6 and later enable only those
+ * types (and only ones also in its FENCE_TYPE parameter); 4.5 and earlier ignore param2 and enable every type in
+ * FENCE_TYPE (libraries/GCS_MAVLink/GCS_Fence.cpp, handle_command_do_fence_enable: Copter-4.5 vs Copter-4.6.0 and master).
+ */
+export function encodeFenceEnable(on: boolean, types = 0, targetSys = 1): Uint8Array {
+  return encodeCommandLong(MAV_CMD.DO_FENCE_ENABLE, [on ? 1 : 0, types], targetSys);
 }

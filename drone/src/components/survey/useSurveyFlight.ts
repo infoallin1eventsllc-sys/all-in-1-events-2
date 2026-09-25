@@ -5,6 +5,7 @@ import {
 } from '../../survey/plan';
 import type { useSurveyMission } from '../../hooks/useSurveyMission';
 import type { useAircraftLink } from '../../link/useAircraftLink';
+import { fenceParamCheck, rtlVsPlan, rtlAltM, FENCE_PARAMS, type ParamFix } from '../../link/paramChecks';
 
 /**
  * Flying a survey on a real aircraft, in the order a crew does it:
@@ -54,15 +55,36 @@ export function useSurveyFlight(sim: Sim, link: Link, plan: SurveyPlan) {
       ? { id: 'batt-plan', label: `${plan.batteries} batteries: returns to swap, then resumes`, ok: t.batteryPct < 0 || t.batteryPct >= 90, detail: t.batteryPct >= 0 ? `${t.batteryPct}% now; start on a full pack` : 'no %', advisory: true }
       : { id: 'batt-plan', label: `Battery covers the ${minutes.toFixed(0)}-min flight`, ok: t.batteryPct < 0 || t.batteryPct >= needPct, detail: t.batteryPct >= 0 ? `${t.batteryPct}% of ${needPct}% needed` : 'no %', advisory: true },
   ];
-  // ArduPilot's fence enable switches on every type in FENCE_TYPE (Copter default 7: max altitude 100 m and a 300 m
-  // circle round home, besides this polygon). The link reads no parameters, so this is the crew's check, with the plan's numbers.
-  if (useFence && ap === 'ARDUPILOT') {
-    const reachM = Math.ceil(Math.max(...fence.map(p => Math.hypot(p.x - site.home.x, p.y - site.home.y))) / 10) * 10;
-    const altM = Math.ceil((plan.params.altitudeM + 10) / 10) * 10;
-    checks.push({ id: 'fence-types', label: 'Autopilot fence: FENCE_TYPE 4 (polygon only), or circle and altitude big enough', ok: reachM <= 300 && altM <= 100,
-      detail: `needs FENCE_RADIUS ≥ ${reachM} m, FENCE_ALT_MAX ≥ ${altM} m (defaults 300, 100)`, advisory: true });
-  }
+  // The autopilot's own fences, read from its parameters. ArduCopter's defaults (FENCE_TYPE 7: max altitude 100 m, a 300 m
+  // circle round home, polygons; libraries/AC_Fence/AC_Fence.cpp) would stop a big or high survey part way, and PX4's
+  // GF_MAX_HOR_DIST / GF_MAX_VER_DIST do the same when set. The circle is round the autopilot's home, so reach is
+  // measured from where it reports home (the planned home until it does), to this plan's fence and the last one
+  // uploaded (a re-fly's can reach a little past the plan's).
+  const homePt = t.home ? fromLatLon(site.origin, t.home.lat, t.home.lon) : site.home;
+  const reachM = Math.max(...[...fence, ...(up.fencePoly ?? [])].map(p => Math.hypot(p.x - homePt.x, p.y - homePt.y)));
+  const rtl = rtlAltM(ap, link.params);
+  // PX4's return climbs to RTL_RETURN_ALT before coming home, and its vertical limit applies then too; ArduCopter's return keeps under FENCE_ALT_MAX by itself.
+  const topM = Math.max(plan.params.altitudeM, ap === 'PX4' && rtl !== null ? rtl : 0) + 10;
+  const fenceCheck = link.live ? fenceParamCheck(ap, link.params, { reachM, altM: topM, polygon: useFence, swVersion: t.swVersion, homeAmslM: t.home?.altMslM }) : null;
+  if (link.live) checks.push(rtlVsPlan(ap, link.params, plan.params.altitudeM));
+  if (fenceCheck) { const { fixes: _f, ...c } = fenceCheck; checks.push(c); }
   const gateOk = link.live && checks.every(c => c.ok || c.advisory);
+
+  // Pilot only (the link's setParam refuses anyone else): the smallest change that clears the fence check, then read back.
+  const [fix, setFix] = useState<{ state: 'IDLE' | 'FIXING' | 'FAILED' | 'DONE'; msg: string }>({ state: 'IDLE', msg: '' });
+  const fenceFixes: ParamFix[] = fenceCheck?.fixes ?? [];
+  const fixFence = useCallback(async () => {
+    setFix({ state: 'FIXING', msg: '' });
+    const done: string[] = [];
+    try {
+      for (const f of fenceFixes) { const r = await link.setParam(f.name, f.value); done.push(`${r.name} ${r.value}`); }
+      setFix({ state: 'DONE', msg: done.join(', ') });
+    } catch (e) {
+      setFix({ state: 'FAILED', msg: [e instanceof Error ? e.message : String(e), done.length ? `(set: ${done.join(', ')})` : ''].filter(Boolean).join(' ') });
+    }
+    // Read back what the check uses (not the names this firmware never answered: each would cost the full retry time).
+    await link.readParams(FENCE_PARAMS[ap].filter(n => link.params[n] !== null));
+  }, [fenceFixes, link, ap]);
 
   // ---- actions ----
   const upload = useCallback(async (from: ResumePoint | null = null, reflyLines: FlightLine[] | null = null) => {
@@ -102,7 +124,7 @@ export function useSurveyFlight(sim: Sim, link: Link, plan: SurveyPlan) {
   const armable = uploaded && !up.flown && !sim.liveStarted;
   const onGround = !t.armed || t.altRelM < 1;
   return {
-    checks, gateOk, fence: useFence ? (up.kind === 'REFLY' && up.fencePoly) || fence : null, useFence, setUseFence, mission, count,
+    checks, gateOk, fenceFixes, fixFence, fix, fence: useFence ? (up.kind === 'REFLY' && up.fencePoly) || fence : null, useFence, setUseFence, mission, count,
     upload: up, uploaded, armable, start, onGround,
     uploadMission: () => upload(null),
     /** The interrupted point, or the one last uploaded (a resume that has not flown yet can be sent again). */

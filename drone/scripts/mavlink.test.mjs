@@ -162,4 +162,87 @@ const decodeOne = h => { const pp = new m.MavParser(); const fr = pp.push(hex(h)
   wire.length = 0; await write(b);
   assert.equal(new m.MavParser().push(Uint8Array.from(wire)).length, 1, 'a failed write does not stall the next');
 }
+{
+  // Parameters, against pymavlink: ArduPilot casts integers to the float field, PX4 copies their bytes.
+  for (const [k, ref] of Object.entries(fx.param)) {
+    const f = decodeOne(ref.frame);
+    if (ref.error !== undefined) { assert.deepEqual(m.decodeParamError(f), { name: ref.name, error: ref.error }, k); continue; }
+    const pv = m.decodeParamValue(f, ref.enc);
+    assert.equal(pv.name, ref.name, `${k}: name`); assert.equal(pv.type, ref.type, `${k}: type`); assert.equal(pv.value, ref.value, `${k}: value`);
+  }
+  // Read as a cast, PX4's GF_ACTION 2 is a denormal near zero: the encoding matters.
+  assert.ok(m.decodeParamValue(decodeOne(fx.param.px4_gf_action.frame), 'CAST').value < 1e-40);
+  assert.equal(m.paramEncodingOf('PX4'), 'BYTEWISE'); assert.equal(m.paramEncodingOf('ARDUPILOT'), 'CAST'); assert.equal(m.paramEncodingOf('UNKNOWN'), 'CAST');
+  const e = fx.encode;
+  const same = (bytes, ref, name) => { const fr = new m.MavParser().push(bytes)[0]; assert.ok(fr, `${name}: parses`); assert.equal(fr.msgId, ref.msgId, name); assert.equal(Buffer.from(bytes.subarray(10, 10 + bytes[1])).toString('hex'), ref.payload, name); };
+  same(m.encodeParamRequestRead('FENCE_RADIUS'), e.param_read_radius, 'PARAM_REQUEST_READ');
+  same(m.encodeParamRequestRead('FENCE_ALT_MAX_TP'), e.param_read_16_chars, 'PARAM_REQUEST_READ, 16-char id without NUL');
+  same(m.encodeParamSet('FENCE_RADIUS', 450, m.MAV_PARAM_TYPE.REAL32, 'CAST'), e.param_set_ap_radius, 'ArduPilot PARAM_SET float');
+  same(m.encodeParamSet('FENCE_TYPE', 5, m.MAV_PARAM_TYPE.INT8, 'CAST'), e.param_set_ap_type, 'ArduPilot PARAM_SET INT8 as a cast float');
+  same(m.encodeParamSet('GF_ACTION', 3, m.MAV_PARAM_TYPE.INT32, 'BYTEWISE'), e.param_set_px4_action, 'PX4 PARAM_SET INT32 bytewise');
+  same(m.encodeParamSet('GF_MAX_HOR_DIST', 450, m.MAV_PARAM_TYPE.REAL32, 'BYTEWISE'), e.param_set_px4_dist, 'PX4 PARAM_SET float');
+  same(m.encodeFenceEnable(true, m.FENCE_TYPE.POLYGON), e.fence_enable_polygon, 'DO_FENCE_ENABLE polygon only');
+  assert.throws(() => m.encodeParamRequestRead('SEVENTEEN_CHARS_X'), /Bad parameter name/);
+  assert.equal(m.paramStored(299.6, m.MAV_PARAM_TYPE.INT16), 300); assert.equal(m.paramStored(0.1, m.MAV_PARAM_TYPE.REAL32), Math.fround(0.1));
+  // AUTOPILOT_VERSION's flight_sw_version lands in telemetry (the fence check needs 4.6+ for the polygon-only enable).
+  assert.equal(m.decodeInto({ ...m.EMPTY_TELEMETRY }, decodeOne(fx.health.autopilot_version.frame)).swVersion, (4 << 24) | (5 << 16) | (7 << 8) | 255);
+}
+{
+  // Parameter pre-flight and the survey's fence check.
+  const c = await (await import('./bundle.mjs')).loadModule('../src/link/paramChecks.ts');
+  const P = o => Object.fromEntries(Object.entries(o).map(([name, value]) => [name, value === null ? null : { name, value, type: 9, count: 0, index: 0 }]));
+  const v46 = (4 << 24) | (6 << 16), v45 = (4 << 24) | (5 << 16);
+  const copter = P({ FENCE_ENABLE: 0, FENCE_TYPE: 7, FENCE_RADIUS: 300, FENCE_ALT_MAX: 100, FENCE_AUTOENABLE: 0, FENCE_ACTION: 1, BATT_FS_LOW_ACT: 0, RTL_ALT_M: null, RTL_ALT: 1500 });
+  const big = { reachM: 412, altM: 70, polygon: true };
+  // 4.6+, FENCE_ENABLE 0: the dashboard enables the polygon only, so the default circle never switches on.
+  let r = c.fenceParamCheck('ARDUPILOT', copter, { ...big, swVersion: v46 });
+  assert.equal(r.ok, true, r.detail); assert.deepEqual(r.fixes, []);
+  // 4.5 enables every type in FENCE_TYPE: the 300 m circle would stop a survey reaching 412 m. Red, fix raises the radius only.
+  r = c.fenceParamCheck('ARDUPILOT', copter, { ...big, swVersion: v45 });
+  assert.equal(r.ok, false); assert.equal(r.advisory, false); assert.deepEqual(r.fixes, [{ name: 'FENCE_RADIUS', value: 420 }]); assert.match(r.detail, /circle 300 m < 420 m/);
+  // FENCE_ENABLE 1 (or not read) switches them on whatever the firmware; a high survey needs FENCE_ALT_MAX raised too.
+  r = c.fenceParamCheck('ARDUPILOT', { ...copter, ...P({ FENCE_ENABLE: 1 }) }, { reachM: 412, altM: 110, polygon: true, swVersion: v46 });
+  assert.deepEqual(r.fixes, [{ name: 'FENCE_RADIUS', value: 420 }, { name: 'FENCE_ALT_MAX', value: 110 }]);
+  r = c.fenceParamCheck('ARDUPILOT', { ...copter, ...P({ FENCE_ENABLE: null }) }, { ...big, swVersion: v46 });
+  assert.equal(r.ok, false, 'FENCE_ENABLE not read counts as on');
+  // A circle beyond FENCE_RADIUS's range: drop the circle from FENCE_TYPE instead.
+  r = c.fenceParamCheck('ARDUPILOT', { ...copter, ...P({ FENCE_ENABLE: 1 }) }, { reachM: 12000, altM: 70, polygon: true, swVersion: v46 });
+  assert.deepEqual(r.fixes, [{ name: 'FENCE_TYPE', value: 5 }]);
+  // No polygon in FENCE_TYPE: amber, fixable by adding it.
+  r = c.fenceParamCheck('ARDUPILOT', { ...copter, ...P({ FENCE_TYPE: 3 }) }, { ...big, swVersion: v46 });
+  assert.equal(r.ok, false); assert.equal(r.advisory, true); assert.deepEqual(r.fixes, [{ name: 'FENCE_TYPE', value: 7 }]);
+  // Still reading: holds the upload. Never answered: amber with the numbers to check, never a guess.
+  r = c.fenceParamCheck('ARDUPILOT', {}, { ...big, swVersion: v46 });
+  assert.equal(r.advisory, false); assert.match(r.detail, /FENCE_TYPE reading…/);
+  r = c.fenceParamCheck('ARDUPILOT', P({ FENCE_TYPE: 7 }), { ...big, swVersion: v46 });
+  assert.equal(r.ok, false); assert.equal(r.advisory, false, 'FENCE_ENABLE and the limits not answered yet');
+  r = c.fenceParamCheck('ARDUPILOT', P({ FENCE_TYPE: null }), { ...big, swVersion: v46 });
+  assert.equal(r.advisory, true); assert.match(r.detail, /not read: needs FENCE_RADIUS ≥ 420 m, FENCE_ALT_MAX ≥ 70 m/);
+  r = c.fenceParamCheck('ARDUPILOT', P({ FENCE_TYPE: 7, FENCE_ENABLE: 1, FENCE_RADIUS: null, FENCE_ALT_MAX: 120 }), { ...big, swVersion: v46 });
+  assert.equal(r.advisory, true); assert.match(r.detail, /not read/);
+  assert.equal(c.fenceParamCheck('PX4', P({ GF_ACTION: 2 }), { ...big, swVersion: 0 }).advisory, false);
+  assert.equal(c.fenceParamCheck('PX4', P({ GF_ACTION: 2, GF_MAX_HOR_DIST: null, GF_MAX_VER_DIST: 0 }), { ...big, swVersion: 0 }).advisory, true);
+  // FENCE_ALT_MAX_TP 0: the limit is above sea level.
+  r = c.fenceParamCheck('ARDUPILOT', { ...copter, ...P({ FENCE_ENABLE: 1, FENCE_RADIUS: 500, FENCE_ALT_MAX_TP: 0 }) }, { ...big, swVersion: v46, homeAmslM: 105 });
+  assert.deepEqual(r.fixes, [{ name: 'FENCE_ALT_MAX', value: 180 }]);
+  // PX4: limits apply when > 0; GF_ACTION 0 acts on nothing.
+  const px4 = P({ GF_ACTION: 2, GF_MAX_HOR_DIST: 150, GF_MAX_VER_DIST: 0, COM_LOW_BAT_ACT: 0, RTL_RETURN_ALT: 60 });
+  r = c.fenceParamCheck('PX4', px4, { ...big, swVersion: 0 });
+  assert.equal(r.ok, false); assert.equal(r.advisory, false); assert.deepEqual(r.fixes, [{ name: 'GF_MAX_HOR_DIST', value: 420 }]);
+  assert.equal(c.fenceParamCheck('PX4', { ...px4, ...P({ GF_ACTION: 0 }) }, { ...big, swVersion: 0 }).ok, true);
+  assert.equal(c.fenceParamCheck('PX4', { ...px4, ...P({ GF_MAX_HOR_DIST: 0 }) }, { ...big, swVersion: 0 }).ok, true);
+  // Link pre-flight: battery failsafe, fence action, return altitude. RTL_ALT is centimetres, RTL_ALT_M metres.
+  const pf = Object.fromEntries(c.paramPreflight('ARDUPILOT', copter).map(x => [x.id, x]));
+  assert.equal(pf['batt-fs'].ok, false); assert.match(pf['batt-fs'].detail, /warn only/);
+  assert.equal(pf['fence-act'].ok, true); assert.equal(pf['rtl-alt'].detail, 'RTL_ALT 15 m');
+  assert.ok(Object.values(pf).every(x => x.advisory));
+  assert.equal(c.rtlAltM('ARDUPILOT', P({ RTL_ALT_M: 30, RTL_ALT: null })), 30);
+  assert.equal(c.rtlAltM('ARDUPILOT', P({ RTL_ALT_M: null, RTL_ALT: null })), null);
+  const px = Object.fromEntries(c.paramPreflight('PX4', px4).map(x => [x.id, x]));
+  assert.equal(px['batt-fs'].ok, false); assert.equal(px['fence-act'].ok, false, 'hold is not a return'); assert.equal(px['rtl-alt'].ok, true);
+  assert.match(c.paramPreflight('PX4', P({ GF_ACTION: null }))[0].detail, /COM_LOW_BAT_ACT reading…/);
+  assert.match(c.paramPreflight('PX4', P({ GF_ACTION: null }))[1].detail, /GF_ACTION not read/);
+  assert.equal(c.rtlVsPlan('ARDUPILOT', copter, 60).ok, false); assert.equal(c.rtlVsPlan('PX4', px4, 60).ok, true);
+  assert.equal(c.fenceMaskHonoured(v46), true); assert.equal(c.fenceMaskHonoured(v45), false); assert.equal(c.fenceMaskHonoured(0), false);
+}
 console.log('mavlink codec: all tests passed');
