@@ -16,6 +16,7 @@ import { RegulatoryComplianceModal } from './components/production/RegulatoryCom
 import { LinkButton } from './link/LinkButton';
 import { OverviewView } from './dashboards/OverviewView';
 import { DemoTour, type TourView } from './dashboards/DemoTour';
+import { MeridianCredit } from './dashboards/MeridianCredit';
 import { useHealth } from './diagnostics/useHealth';
 import { InstallButton } from './dashboards/InstallButton';
 import { OperatorMenu } from './operator/OperatorMenu';
@@ -815,7 +816,9 @@ export default function App() {
         All in 1 Events · Drone Command ·{' '}
         <button onClick={() => setTourOpen(true)} className="underline hover:text-ink-2">Take the tour</button> ·{' '}
         <button onClick={() => setShowShortcuts(true)} className="underline hover:text-ink-2">Keyboard shortcuts</button>
-        <div className="mt-1">Designed and engineered by <a href="https://www.meridianinterface.com" target="_blank" rel="noopener" className="font-medium underline hover:text-ink-2">Meridian Interface</a></div>
+        {isClient
+          ? <div className="mt-8 mb-2"><MeridianCredit /></div>
+          : <div className="mt-1">Designed and engineered by <a href="https://www.meridianinterface.com" target="_blank" rel="noopener" className="font-medium underline hover:text-ink-2">Meridian Interface</a></div>}
       </footer>
       <DemoTour open={tourOpen} onClose={() => setTourOpen(false)} view={activeTab} go={(v: TourView) => setActiveTab(v)} />
     </div>
