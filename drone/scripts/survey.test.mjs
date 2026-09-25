@@ -76,7 +76,7 @@ assert.ok(cov2.viewsAt(hole) < m.GOOD_VIEWS, 'the hole is weak');
 assert.equal(cov2.weakClusters(3, false).some(c => Math.hypot(c.centre.x - hole.x, c.centre.y - hole.y) < 20 && c.cells > 40), false, 'mid-flight, unseen cells are not called weak');
 const weak = cov2.weakClusters(3, true);
 assert.ok(weak.some(c => Math.hypot(c.centre.x - hole.x, c.centre.y - hole.y) < 25), 'after capture, the hole is a weak patch');
-const fill = m.gapFillLines(cov2, grid);
+const fill = m.gapFillLines(cov2, grid, SITE.boundary);
 assert.ok(fill.length >= 1, 'gap-fill produces lines');
 assert.ok(fill.some(l => { const t = ((hole.x - l.a.x) * (l.b.x - l.a.x) + (hole.y - l.a.y) * (l.b.y - l.a.y)) / ((l.b.x - l.a.x) ** 2 + (l.b.y - l.a.y) ** 2); const px = l.a.x + t * (l.b.x - l.a.x), py = l.a.y + t * (l.b.y - l.a.y); return t >= 0 && t <= 1 && Math.hypot(px - hole.x, py - hole.y) < grid.footprint.acrossM / 2; }), 'a fill line passes over the hole');
 
@@ -125,6 +125,16 @@ console.log('survey planning: all tests passed');
   const mf = JSON.parse(byName['manifest.json']);
   assert.equal(mf.photos.rejected, 1); assert.equal(mf.groundSampleDistanceCm, 1.6);
   JSON.parse(byName['mission.plan']);
+  // Reported photos: names follow the aircraft's image index (a lost report leaves a gap, not a shift),
+  // a failed capture has no file, and an index that restarts (reboot on a battery swap) carries on counting.
+  const rep = [5, 6, 7, 9, 10, 1, 2].map((idx, i) => ({ ...photos[i], id: i + 1, idx, ok: i !== 2, reason: i === 2 ? 'Capture failed' : undefined }));
+  assert.deepEqual(x.imageNumbers(rep), [1, 2, 0, 5, 6, 7, 8]);
+  const rf = Object.fromEntries(x.buildSurveyFiles(grid, rep, cov, { name: SITE.name, kind: 'DEMO', origin: SITE.origin, boundary: SITE.boundary, home: SITE.home, orbitCenter: { x: 60, y: -70 } }, m.CAMERAS.MAVIC_3E).map(f => [f.name, new TextDecoder().decode(f.data)]));
+  assert.deepEqual(rf['geo.txt'].trim().split('\n').slice(1).map(r => r.split(' ')[0]), ['DJI_0001.JPG', 'DJI_0002.JPG', 'DJI_0005.JPG', 'DJI_0006.JPG', 'DJI_0007.JPG', 'DJI_0008.JPG'], 'geo.txt names follow the reported index');
+  assert.equal(rf['geotags.csv'].trim().split('\n').length, 7, 'a failed capture has no row: no image');
+  assert.equal(JSON.parse(rf['manifest.json']).photos.captureFailed, 1);
+  // Without indices (simulated, estimated): one number per photo, rejected ones included (they are on the card).
+  assert.deepEqual(x.imageNumbers(photos.slice(0, 5)), [1, 2, 3, 4, 5]);
 }
 console.log('survey package: all tests passed');
 
@@ -161,6 +171,25 @@ console.log('survey package: all tests passed');
   assert.ok(grid.lines.every(l => inside(l.a) && inside(l.b)), 'fence holds every lead-in');
   const edgeDist = (p) => Math.min(...fence.map((a, i) => { const b = fence[(i + 1) % fence.length]; const q = m.projectOnSegment(p, a, b); return Math.hypot(q.x - p.x, q.y - p.y); }));
   assert.ok(grid.lines.every(l => edgeDist(l.a) >= 29.9 && edgeDist(l.b) >= 29.9), 'every waypoint at least the margin from the fence');
+
+  // Re-fly over a weak strip along the NE edge (a diagonal boundary edge): the passes are clipped to the
+  // site plus the plan's lead-in, there are several across a strip wider than the line spacing, and every
+  // waypoint of the re-fly mission is inside the fence uploaded with it, by the margin.
+  const strip = new m.CoverageGrid(SITE.boundary, 5), ea = SITE.boundary[2], eb = SITE.boundary[3];
+  for (let r = 0; r < strip.rows; r++) for (let c = 0; c < strip.cols; c++) { const q = strip.cellCentre(c, r), e = m.projectOnSegment(q, ea, eb); strip.views[r * strip.cols + c] = Math.hypot(e.x - q.x, e.y - q.y) < 20 ? 2 : 9; }
+  const lead = grid.footprint.alongM * 0.6;
+  const toEdge = (p, poly) => (m.pointInPolygon(p, poly) ? 0 : Math.min(...poly.map((a, i) => { const q = m.projectOnSegment(p, a, poly[(i + 1) % poly.length]); return Math.hypot(q.x - p.x, q.y - p.y); })));
+  for (const ang of [0, 90]) {
+    const pl = m.planSurvey(SITE.boundary, SITE.home, { ...base, lineAngleDeg: ang });
+    const passes = m.gapFillLines(strip, pl, SITE.boundary);
+    assert.ok(passes.length > 1, `a strip wider than the spacing gets several passes (${passes.length} at ${ang}°)`);
+    assert.ok(passes.every(l => toEdge(l.a, SITE.boundary) <= lead + 0.5 && toEdge(l.b, SITE.boundary) <= lead + 0.5), 'passes overshoot the site by no more than a lead-in');
+    const rf = m.fencePolygon({ ...pl, lines: [...pl.lines, ...passes] }, SITE.boundary, SITE.home, 30);
+    const rfEdge = (p) => Math.min(...rf.map((a, i) => { const q = m.projectOnSegment(p, a, rf[(i + 1) % rf.length]); return Math.hypot(q.x - p.x, q.y - p.y); }));
+    const wps = m.surveyMission({ ...pl, lines: passes }, SITE.origin, { home: SITE.home }).items.filter(i => i.command === C.NAV_WAYPOINT).map(i => m.fromLatLon(SITE.origin, i.lat, i.lon));
+    assert.equal(wps.length, passes.length * 2);
+    assert.ok(wps.every(p => m.pointInPolygon(p, rf) && rfEdge(p) >= 29.9), `every re-fly waypoint inside the re-fly fence at ${ang}°`);
+  }
   const qp = m.qgcPlan(grid, SITE.origin, SITE.home, { boundary: SITE.boundary, autopilot: 'PX4' });
   assert.equal(qp.geoFence.polygons[0].inclusion, true); assert.equal(qp.geoFence.polygons[0].polygon.length, fence.length);
   assert.equal(qp.mission.firmwareType, 12, 'PX4 plan');
@@ -202,6 +231,27 @@ console.log('survey package: all tests passed');
   zip.set(name, 30); zip.set(def, 30 + name.length);
   const fromKmz = b.parseBoundaryText(await b.kmlFromKmz(zip.buffer));
   assert.equal(fromKmz.ring.length, 4, 'KMZ opens');
+  // A streamed KMZ (flag bit 3): sizes 0 in the local header, a data descriptor after the data, the real
+  // sizes only in the central directory. A small file ahead of the KML checks the offsets.
+  {
+    const { deflateRawSync } = await import('node:zlib');
+    const parts = [], dir = []; let off = 0;
+    const add = (fname, body) => {
+      const nm = new TextEncoder().encode(fname), data = new Uint8Array(deflateRawSync(body));
+      const lh = new Uint8Array(30 + nm.length), lv = new DataView(lh.buffer);
+      lv.setUint32(0, 0x04034b50, true); lv.setUint16(4, 20, true); lv.setUint16(6, 8, true); lv.setUint16(8, 8, true); lv.setUint16(26, nm.length, true); lh.set(nm, 30);
+      const dd = new Uint8Array(16), dv = new DataView(dd.buffer); dv.setUint32(0, 0x08074b50, true); dv.setUint32(8, data.length, true); dv.setUint32(12, body.length, true);
+      const ch = new Uint8Array(46 + nm.length), cv = new DataView(ch.buffer);
+      cv.setUint32(0, 0x02014b50, true); cv.setUint16(6, 20, true); cv.setUint16(8, 8, true); cv.setUint16(10, 8, true); cv.setUint32(20, data.length, true); cv.setUint32(24, body.length, true); cv.setUint16(28, nm.length, true); cv.setUint32(42, off, true); ch.set(nm, 46);
+      parts.push(lh, data, dd); dir.push(ch); off += lh.length + data.length + dd.length;
+    };
+    add('files/icon.png', new Uint8Array(300).fill(7)); add('doc.kml', raw);
+    const cdSize = dir.reduce((s, d) => s + d.length, 0), end = new Uint8Array(22), ev = new DataView(end.buffer);
+    ev.setUint32(0, 0x06054b50, true); ev.setUint16(8, dir.length, true); ev.setUint16(10, dir.length, true); ev.setUint32(12, cdSize, true); ev.setUint32(16, off, true);
+    const all = [...parts, ...dir, end], z = new Uint8Array(all.reduce((s, a) => s + a.length, 0)); let k = 0; for (const a of all) { z.set(a, k); k += a.length; }
+    const streamed = b.parseBoundaryText(await b.kmlFromKmz(z.buffer));
+    assert.equal(streamed.ring.length, 4, 'streamed KMZ (bit 3) opens'); assert.equal(streamed.name, 'North field');
+  }
   // The package carries the boundary as KML and the fence in the QGC plan.
   const x = await loadModule('../src/survey/exportSurvey.ts');
   const plan2 = m.planSurvey(site.boundary, site.home, { ...base, altitudeM: 50 });

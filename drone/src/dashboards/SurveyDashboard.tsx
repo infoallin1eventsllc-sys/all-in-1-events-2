@@ -183,7 +183,7 @@ export const SurveyDashboard: React.FC = () => {
   const PIP = 'hidden md:block absolute bottom-3 right-3 w-[26%] min-w-[190px] aspect-video rounded-lg overflow-hidden border border-white/25 shadow-xl bg-imagery z-10';
 
   // Primary action by phase. On a live link: upload (or resume) → hold to start → hold/continue in the air.
-  const resumeLine = sim.liveResume ? sim.liveResume.line + 1 : null;
+  const resumeLine = flight.resumePoint ? flight.resumePoint.line + 1 : null;
   const reflyLabel = sim.weakPatches ? `Re-fly ${sim.weakPatches} weak patch${sim.weakPatches > 1 ? 'es' : ''}` : 'Re-fly weak patches';
   const livePrimary: React.ReactNode = !sim.live ? null
     : flight.upload.state === 'UPLOADING'
@@ -195,7 +195,10 @@ export const SurveyDashboard: React.FC = () => {
       ? <ToolButton command="fly" id="sv-primary" primary icon={<Upload />} label={`Upload resume · line ${resumeLine}`} disabled={!flight.gateOk} onClick={flight.uploadResume} title="A new mission from the point the survey stopped: take off, fly back, carry on" />
     : phase === 'COMPLETE' && sim.weakPatches && !orbit
       ? <ToolButton command="fly" id="sv-primary" primary icon={<RefreshCw />} label={reflyLabel} disabled={!flight.gateOk} onClick={flight.uploadRefly} title="Short extra passes over every patch seen by fewer than five photos" />
-      : <ToolButton command="fly" id="sv-primary" primary icon={<Upload />} label={phase === 'COMPLETE' ? 'Upload to fly again' : 'Upload mission'} disabled={!flight.gateOk} onClick={flight.uploadMission} title={flight.gateOk ? 'Geofence and survey mission to the aircraft' : 'See the checklist in the Aircraft tab'} />;
+    : phase === 'COMPLETE'
+      // A new mission clears this capture's coverage and photo list: a hold, not a click, so the package is exported first.
+      ? <HoldButton id="sv-primary" icon={<Upload />} label="Upload to fly again" hint="Hold · clears this capture" disabled={!flight.gateOk} onFire={flight.uploadMission} title="A new mission from the first line. Clears this capture's coverage and photo list: export the package first" />
+      : <ToolButton command="fly" id="sv-primary" primary icon={<Upload />} label="Upload mission" disabled={!flight.gateOk} onClick={flight.uploadMission} title={flight.gateOk ? 'Geofence and survey mission to the aircraft' : 'See the checklist in the Aircraft tab'} />;
   const primary = sim.live
     ? { label: '', icon: null, onClick: () => {} }
     : phase === 'READY' ? { label: 'Start survey', icon: <Play />, onClick: sim.start }

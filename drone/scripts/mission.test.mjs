@@ -144,10 +144,12 @@ function autopilot({ px4 = false, dropCount = 0, prearmFail = false } = {}) {
   assert.equal(t.photosReported, 3, 'three CAMERA_FEEDBACKs, the stray CAMERA_TRIGGER ignored');
   assert.equal(t.photoSource, 'FEEDBACK');
   assert.deepEqual(t.photoLog.map(p => p.n), [1, 2, 3], 'each photo logged');
+  assert.deepEqual(t.photoLog.map(p => p.idx), [1, 2, 3], "with the aircraft's own image index (names the file in the export)");
   const cap = new Uint8Array(60); const cv = new DataView(cap.buffer); cv.setInt32(12, 337701234, true); cv.setInt32(16, -1181905678, true); cv.setInt32(24, 61500, true); cv.setInt32(44, 7, true); cv.setInt8(49, 1);
   const t2 = { ...mav.EMPTY_TELEMETRY };
   mav.decodeInto(t2, new mav.MavParser().push(mav.encodeRaw(263, cap, 1, 100))[0]);
   assert.equal(t2.photoSource, 'CAMERA'); assert.ok(Math.abs(t2.photoLog[0].lat - 33.7701234) < 1e-9 && Math.abs(t2.photoLog[0].altRelM - 61.5) < 1e-9, 'CAMERA_IMAGE_CAPTURED position decoded');
+  assert.equal(t2.photoLog[0].idx, 7, 'CAMERA_IMAGE_CAPTURED image_index');
 }
 
 console.log('mission: all tests passed');

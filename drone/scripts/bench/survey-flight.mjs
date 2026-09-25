@@ -33,9 +33,11 @@ let vlog = [];
 const fail = (msg) => { console.error(`FAIL: ${msg}`); console.error('autopilot said:\n  ' + vlog.filter(l => !/^MIS do/.test(l)).slice(-25).join('\n  ')); cleanup(); process.exit(1); };
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 
-run('python3', ['mavlink_ws.py', '--udp', '127.0.0.1:14551', '--host', '127.0.0.1', '--port', '8771', '--token', 'bench']);
+// Ports: BENCH_WS_PORT / BENCH_UDP_PORT, so two benches can run side by side.
+const wsPort = process.env.BENCH_WS_PORT ?? '8771', udpPort = process.env.BENCH_UDP_PORT ?? '14551';
+run('python3', ['mavlink_ws.py', '--udp', `127.0.0.1:${udpPort}`, '--host', '127.0.0.1', '--port', wsPort, '--token', 'bench']);
 await new Promise(r => setTimeout(r, 1500));
-const vehicle = run('python3', ['fake_vehicle.py', '--to', '127.0.0.1:14551', '--time', '8', ...(px4 ? ['--px4'] : [])]);
+const vehicle = run('python3', ['fake_vehicle.py', '--to', `127.0.0.1:${udpPort}`, '--time', '8', ...(px4 ? ['--px4'] : [])]);
 vehicle.stdout.on('data', d => vlog.push(...String(d).trim().split('\n')));
 
 // Software WebGL so it also runs headless on a server.
@@ -44,7 +46,7 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 page.on('pageerror', e => fail(`page error: ${e.message}`));
 await page.goto(`${url}?view=survey`, { waitUntil: 'networkidle' });
 await page.click('#link-button');
-await page.getByLabel('Bridge address').fill('ws://127.0.0.1:8771/?token=bench');
+await page.getByLabel('Bridge address').fill(`ws://127.0.0.1:${wsPort}/?token=bench`);
 await page.getByRole('button', { name: 'Connect', exact: true }).click();
 await page.getByRole('tab', { name: /Aircraft/ }).waitFor({ timeout: 15000 }).catch(() => fail('no live telemetry'));
 await page.mouse.click(700, 950);
@@ -90,7 +92,10 @@ await page.getByRole('tab', { name: /Coverage/ }).click(); await page.waitForTim
 const text = await page.locator('#survey-dashboard').innerText();
 const photos = Number(text.match(/Photos\n~?([\d,]+)/)?.[1]?.replace(',', '') ?? 0);
 const lines = text.match(/Lines flown\n(\d+) of (\d+)/);
-if (![...seen].some(s => /Capturing · line 1 of/.test(s))) fail('never saw line 1 being captured');
+// The status is sampled every 2 s and a short first line can fall between samples: the event log has every line.
+await page.getByRole('tab', { name: 'Log' }).click(); await page.waitForTimeout(300);
+const events = await page.locator('#survey-dashboard').innerText();
+if (![...seen].some(s => /Capturing · line 1 of/.test(s)) && !/\nLine 1 of \d+\n/.test(events)) fail('never saw line 1 being captured');
 if (!resumed) fail('the battery return did not offer a resume');
 if (!lines || lines[1] !== lines[2]) fail(`lines flown: ${lines ? `${lines[1]} of ${lines[2]}` : 'not shown'}`);
 if (photos < 300) fail(`only ${photos} photos reported`);

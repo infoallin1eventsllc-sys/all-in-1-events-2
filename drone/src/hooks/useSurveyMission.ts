@@ -36,7 +36,7 @@ export interface SurveyAircraft {
   history: { vibration: number[]; wind: number[]; speed: number[] };
 }
 
-export interface Photo { id: number; x: number; y: number; altM: number; headingDeg: number; pitchDeg: number; t: number; line: number; ok: boolean; reason?: 'Blur' | 'Exposure' | 'Capture failed'; /** Position estimated (no photo report from the aircraft); use the image's own EXIF. */ est?: boolean }
+export interface Photo { id: number; x: number; y: number; altM: number; headingDeg: number; pitchDeg: number; t: number; line: number; ok: boolean; reason?: 'Blur' | 'Exposure' | 'Capture failed'; /** Position estimated (no photo report from the aircraft); use the image's own EXIF. */ est?: boolean; /** Image index the aircraft reported (names the file in the export). */ idx?: number }
 
 /** Live telemetry the survey reads (a subset of the link's). */
 export type LiveTelemetry = Pick<Telemetry, 'lat' | 'lon' | 'altRelM' | 'headingDeg' | 'groundspeedMps' | 'batteryPct' | 'voltageV' | 'currentA' | 'armed' | 'customMode' | 'autopilot' | 'radioRssi' | 'photoLog' | 'photoSource' | 'missionCurrent' | 'home' | 'windMps'>;
@@ -94,7 +94,7 @@ export function useSurveyMission() {
   const refly = useRef(false);
   const liveRef = useRef<{ lastPos: Pt | null; since: number; reported: number; lastMs: number } | null>(null);
   /** The mission on the aircraft: what each item is for, and where MISSION_CURRENT's numbering starts. */
-  const liveMission = useRef<{ roles: ItemRole[]; seqOffset: number; kind: 'NEW' | 'RESUME' | 'REFLY'; lines: FlightLine[]; lastLine: number; lastAt: Pt | null; finished: boolean } | null>(null);
+  const liveMission = useRef<{ roles: ItemRole[]; seqOffset: number; kind: 'NEW' | 'RESUME' | 'REFLY'; lines: FlightLine[]; lastLine: number; lastAt: Pt | null; finished: boolean; started: boolean } | null>(null);
   const [liveResume, setLiveResume] = useState<ResumePoint | null>(null);
 
   const [phase, setPhase] = useState<Phase>('READY');
@@ -152,14 +152,14 @@ export function useSurveyMission() {
     const ph = phaseRef.current;
     if (ph === 'READY' || ph === 'COMPLETE' || ph === 'HELD' || ph === 'SWAP' || ph === 'LANDING' || ph === 'RETURNING') return;
     const L = legRef.current;
-    resumeRef.current = { index: L.index, progressM: L.progressM, at: { x: acRef.current.x, y: acRef.current.y } };
+    resumeRef.current ??= { index: L.index, progressM: L.progressM, at: { x: acRef.current.x, y: acRef.current.y } }; // mid-detour, the earlier point stands
     go('RETURNING'); log('WARNING', reason);
   }, [go, log]);
 
   /** Short extra capture lines over every weak patch, flown on the current battery. */
   const reflyGaps = useCallback(() => {
     if (phaseRef.current !== 'COMPLETE' || planRef.current.params.pattern === 'ORBIT') return 0;
-    const fill = gapFillLines(gridRef.current, planRef.current);
+    const fill = gapFillLines(gridRef.current, planRef.current, siteRef.current.boundary);
     if (!fill.length) { log('SUCCESS', 'No weak patches — coverage is good everywhere'); return 0; }
     const home = siteRef.current.home;
     const legs: Leg[] = []; let at = home;
@@ -168,7 +168,7 @@ export function useSurveyMission() {
     legsRef.current = legs; refly.current = true;
     legRef.current = { index: 0, progressM: 0, sinceTriggerM: 0, onCapture: false };
     if (acRef.current.battery < 50) { acRef.current = { ...acRef.current, battery: 100 }; batteries.current++; }
-    go('TAKEOFF'); log('INFO', `Re-flying ${fill.length} weak patch${fill.length > 1 ? 'es' : ''}`);
+    go('TAKEOFF'); log('INFO', `Re-flying the weak patches: ${fill.length} pass${fill.length > 1 ? 'es' : ''}`);
     return fill.length;
   }, [go, log]);
 
@@ -181,15 +181,16 @@ export function useSurveyMission() {
   }, [plan, go, log]);
 
   // ---- photos ----------------------------------------------------------------
-  const takePhoto = useCallback((headingRad: number, line: number, sim: boolean) => {
+  const takePhoto = useCallback((headingRad: number, line: number, sim: boolean, report?: { idx: number; failed: boolean }) => {
     const ac = acRef.current, P = planRef.current;
     const vib = ac.vibrationG, wind = ac.windMps;
-    let ok = true, reason: Photo['reason'];
+    // A capture the camera reports as failed took no image: it covers nothing.
+    let ok = !report?.failed, reason: Photo['reason'] = ok ? undefined : 'Capture failed';
     if (sim) {
       const pBlur = 0.003 + Math.max(0, vib - 0.6) * 0.7 + Math.max(0, wind - 9) * 0.03;
       if (Math.random() < pBlur) { ok = false; reason = 'Blur'; } else if (Math.random() < 0.003) { ok = false; reason = 'Exposure'; }
     }
-    const photo: Photo = { id: photosRef.current.length + 1, x: ac.x, y: ac.y, altM: ac.altM, headingDeg: (headingRad * 180) / Math.PI, pitchDeg: P.gimbalPitchDeg, t: Date.now(), line, ok, reason };
+    const photo: Photo = { id: photosRef.current.length + 1, x: ac.x, y: ac.y, altM: ac.altM, headingDeg: (headingRad * 180) / Math.PI, pitchDeg: P.gimbalPitchDeg, t: Date.now(), line, ok, reason, ...(report ? { idx: report.idx } : {}) };
     photosRef.current.push(photo);
     if (!ok) return;
     const scale = Math.max(0.3, ac.altM / P.params.altitudeM);
@@ -227,16 +228,16 @@ export function useSurveyMission() {
    * After a mission upload the dashboard registers what each item is for, so
    * MISSION_CURRENT reads as "capturing line 4" rather than "item 17".
    */
-  const setLiveMission = useCallback((roles: ItemRole[], seqOffset: number, kind: 'NEW' | 'RESUME' | 'REFLY' = 'NEW', lines?: FlightLine[]) => {
-    liveMission.current = { roles, seqOffset, kind, lines: lines ?? planRef.current.lines, lastLine: -1, lastAt: null, finished: false };
+  const setLiveMission = useCallback((roles: ItemRole[], seqOffset: number, kind: 'NEW' | 'RESUME' | 'REFLY' = 'NEW', lines?: FlightLine[], from?: ResumePoint | null) => {
+    // A resume starts at its point, so one cut short before its first line resumes from there again.
+    liveMission.current = { roles, seqOffset, kind, lines: lines ?? planRef.current.lines, lastLine: from?.line ?? -1, lastAt: from?.at ?? null, finished: false, started: false };
     refly.current = kind === 'REFLY';
-    setLiveResume(null);
-    if (kind === 'NEW') { gridRef.current.reset(); photosRef.current = []; flightS.current = 0; batteries.current = 1; }
-    else batteries.current++;
+    // The resume point outlives the upload (a re-upload needs it); the mission starting spends it.
+    if (kind === 'NEW') { setLiveResume(null); gridRef.current.reset(); photosRef.current = []; flightS.current = 0; batteries.current = 1; }
     log('INFO', kind === 'RESUME' ? 'Resume mission on the aircraft' : kind === 'REFLY' ? `Weak-patch mission on the aircraft: ${lines?.length ?? 0} passes` : `Mission on the aircraft: ${roles.length} items`);
   }, [log]);
   /** Extra passes over the weak patches of a finished capture (for a live re-fly mission). */
-  const gapLines = useCallback(() => gapFillLines(gridRef.current, planRef.current), []);
+  const gapLines = useCallback(() => gapFillLines(gridRef.current, planRef.current, siteRef.current.boundary), []);
 
   /** Legs of the plan by line, so the map and 3D view can show a live flight's progress. */
   const legOfLine = useMemo(() => {
@@ -276,9 +277,16 @@ export function useSurveyMission() {
     const idx = M ? t.missionCurrent - M.seqOffset : -1;
     const role = M && idx >= 0 && idx < M.roles.length ? M.roles[idx] : null;
     const wasFlying = !['READY', 'COMPLETE', 'HELD'].includes(phaseRef.current);
+    if (M && t.armed && mode === 'AUTO' && role) {
+      // Flying the mission: an old resume point is spent (a new interruption records a fresh one).
+      if (!M.started) { M.started = true; if (M.kind !== 'NEW') batteries.current++; }
+      if (liveResume) setLiveResume(null);
+    }
+    // Past the last line's end the survey is flown, whatever mode takes it home (PX4 flies a mission RTL item in its RTL mode).
+    if (M?.started && t.armed && !M.finished && idx > M.roles.map(r => r.kind).lastIndexOf('LINE_END')) { M.finished = true; if (liveResume) setLiveResume(null); }
     const interrupted = () => {
       // Left the mission before its end (battery failsafe, RTL, a landing): remember where, to resume from there.
-      if (M && !M.finished && M.lastLine >= 0 && !liveResume) {
+      if (M?.started && !M.finished && M.lastLine >= 0 && !liveResume) {
         if (M.kind === 'REFLY') return; // a short re-fly is simply flown again
         const r = { line: M.lastLine, at: M.lastAt ?? M.lines[M.lastLine].a };
         setLiveResume(r); log('WARNING', `Survey interrupted on line ${r.line + 1}; it can resume from that point`);
@@ -286,7 +294,9 @@ export function useSurveyMission() {
     };
     let ph: Phase = phaseRef.current;
     if (!t.armed) {
-      ph = M?.finished ? 'COMPLETE' : liveResume || (M && M.lastLine >= 0) ? 'HELD' : wasFlying ? 'HELD' : 'READY';
+      // A resume or re-fly stays pending until it flies: READY would re-track home, re-plan and offer a NEW upload that
+      // wipes the capture. An unfinished re-fly lands back in COMPLETE, to be flown again.
+      ph = M?.finished || M?.kind === 'REFLY' ? 'COMPLETE' : liveResume || M?.kind === 'RESUME' || (M && M.lastLine >= 0) || wasFlying ? 'HELD' : 'READY';
       if (ph === 'HELD') interrupted();
     } else if (mode === 'AUTO' && role) {
       if (role.kind === 'TAKEOFF' || (role.kind === 'SETUP' && idx < 4)) ph = 'TAKEOFF';
@@ -294,7 +304,7 @@ export function useSurveyMission() {
       else if (role.kind === 'LINE_END' || role.kind === 'TRIGGER_ON') {
         ph = 'CAPTURING'; M!.lastLine = role.line;
         const l = M!.lines[role.line]; if (l) M!.lastAt = projectOnSegment(p, l.a, l.b);
-      } else if (role.kind === 'RTL') { ph = 'RETURNING'; M!.finished = true; }
+      } else if (role.kind === 'RTL') ph = 'RETURNING';
       else ph = 'TRANSIT';
     } else if (mode === 'RTL' || mode === 'LAND') {
       ph = mode === 'LAND' || dist(p, S.home) < 5 ? 'LANDING' : 'RETURNING';
@@ -305,7 +315,8 @@ export function useSurveyMission() {
     if (ph !== phaseRef.current) {
       go(ph);
       const say: Partial<Record<Phase, string>> = { TAKEOFF: 'Taking off', RETURNING: 'Returning home', LANDING: 'Landing', PAUSED: 'Holding position', COMPLETE: 'Survey complete: landed', HELD: 'Landed with the survey unfinished' };
-      if (ph === 'CAPTURING' && M) log('INFO', M.kind === 'REFLY' ? `Weak patch ${M.lastLine + 1} of ${M.lines.length}` : P.params.pattern === 'ORBIT' ? 'Orbit: capturing' : `Line ${M.lastLine + 1} of ${P.lines.length}`);
+      if (ph === 'CAPTURING' && M) log('INFO', M.kind === 'REFLY' ? `Re-fly pass ${M.lastLine + 1} of ${M.lines.length}` : P.params.pattern === 'ORBIT' ? 'Orbit: capturing' : `Line ${M.lastLine + 1} of ${P.lines.length}`);
+      else if (ph === 'COMPLETE' && M?.kind === 'REFLY' && !M.finished) log('WARNING', 'Landed with the re-fly unfinished; re-fly the weak patches again');
       else if (say[ph]) log(ph === 'COMPLETE' ? 'SUCCESS' : ph === 'RETURNING' && !M?.finished ? 'WARNING' : 'INFO', say[ph]!);
     }
     // Where on the plan: drives the flown/remaining path on the map and the 3D view.
@@ -322,14 +333,13 @@ export function useSurveyMission() {
       for (const f of fresh) {
         const at = fromLatLon(S.origin, f.lat, f.lon);
         const save = acRef.current; acRef.current = { ...save, x: at.x, y: at.y, altM: f.altRelM || save.altM };
-        takePhoto(hRad, M?.lastLine ?? -1, false);
-        const last = photosRef.current[photosRef.current.length - 1];
-        if (!f.ok) { last.ok = false; last.reason = 'Capture failed'; }
+        takePhoto(hRad, M?.lastLine ?? -1, false, { idx: f.idx, failed: !f.ok });
         acRef.current = save;
       }
       L.reported = fresh[fresh.length - 1].n;
-    } else if (t.photoSource === 'NONE' && phaseRef.current === 'CAPTURING' && L.lastPos) {
-      // Nothing reports photos on this aircraft: estimate them by distance flown with the trigger on.
+    } else if (t.photoSource === 'NONE' && mode === 'AUTO' && (role?.kind === 'LINE_END' || role?.kind === 'TRIGGER_ON') && L.lastPos) {
+      // Nothing reports photos on this aircraft: estimate them by distance flown with the trigger on: on a line, in Auto
+      // (SmartRTL or Brake leave the phase as it was, and the way home takes no photos).
       L.since += dist(L.lastPos, p);
       if (L.since >= P.triggerM) { L.since = 0; takePhoto(hRad, M?.lastLine ?? -1, false); photosRef.current[photosRef.current.length - 1].est = true; }
     }
@@ -373,6 +383,17 @@ export function useSurveyMission() {
           const want = (h * 180) / Math.PI + 90;
           const diff = ((want - ac.headingDeg + 540) % 360) - 180;
           ac.headingDeg = (ac.headingDeg + diff * Math.min(1, 0.25 * k) + 360) % 360;
+        };
+        // Battery reserve: go home, swap, resume. On the leg home there is nothing left to resume: just land.
+        const reserve = () => {
+          const L = legRef.current;
+          if (!detourRef.current && legsRef.current[L.index]?.line === -1) {
+            if (phaseRef.current === 'PAUSED') { go('RETURNING'); log('WARNING', `Battery ${ac.battery.toFixed(0)}% — flying home`); }
+            return;
+          }
+          // Still flying back to an earlier resume point: that point stands.
+          resumeRef.current ??= { index: L.index, progressM: L.progressM, at: { x: ac.x, y: ac.y } };
+          go('RETURNING'); log('WARNING', `Battery ${ac.battery.toFixed(0)}% — returning to swap, will resume from this point`);
         };
 
         if (ph === 'TAKEOFF') {
@@ -420,12 +441,7 @@ export function useSurveyMission() {
             }
             if (L.index >= legsRef.current.length) { go('LANDING'); log('SUCCESS', refly.current ? 'Weak patches re-flown — landing' : 'All lines captured — landing'); }
           }
-          // Battery reserve: go home, swap, resume.
-          if (ac.battery <= RESERVE_PCT && phaseRef.current !== 'LANDING') {
-            const L = legRef.current;
-            resumeRef.current = { index: L.index, progressM: L.progressM, at: { x: ac.x, y: ac.y } };
-            go('RETURNING'); log('WARNING', `Battery ${ac.battery.toFixed(0)}% — returning to swap, will resume from this point`);
-          }
+          if (ac.battery <= RESERVE_PCT && phaseRef.current !== 'LANDING') reserve();
         } else if (ph === 'RETURNING') {
           ac.speedMps += (12 - ac.speedMps) * Math.min(1, 0.3 * k);
           if (moveAlong(siteRef.current.home, ac.speedMps)) go('LANDING');
@@ -443,6 +459,7 @@ export function useSurveyMission() {
         } else if (ph === 'PAUSED') {
           ac.speedMps = Math.max(0, ac.speedMps - 3 * dt);
           ac.headingDeg = (ac.headingDeg + 0.4 * k) % 360;
+          if (ac.battery <= RESERVE_PCT) reserve(); // a hold burns the battery too
         }
 
         // Power, vibration, link.
@@ -497,7 +514,7 @@ export function useSurveyMission() {
     legs, legIndex: L.index, legProgressM: L.progressM, currentLine, linesDone,
     flightS: snap.flightS, remainingS, batteriesUsed: snap.batteries,
     simSpeed, setSimSpeed, events, live: !!liveRef.current, origin,
-    site, setSite, setLiveMission, liveResume, clearLiveResume: () => setLiveResume(null), gapLines,
+    site, setSite, setLiveMission, liveResume, gapLines, liveStarted: !!liveMission.current?.started,
     camera: CAMERAS[(active ? planRef.current : plan).params.camera],
     start, pause, returnHome, reflyGaps, reset, applyLive, releaseLive,
     isRefly: refly.current,

@@ -136,25 +136,40 @@ export function parseBoundaryText(text: string): { name?: string; ring: LatLon[]
   return parseCoordinateList(t);
 }
 
-/** Read the first .kml inside a KMZ (a zip): stored or deflated entries. */
+/**
+ * Read the first .kml inside a KMZ (a zip): stored or deflated entries. Sizes come from the
+ * central directory: zips written as a stream (flag bit 3) leave them 0 in the local headers.
+ */
 export async function kmlFromKmz(buf: ArrayBuffer): Promise<string> {
   const v = new DataView(buf); const u8 = new Uint8Array(buf);
-  for (let i = 0; i + 30 <= u8.length;) {
-    if (v.getUint32(i, true) !== 0x04034b50) break;
-    const method = v.getUint16(i + 8, true), csize = v.getUint32(i + 18, true), nlen = v.getUint16(i + 26, true), xlen = v.getUint16(i + 28, true);
-    const name = new TextDecoder().decode(u8.subarray(i + 30, i + 30 + nlen));
-    const start = i + 30 + nlen + xlen, data = u8.subarray(start, start + csize);
-    if (/\.kml$/i.test(name)) {
-      if (method === 0) return new TextDecoder().decode(data);
-      if (method === 8) {
-        const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
-        return new Response(stream).text();
-      }
-      throw new Error('This KMZ uses a compression method the browser cannot open');
+  const entries: { name: string; method: number; csize: number; local: number }[] = [];
+  // End of central directory: 22 bytes plus a comment of up to 64 KiB, at the end of the file.
+  let eocd = -1;
+  for (let i = u8.length - 22; i >= Math.max(0, u8.length - 22 - 0xffff); i--) if (v.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  if (eocd >= 0) {
+    for (let i = v.getUint32(eocd + 16, true), k = v.getUint16(eocd + 10, true); k > 0 && i + 46 <= u8.length && v.getUint32(i, true) === 0x02014b50; k--) {
+      const nlen = v.getUint16(i + 28, true);
+      entries.push({ name: new TextDecoder().decode(u8.subarray(i + 46, i + 46 + nlen)), method: v.getUint16(i + 10, true), csize: v.getUint32(i + 20, true), local: v.getUint32(i + 42, true) });
+      i += 46 + nlen + v.getUint16(i + 30, true) + v.getUint16(i + 32, true);
     }
-    i = start + csize;
+  } else {
+    // No directory (a truncated file): walk the local headers, which works unless they were streamed.
+    for (let i = 0; i + 30 <= u8.length && v.getUint32(i, true) === 0x04034b50;) {
+      const nlen = v.getUint16(i + 26, true), csize = v.getUint32(i + 18, true);
+      entries.push({ name: new TextDecoder().decode(u8.subarray(i + 30, i + 30 + nlen)), method: v.getUint16(i + 8, true), csize, local: i });
+      i += 30 + nlen + v.getUint16(i + 28, true) + csize;
+    }
   }
-  throw new Error('No KML inside this KMZ');
+  const e = entries.find(x => /\.kml$/i.test(x.name));
+  if (!e || e.local + 30 > u8.length || v.getUint32(e.local, true) !== 0x04034b50) throw new Error('No KML inside this KMZ');
+  // The data starts after the local header, whose name and extra lengths can differ from the directory's.
+  const start = e.local + 30 + v.getUint16(e.local + 26, true) + v.getUint16(e.local + 28, true), data = u8.subarray(start, start + e.csize);
+  if (e.method === 0) return new TextDecoder().decode(data);
+  if (e.method === 8) {
+    const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return new Response(stream).text();
+  }
+  throw new Error('This KMZ uses a compression method the browser cannot open');
 }
 
 /** Read a boundary from a file the operator picked. */
