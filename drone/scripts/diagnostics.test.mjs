@@ -45,6 +45,83 @@ const one = h => { const p = new mav.MavParser(); const fr = p.push(hex(h)); ass
   assert.equal(d.severity, 2); assert.equal(d.text, fx.statustext.text);
 }
 
+// --- 1b. battery and power edge cases (wire layout as pymavlink 2.4.49 packs it: BATTERY_STATUS '<iih10HhBBBbiB4HBI', SYS_STATUS '<IIIHHhHHHHHHb') ---
+{
+  const battery = ({ id = 0, cells = [], temp = 2500, current = 1000, remaining = 80, faults = 0 }) => {
+    const b = new DataView(new ArrayBuffer(54));
+    b.setInt16(8, temp, true);
+    for (let i = 0; i < 10; i++) b.setUint16(10 + i * 2, cells[i] ?? 0xffff, true);
+    b.setInt16(30, current, true); b.setUint8(32, id); b.setInt8(35, remaining); b.setUint32(50, faults, true);
+    return { msgId: 147, payload: b };
+  };
+  let d = dec.decodeHealth(battery({ id: 2, cells: [4100, 4090, 4110, 4100] }));
+  assert.equal(d.id, 2, 'battery id (byte 32) is kept, so monitors do not mix'); assert.deepEqual(d.cellsV, [4.1, 4.09, 4.11, 4.1]); close(d.packV, 16.4, 1e-9);
+  // A 14S (~58 V) pack with no cell readings: one entry, the pack.
+  d = dec.decodeHealth(battery({ cells: [58800] })); assert.deepEqual(d.cellsV, []); assert.equal(d.packV, 58.8);
+  // A 24S pack over 65.534 V: 65534 in cell 0, the rest carried into cell 1. Not two cells.
+  d = dec.decodeHealth(battery({ cells: [65534, 34266] })); assert.deepEqual(d.cellsV, [], 'split pack voltage is not cells'); close(d.packV, 99.8, 1e-9);
+  // SYS_STATUS voltage_battery UINT16_MAX: not sent, not 65.5 V.
+  const sys = new DataView(new ArrayBuffer(43)); sys.setUint16(14, 0xffff, true); sys.setInt16(16, -1, true);
+  d = dec.decodeHealth({ msgId: 1, payload: sys }); assert.equal(d.packV, null); assert.equal(d.currentA, null);
+  sys.setUint16(14, 15600, true); assert.equal(dec.decodeHealth({ msgId: 1, payload: sys }).packV, 15.6);
+
+  // Two monitors on one aircraft (the flight pack and, say, a second pack or a servo rail): the instruments show the primary, the checks see both.
+  const mon = new H.HealthMonitor(); const st = { armed: false, altRelM: 0, throttlePct: 0, groundspeedMps: 0, rollDeg: 0, pitchDeg: 0, vehicleType: 2, autopilot: 3, fixType: 3, satellites: 17, hdop: 0.7, radioRssi: 0 };
+  mon.setState(st, 1000);
+  for (let k = 0; k < 4; k++) {
+    mon.apply(dec.decodeHealth(battery({ id: 0, cells: [4100, 4100, 4100, 4100], remaining: 80 })), 1000 + k);
+    mon.apply(dec.decodeHealth(battery({ id: 1, cells: [4150, 3900], remaining: -1 })), 1000 + k);
+  }
+  const r = mon.report(1100);
+  assert.equal(r.battery.remainingPct, 80, 'the primary pack\'s charge, not flickering to "unknown"'); assert.deepEqual(r.cellsV, [4.1, 4.1, 4.1, 4.1]);
+  assert.ok(r.findings.some(f => f.id === 'cell-spread' && f.level === 'FAULT'), 'the second pack\'s 250 mV spread is still caught');
+  const m2 = new H.HealthMonitor(); m2.setState(st, 1000); m2.apply(dec.decodeHealth({ msgId: 1, payload: (sys.setUint16(14, 0xffff, true), sys) }), 1000);
+  assert.equal(m2.report(1100).systems.find(x => x.id === 'BATTERY').reading, 'Not reported by this aircraft');
+}
+
+// --- 1c. which output drives which motor --------------------------------------------
+{
+  const flyOutputs = (vehicleType, us) => {
+    const mon = new H.HealthMonitor(); const out = []; mon.onFlightEnd = r => out.push(r);
+    const st = armed => ({ armed, altRelM: armed ? 10 : 0, throttlePct: armed ? 50 : 0, groundspeedMps: 1, rollDeg: 0, pitchDeg: 0, vehicleType, autopilot: 3, fixType: 3, satellites: 17, hdop: 0.7, radioRssi: 0 });
+    let t = 1000;
+    for (let i = 0; i < 40; i++) { t += 250; mon.setState(st(true), t); mon.apply({ k: 'OUTPUTS', us: [...us, ...Array(16 - us.length).fill(0)] }, t); }
+    const mid = mon.report(t);
+    t += 250; mon.setState(st(false), t);
+    return { mid, flight: out[0] };
+  };
+  // QuadPlane: outputs 1–4 fly the wing (ailerons, elevator, rudder all over the place), lift motors 1–4 on outputs 5–8.
+  assert.deepEqual(H.frameOf(20).channels, [4, 5, 6, 7]); assert.deepEqual(H.frameOf(22).channels, [4, 5, 6, 7]);
+  let r = flyOutputs(20, [1100, 1900, 1500, 1250, 1500, 1510, 1495, 1505]);
+  assert.ok(r.flight, 'a flight is recorded'); assert.equal(r.flight.findings.length, 0, `wing servos are not motors: ${r.flight.findings.map(f => f.id)}`);
+  assert.ok(r.mid.motors.every(mm => mm.outputPct > 45 && mm.outputPct < 55), 'motor outputs read from 5–8');
+  r = flyOutputs(20, [1500, 1500, 1500, 1500, 1500, 1500, 1720, 1500]);
+  assert.equal(r.flight.findings[0].motor, 3, 'lift motor 3 (output 7) working hard is found');
+  // Tricopter: motors on outputs 1, 2 and 4; output 3 is unused (and the yaw servo is on 7).
+  assert.deepEqual(H.frameOf(15).channels, [0, 1, 3]);
+  r = flyOutputs(15, [1500, 1510, 1000, 1495, 0, 0, 1800]);   // output 3 idles at 1000: read as a motor it would look dead
+  assert.equal(r.flight.findings.length, 0, `tricopter tail motor read from output 4: ${r.flight.findings.map(f => f.id)}`);
+  // Tailsitters, tilt-rotors, anything else: which output is which motor varies, so balance is not analysed rather than guessed.
+  for (const vt of [19, 21, 4, 3]) {
+    r = flyOutputs(vt, [1100, 1900, 1500, 1250, 1500, 1510, 1495, 1505]);
+    assert.equal(H.frameOf(vt).balance, false); assert.equal(r.flight.findings.length, 0, `no invented faults for type ${vt}`);
+    assert.match(r.mid.systems.find(x => x.id === 'PROPULSION').reading, /Not analysed/);
+  }
+}
+
+// --- 1d. autopilot text: a pre-arm refusal is a pre-arm refusal ---------------------------------
+{
+  const mon = new H.HealthMonitor(); mon.setState({ armed: false, altRelM: 0, throttlePct: 0, groundspeedMps: 0, rollDeg: 0, pitchDeg: 0, vehicleType: 2, autopilot: 3, fixType: 3, satellites: 17, hdop: 0.7, radioRssi: 0 }, 1000);
+  mon.apply({ k: 'TEXT', severity: 4, text: 'PreArm: Internal errors 0x100000 l:0 CrashDump data' }, 1000);
+  mon.apply({ k: 'TEXT', severity: 4, text: 'PreArm: Motors: ESC error' }, 1000);
+  let ids = mon.report(1100).findings.map(f => f.id);
+  assert.ok(!ids.includes('crash') && !ids.includes('esc-fail'), `pre-arm text is not a crash or an ESC failure: ${ids}`);
+  assert.ok(ids.filter(id => id.startsWith('prearm-')).length === 2 && mon.report(1100).overall === 'WATCH');
+  mon.apply({ k: 'TEXT', severity: 2, text: 'Crash: Disarming: AngErr=31>30, Accel<3.0' }, 1000);
+  ids = mon.report(1100).findings.map(f => f.id);
+  assert.ok(ids.includes('crash'), 'a real crash message still is one');
+}
+
 // --- 2. motor balance: which part is it? ------------------------------------------
 const QUAD = H.frameOf(2);
 {

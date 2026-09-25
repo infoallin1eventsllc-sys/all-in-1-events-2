@@ -27,6 +27,7 @@ export const LightShowStudioView: React.FC = () => {
     droneCount,
     setDroneCount,
     drones,
+    liveDrones,
     selectedDroneId,
     setSelectedDroneId,
     conductorState,
@@ -165,6 +166,7 @@ export const LightShowStudioView: React.FC = () => {
           {/* 1. Interactive 3D Three.js WebGL Stage */}
           <LightShowCanvas3D
             drones={drones}
+            live={liveDrones}
             selectedDroneId={selectedDroneId}
             onSelectDrone={setSelectedDroneId}
             showTrajectories={showTrajectories}

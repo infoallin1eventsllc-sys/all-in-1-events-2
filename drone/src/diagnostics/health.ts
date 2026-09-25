@@ -64,7 +64,13 @@ export interface MotorState {
 
 export interface SystemState { id: SystemId; label: string; level: Level; reading: string; detail: string }
 
-export interface FrameInfo { kind: 'QUAD' | 'HEXA' | 'OCTO' | 'TRI' | 'PLANE' | 'VTOL' | 'OTHER' | 'UNKNOWN'; motors: number; label: string }
+export interface FrameInfo {
+  kind: 'QUAD' | 'HEXA' | 'OCTO' | 'TRI' | 'PLANE' | 'VTOL' | 'OTHER' | 'UNKNOWN'; motors: number; label: string;
+  /** Output (0-based SERVOn / ESC number) driving motor 1, 2, …; outputs 1..n when absent. */
+  channels?: number[];
+  /** False when which output drives which motor is not known well enough to judge balance: reported as not analysed, never a fault. */
+  balance?: boolean;
+}
 
 export interface HealthEvent { t: number; level: Level; text: string }
 
@@ -209,16 +215,21 @@ export function frameOf(vehicleType: number): FrameInfo {
     case 2: return { kind: 'QUAD', motors: 4, label: 'Quadcopter (X)' };
     case 13: return { kind: 'HEXA', motors: 6, label: 'Hexacopter (X)' };
     case 14: return { kind: 'OCTO', motors: 8, label: 'Octocopter (X)' };
-    case 15: return { kind: 'TRI', motors: 3, label: 'Tricopter' };
+    // ArduCopter tricopter: motors on outputs 1, 2 and 4 (4 is the tail motor); output 3 is unused, the yaw servo is on 7.
+    case 15: return { kind: 'TRI', motors: 3, label: 'Tricopter', channels: [0, 1, 3] };
     case 1: return { kind: 'PLANE', motors: 1, label: 'Fixed wing' };
-    case 19: case 20: case 21: case 22: return { kind: 'VTOL', motors: 4, label: 'VTOL' };
+    // QuadPlane (quad lift, fixed rotors): lift motors 1–4 default to outputs 5–8; 1–4 fly the wing.
+    case 20: case 22: return { kind: 'VTOL', motors: 4, label: 'VTOL (QuadPlane)', channels: [4, 5, 6, 7] };
+    // Tailsitters and tilt-rotors map motors per airframe: judging them as a quad would invent faults.
+    case 19: case 21: return { kind: 'VTOL', motors: 0, label: 'VTOL (tailsitter / tilt-rotor)', balance: false };
     case 0: return { kind: 'UNKNOWN', motors: 4, label: 'Waiting for the aircraft' };
-    default: return { kind: 'OTHER', motors: 4, label: 'Other vehicle' };
+    default: return { kind: 'OTHER', motors: 0, label: 'Other vehicle', balance: false };
   }
 }
 
 export function motorLayout(frame: FrameInfo): { n: number; angleDeg: number; spin: 'CW' | 'CCW' }[] {
-  const g = GEOMETRY[frame.kind] ?? (frame.kind === 'VTOL' || frame.kind === 'OTHER' || frame.kind === 'UNKNOWN' ? GEOMETRY.QUAD : null);
+  if (frame.balance === false) return [];
+  const g = GEOMETRY[frame.kind] ?? (frame.kind === 'VTOL' || frame.kind === 'UNKNOWN' ? GEOMETRY.QUAD : null);
   if (g) return g.map(([angleDeg, spin], i) => ({ n: i + 1, angleDeg, spin }));
   return Array.from({ length: frame.motors }, (_, i) => ({ n: i + 1, angleDeg: 0, spin: 'CW' as const }));
 }
@@ -346,15 +357,16 @@ const BATTERY_FAULTS: [number, string][] = [
 
 interface TextRule { re: RegExp; make: (m: RegExpMatchArray) => Omit<Finding, 'id'> & { id: string } }
 const TEXT_RULES: TextRule[] = [
+  // First: a pre-arm refusal is a pre-arm refusal, whatever words it contains ("PreArm: … CrashDump …" is not a crash).
+  { re: /PreArm:\s*(.*)/i, make: m => ({ id: `prearm-${m[1].slice(0, 24)}`, level: 'WATCH', system: 'SENSORS', title: `Will not arm: ${m[1]}`, detail: 'The autopilot refuses to arm until this is fixed.', action: 'INSPECT', actionText: 'Fix before flight' }) },
   { re: /Potential Thrust Loss \((\d+)\)/i, make: m => ({ id: `sat-${m[1]}`, level: 'FAULT', system: 'PROPULSION', part: `prop-${m[1]}`, motor: +m[1], title: `Motor ${m[1]} ran out of power`, detail: `The autopilot reported motor ${m[1]} at full power while still losing height or attitude ("Potential Thrust Loss"). A damaged prop, a failing motor or ESC, or too much weight.`, action: 'LAND', actionText: 'Land and inspect' }) },
   { re: /Yaw Imbalance/i, make: () => ({ id: 'yaw-ap', level: 'WATCH', system: 'AIRFRAME', part: 'arms', title: 'Autopilot reports a yaw imbalance', detail: 'It is holding a constant yaw correction: a motor is tilted, an arm is twisted, or a prop is the wrong way up.', action: 'INSPECT', actionText: 'Check arms are square' }) },
   { re: /Vibration compensation/i, make: () => ({ id: 'vibe-comp', level: 'FAULT', system: 'AIRFRAME', part: 'props', title: 'Vibration too high to hold altitude normally', detail: 'The autopilot switched to vibration compensation. Balance or replace the propellers, tighten the motors and check the flight controller mount.', action: 'LAND', actionText: 'Land and inspect' }) },
-  { re: /Crash/i, make: () => ({ id: 'crash', level: 'FAULT', system: 'AIRFRAME', part: 'frame', title: 'Crash detected', detail: 'Inspect every arm, propeller, motor and the flight controller mount before the next flight, even if it looks fine.', action: 'INSPECT', actionText: 'Full inspection' }) },
+  { re: /\bCrash\b/i, make: () => ({ id: 'crash', level: 'FAULT', system: 'AIRFRAME', part: 'frame', title: 'Crash detected', detail: 'Inspect every arm, propeller, motor and the flight controller mount before the next flight, even if it looks fine.', action: 'INSPECT', actionText: 'Full inspection' }) },
   { re: /(Motor|ESC)\s*\d*\s*(fail|failure|error|desync)/i, make: m => ({ id: 'esc-fail', level: 'FAULT', system: 'PROPULSION', part: 'esc', title: 'Motor or ESC failure reported', detail: `The autopilot said: "${m.input}".`, action: 'LAND', actionText: 'Land now' }) },
   { re: /(EKF|estimator|navigation).*(variance|fail|lane|error)/i, make: m => ({ id: 'nav-text', level: 'WATCH', system: 'NAVIGATION', part: 'gps', title: 'Navigation filter warning', detail: `The autopilot said: "${m.input}". Usually GPS or compass interference.`, action: 'MONITOR', actionText: 'Watch position hold' }) },
   { re: /GPS Glitch/i, make: () => ({ id: 'gps-glitch', level: 'WATCH', system: 'GPS', part: 'gps', title: 'GPS glitch', detail: 'Position jumped. Fly away from tall metal and buildings; if it repeats in open sky, check the GPS antenna and cable.', action: 'MONITOR', actionText: 'Watch position hold' }) },
   { re: /(compass|mag).*(inconsistent|interference|variance|not calibrated|unhealthy)/i, make: m => ({ id: 'compass-text', level: 'WATCH', system: 'SENSORS', part: 'compass', title: 'Compass problem', detail: `The autopilot said: "${m.input}". Recalibrate away from metal and keep power wires away from the GPS mast.`, action: 'CALIBRATE', actionText: 'Calibrate compass' }) },
-  { re: /PreArm:\s*(.*)/i, make: m => ({ id: `prearm-${m[1].slice(0, 24)}`, level: 'WATCH', system: 'SENSORS', title: `Will not arm: ${m[1]}`, detail: 'The autopilot refuses to arm until this is fixed.', action: 'INSPECT', actionText: 'Fix before flight' }) },
 ];
 
 const sevLevel = (s: number): Level => (s <= 3 ? 'FAULT' : s === 4 ? 'WATCH' : 'OK');
@@ -389,6 +401,8 @@ export class HealthMonitor {
   private clip = 0;
   private vibeHist: { x: number; y: number; z: number }[] = [];
   private cells: number[] = [];
+  /** Latest BATTERY_STATUS per battery monitor; the lowest id is the primary pack the instruments show. */
+  private packs = new Map<number, Extract<HealthMsg, { k: 'BATTERY' }>>();
   private batt: Extract<HealthMsg, { k: 'BATTERY' }> | null = null;
   private sensors: Extract<HealthMsg, { k: 'SENSORS' }> | null = null;
   private nav: Extract<HealthMsg, { k: 'NAV' }> | null = null;
@@ -460,8 +474,8 @@ export class HealthMonitor {
     const f = this.flight, air = this.airborne();
     switch (m.k) {
       case 'OUTPUTS': {
-        const n = this.frame.kind === 'PLANE' ? 0 : this.frame.motors;
-        const pct = m.us.slice(0, n).map(u => (u >= 900 && u <= 2200 ? Math.max(0, Math.min(100, (u - 1000) / 10)) : null));
+        const n = this.frame.kind === 'PLANE' ? 0 : this.frame.motors, ch = this.frame.channels;
+        const pct = (ch ? ch.map(c => m.us[c]) : m.us.slice(0, n)).slice(0, n).map(u => (u >= 900 && u <= 2200 ? Math.max(0, Math.min(100, (u - 1000) / 10)) : null));
         pct.forEach((p, i) => { this.out[i] = p == null ? null : EMA(this.out[i] ?? null, p, 0.12); });
         this.out.length = n;
         if (f && air && pct.every(p => p != null)) {
@@ -486,7 +500,7 @@ export class HealthMonitor {
       case 'ESC': {
         this.escAt = t;
         for (let i = 0; i < 4; i++) {
-          const k = m.first + i; if (k >= 8) continue;
+          const esc = m.first + i, k = this.frame.channels ? this.frame.channels.indexOf(esc) : esc; if (k < 0 || k >= 8) continue; // ESC n sits on output n
           this.rpm[k] = m.rpm[i]; this.cur[k] = m.currentA[i]; this.temp[k] = m.tempC[i];
           if (f && air) {
             if (m.rpm[i] > 0) { f.rpmSum[k] += m.rpm[i]; f.rpmN[k]++; }
@@ -497,7 +511,9 @@ export class HealthMonitor {
         break;
       }
       case 'BATTERY': {
-        this.batt = m; this.cells = m.cellsV;
+        // Each monitor is its own pack: never mix one pack's cells or charge with another's.
+        this.packs.set(m.id ?? 0, m);
+        this.batt = this.packs.get(Math.min(...this.packs.keys()))!; this.cells = this.batt.cellsV;
         if (f && m.cellsV.length) {
           const lo = Math.min(...m.cellsV), hi = Math.max(...m.cellsV);
           f.minCell = Math.min(f.minCell ?? 9, lo); f.maxSpread = Math.max(f.maxSpread ?? 0, hi - lo);
@@ -552,7 +568,7 @@ export class HealthMonitor {
 
   private balanceFrom(acc: FlightAcc | null): { input: BalanceInput; samples: number } | null {
     const n = this.frame.kind === 'PLANE' ? 0 : this.frame.motors;
-    if (!n) return null;
+    if (!n || this.frame.balance === false) return null;
     if (acc) {
       const useSteady = acc.outN >= LIMITS.minBalanceSamples;
       const N = useSteady ? acc.outN : acc.allN;
@@ -606,18 +622,21 @@ export class HealthMonitor {
     }
     if (clipDelta > 0) out.push({ id: 'clip', level: clipDelta >= LIMITS.clipFault ? 'FAULT' : 'WATCH', system: 'AIRFRAME', part: 'fc-mount', title: 'Accelerometer hit its limit', detail: `${clipDelta} clipping events this flight (should be zero). The flight controller is being shaken past what it can measure: soften its mount and fix the vibration source.`, action: 'INSPECT', actionText: 'Check FC mount' });
 
-    // Battery
-    const b = this.batt;
-    const cells = live ? (b?.cellsV ?? []) : [];
-    const spread = live ? (cells.length ? Math.max(...cells) - Math.min(...cells) : null) : acc?.maxSpread ?? null;
-    const lowCell = live ? (cells.length ? Math.min(...cells) : null) : acc?.minCell ?? null;
-    const bt = live ? b?.tempC ?? null : acc?.maxBattTemp ?? null;
+    // Battery: the worst pack when several are reported, each judged on its own cells.
+    const b = this.batt, packs = [...this.packs.values()];
+    const spreads = packs.filter(pk => pk.cellsV.length).map(pk => Math.max(...pk.cellsV) - Math.min(...pk.cellsV));
+    const lows = packs.filter(pk => pk.cellsV.length).map(pk => Math.min(...pk.cellsV));
+    const temps2 = packs.map(pk => pk.tempC).filter((v): v is number => v != null);
+    const spread = live ? (spreads.length ? Math.max(...spreads) : null) : acc?.maxSpread ?? null;
+    const lowCell = live ? (lows.length ? Math.min(...lows) : null) : acc?.minCell ?? null;
+    const bt = live ? (temps2.length ? Math.max(...temps2) : null) : acc?.maxBattTemp ?? null;
     if (spread != null && spread >= LIMITS.cellSpreadWatchV) out.push({ id: 'cell-spread', level: spread >= LIMITS.cellSpreadFaultV ? 'FAULT' : 'WATCH', system: 'BATTERY', part: 'battery', title: 'Battery cells are out of balance', detail: `${(spread * 1000).toFixed(0)} mV between the highest and lowest cell (keep under ${LIMITS.cellSpreadWatchV * 1000}). Balance-charge it; if the gap comes back, retire the pack.`, action: spread >= LIMITS.cellSpreadFaultV ? 'REPLACE' : 'INSPECT', actionText: spread >= LIMITS.cellSpreadFaultV ? 'Retire this pack' : 'Balance-charge' });
     if (lowCell != null && lowCell > 0 && lowCell < LIMITS.cellLowWatchV) out.push({ id: 'cell-low', level: lowCell < LIMITS.cellLowFaultV ? 'FAULT' : 'WATCH', system: 'BATTERY', part: 'battery', title: 'A cell dropped too low under load', detail: `Lowest cell ${lowCell.toFixed(2)} V. The pack is worn, too small for this load, or was flown too long.`, action: lowCell < LIMITS.cellLowFaultV ? (live ? 'LAND' : 'REPLACE') : 'MONITOR', actionText: lowCell < LIMITS.cellLowFaultV ? (live ? 'Land now' : 'Retire this pack') : 'Shorten flights' });
     if (bt != null && bt >= LIMITS.battWatchC) out.push({ id: 'batt-hot', level: bt >= LIMITS.battFaultC ? 'FAULT' : 'WATCH', system: 'BATTERY', part: 'battery', title: 'Battery is hot', detail: `${Math.round(bt)} °C. Let it cool before charging; a pack that keeps running hot has high internal resistance.`, action: 'MONITOR', actionText: 'Cool before charging' });
-    if (b && b.faults) {
-      const names = BATTERY_FAULTS.filter(([bit]) => b.faults & bit).map(([, n]) => n);
-      out.push({ id: 'batt-fault', level: 'FAULT', system: 'BATTERY', part: 'battery', title: 'Battery reports a fault', detail: `The smart battery flags ${names.join(', ') || `code ${b.faults}`}.`, action: 'REPLACE', actionText: 'Swap the pack' });
+    const faults = packs.reduce((f, pk) => f | pk.faults, 0);
+    if (b && faults) {
+      const names = BATTERY_FAULTS.filter(([bit]) => faults & bit).map(([, n]) => n);
+      out.push({ id: 'batt-fault', level: 'FAULT', system: 'BATTERY', part: 'battery', title: 'Battery reports a fault', detail: `The smart battery flags ${names.join(', ') || `code ${faults}`}.`, action: 'REPLACE', actionText: 'Swap the pack' });
     }
 
     // Sensors
@@ -733,13 +752,13 @@ export class HealthMonitor {
     const sensorNames = s ? SENSOR_BITS.filter(([bit]) => (s.present & bit) && (s.enabled & bit)).map(([, nm]) => nm) : [];
     return [
       { id: 'PROPULSION', label: 'Motors and propellers', level: lvl('PROPULSION', outs.length > 0),
-        reading: outs.length ? `${n} motors · ${Math.round(Math.min(...outs))}–${Math.round(Math.max(...outs))}% output` : nr,
+        reading: this.frame.balance === false ? `Not analysed: the ${this.frame.label} motor layout varies by airframe` : outs.length ? `${n} motors · ${Math.round(Math.min(...outs))}–${Math.round(Math.max(...outs))}% output` : nr,
         detail: [rpmKnown ? 'rpm from ESC telemetry' : 'no rpm telemetry', temps.length ? `hottest ${Math.round(Math.max(...temps))} °C` : null].filter(Boolean).join(' · ') },
       { id: 'AIRFRAME', label: 'Frame and vibration', level: lvl('AIRFRAME', !!this.vibe),
         reading: this.vibe ? `${Math.round(Math.max(this.vibe.x, this.vibe.y, this.vibe.z))} m/s² vibration` : nr,
         detail: this.vibe ? `clipping ${this.clip}` : 'arms, mounts and balance' },
       { id: 'BATTERY', label: 'Battery', level: lvl('BATTERY', !!b),
-        reading: cells.length ? `${cells.length} cells · ${Math.min(...cells).toFixed(2)}–${Math.max(...cells).toFixed(2)} V` : b?.packV ? `${b.packV.toFixed(1)} V pack` : s ? `${s.packV.toFixed(1)} V pack` : nr,
+        reading: cells.length ? `${cells.length} cells · ${Math.min(...cells).toFixed(2)}–${Math.max(...cells).toFixed(2)} V` : b?.packV ? `${b.packV.toFixed(1)} V pack` : s?.packV != null ? `${s.packV.toFixed(1)} V pack` : nr,
         detail: [b?.tempC != null ? `${Math.round(b.tempC)} °C` : null, b?.remainingPct != null ? `${b.remainingPct}% left` : null, cells.length ? null : 'no per-cell voltages'].filter(Boolean).join(' · ') },
       { id: 'SENSORS', label: 'Sensors', level: lvl('SENSORS', !!s),
         reading: s ? `${sensorNames.length} sensors checked` : nr, detail: s ? sensorNames.slice(0, 4).join(', ') : '' },

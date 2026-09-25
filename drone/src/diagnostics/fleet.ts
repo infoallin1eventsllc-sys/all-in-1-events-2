@@ -1,5 +1,6 @@
 import { HealthMonitor, LIMITS, type Finding, type FlightHealth, type HealthReport, type Level, type SystemId, type VehicleState } from './health';
 import type { HealthMsg } from './decode';
+import { padLabel, padCols as gridCols } from '../lightshow/pads';
 
 /**
  * Fleet health: one health monitor per aircraft, so a light show of 100, 250 or
@@ -48,15 +49,8 @@ export type Readiness = 'READY' | 'WATCH' | 'GROUNDED' | 'SILENT';
 export const readiness = (a: AircraftHealth): Readiness =>
   a.overall === 'UNKNOWN' ? 'SILENT' : a.overall === 'FAULT' ? 'GROUNDED' : a.overall === 'WATCH' ? 'WATCH' : 'READY';
 
-/** Pad label for the n-th aircraft (0-based) on a launch grid `cols` wide. */
-export function padLabel(n: number, cols: number) {
-  const row = Math.floor(n / cols), col = n % cols;
-  const letters = row < 26 ? String.fromCharCode(65 + row) : String.fromCharCode(64 + Math.floor(row / 26)) + String.fromCharCode(65 + (row % 26));
-  return `${letters}${String(col + 1).padStart(2, '0')}`;
-}
-
-/** Launch grid width for a fleet: close to 5:3 across, as show pads are laid out. */
-export const gridCols = (n: number) => Math.max(5, Math.round(Math.sqrt(n * 1.7)));
+// One launch grid for the show: the simulation, the exported package and this view agree on every pad.
+export { padLabel, padCols as gridCols } from '../lightshow/pads';
 
 export function summarize(id: string, pad: string, r: HealthReport, hours?: { props: number; motors: number }): AircraftHealth {
   const devs = r.motors.map(m => m.deviationPct).filter((v): v is number => v != null);
@@ -189,16 +183,18 @@ export function fleetStats(list: AircraftHealth[], opts: { propHours?: number; m
   const motorsDue = list.filter(a => a.motorHours != null && a.motorHours >= MH).map(a => a.pad);
 
   const live = list.filter(a => a.overall !== 'UNKNOWN');
-  const lowBatt = live.filter(a => a.batteryPct != null && a.batteryPct < SHOW_MIN_BATTERY);
+  // A gate passes on what an aircraft reports, never on what it has not: no pack reading or no GPS report holds the show.
+  const noBatt = live.filter(a => a.batteryPct == null);
+  const lowBatt = live.filter(a => a.batteryPct == null || a.batteryPct < SHOW_MIN_BATTERY);
   const grounded = live.filter(a => a.overall === 'FAULT');
   const silent = list.filter(a => a.overall === 'UNKNOWN');
-  const noFix = live.filter(a => a.systems.GPS === 'FAULT');
+  const noFix = live.filter(a => a.systems.GPS !== 'OK' && a.systems.GPS !== 'WATCH');
   const main = firmware[0]?.name;
   const odd = live.filter(a => a.firmware && a.firmware !== main);
   const gates = [
     { id: 'report', label: 'Every aircraft reporting', ok: silent.length === 0, detail: silent.length ? `${silent.length} silent` : `${list.length} of ${list.length}`, pads: silent.map(a => a.pad) },
     { id: 'faults', label: 'No aircraft with a fault', ok: grounded.length === 0, detail: grounded.length ? `${grounded.length} to ground` : 'none', pads: grounded.map(a => a.pad) },
-    { id: 'battery', label: `Battery above ${SHOW_MIN_BATTERY}% on every aircraft`, ok: lowBatt.length === 0, detail: lowBatt.length ? `${lowBatt.length} packs to swap` : min != null ? `lowest ${Math.round(min)}%` : '—', pads: lowBatt.map(a => a.pad) },
+    { id: 'battery', label: `Battery above ${SHOW_MIN_BATTERY}% on every aircraft`, ok: lowBatt.length === 0, detail: lowBatt.length ? [lowBatt.length > noBatt.length ? `${lowBatt.length - noBatt.length} packs to swap` : '', noBatt.length ? `${noBatt.length} not reporting a charge` : ''].filter(Boolean).join(', ') : min != null ? `lowest ${Math.round(min)}%` : '—', pads: lowBatt.map(a => a.pad) },
     { id: 'gps', label: '3D GPS fix on every aircraft', ok: noFix.length === 0, detail: noFix.length ? `${noFix.length} without` : 'all fixed', pads: noFix.map(a => a.pad) },
     { id: 'firmware', label: 'Every aircraft on the same firmware', ok: odd.length === 0, detail: odd.length ? `${odd.length} on another version` : main ?? '—', pads: odd.map(a => a.pad) },
   ];
@@ -215,9 +211,13 @@ export function goSentence(s: FleetStats): string {
   const steps: string[] = [];
   const g = (id: string) => s.gates.find(x => x.id === id)!;
   if (!g('faults').ok) steps.push(`ground ${s.counts.GROUNDED} aircraft and fly spares in their slots`);
-  if (!g('battery').ok) steps.push(`swap ${s.battery.below} pack${s.battery.below === 1 ? '' : 's'} under ${SHOW_MIN_BATTERY}%`);
+  if (!g('battery').ok) {
+    if (s.battery.below) steps.push(`swap ${s.battery.below} pack${s.battery.below === 1 ? '' : 's'} under ${SHOW_MIN_BATTERY}%`);
+    const unread = g('battery').pads.length - s.battery.below;
+    if (unread > 0) steps.push(`get a battery reading from ${unread} aircraft`);
+  }
   if (!g('report').ok) steps.push(`bring ${s.counts.SILENT} silent aircraft back on the link or replace them`);
-  if (!g('gps').ok) steps.push('wait for a GPS fix on every aircraft');
+  if (!g('gps').ok) steps.push('wait for a 3D GPS fix on every aircraft');
   if (!g('firmware').ok) steps.push('put every aircraft on the same firmware');
   const txt = steps.join(', ');
   return `Hold: ${txt.charAt(0).toUpperCase()}${txt.slice(1)}.`;

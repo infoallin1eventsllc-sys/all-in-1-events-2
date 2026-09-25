@@ -40,6 +40,8 @@ export const LightShowConductor: React.FC<LightShowConductorProps> = ({
   onEmergencyAbort,
   onArmShow,
 }) => {
+  // The show starts only once armed and resumes only from a hold; an abort is reset with Rewind.
+  const canPlay = conductorState.status === 'ARMED' || conductorState.status === 'PAUSED' || conductorState.status === 'RUNNING';
   const formatTime = (secs: number) => {
     const mins = Math.floor(secs / 60);
     const s = Math.floor(secs % 60);
@@ -60,7 +62,7 @@ export const LightShowConductor: React.FC<LightShowConductorProps> = ({
               ? 'bg-emerald-950/80 border-emerald-600 text-emerald-400 animate-pulse'
               : conductorState.status === 'ARMED'
               ? 'bg-amber-950/80 border-amber-600 text-amber-400'
-              : conductorState.status === 'ABORTING'
+              : conductorState.status === 'ABORTING' || conductorState.status === 'ABORTED'
               ? 'bg-rose-950/80 border-rose-600 text-rose-400'
               : 'bg-slate-800 border-slate-700 text-slate-400'
           }`}>
@@ -76,7 +78,7 @@ export const LightShowConductor: React.FC<LightShowConductorProps> = ({
                   ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
                   : conductorState.status === 'ARMED'
                   ? 'bg-amber-950 text-amber-300 border-amber-800'
-                  : conductorState.status === 'ABORTING'
+                  : conductorState.status === 'ABORTING' || conductorState.status === 'ABORTED'
                   ? 'bg-rose-950 text-rose-300 border-rose-800'
                   : 'bg-slate-800 text-slate-400 border-slate-700'
               }`}>
@@ -161,7 +163,9 @@ export const LightShowConductor: React.FC<LightShowConductorProps> = ({
 
           <button
             onClick={onTogglePlay}
-            className={`px-5 py-2 rounded-xl font-mono font-bold flex items-center gap-2 shadow transition-all ${
+            disabled={!canPlay}
+            title={canPlay ? undefined : conductorState.status === 'PRE_FLIGHT' ? 'Arm the show first' : 'Rewind to reset after an abort'}
+            className={`px-5 py-2 rounded-xl font-mono font-bold flex items-center gap-2 shadow transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
               conductorState.status === 'RUNNING'
                 ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
                 : 'bg-sky-500 hover:bg-sky-400 text-slate-950'

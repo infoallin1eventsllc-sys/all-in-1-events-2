@@ -36,6 +36,10 @@ export interface ShowFormation {
   paletteName: string;
   /** Positions and colours for `count` aircraft at `t` seconds into the cue; formations are alive. */
   generatePoints: (count: number, t?: number) => { pos: Vector3D; color: ColorRGBW }[];
+  /** Seconds into the cue where the shape changes outright (a new number, say) rather than moving: the exporter flies a matched transition there. */
+  cuts?: number[];
+  /** The shape before spacing, for stepping through a cue with a Spacer. */
+  shape?: (count: number, t?: number) => { pos: Vector3D; color: ColorRGBW }[];
 }
 
 export interface ShowTimelineCue {
@@ -47,7 +51,8 @@ export interface ShowTimelineCue {
 }
 
 export interface ShowConductorState {
-  status: 'PRE_FLIGHT' | 'ARMED' | 'RUNNING' | 'PAUSED' | 'ABORTING' | 'SHOW_COMPLETE';
+  /** ABORTING: lights out, descending; ABORTED: every aircraft down (rewind resets). */
+  status: 'PRE_FLIGHT' | 'ARMED' | 'RUNNING' | 'PAUSED' | 'ABORTING' | 'ABORTED' | 'SHOW_COMPLETE';
   currentTimeSec: number;
   totalDurationSec: number;
   activeFormationIndex: number;
