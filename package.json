@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "python -m http.server 8000",
     "start": "netlify dev",
-    "lint": "echo 'Install ESLint to lint JS files'"
+    "lint": "echo 'Install ESLint to lint JS files'",
+    "build:drone": "cd drone && npm ci --no-audit --no-fund && npm run build && rm -rf node_modules",
+    "dev:drone": "cd drone && npm install && npm run dev",
+    "build": "npm run build:drone && node scripts/build-site.mjs"
   },
   "keywords": [
     "events",
@@ -25,6 +28,6 @@
     "netlify-cli": "^17.0.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.19.0"
   }
 }

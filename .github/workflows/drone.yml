@@ -1,0 +1,28 @@
+name: Drone Command
+
+on:
+  push:
+    paths: ['drone/**', '.github/workflows/drone.yml']
+  pull_request:
+    paths: ['drone/**', '.github/workflows/drone.yml']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: drone
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: drone/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Typecheck
+        run: npm run lint
+      - name: MAVLink codec tests
+        run: npm test
+      - name: Build
+        run: npm run build

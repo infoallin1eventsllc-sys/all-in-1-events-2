@@ -1,0 +1,41 @@
+{
+  "name": "all-in-1-drone-command",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Drone command dashboards for All in 1 Events: light show, site survey and surveillance",
+  "scripts": {
+    "dev": "vite --port=3000 --host=0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview",
+    "clean": "rm -rf dist",
+    "footage": "node scripts/fetch_footage.mjs",
+    "veo": "node scripts/veo.mjs",
+    "lint": "tsc --noEmit",
+    "test": "node scripts/mavlink.test.mjs && node scripts/export.test.mjs && node scripts/record.test.mjs && node scripts/survey.test.mjs && node scripts/tiles.test.mjs && node scripts/terrain.test.mjs && node scripts/boundary.test.mjs && node scripts/mission.test.mjs && node scripts/measure.test.mjs && node scripts/processed.test.mjs && node scripts/nodeodm.test.mjs && node scripts/analytics.test.mjs && node scripts/diagnostics.test.mjs && node scripts/fleet.test.mjs && node scripts/control.test.mjs && node scripts/fly.test.mjs && node scripts/server.test.mjs && node scripts/sync.test.mjs && node scripts/compliance.test.mjs",
+    "plates": "node scripts/plates.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "^0.546.0",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1",
+    "three": "^0.186.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/three": "^0.186.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "esbuild": "^0.27.0",
+    "fast-png": "^8.0.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}

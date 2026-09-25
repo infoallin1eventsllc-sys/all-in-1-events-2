@@ -1,0 +1,324 @@
+{
+ "decode": {
+  "gimbal_attitude": {
+   "frame": "fd28000000019a1d0100d20400004474643f81d8ca3df441bdbe40db743e000000000000000000000000000000000000019aa5c3",
+   "pitch": -45,
+   "yaw": 30
+  },
+  "camera_feedback": {
+   "frame": "fd2b0000000101b4000040420f0000000000cca3211470386cb90000d34200007142000000000000b4c20000b442d7a344412a00014c6f",
+   "idx": 42,
+   "lat": 33.774894,
+   "lon": -118.409,
+   "altRel": 60.25
+  },
+  "mount_status": {
+   "frame": "fd0e00000001019e000048f4ffff0000000094110000ffbee2a1",
+   "pitch": -30,
+   "yaw": 45
+  },
+  "heartbeat_px4_mission": {
+   "frame": "fd09000000010100000000000404020c810403cbf5",
+   "autopilot": 12,
+   "mode": "AUTO"
+  },
+  "heartbeat_px4_rtl": {
+   "frame": "fd09000000010100000000000405020c8104031e6a",
+   "mode": "RTL"
+  },
+  "heartbeat_ardupilot_guided": {
+   "frame": "fd0900000001010000000400000002038104030356",
+   "autopilot": 3,
+   "mode": "GUIDED"
+  },
+  "fence_breached": {
+   "frame": "fd080000000101a2000040e2010003000101fd8c",
+   "breached": true
+  },
+  "fence_clear_after_breach": {
+   "frame": "fd080000000101a2000040e201000300000121d6",
+   "breached": false
+  },
+  "heartbeat_plane_guided": {
+   "frame": "fd0900000001010000000f00000001038104033e47",
+   "mode": "GUIDED"
+  },
+  "heartbeat_plane_rtl": {
+   "frame": "fd0900000001010000000b0000000103810403a2f7",
+   "mode": "RTL"
+  },
+  "heartbeat_quadplane_qland": {
+   "frame": "fd0900000001010000001400000014038104031bde",
+   "mode": "LAND"
+  },
+  "heartbeat_rover_guided": {
+   "frame": "fd0900000001010000000f0000000a038104031b6a",
+   "mode": "GUIDED"
+  },
+  "heartbeat_copter_guided_sys2": {
+   "frame": "fd0900000002010000000400000002038104037d8e",
+   "sys": 2
+  },
+  "radio_status_sik": {
+   "frame": "fd0900000033446d000000000000b4ac642826effe",
+   "rssi": 180,
+   "remrssi": 172,
+   "noise": 40
+  }
+ },
+ "encode": {
+  "gimbal_pitchyaw": {
+   "msgId": 76,
+   "payload": "0000f0c10000c07f0000c07f0000c07f000000000000000000000000e8030101"
+  },
+  "mount_control": {
+   "msgId": 76,
+   "payload": "0000f0c1000000000000000000000000000000000000000000000040cd000101"
+  },
+  "zoom": {
+   "msgId": 76,
+   "payload": "0000004000004842000000000000000000000000000000000000000013020101"
+  },
+  "source_ir": {
+   "msgId": 76,
+   "payload": "0000000000000040000000000000000000000000000000000000000016020101"
+  },
+  "relay_on": {
+   "msgId": 76,
+   "payload": "000000000000803f0000000000000000000000000000000000000000b5000101"
+  },
+  "photo": {
+   "msgId": 76,
+   "payload": "00000000000000000000803f00000000000000000000000000000000d0070101"
+  },
+  "px4_mode_mission": {
+   "msgId": 76,
+   "payload": "0000803f000080400000804000000000000000000000000000000000b0000101"
+  },
+  "ardu_mode_guided": {
+   "msgId": 76,
+   "payload": "0000803f000080400000000000000000000000000000000000000000b0000101"
+  },
+  "reposition": {
+   "msgId": 75,
+   "payload": "000080bf0000803f000000000000c07fcca3211470386cb900002042c000010106"
+  },
+  "plane_mode_guided": {
+   "msgId": 76,
+   "payload": "0000803f000070410000000000000000000000000000000000000000b0000101"
+  },
+  "rover_mode_rtl": {
+   "msgId": 76,
+   "payload": "0000803f000030410000000000000000000000000000000000000000b0000101"
+  },
+  "quadplane_mode_qland": {
+   "msgId": 76,
+   "payload": "0000803f0000a0410000000000000000000000000000000000000000b0000101"
+  },
+  "px4_reposition_amsl": {
+   "msgId": 75,
+   "payload": "000080bf0000803f000000000000c07fcca3211470386cb900001143c000010105"
+  },
+  "set_interval_sys2": {
+   "msgId": 76,
+   "payload": "00000442005043480000000000000000000000000000000000000000ff010201"
+  },
+  "param_read_radius": {
+   "msgId": 20,
+   "payload": "ffff010146454e43455f524144495553"
+  },
+  "param_read_16_chars": {
+   "msgId": 20,
+   "payload": "ffff010146454e43455f414c545f4d41585f5450"
+  },
+  "param_set_ap_radius": {
+   "msgId": 23,
+   "payload": "0000e143010146454e43455f5241444955530000000009"
+  },
+  "param_set_ap_type": {
+   "msgId": 23,
+   "payload": "0000a040010146454e43455f5459504500000000000002"
+  },
+  "param_set_px4_action": {
+   "msgId": 23,
+   "payload": "03000000010147465f414354494f4e0000000000000006"
+  },
+  "param_set_px4_dist": {
+   "msgId": 23,
+   "payload": "0000e143010147465f4d41585f484f525f444953540009"
+  },
+  "fence_enable_polygon": {
+   "msgId": 76,
+   "payload": "0000803f000080400000000000000000000000000000000000000000cf000101"
+  }
+ },
+ "health": {
+  "servo_output_raw": {
+   "frame": "fd17000000010124000040e20100c805f0054a06d7054c0400000000000000e803ac42",
+   "us": [
+    1480,
+    1520,
+    1610,
+    1495
+   ]
+  },
+  "vibration": {
+   "frame": "fd1d0000000101f10000010000000000000000004841000034410000fc410300000000000000072046",
+   "x": 12.5,
+   "y": 11.25,
+   "z": 31.5,
+   "clip": [
+    3,
+    0,
+    7
+   ]
+  },
+  "esc_1_to_4": {
+   "frame": "fd2c0000000101162b0018061606130619062c030a04fb04160378008700a000760000196419621bf6180a000a000a000a003033372f777a",
+   "tempC": [
+    48,
+    51,
+    55,
+    47
+   ],
+   "voltageV": [
+    15.6,
+    15.58,
+    15.55,
+    15.61
+   ],
+   "currentA": [
+    8.12,
+    10.34,
+    12.75,
+    7.9
+   ],
+   "rpm": [
+    6400,
+    6500,
+    7010,
+    6390
+   ]
+  },
+  "battery_cells": {
+   "frame": "fd33000000010193000020030000e02e00004e0c480f410f750e460fffffffffffffffffffffffff660800010140840300000100000000000000000004caad",
+   "cells": [
+    3.912,
+    3.905,
+    3.701,
+    3.91
+   ],
+   "tempC": 31.5,
+   "currentA": 21.5,
+   "remaining": 64,
+   "faults": 4
+  },
+  "battery_pack_only": {
+   "frame": "fd240000000101930000ffffffffffffffffff7ff03cffffffffffffffffffffffffffffffffffffffff000101ff9db2",
+   "packV": 15.6
+  },
+  "sys_status": {
+   "frame": "fd1f00000001010100002f0000002f0000002b0000005e01f03c6608fa000000000000000000000040d656",
+   "present": 47,
+   "health": 43,
+   "drop": 2.5
+  },
+  "ekf_status": {
+   "frame": "fd160000000101c100008fc2f53d0000803e0ad7a33df6281c3f00000000ff01ae07",
+   "velocity": 0.12,
+   "posHoriz": 0.25,
+   "posVert": 0.08,
+   "compass": 0.61,
+   "flags": 511
+  },
+  "estimator_status": {
+   "frame": "fd2a0000000101e600000100000000000000cdcc4c3e9a99993ecdcccc3d6666663f00000000000000000000003fcdcc4c3fff039f68",
+   "velocity": 0.2,
+   "posHoriz": 0.3,
+   "posVert": 0.1,
+   "compass": 0.9
+  },
+  "power_status": {
+   "frame": "fd0500000001017d00000014000009dc0f",
+   "vcc": 5.12,
+   "flags": 9
+  },
+  "autopilot_version": {
+   "frame": "fd2c000000010194000000000000000000000000000000000000ff070504000000000000000000008c00091240573261336463346237d261",
+   "major": 4,
+   "minor": 5,
+   "patch": 7,
+   "type": 255,
+   "git": "2a3dc4b7"
+  },
+  "statustext": {
+   "frame": "fd1a0000000101fd000002506f74656e7469616c20546872757374204c6f73732028332930d2",
+   "severity": 2,
+   "text": "Potential Thrust Loss (3)"
+  },
+  "px4_esc_status": {
+   "frame": "fd38000000010123010063000000000000000019000064190000621b0000f618000000007841000078410000744100007841000000410000284100004c410000f040de3d",
+   "rpm": [
+    6400,
+    6500,
+    7010,
+    6390
+   ],
+   "currentA": [
+    8.0,
+    10.5,
+    12.75,
+    7.5
+   ]
+  }
+ },
+ "param": {
+  "ap_fence_type": {
+   "frame": "fd1900000001011600000000e040ba04930146454e43455f54595045000000000000028b75",
+   "name": "FENCE_TYPE",
+   "value": 7,
+   "type": 2,
+   "enc": "CAST"
+  },
+  "ap_fence_radius": {
+   "frame": "fd19000000010116000000009643ba04950146454e43455f5241444955530000000009e454",
+   "name": "FENCE_RADIUS",
+   "value": 300,
+   "type": 9,
+   "enc": "CAST"
+  },
+  "ap_16_chars": {
+   "frame": "fd1900000001011600000000803fba049e0146454e43455f414c545f4d41585f5450020403",
+   "name": "FENCE_ALT_MAX_TP",
+   "value": 1,
+   "type": 2,
+   "enc": "CAST"
+  },
+  "px4_gf_action": {
+   "frame": "fd19000000010116000002000000d403380147465f414354494f4e00000000000000061725",
+   "name": "GF_ACTION",
+   "value": 2,
+   "type": 6,
+   "enc": "BYTEWISE"
+  },
+  "px4_negative": {
+   "frame": "fd190000000101160000ffffffffd4036400434f4d5f464c544d4f4445310000000006a846",
+   "name": "COM_FLTMODE1",
+   "value": -1,
+   "type": 6,
+   "enc": "BYTEWISE"
+  },
+  "px4_float": {
+   "frame": "fd19000000010116000000000000d4033b0147465f4d41585f484f525f4449535400092231",
+   "name": "GF_MAX_HOR_DIST",
+   "value": 0,
+   "type": 9,
+   "enc": "BYTEWISE"
+  },
+  "error_missing": {
+   "frame": "fd150000000101590100ffffffbe52544c5f414c5400000000000000000001772b",
+   "name": "RTL_ALT",
+   "error": 1
+  }
+ }
+}

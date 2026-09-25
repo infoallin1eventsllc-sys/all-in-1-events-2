@@ -143,8 +143,11 @@ Adjust cadence with `cron.schedule('marketing-orchestrator', '<cron>', ...)`.
 
 - **All CRM tables are RLS deny-by-default.** Only the service role (used by the
   edge functions) can read/write. The public/anon key cannot see any data.
-- `intake` is the only public endpoint. Set a `WEBHOOK_SECRET` secret to require
-  an `x-webhook-secret` header on it.
+- `intake` and `dashboard` are public (no JWT). `dashboard` is gated by its
+  passcode. `intake` validates and size-caps input, drops honeypot submissions
+  and rate-limits per IP. A `WEBHOOK_SECRET` secret additionally requires an
+  `x-webhook-secret` header, for server-to-server callers only (a browser form
+  can't keep a secret).
 - `orchestrator` / `runner` / `report` require a valid JWT. **Hardening (optional):**
   they can currently be triggered by anyone holding the public anon key. To lock
   them to internal use only, add a shared-secret header check (set a `RUN_SECRET`
@@ -159,7 +162,15 @@ Functions were deployed via the Supabase MCP tools. To redeploy from source with
 the Supabase CLI:
 
 ```bash
-supabase functions deploy orchestrator runner intake report --project-ref glzodwhyavexpuusbqjy
+supabase functions deploy orchestrator runner intake report dashboard --project-ref glzodwhyavexpuusbqjy
 ```
 
-(The `_shared/` folder is imported by each function via `../_shared/...`.)
+(The `_shared/` folder is imported by each function via `../_shared/...`.
+`supabase/config.toml` keeps `intake` and `dashboard` at `verify_jwt = false`;
+without it the CLI deploys them with JWT checks on and the website form gets 401.)
+
+> **Warning: the live project is ahead of this folder.** Live has 19 functions
+> (owner, planner, pay, compose-reply, notify-owner…), and its runner and intake
+> are newer and larger than the copies here. Deploying these files would roll
+> those back. Treat this folder as a reference snapshot. Port a change into the
+> live source (`get_edge_function`), never redeploy from here. See SESSION.md.

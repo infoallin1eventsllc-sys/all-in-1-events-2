@@ -16,6 +16,8 @@ export type ClaudeResult = {
   mocked: boolean;
   error?: string;
   usage?: { input_tokens?: number; output_tokens?: number };
+  /** Why the model stopped: "end_turn" is a complete answer; "max_tokens" means it was cut short. */
+  stopReason?: string;
 };
 
 type CallOpts = {
@@ -79,7 +81,7 @@ async function viaKeyRouter(opts: CallOpts, model: string): Promise<ClaudeResult
     .map((b: { text: string }) => b.text)
     .join("\n")
     .trim();
-  return { text, mocked: false, usage: reply.usage };
+  return { text, mocked: false, usage: reply.usage, stopReason: reply.stop_reason };
 }
 
 export async function callClaude(opts: CallOpts): Promise<ClaudeResult> {
@@ -119,13 +121,22 @@ export async function callClaude(opts: CallOpts): Promise<ClaudeResult> {
       .map((b: { text: string }) => b.text)
       .join("\n")
       .trim();
-    return { text, mocked: false, usage: resp.usage };
+    return { text, mocked: false, usage: resp.usage, stopReason: resp.stop_reason };
   } catch (err) {
     // Key missing/invalid/rate-limited → degrade to mock so the pipeline keeps
     // running. Surface the reason so the dashboard/logs can show it.
     const reason = err instanceof Error ? err.message : String(err);
     return { text: mockFor(opts.prompt), mocked: true, error: reason };
   }
+}
+
+/**
+ * True only for a real, finished answer: not mock text (no key, or the API
+ * failed) and not cut off at max_tokens. Anything that may reach a customer
+ * without a human reading it first must pass this.
+ */
+export function isComplete(r: ClaudeResult): boolean {
+  return !r.mocked && r.stopReason === "end_turn" && r.text.length > 0;
 }
 
 // Parse the first JSON object/array found in a model response.

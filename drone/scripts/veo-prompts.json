@@ -1,0 +1,35 @@
+{
+  "negative": "cartoon, animation, 3D render look, CGI, video game graphics, text, captions, watermark, logo, distorted or warped buildings, duplicated buildings, jittery motion, flicker",
+  "clips": [
+    {
+      "key": "giza",
+      "place": "GIZA",
+      "title": "FPV over the Pyramids of Giza at sunrise",
+      "prompt": "A real FPV drone flight over the Pyramids of Giza, Egypt: skimming low over the desert sand at dawn, rising fast, then weaving between the Great Pyramid and the Pyramid of Khafre, with Cairo's haze on the horizon. One continuous take: low altitude over the sand, a rapid vertical climb, banking turns between the pyramids, ending in an upward spiral around the Great Pyramid. Low golden sunrise light raking across the limestone blocks, long shadows, warm haze. Photorealistic real drone footage shot on a DJI cinema drone, 4K, natural colour, subtle motion blur, no CGI look. Epic, awe-inspiring, strong sense of speed. Horizontal 16:9, physically coherent motion."
+    },
+    {
+      "key": "alps",
+      "place": "MOUNTAINS",
+      "title": "FPV down a glacier valley in the Alps",
+      "prompt": "A real FPV drone flight through a mountain range: diving off a snowy ridge, skimming a sharp rock arete, then racing down a glacier valley toward a turquoise alpine lake. One continuous take with sweeping banked turns. Swiss Alps in early summer, clear morning sun, crisp shadows on snow, thin mist in the valley. Photorealistic real drone footage, 4K, natural colour, subtle motion blur, no CGI look. Exhilarating, vast, strong sense of speed. Horizontal 16:9, physically coherent motion."
+    },
+    {
+      "key": "nyc",
+      "place": "NEW_YORK",
+      "title": "FPV from Central Park down Fifth Avenue",
+      "prompt": "A real FPV drone flight through New York City: starting low over Central Park, climbing fast to reveal Midtown, then diving down Fifth Avenue between the skyscrapers past yellow cabs, ending in a climbing orbit of the Empire State Building. One continuous take. Late afternoon sun, glass towers reflecting the sky, deep street shadows. Photorealistic real drone footage, 4K, natural colour, subtle motion blur, no CGI look. Thrilling, cinematic, strong sense of speed. Horizontal 16:9, physically coherent motion."
+    },
+    {
+      "key": "sf",
+      "place": "SAN_FRANCISCO",
+      "title": "FPV along the Golden Gate Bridge into the city",
+      "prompt": "A real FPV drone flight in San Francisco: skimming low over the water of the bay, racing along the Golden Gate Bridge under its red towers and cables, then climbing over the headlands to reveal the downtown skyline and the Transamerica Pyramid, with low fog rolling in. One continuous take with banked turns. Golden hour light. Photorealistic real drone footage, 4K, natural colour, subtle motion blur, no CGI look. Cinematic, strong sense of speed. Horizontal 16:9, physically coherent motion."
+    },
+    {
+      "key": "la",
+      "place": "LOS_ANGELES",
+      "title": "FPV over the freeways into downtown Los Angeles",
+      "prompt": "A real FPV drone flight in Los Angeles at golden hour: skimming low over busy freeway traffic lined with palm trees, climbing fast to reveal the downtown skyline, then weaving between the glass towers with the hills and a warm hazy sunset behind. One continuous take with banked turns. Photorealistic real drone footage, 4K, natural colour, subtle motion blur, no CGI look. Cinematic, strong sense of speed. Horizontal 16:9, physically coherent motion."
+    }
+  ]
+}

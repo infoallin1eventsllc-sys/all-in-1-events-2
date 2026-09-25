@@ -83,7 +83,7 @@
 <main class="max-w-container-max-width mx-auto px-margin-mobile md:px-margin-desktop py-16">
 
   <!-- Hero -->
-  <section class="mb-16">
+  <section id="portfolio" class="mb-16 scroll-mt-24">
     <h1 class="font-headline-xl text-headline-xl glow-text mb-4">Elevate Your Atmosphere</h1>
     <p class="text-on-surface-variant max-w-2xl">Precision event production meeting electric nightlife energy. Browse our curated selection of high-end activations and luxury equipment.</p>
   </section>
@@ -172,7 +172,7 @@
         <li><a class="text-on-surface-variant hover:text-secondary text-label-sm font-label-sm" href="#careers">Careers</a></li>
       </ul>
     </div>
-    <div>
+    <div id="contact" class="scroll-mt-24">
       <h5 class="text-primary font-bold mb-4">Contact</h5>
       <p class="text-on-surface-variant text-label-sm mb-2">concierge@allin1events.com</p>
       <p class="text-on-surface-variant text-label-sm">+1 (800) 555-IRIS</p>
@@ -251,6 +251,11 @@
   </div>
 
 </section>
+
+<!-- Declares the "inquiry" form to Netlify Forms at deploy time; js/app.js posts to it. -->
+<form name="inquiry" data-netlify="true" netlify-honeypot="bot-field" hidden>
+  <input name="name"/><input name="email"/><input name="eventDate"/><textarea name="details"></textarea><input name="bot-field"/>
+</form>
 
 <!-- ===== SCRIPTS ===== -->
 <script src="js/api.js"></script>

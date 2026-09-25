@@ -1,8 +1,8 @@
 {
-  "buildCommand": "echo 'Static site'",
-  "outputDirectory": ".",
+  "buildCommand": "npm run build",
+  "outputDirectory": "_site",
   "functions": {
-    "vercel/api/*.js": {
+    "api/chat.js": {
       "memory": 128,
       "maxDuration": 30
     }
@@ -22,19 +22,47 @@
         {
           "key": "Referrer-Policy",
           "value": "strict-origin-when-cross-origin"
-        },
+        }
+      ]
+    },
+    {
+      "source": "/((?!drone(?:/|$)).*)",
+      "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; img-src 'self' https://lh3.googleusercontent.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; connect-src 'self' https://api.anthropic.com"
+          "value": "default-src 'self'; img-src 'self' https://lh3.googleusercontent.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; connect-src 'self'; form-action 'self' mailto:"
         },
         {
           "key": "Permissions-Policy",
           "value": "camera=(), microphone=(), geolocation=()"
         }
       ]
+    },
+    {
+      "source": "/drone/(.*)",
+      "headers": [
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), microphone=(self), geolocation=()"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; img-src 'self' data: blob:; media-src 'self' blob: https://www.pexels.com https://videos.pexels.com https://player.vimeo.com https://*.vimeocdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self'; worker-src 'self' blob:; connect-src 'self' https: ws: wss: http://localhost:* http://127.0.0.1:*"
+        }
+      ]
     }
   ],
-  "env": {
-    "ANTHROPIC_API_KEY": "@anthropic_api_key"
-  }
+  "rewrites": [
+    {
+      "source": "/drone/(.*)",
+      "destination": "/drone/index.html"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/drone",
+      "destination": "/drone/",
+      "permanent": true
+    }
+  ]
 }

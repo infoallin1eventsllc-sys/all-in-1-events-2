@@ -1,0 +1,16 @@
+{
+  "id": "p-drone-command",
+  "title": "All in 1 Drone Command",
+  "category": "dashboards",
+  "categoryLabel": "Operations Console",
+  "client": "All in 1 Events",
+  "year": "2026",
+  "image": "https://meridianinterface.com/images/portfolio/drone-command.jpg",
+  "summary": "One console for drone light shows, site surveys and overnight security. It flies real ArduPilot and PX4 aircraft, names the failing part before a flight goes wrong, and keeps a tamper-evident record of every flight — on a laptop, tablet or phone.",
+  "highlights": [
+    "Live 3D show conductor for 100–500 aircraft",
+    "Survey measurements from the map",
+    "Aircraft health that names the failing part"
+  ],
+  "liveUrl": "https://meridianinterface.com/demos/drone-command/?tour"
+}

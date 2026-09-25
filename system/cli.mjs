@@ -61,7 +61,9 @@ async function post(pathq, body) {
   return r.json();
 }
 async function invoke(name, body = {}) {
-  const r = await fetch(fn(name), { method: "POST", headers: authHeaders, body: JSON.stringify(body) });
+  // intake enforces WEBHOOK_SECRET when it is set; send it along when we have it.
+  const headers = process.env.WEBHOOK_SECRET ? { ...authHeaders, "x-webhook-secret": process.env.WEBHOOK_SECRET } : authHeaders;
+  const r = await fetch(fn(name), { method: "POST", headers, body: JSON.stringify(body) });
   const text = await r.text();
   let json; try { json = JSON.parse(text); } catch { json = text; }
   return { status: r.status, json };
@@ -143,7 +145,11 @@ const cmds = {
   async approve(args) {
     const id = args[0];
     if (!id) return console.error("usage: approve <content_id>");
-    await patch(`content_items?id=eq.${id}`, { status: "approved" });
+    const rows = await patch(`content_items?id=eq.${id}&status=in.(draft,pending_approval,rejected,failed)`, { status: "approved" });
+    if (!rows.length) {
+      const [item] = await get(`content_items?select=status&id=eq.${id}`);
+      return console.error(item ? `not approved: content is already ${item.status}` : "content not found");
+    }
     await post("tasks", { type: "publish_content", payload: { content_item_id: id }, priority: 60 });
     console.log(`✓ approved and queued for publish: ${id}`);
   },
@@ -158,9 +164,11 @@ const cmds = {
   async send(args) {
     const id = args[0];
     if (!id) return console.error("usage: send <message_id>");
-    const [msg] = await get(`messages?select=channel&id=eq.${id}`);
+    const [msg] = await get(`messages?select=channel,status&id=eq.${id}`);
     if (!msg) return console.error("message not found");
-    await patch(`messages?id=eq.${id}`, { status: "queued" });
+    // Only a draft (or a failed send) can be queued: never re-send a sent or already-queued message.
+    const rows = await patch(`messages?id=eq.${id}&status=in.(draft,failed)`, { status: "queued" });
+    if (!rows.length) return console.error(`not queued: message is already ${msg.status}`);
     await post("tasks", { type: msg.channel === "sms" ? "send_sms" : "send_email", payload: { message_id: id }, priority: 40 });
     console.log(`✓ queued ${msg.channel} for send: ${id}  (run \`node cli.mjs run\` to dispatch)`);
   },

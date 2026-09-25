@@ -9,3 +9,11 @@ node_modules/
 # OS / editor
 .DS_Store
 *.swp
+
+# Drone command app build output (built on deploy)
+drone/dist/
+drone/dist-artifact/
+_site/
+
+# Temporary agent worktrees
+.claude/worktrees/

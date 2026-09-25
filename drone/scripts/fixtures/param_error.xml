@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<mavlink>
+  <version>3</version>
+  <messages>
+    <message id="345" name="PARAM_ERROR">
+      <description>Parameter set/get error (ArduPilot master and PX4 answer an unknown name with it). Copied from MAVLink common.xml, which this pymavlink build does not include.</description>
+      <field type="uint8_t" name="target_system">System ID</field>
+      <field type="uint8_t" name="target_component">Component ID</field>
+      <field type="char[16]" name="param_id">Parameter id</field>
+      <field type="int16_t" name="param_index">Parameter index, -1 when param_id identifies it</field>
+      <field type="uint8_t" name="error">MAV_PARAM_ERROR</field>
+    </message>
+  </messages>
+</mavlink>
