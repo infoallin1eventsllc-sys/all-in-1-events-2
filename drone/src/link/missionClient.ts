@@ -135,7 +135,7 @@ export interface StartResult { ok: boolean; error?: string; detail?: string[] }
 export async function startMission(io: MissionIO, ap: Autopilot): Promise<StartResult> {
   const sys = io.sysId();
   const setMode = async (mode: FlightMode) => {
-    const b = encodeFlightMode(ap, mode, sys); if (!b) return false;
+    const b = encodeFlightMode(ap, mode, sys, io.telemetry().vehicleType); if (!b) return false;
     await io.send(b);
     return awaitState(io, t => modeName(t) === mode, 2500);
   };

@@ -20,8 +20,9 @@ export const LinkButton: React.FC = () => {
     return () => document.removeEventListener('mousedown', onDoc);
   }, [open]);
 
-  const tone: Tone = link.status === 'CONNECTED' ? (link.live ? 'ok' : 'warn') : link.status === 'CONNECTING' ? 'warn' : link.status === 'ERROR' ? 'bad' : 'neutral';
-  const label = link.status === 'CONNECTED' ? (link.live ? link.deviceName : `${link.deviceName} · no heartbeat`) : link.status === 'CONNECTING' ? 'Connecting…' : 'Simulation';
+  const [cmdError, setCmdError] = useState('');
+  const tone: Tone = link.status === 'CONNECTED' ? (link.live ? 'ok' : 'warn') : link.status === 'CONNECTING' ? 'warn' : link.status === 'ERROR' || link.lost ? 'bad' : 'neutral';
+  const label = link.status === 'CONNECTED' ? (link.live ? link.deviceName : `${link.deviceName} · no heartbeat`) : link.status === 'CONNECTING' ? 'Connecting…' : link.lost ? 'Link lost' : 'Simulation';
   const t = link.telemetry;
 
   const TransportRow: React.FC<{ id: Transport; icon: React.ReactNode; title: string; body: string; available: boolean; onPick: () => void }> = ({ id, icon, title, body, available, onPick }) => (
@@ -56,7 +57,7 @@ export const LinkButton: React.FC = () => {
         <div className="fixed left-3 right-3 top-[108px] sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-[360px] max-h-[calc(100dvh-120px)] overflow-y-auto rounded-[var(--radius-card)] border border-line bg-surface shadow-[0_12px_40px_rgba(16,24,40,0.14)] p-2 z-50">
           <div className="px-3 pt-2 pb-1 flex items-center justify-between">
             <span className="text-[13px] font-semibold text-ink">Aircraft link</span>
-            <Chip tone={tone}>{link.status === 'CONNECTED' ? (link.live ? 'Live' : 'Linked') : link.status === 'CONNECTING' ? 'Connecting' : link.status === 'ERROR' ? 'Error' : 'Simulation'}</Chip>
+            <Chip tone={tone}>{link.status === 'CONNECTED' ? (link.live ? 'Live' : 'Linked') : link.status === 'CONNECTING' ? 'Connecting' : link.status === 'ERROR' ? 'Error' : link.lost ? 'Lost' : 'Simulation'}</Chip>
           </div>
 
           {link.status === 'CONNECTED' ? (
@@ -84,11 +85,12 @@ export const LinkButton: React.FC = () => {
                 {!t.armed
                   ? <ToolButton command="fly" size="sm" icon={<ShieldCheck />} label="Arm" primary disabled={!link.live || !link.preflight.ok} onClick={() => link.arm(true)} title={link.preflight.ok ? 'COMPONENT_ARM_DISARM' : 'Pre-flight gate not satisfied'} />
                   : <ToolButton command="abort" size="sm" icon={<ShieldCheck />} label="Disarm" disabled={!link.live} onClick={() => link.arm(false)} />}
-                <ToolButton command="fly" size="sm" icon={<Plane />} label="Take off 30 m" disabled={!link.live || !t.armed} onClick={() => link.takeoff(30)} />
+                <ToolButton command="fly" size="sm" icon={<Plane />} label="Take off 30 m" disabled={!link.live || !t.armed} onClick={() => { setCmdError(''); link.takeoff(30).catch(e => setCmdError(e instanceof Error ? e.message : String(e))); }} />
                 <ToolButton command="abort" size="sm" icon={<ArrowDownToLine />} label="Land" disabled={!link.live || !t.armed} onClick={() => link.land()} />
                 <ToolButton command="abort" size="sm" icon={<Satellite />} label="Return to launch" disabled={!link.live} onClick={() => link.returnToLaunch()} />
                 <ToolButton size="sm" label="Disconnect" onClick={() => { link.disconnect(); }} />
               </div>
+              {cmdError && <div className="text-[11px] text-bad">{cmdError}</div>}
               {t.lastAck && Date.now() - t.lastAck.atMs < 8000 && (
                 <div className={`text-[11px] ${t.lastAck.result === 0 ? 'text-ok' : 'text-warn'}`}>Command {t.lastAck.command}: {['accepted', 'temporarily rejected', 'denied', 'unsupported', 'failed', 'in progress'][t.lastAck.result] ?? `result ${t.lastAck.result}`}</div>
               )}

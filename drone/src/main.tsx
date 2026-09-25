@@ -13,17 +13,18 @@ import './index.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
+    {/* Outermost: the control dispatcher checks the operator's role on every command it sends. */}
+    <OperatorProvider>
     <AircraftLinkProvider>
       <HealthProvider>
       <FleetHealthProvider>
       <ControlProvider>
-        <OperatorProvider>
-          <App />
-        </OperatorProvider>
+        <App />
       </ControlProvider>
       </FleetHealthProvider>
       </HealthProvider>
     </AircraftLinkProvider>
+    </OperatorProvider>
   </StrictMode>,
 );
 

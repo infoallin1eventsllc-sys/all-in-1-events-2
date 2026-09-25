@@ -7,6 +7,7 @@ import { useFleetHealth } from '../../diagnostics/useFleetHealth';
 import { Headline, Card, Section, Segmented, type Tone } from '../ui';
 import { TacticalMap } from './TacticalMap';
 import { DECK } from '../health/Instruments';
+import { useOperator, ROLE_LABEL } from '../../operator/operator';
 
 /**
  * Control: fly one aircraft, or up to 500 at once.
@@ -33,6 +34,7 @@ export const ControlView: React.FC = () => {
   const c = useControl();
   c.useActive();
   const fleet = useFleetHealth();
+  const op = useOperator();
   const [mode, setMode] = useState<Mode>('FLEET');
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [one, setOne] = useState<string | null>(null);
@@ -51,7 +53,7 @@ export const ControlView: React.FC = () => {
       <Headline
         title="Control"
         status={air ? { label: `${air} in the air`, tone: 'accent', pulse: true } : { label: 'All on the ground', tone: 'neutral' }}
-        context={`${vs.length} aircraft · ${c.source === 'LIVE' ? 'live on the link' : 'simulated show fleet'}`}
+        context={`${vs.length} aircraft · ${c.linkLost ? 'link lost: last known positions, not reporting' : c.source === 'LIVE' ? 'live on the link' : 'simulated show fleet'}`}
         stats={[
           { label: 'In the air', value: air, tone: air ? 'accent' as Tone : 'neutral' },
           { label: 'Armed on the ground', value: armedGround, tone: armedGround ? 'warn' : 'neutral' },
@@ -67,11 +69,15 @@ export const ControlView: React.FC = () => {
             <Segmented size="sm" value={String(fleet.size)} onChange={v => fleet.setSize(Number(v) as 100 | 250 | 500)} items={[{ id: '100', label: '100' }, { id: '250', label: '250' }, { id: '500', label: '500' }]} />
           </label>
         )}
-        <button type="button" id="control-land-all" onClick={landAll} disabled={!vs.some(v => v.airborne || v.armed)}
+        <button type="button" id="control-land-all" onClick={landAll} disabled={!op.canAbort || !vs.some(v => v.airborne || v.armed)}
           className="ml-auto inline-flex items-center gap-2 h-10 px-4 rounded-xl text-[14px] font-semibold text-white bg-[#c62828] hover:bg-[#b71c1c] disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
           <PlaneLanding className="w-4.5 h-4.5" />Land everything now
         </button>
       </div>
+
+      {!op.canCommand && (
+        <p id="control-role" className="text-[12.5px] text-warn">{ROLE_LABEL[op.role]}: {op.canAbort ? 'you can hold, land, return home and disarm; only the pilot in command can arm, take off, move or stop motors.' : 'view only. Only the pilot in command can command the aircraft.'}</p>
+      )}
 
       {mode === 'FLEET' ? <FleetControl sel={sel} setSel={setSel} onOpen={id => { setOne(id); setMode('ONE'); }} /> : <OneControl id={one} setId={setOne} byId={byId} />}
 
@@ -105,6 +111,8 @@ export const ControlView: React.FC = () => {
 
 const FleetControl: React.FC<{ sel: Set<string>; setSel: (s: Set<string>) => void; onOpen: (id: string) => void }> = ({ sel, setSel, onOpen }) => {
   const c = useControl();
+  const op = useOperator();
+  const fly = op.canCommand, abort = op.canAbort;
   const vs = c.vehicles;
   const picked = useRef<string | null>(null);         // the aircraft last clicked on the map
   const [alt, setAlt] = useState(20);
@@ -163,14 +171,14 @@ const FleetControl: React.FC<{ sel: Set<string>; setSel: (s: Set<string>) => voi
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <HoldButton id="fleet-takeoff" icon={<PlaneTakeoff />} label={`Take off · ${ids.length}`} hint="Hold" disabled={!ids.length} onFire={() => send({ k: 'TAKEOFF', altM: alt })} tone="go" />
-          <DeckButton id="fleet-hold" icon={<Pause />} label="Hold position" disabled={!selV.some(v => v.airborne)} onClick={() => send({ k: 'HOLD' })} />
-          <DeckButton id="fleet-goto" icon={<Navigation />} label="Move or climb…" disabled={!selV.some(v => v.airborne)} onClick={() => setGoOpen(o => !o)} active={goOpen} />
-          <DeckButton id="fleet-rtl" icon={<Home />} label="Return home" disabled={!selV.some(v => v.airborne)} onClick={() => send({ k: 'RTL' })} />
-          <DeckButton id="fleet-land" icon={<PlaneLanding />} label="Land" disabled={!selV.some(v => v.airborne)} onClick={() => send({ k: 'LAND' })} />
-          <DeckButton id="fleet-disarm" icon={<Power />} label="Disarm" disabled={!selV.some(v => v.armed && !v.airborne)} onClick={() => send({ k: 'DISARM' })} />
+          <HoldButton id="fleet-takeoff" icon={<PlaneTakeoff />} label={`Take off · ${ids.length}`} hint="Hold" disabled={!fly || !ids.length} onFire={() => send({ k: 'TAKEOFF', altM: alt })} tone="go" />
+          <DeckButton id="fleet-hold" icon={<Pause />} label="Hold position" disabled={!abort || !selV.some(v => v.airborne)} onClick={() => send({ k: 'HOLD' })} />
+          <DeckButton id="fleet-goto" icon={<Navigation />} label="Move or climb…" disabled={!fly || !selV.some(v => v.airborne)} onClick={() => setGoOpen(o => !o)} active={goOpen} />
+          <DeckButton id="fleet-rtl" icon={<Home />} label="Return home" disabled={!abort || !selV.some(v => v.airborne)} onClick={() => send({ k: 'RTL' })} />
+          <DeckButton id="fleet-land" icon={<PlaneLanding />} label="Land" disabled={!abort || !selV.some(v => v.airborne)} onClick={() => send({ k: 'LAND' })} />
+          <DeckButton id="fleet-disarm" icon={<Power />} label="Disarm" disabled={!abort || !selV.some(v => v.armed && !v.airborne)} onClick={() => send({ k: 'DISARM' })} />
         </div>
-        {goOpen && (
+        {goOpen && fly && (
           <div className="rounded-lg p-3 flex flex-col gap-2" style={{ border: `1px solid ${DECK.line}`, background: 'rgba(90,210,255,0.04)' }}>
             <div className="text-[12px]" style={{ color: DECK.ink2 }}>Move every selected aircraft in the air by the same amount, keeping the formation, and set its height.</div>
             <div className="grid grid-cols-3 gap-2">
@@ -199,7 +207,7 @@ const FleetControl: React.FC<{ sel: Set<string>; setSel: (s: Set<string>) => voi
           <div className="flex items-center gap-2 text-[12.5px] font-semibold" style={{ color: DECK.bad }}><ShieldAlert className="w-4 h-4" />Emergency stop</div>
           <p className="text-[11.5px]" style={{ color: DECK.ink2 }}>Cuts the motors on the selected aircraft. Anything in the air falls. Use only when an aircraft is out of control.</p>
           <label className="flex items-center gap-2 text-[12px]" style={{ color: DECK.ink }}><input id="kill-ok" type="checkbox" checked={killOk} onChange={e => setKillOk(e.target.checked)} className="accent-[#f87171]" />I understand they will fall</label>
-          <HoldButton id="fleet-kill" icon={<OctagonAlert />} label={`Stop motors · ${ids.length}`} hint="Hold 2 s" ms={2000} disabled={!killOk || !ids.length} onFire={() => { send({ k: 'KILL' }); setKillOk(false); }} tone="stop" />
+          <HoldButton id="fleet-kill" icon={<OctagonAlert />} label={`Stop motors · ${ids.length}`} hint="Hold 2 s" ms={2000} disabled={!fly || !killOk || !ids.length} onFire={() => { send({ k: 'KILL' }); setKillOk(false); }} tone="stop" />
         </div>
       </div>
     </section>
@@ -211,10 +219,15 @@ const FleetControl: React.FC<{ sel: Set<string>; setSel: (s: Set<string>) => voi
 const OneControl: React.FC<{ id: string | null; setId: (id: string) => void; byId: Map<string, VehicleView> }> = ({ id, setId, byId }) => {
   const c = useControl();
   const fleet = useFleetHealth();
+  const op = useOperator();
+  const fly = op.canCommand, abort = op.canAbort;
   const vs = c.vehicles;
   const v = id ? byId.get(id) : undefined;
   const [alt, setAlt] = useState(15);
   const [goMode, setGoMode] = useState(false);
+  // "Click to fly there" belongs to the aircraft it was armed for: picking another (on the map, where a
+  // click near an aircraft selects it, or in the list) turns it off, so the next click cannot fly the new one.
+  useEffect(() => { setGoMode(false); }, [id]);
   const [killOk, setKillOk] = useState(false);
   const i = vs.findIndex(x => x.id === id);
   const step = (d: number) => { const n = vs[(i + d + vs.length) % vs.length]; if (n) setId(n.id); };
@@ -235,9 +248,9 @@ const OneControl: React.FC<{ id: string | null; setId: (id: string) => void; byI
             </select>
             <button type="button" aria-label="Next aircraft" onClick={() => step(1)} className="h-8 w-8 grid place-items-center rounded-lg" style={{ border: `1px solid ${DECK.line}`, color: DECK.ink2 }}><ChevronRight className="w-4 h-4" /></button>
           </div>
-          <DeckButton id="one-gomode" icon={goMode ? <Crosshair /> : <MousePointerClick />} label={goMode ? 'Click the field…' : 'Click to fly there'} disabled={!v?.airborne} active={goMode} onClick={() => setGoMode(g => !g)} compact />
+          <DeckButton id="one-gomode" icon={goMode ? <Crosshair /> : <MousePointerClick />} label={goMode ? 'Click the field…' : 'Click to fly there'} disabled={!fly || !v?.airborne} active={goMode} onClick={() => setGoMode(g => !g)} compact />
         </div>
-        <TacticalMap vehicles={vs} updatedAt={c.updatedAt} selected={new Set(id ? [id] : [])} focus={id} goMode={goMode && !!v?.airborne}
+        <TacticalMap vehicles={vs} updatedAt={c.updatedAt} selected={new Set(id ? [id] : [])} focus={id} goMode={fly && goMode && !!v?.airborne}
           onPick={pid => setId(pid)} onTarget={(x, y) => { send({ k: 'GOTO', x, y, altM: Math.max(2, v?.alt ?? alt) }); setGoMode(false); }} />
       </div>
 
@@ -261,26 +274,26 @@ const OneControl: React.FC<{ id: string | null; setId: (id: string) => void; byI
 
           <DeckNumber id="one-alt" label="Take-off height" unit="m" value={alt} min={2} max={120} onChange={setAlt} />
           <div className="grid grid-cols-2 gap-2">
-            <HoldButton id="one-takeoff" icon={<PlaneTakeoff />} label="Take off" hint="Hold" disabled={v.airborne} onFire={() => send({ k: 'TAKEOFF', altM: alt })} tone="go" />
-            <DeckButton id="one-hold" icon={<Pause />} label="Hold position" disabled={!v.airborne} onClick={() => send({ k: 'HOLD' })} />
-            <DeckButton id="one-rtl" icon={<Home />} label="Return home" disabled={!v.airborne} onClick={() => send({ k: 'RTL' })} />
-            <DeckButton id="one-land" icon={<PlaneLanding />} label="Land" disabled={!v.airborne} onClick={() => send({ k: 'LAND' })} />
-            <HoldButton id="one-arm" icon={<Power />} label={v.armed ? 'Disarm' : 'Arm'} hint={v.armed ? 'Press' : 'Hold'} disabled={v.airborne} onFire={() => send({ k: v.armed ? 'DISARM' : 'ARM' })} tone="go" ms={v.armed ? 1 : 900} />
-            <DeckButton id="one-reset" icon={<RotateCcw />} label="Stop and hover" disabled={!v.airborne} onClick={() => send({ k: 'GOTO', x: v.x, y: v.y, altM: Math.max(2, v.alt) })} />
+            <HoldButton id="one-takeoff" icon={<PlaneTakeoff />} label="Take off" hint="Hold" disabled={!fly || v.airborne} onFire={() => send({ k: 'TAKEOFF', altM: alt })} tone="go" />
+            <DeckButton id="one-hold" icon={<Pause />} label="Hold position" disabled={!abort || !v.airborne} onClick={() => send({ k: 'HOLD' })} />
+            <DeckButton id="one-rtl" icon={<Home />} label="Return home" disabled={!abort || !v.airborne} onClick={() => send({ k: 'RTL' })} />
+            <DeckButton id="one-land" icon={<PlaneLanding />} label="Land" disabled={!abort || !v.airborne} onClick={() => send({ k: 'LAND' })} />
+            <HoldButton id="one-arm" icon={<Power />} label={v.armed ? 'Disarm' : 'Arm'} hint={v.armed ? 'Press' : 'Hold'} disabled={v.airborne || (v.armed ? !abort : !fly)} onFire={() => send({ k: v.armed ? 'DISARM' : 'ARM' })} tone="go" ms={v.armed ? 1 : 900} />
+            <DeckButton id="one-reset" icon={<RotateCcw />} label="Stop and hover" disabled={!fly || !v.airborne} onClick={() => send({ k: 'GOTO', x: v.x, y: v.y, altM: Math.max(2, v.alt) })} />
           </div>
 
           <div>
             <div className="text-[10.5px] font-semibold uppercase tracking-[0.16em] mb-2" style={{ color: DECK.ink2 }}>Nudge</div>
             <div className="grid grid-cols-[repeat(3,40px)_1fr_40px] gap-1.5 items-center" aria-label="Nudge the aircraft">
-              <span /><NudgeBtn label="North 5 m" onClick={() => nudge(0, 5, 0)} disabled={!v.airborne}><ArrowUp className="w-4 h-4" /></NudgeBtn><span /><span /><NudgeBtn label="Up 2 m" onClick={() => nudge(0, 0, 2)} disabled={!v.airborne}><ChevronsUp className="w-4 h-4" /></NudgeBtn>
-              <NudgeBtn label="West 5 m" onClick={() => nudge(-5, 0, 0)} disabled={!v.airborne}><ArrowLeft className="w-4 h-4" /></NudgeBtn><span className="text-center text-[10px]" style={{ color: DECK.ink3 }}>5 m</span><NudgeBtn label="East 5 m" onClick={() => nudge(5, 0, 0)} disabled={!v.airborne}><ArrowRight className="w-4 h-4" /></NudgeBtn><span className="text-right pr-2 text-[10px]" style={{ color: DECK.ink3 }}>2 m</span><span />
-              <span /><NudgeBtn label="South 5 m" onClick={() => nudge(0, -5, 0)} disabled={!v.airborne}><ArrowDown className="w-4 h-4" /></NudgeBtn><span /><span /><NudgeBtn label="Down 2 m" onClick={() => nudge(0, 0, -2)} disabled={!v.airborne}><ChevronsDown className="w-4 h-4" /></NudgeBtn>
+              <span /><NudgeBtn label="North 5 m" onClick={() => nudge(0, 5, 0)} disabled={!fly || !v.airborne}><ArrowUp className="w-4 h-4" /></NudgeBtn><span /><span /><NudgeBtn label="Up 2 m" onClick={() => nudge(0, 0, 2)} disabled={!fly || !v.airborne}><ChevronsUp className="w-4 h-4" /></NudgeBtn>
+              <NudgeBtn label="West 5 m" onClick={() => nudge(-5, 0, 0)} disabled={!fly || !v.airborne}><ArrowLeft className="w-4 h-4" /></NudgeBtn><span className="text-center text-[10px]" style={{ color: DECK.ink3 }}>5 m</span><NudgeBtn label="East 5 m" onClick={() => nudge(5, 0, 0)} disabled={!fly || !v.airborne}><ArrowRight className="w-4 h-4" /></NudgeBtn><span className="text-right pr-2 text-[10px]" style={{ color: DECK.ink3 }}>2 m</span><span />
+              <span /><NudgeBtn label="South 5 m" onClick={() => nudge(0, -5, 0)} disabled={!fly || !v.airborne}><ArrowDown className="w-4 h-4" /></NudgeBtn><span /><span /><NudgeBtn label="Down 2 m" onClick={() => nudge(0, 0, -2)} disabled={!fly || !v.airborne}><ChevronsDown className="w-4 h-4" /></NudgeBtn>
             </div>
           </div>
 
           <div className="rounded-lg p-3 flex flex-col gap-2" style={{ border: '1px solid rgba(248,113,113,0.4)', background: 'rgba(248,113,113,0.06)' }}>
             <label className="flex items-center gap-2 text-[12px]" style={{ color: DECK.ink }}><input id="one-kill-ok" type="checkbox" checked={killOk} onChange={e => setKillOk(e.target.checked)} className="accent-[#f87171]" />Emergency stop: I understand it will fall</label>
-            <HoldButton id="one-kill" icon={<OctagonAlert />} label="Stop motors" hint="Hold 2 s" ms={2000} disabled={!killOk} onFire={() => { send({ k: 'KILL' }); setKillOk(false); }} tone="stop" />
+            <HoldButton id="one-kill" icon={<OctagonAlert />} label="Stop motors" hint="Hold 2 s" ms={2000} disabled={!fly || !killOk} onFire={() => { send({ k: 'KILL' }); setKillOk(false); }} tone="stop" />
           </div>
         </>}
       </div>

@@ -1,4 +1,4 @@
-import { MAV_CMD, MAV_RESULT, encodeCommandLong, encodeFlightMode, encodeReposition, encodeTakeoffFor, type Autopilot, type FlightMode, type Telemetry } from '../link/mavlink';
+import { MAV_CMD, MAV_RESULT, encodeCommandLong, encodeFlightMode, encodeRepositionFor, encodeTakeoffFor, type Autopilot, type FlightMode, type Telemetry } from '../link/mavlink';
 
 /**
  * The control vocabulary, shared by one aircraft and a fleet of 500.
@@ -31,6 +31,14 @@ export const FORCE_DISARM = 21196;   // MAVLink magic number: disarm even in fli
 export const CMD_LABEL: Record<Cmd['k'], string> = {
   ARM: 'Arm', DISARM: 'Disarm', TAKEOFF: 'Take off', HOLD: 'Hold position', GOTO: 'Go to', RTL: 'Return home', LAND: 'Land', KILL: 'Stop motors', MODE: 'Set mode',
 };
+
+/**
+ * Who may send it (operator roles): 'abort' commands bring aircraft down or stop them where they are,
+ * and a visual observer may send those; everything else, stopping motors included, is the pilot's.
+ */
+export function commandRole(c: Cmd): 'fly' | 'abort' {
+  return c.k === 'LAND' || c.k === 'RTL' || c.k === 'HOLD' || c.k === 'DISARM' ? 'abort' : 'fly';
+}
 
 export function describe(c: Cmd): string {
   switch (c.k) {
@@ -69,12 +77,12 @@ export function toLocal(origin: { lat: number; lon: number }, lat: number, lon: 
 }
 
 /** One step as bytes for a real aircraft. */
-export function encodeStep(s: Step, ap: Autopilot, sys: number, t: Pick<Telemetry, 'altMslM' | 'altRelM' | 'lat' | 'lon'>, origin: { lat: number; lon: number }): Uint8Array | null {
-  if (s.cmd === MAV_CMD.DO_SET_MODE) return encodeFlightMode(ap, s.mode!, sys);
+export function encodeStep(s: Step, ap: Autopilot, sys: number, t: Pick<Telemetry, 'altMslM' | 'altRelM' | 'lat' | 'lon'> & Partial<Pick<Telemetry, 'vehicleType'>>, origin: { lat: number; lon: number }): Uint8Array | null {
+  if (s.cmd === MAV_CMD.DO_SET_MODE) return encodeFlightMode(ap, s.mode!, sys, t.vehicleType);
   if (s.cmd === MAV_CMD.TAKEOFF) return encodeTakeoffFor(ap, s.to!.altM, t, sys);
   if (s.cmd === MAV_CMD.DO_REPOSITION) {
     const p = Number.isNaN(s.to!.x) ? { lat: t.lat, lon: t.lon } : toLatLon(origin, s.to!.x, s.to!.y);
-    return encodeReposition(p.lat, p.lon, s.to!.altM, sys);
+    return encodeRepositionFor(ap, p.lat, p.lon, s.to!.altM, t, sys);
   }
   return encodeCommandLong(s.cmd, s.params, sys);
 }

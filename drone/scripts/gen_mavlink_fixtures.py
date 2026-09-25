@@ -87,6 +87,26 @@ with tempfile.TemporaryDirectory() as d:
     h["px4_esc_status"] = {"frame": e.MAVLink_esc_status_message(0, 99, [6400, 6500, 7010, 6390], [15.5, 15.5, 15.25, 15.5], [8.0, 10.5, 12.75, 7.5]).pack(ev).hex(),
                            "rpm": [6400, 6500, 7010, 6390], "currentA": [8.0, 10.5, 12.75, 7.5]}
 
+# --- mode numbering per ArduPilot firmware, fence state, the radio's own link report ---
+# (fresh senders, so the frames above keep their sequence numbers and bytes)
+w = mav()
+d = fx["decode"]
+d["fence_breached"] = {"frame": m.MAVLink_fence_status_message(1, 3, 1, 123456, 0).pack(w).hex(), "breached": True}
+d["fence_clear_after_breach"] = {"frame": m.MAVLink_fence_status_message(0, 3, 1, 123456, 0).pack(w).hex(), "breached": False}  # breach_type stays set
+d["heartbeat_plane_guided"] = {"frame": m.MAVLink_heartbeat_message(m.MAV_TYPE_FIXED_WING, 3, 129, 15, 4, 3).pack(w).hex(), "mode": "GUIDED"}
+d["heartbeat_plane_rtl"] = {"frame": m.MAVLink_heartbeat_message(m.MAV_TYPE_FIXED_WING, 3, 129, 11, 4, 3).pack(w).hex(), "mode": "RTL"}
+d["heartbeat_quadplane_qland"] = {"frame": m.MAVLink_heartbeat_message(m.MAV_TYPE_VTOL_QUADROTOR, 3, 129, 20, 4, 3).pack(w).hex(), "mode": "LAND"}
+d["heartbeat_rover_guided"] = {"frame": m.MAVLink_heartbeat_message(m.MAV_TYPE_GROUND_ROVER, 3, 129, 15, 4, 3).pack(w).hex(), "mode": "GUIDED"}
+d["heartbeat_copter_guided_sys2"] = {"frame": m.MAVLink_heartbeat_message(m.MAV_TYPE_QUADROTOR, 3, 129, 4, 4, 3).pack(mav(2, 1)).hex(), "sys": 2}
+d["radio_status_sik"] = {"frame": m.MAVLink_radio_status_message(180, 172, 100, 40, 38, 0, 0).pack(mav(51, 68)).hex(), "rssi": 180, "remrssi": 172, "noise": 40}
+e = fx["encode"]
+e["plane_mode_guided"] = L(m.MAV_CMD_DO_SET_MODE, [1, 15, 0, 0, 0, 0, 0])
+e["rover_mode_rtl"] = L(m.MAV_CMD_DO_SET_MODE, [1, 11, 0, 0, 0, 0, 0])
+e["quadplane_mode_qland"] = L(m.MAV_CMD_DO_SET_MODE, [1, 20, 0, 0, 0, 0, 0])
+# PX4 reposition: MAV_FRAME_GLOBAL_INT (AMSL), 105 m field + 40 m.
+e["px4_reposition_amsl"] = payload(m.MAVLink_command_int_message(1, 1, 5, m.MAV_CMD_DO_REPOSITION, 0, 0, -1, 1, 0, nan, 337748940, -1184090000, 145.0), g)
+e["set_interval_sys2"] = payload(m.MAVLink_command_long_message(2, 1, m.MAV_CMD_SET_MESSAGE_INTERVAL, 0, 33, 200000, 0, 0, 0, 0, 0), g)
+
 out = os.path.join(os.path.dirname(__file__), "fixtures", "mavlink.json")
 with open(out, "w") as f:
     json.dump(fx, f, indent=1)

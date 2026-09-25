@@ -41,7 +41,9 @@ const SIZE_KEY = 'a1-fleet-size';
 export const FleetHealthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const link = useAircraftLink();
   const liveIds = Object.keys(link.vehicles);
-  const source: 'LIVE' | 'SIMULATION' = link.live && liveIds.length > 0 ? 'LIVE' : 'SIMULATION';
+  // A dropped link keeps the real fleet (last known, not reporting) until the operator disconnects: swapping in
+  // the simulation mid-flight would put simulated aircraft under "Land everything" and discard pending retries.
+  const source: 'LIVE' | 'SIMULATION' = link.lost || (link.live && liveIds.length > 0) ? 'LIVE' : 'SIMULATION';
   const [size, setSizeState] = useState<FleetSize>(() => { try { const v = Number(localStorage.getItem(SIZE_KEY)); return (v === 250 || v === 500 ? v : 100) as FleetSize; } catch { return 100; } });
   const [speed, setSpeed] = useState(4);
   const [flying, setFlying] = useState(false);

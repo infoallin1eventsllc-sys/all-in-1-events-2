@@ -38,6 +38,8 @@ export interface Batch {
   startedAt: number;
   targets: Map<string, TargetState>;
   steps: Map<string, Step[]>;
+  /** Each aircraft's own command when it differs from `cmd` (a formation move: `cmd` holds only the offset). */
+  perTarget?: Map<string, Cmd>;
   done: boolean;
 }
 
@@ -69,6 +71,18 @@ export const counts = (b: Batch) => {
   return c;
 };
 
+/**
+ * What "retry the ones that failed" sends: the refused and unanswered aircraft, each with the command
+ * it was given. A formation move's shared `cmd` is only the offset, so re-sending it would fly every
+ * failed aircraft to the same point; each keeps its own spot instead.
+ */
+export function retryPlan(b: Batch): { cmd: Cmd; ids: string[]; perTarget?: Map<string, Cmd> } | null {
+  const ids = [...b.targets.values()].filter(t => t.status === 'REJECTED' || t.status === 'NO_RESPONSE').map(t => t.id);
+  if (!ids.length) return null;
+  const per = b.perTarget;
+  return { cmd: b.cmd, ids, perTarget: per && new Map(ids.filter(id => per.has(id)).map(id => [id, per.get(id)!])) };
+}
+
 export class Commander {
   batches: Batch[] = [];
   private seq = 0;
@@ -81,7 +95,7 @@ export class Commander {
   constructor(private transport: Transport) {}
 
   dispatch(cmd: Cmd, ids: string[], now: number, opts: DispatchOpts = {}): Batch {
-    const b: Batch = { seq: ++this.seq, cmd, label: describe(cmd), startedAt: now, targets: new Map(), steps: new Map(), done: false };
+    const b: Batch = { seq: ++this.seq, cmd, label: describe(cmd), startedAt: now, targets: new Map(), steps: new Map(), perTarget: opts.perTarget, done: false };
     // The newest command wins: anything older still waiting or mid-sequence for these aircraft stops now
     // (a Land sent during a staggered takeoff must stop the rest of that takeoff being sent).
     const fresh = new Set(ids.filter(id => !opts.hold?.has(id)));

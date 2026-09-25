@@ -84,4 +84,43 @@ function fleet(n, { silent = [], loss = 0, prearmFail = [] } = {}) {
   const o = { lat: 37.8, lon: -122.4 }, p = P.toLatLon(o, 100, 50), back = P.toLocal(o, p.lat, p.lon);
   assert.ok(Math.abs(back.x - 100) < 0.01 && Math.abs(back.y - 50) < 0.01, 'local metres round-trip through lat/lon');
 }
+{
+  // Retrying a formation move: each failed aircraft goes to its own spot, not to the shared offset.
+  const sent = [];
+  const com = new C.Commander({ autopilot: () => 'ARDUPILOT', send: (id, step) => sent.push({ id, step }) });
+  const spots = { A: [100, 10], B: [110, 10], C: [120, 10] };
+  const per = new Map(Object.entries(spots).map(([id, [x, y]]) => [id, { k: 'GOTO', x, y, altM: 25 }]));
+  const b = com.dispatch({ k: 'GOTO', x: 0, y: 10, altM: 25 }, ['A', 'B', 'C'], 0, { perTarget: per, retries: 0, timeoutMs: 100 });
+  com.tick(1); com.tick(50);                      // the send budget builds from the first tick
+  assert.equal(sent.length, 3);
+  com.ack('A', 192, 0, 52);                       // A accepted; B refused; C never answers
+  com.ack('B', 192, 4, 52, 'Not in GUIDED');
+  for (let t = 10; t < 400; t += 50) com.tick(t);
+  assert.equal(b.done, true);
+  const plan = C.retryPlan(b);
+  assert.deepEqual(plan.ids.sort(), ['B', 'C']);
+  sent.length = 0;
+  const r = com.dispatch(plan.cmd, plan.ids, 500, { perTarget: plan.perTarget });
+  com.tick(501); com.tick(600);
+  const to = Object.fromEntries(sent.map(s => [s.id, [s.step.to.x, s.step.to.y]]));
+  assert.deepEqual(to, { B: spots.B, C: spots.C }, `retry keeps each aircraft's own target: ${JSON.stringify(to)}`);
+  assert.equal(r.perTarget.size, 2, 'the retry batch keeps them too, for a second retry');
+  assert.equal(C.retryPlan(com.dispatch({ k: 'LAND' }, ['A'], 700)), null, 'nothing failed: nothing to retry');
+  // Shared command (no per-aircraft targets): unchanged.
+  const land = com.dispatch({ k: 'LAND' }, ['D'], 800, { retries: 0, timeoutMs: 10 }); com.tick(801); com.tick(900);
+  assert.deepEqual(C.retryPlan(land), { cmd: { k: 'LAND' }, ids: ['D'], perTarget: undefined });
+}
+{
+  // Roles: an observer may bring aircraft down or stop them; everything else is the pilot's.
+  for (const k of ['LAND', 'RTL', 'HOLD', 'DISARM']) assert.equal(P.commandRole({ k }), 'abort', k);
+  for (const c of [{ k: 'ARM' }, { k: 'TAKEOFF', altM: 10 }, { k: 'GOTO', x: 0, y: 0, altM: 10 }, { k: 'KILL' }, { k: 'MODE', mode: 'AUTO' }]) assert.equal(P.commandRole(c), 'fly', c.k);
+  // Live steps: modes numbered for the airframe, PX4 go-to in AMSL.
+  const t = { altMslM: 125, altRelM: 20, lat: 33.77, lon: -118.4, vehicleType: 1 };
+  const mode = P.encodeStep({ cmd: 176, params: [], mode: 'GUIDED' }, 'ARDUPILOT', 1, t, t);
+  assert.equal(new DataView(mode.buffer).getFloat32(10 + 4, true), 15, 'a plane is sent GUIDED = 15');
+  assert.equal(P.encodeStep({ cmd: 176, params: [], mode: 'LAND' }, 'ARDUPILOT', 1, t, t), null, 'no land mode on a fixed wing');
+  const rp = P.encodeStep({ cmd: 192, params: [], to: { x: 0, y: 0, altM: 40 } }, 'PX4', 1, t, t);
+  const rv = new DataView(rp.buffer, 10);
+  assert.equal(rv.getFloat32(24, true), 145, 'PX4 reposition altitude is AMSL (105 m home + 40 m)'); assert.equal(rv.getUint8(32), 5, 'MAV_FRAME_GLOBAL_INT');
+}
 console.log('control: all tests passed');
