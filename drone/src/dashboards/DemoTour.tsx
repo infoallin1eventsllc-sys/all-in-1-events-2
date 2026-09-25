@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { X, ArrowLeft, ArrowRight, Wand2, ExternalLink } from 'lucide-react';
+import { MERIDIAN_BOOK_URL } from './MeridianCredit';
 import { useHealth } from '../diagnostics/useHealth';
 import { setHealthMode } from '../diagnostics/healthMode';
 
@@ -96,7 +97,7 @@ export const DemoTour: React.FC<Props> = ({ open, onClose, view, go }) => {
           <div className="mt-1 text-[16px] font-semibold leading-snug">That's the tour</div>
           <p className="mt-1.5 text-[13px] leading-relaxed opacity-80">Keep exploring: every screen works. This product was designed and engineered by Meridian Interface: the design system, the 3D graphics and the flight software underneath.</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <a href="https://www.meridianinterface.com" target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-surface text-ink text-[13px] font-semibold hover:opacity-90">Start a project<ExternalLink className="w-3.5 h-3.5" /></a>
+            <a href={MERIDIAN_BOOK_URL} target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-surface text-ink text-[13px] font-semibold hover:opacity-90">Book an appointment<ExternalLink className="w-3.5 h-3.5" /></a>
             <button onClick={() => { setI(0); go('OVERVIEW'); }} className="h-9 px-3 rounded-lg border border-surface/25 text-[13px] font-medium hover:bg-surface/10">Start over</button>
             <button onClick={onClose} className="h-9 px-3 text-[13px] opacity-70 hover:opacity-100">Close</button>
           </div>
