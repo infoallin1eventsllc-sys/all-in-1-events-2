@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowRight } from 'lucide-react';
 
 /** Meridian's booking form, opened directly (the site reads ?book). */
-export const MERIDIAN_BOOK_URL = 'https://meridianinterface.com/?book=drone-command';
+export const MERIDIAN_BOOK_URL = 'https://meridianinterface.com/?book=app_design&utm_source=drone-command-demo&utm_medium=demo&utm_campaign=portfolio';
 
 /**
  * The studio signature plate, as it closes every site Meridian Interface ships (its `BuiltBy`

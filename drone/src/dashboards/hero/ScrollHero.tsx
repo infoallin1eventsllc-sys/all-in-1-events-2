@@ -46,7 +46,9 @@ export const ScrollHero: React.FC<{ onTour: () => void; onExplore: () => void; l
     let top = 0, raf = 0;
 
     const layout = () => {
-      top = (header?.getBoundingClientRect().height ?? 0) + 12;
+      // Where the pinned app bar ends, not just its height: a host page can pin its own bar above it
+      // (the Meridian portfolio's demo bar), which pushes the app bar's sticky top down.
+      top = (header ? (parseFloat(getComputedStyle(header).top) || 0) + header.getBoundingClientRect().height : 0) + 12;
       st.style.top = `${top}px`;
       st.style.height = `${Math.max(480, window.innerHeight - top - 12)}px`;
       apply();
