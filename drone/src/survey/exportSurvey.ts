@@ -2,6 +2,7 @@ import { zipStore } from '../lightshow/exportShow';
 import { qgcPlan, wplText, toLatLon, GOOD_VIEWS, type SurveyPlan, type CoverageGrid, type Camera, type MissionAutopilot, type TerrainFollow } from './plan';
 import type { Photo } from '../hooks/useSurveyMission';
 import { boundaryKml, type SurveySite } from './boundary';
+import { BRAND } from '../brand';
 
 /**
  * Survey package: everything the processing software and the next crew need.
@@ -58,7 +59,7 @@ export function buildSurveyFiles(plan: SurveyPlan, photos: Photo[], grid: Covera
   }
   const st = grid.stats();
   const manifest = {
-    site: site.name, siteKind: site.kind, generator: 'All in 1 Drone Command', exportedAt: new Date().toISOString(),
+    site: site.name, siteKind: site.kind, generator: BRAND.name, exportedAt: new Date().toISOString(),
     origin, pattern: plan.params.pattern, camera: camera.name, altitudeM: plan.params.altitudeM,
     groundSampleDistanceCm: +plan.gsdCm.toFixed(2), frontOverlap: plan.params.frontOverlap, sideOverlap: plan.params.sideOverlap,
     lineSpacingM: +plan.spacingM.toFixed(1), photoSpacingM: +plan.triggerM.toFixed(1), speedMps: +plan.speedMps.toFixed(1), gimbalPitchDeg: plan.gimbalPitchDeg,

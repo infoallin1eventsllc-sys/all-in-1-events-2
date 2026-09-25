@@ -1,4 +1,5 @@
 import { metresPerDegree } from '../lib/geo';
+import { BRAND } from '../brand';
 /**
  * Survey planning: the photogrammetry maths behind the Site survey dashboard.
  *
@@ -579,7 +580,7 @@ export function qgcPlan(plan: SurveyPlan, origin: GeoOrigin, home: Pt, opts: { b
     ...(it.frame === FRAME_MISSION ? {} : { Altitude: it.altRelM, AltitudeMode: it.frame === FRAME_GLOBAL_TERRAIN_ALT ? 4 : 1, AMSLAltAboveTerrain: null }),
   }));
   return {
-    fileType: 'Plan', version: 1, groundStation: 'All in 1 Drone Command',
+    fileType: 'Plan', version: 1, groundStation: BRAND.name,
     geoFence: { circles: [], polygons: fence ? [{ inclusion: true, polygon: fence, version: 1 }] : [], version: 2 },
     rallyPoints: { points: [], version: 2 },
     mission: { version: 2, firmwareType: opts.autopilot === 'PX4' ? 12 : 3, vehicleType: 2, cruiseSpeed: +plan.speedMps.toFixed(1), hoverSpeed: 5, plannedHomePosition: [+h.lat.toFixed(7), +h.lon.toFixed(7), 0], items },

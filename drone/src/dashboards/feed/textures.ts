@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { BRAND } from '../../brand';
 
 /**
  * Procedural surface textures for the patrol camera's city, drawn once on 2D
@@ -353,7 +354,7 @@ export function screenTex(): Tex {
     gr.addColorStop(0, '#3a2a9a'); gr.addColorStop(0.5, '#1f7ad0'); gr.addColorStop(1, '#b0309a');
     g.fillStyle = gr; g.fillRect(0, 0, W, H);
     g.fillStyle = 'rgba(255,255,255,0.85)'; g.font = 'bold 34px sans-serif'; g.textAlign = 'center';
-    g.fillText('ALL IN 1', W / 2, H / 2 + 12);
+    g.fillText(BRAND.showText, W / 2, H / 2 + 12);
   });
   t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
   return t;

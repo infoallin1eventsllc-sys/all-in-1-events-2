@@ -17,6 +17,7 @@ import { useAircraftLink } from '../link/useAircraftLink';
 import { encodeCommandLong, MAV_CMD, modeName } from '../link/mavlink';
 import { useWithShowCompliance } from '../compliance/useCompliance';
 import { CheckCircle2, XCircle, ShieldCheck as Paper } from 'lucide-react';
+import { BRAND } from '../brand';
 
 type RailTab = 'CUES' | 'FLEET' | 'PREFLIGHT';
 
@@ -70,7 +71,7 @@ export const LightShowDashboard: React.FC = () => {
   const exportShow = () => {
     setExporting(true);
     setTimeout(() => {   // let the button say so before a big fleet's export takes a few seconds
-      try { downloadShowPackage('All in 1 show', droneCount); recorder.event('SHOW', 'SUCCESS', `Show package exported for ${droneCount} aircraft`); }
+      try { downloadShowPackage(BRAND.showFile, droneCount); recorder.event('SHOW', 'SUCCESS', `Show package exported for ${droneCount} aircraft`); }
       catch (e) { const msg = e instanceof Error ? e.message : String(e); recorder.event('SHOW', 'CRITICAL', msg.split('\n')[0]); window.alert(msg); }
       finally { setExporting(false); }
     }, 30);
@@ -242,7 +243,7 @@ export const LightShowDashboard: React.FC = () => {
                   </ol>
                   <label className="mt-2 block text-[11px] text-ink-3">Words for the Name in Lights cue
                     <input value={nameText} maxLength={24} onChange={e => { setNameText(e.target.value); showText.value = e.target.value; try { localStorage.setItem('a1-show-text', e.target.value); } catch { /* ignore */ } }}
-                      placeholder="ALL IN 1" className="mt-1 w-full h-8 rounded-lg border border-line bg-surface px-2 text-[13px] text-ink uppercase tracking-wide" />
+                      placeholder={BRAND.showText} className="mt-1 w-full h-8 rounded-lg border border-line bg-surface px-2 text-[13px] text-ink uppercase tracking-wide" />
                   </label>
                 </Section>
                 {/* The hand-off actions stay in view while the cue list scrolls under them. */}

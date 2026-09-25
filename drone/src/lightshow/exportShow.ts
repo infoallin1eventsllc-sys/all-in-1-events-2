@@ -1,6 +1,7 @@
 import { SHOW_FORMATIONS, Spacer, formationPoints } from '../data/lightShowFormations';
 import type { ShowFormation, Vector3D } from '../types/lightShowTypes';
 import { PAD_SPACING_M, padXY } from './pads';
+import { BRAND } from '../brand';
 
 /**
  * Show package export.
@@ -240,7 +241,7 @@ export function downloadShowPackage(showName: string, count: number) {
   const enc = new TextEncoder();
   const files = keys.map((k, i) => ({ name: `drones/${aircraftName(i)}.csv`, data: enc.encode(sampleCsv(k, totalS)) }));
   const manifest = {
-    name: showName, generator: 'All in 1 Drone Command', exportedAt: new Date().toISOString(),
+    name: showName, generator: BRAND.name, exportedAt: new Date().toISOString(),
     aircraft: count, durationS: totalS, sampleHz: SAMPLE_HZ,
     units: 'metres, z up, colours 0-255', frame: 'x to the audience\'s right, y away from the audience (audience towards -y), z up; T+0 is the conductor\'s show clock 0',
     padGridSpacingM: PAD_SPACING_M, maxTransitionSpeedMps: TRANSIT_MPS, minSeparationM: MIN_SEPARATION_M,

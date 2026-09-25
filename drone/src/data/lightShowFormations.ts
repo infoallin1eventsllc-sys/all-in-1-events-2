@@ -1,4 +1,5 @@
 import { ShowFormation, Vector3D, ColorRGBW } from '../types/lightShowTypes';
+import { BRAND } from '../brand';
 
 /**
  * The show: eight formations, each alive. `generatePoints(count, t)` returns
@@ -153,7 +154,7 @@ function textPoints(text: string, count: number, cellM: number): Vector3D[] {
   return out;
 }
 /** The words flown by the "name in lights" cue; the conductor can change them. */
-export const showText = { value: 'ALL IN 1' };
+export const showText = { value: BRAND.showText };
 
 /** A plane curve reparametrised by arc length: `at(s)` (s 0..1 along it) → the curve's own parameter, and its length. */
 function byLength(curve: (u: number) => { x: number; y: number }, N = 2048) {
@@ -484,7 +485,7 @@ const SHAPES: ShowFormation[] = [
     paletteName: 'Rainbow wave',
     generatePoints: (count, t = 0) => {
       const out: Pt[] = [];
-      const text = showText.value.trim() || 'ALL IN 1';
+      const text = showText.value.trim() || BRAND.showText;
       const cell = Math.min(5.2, 96 / Math.max(6, text.length * 6));   // long names shrink to fit the stage
       const pts = textPoints(text, count, cell);
       pts.forEach((p, i) => {

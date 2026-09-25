@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { ArrowRight, PlayCircle } from 'lucide-react';
 import { DroneHero } from './DroneHero';
+import { BRAND } from '../../brand';
 
 /**
  * The Overview hero as a scroll-reveal: the stage pins under the app bar while
@@ -99,7 +100,7 @@ export const ScrollHero: React.FC<{ onTour: () => void; onExplore: () => void; l
   const lines = ['Every drone job.', 'One console.'];
 
   return (
-    <section ref={section} aria-label="All in 1 Drone Command" className={reduced ? 'relative' : 'relative h-[300vh] sm:h-[340vh]'}>
+    <section ref={section} aria-label={BRAND.name} className={reduced ? 'relative' : 'relative h-[300vh] sm:h-[340vh]'}>
       <div ref={stick} className={`${reduced ? 'relative min-h-[620px] lg:min-h-[740px]' : 'sticky'} overflow-clip rounded-[18px] bg-[#05070c] flex items-center justify-center`}>
         <DroneHero progress={reduced ? undefined : progress} look={look} />
         <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(52%_46%_at_50%_44%,rgba(5,7,12,0.62)_0%,rgba(5,7,12,0)_100%)]" />

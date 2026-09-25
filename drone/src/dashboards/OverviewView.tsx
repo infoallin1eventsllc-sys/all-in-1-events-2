@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Sparkles, ScanLine, Eye, HeartPulse, BarChart3, Archive, Radio, Smartphone, ShieldCheck, Cpu, ArrowRight, Gamepad2 } from 'lucide-react';
 import { MERIDIAN_BOOK_URL } from './MeridianCredit';
 import { ScrollHero } from './hero/ScrollHero';
+import { BRAND } from '../brand';
 
 /**
  * Overview: the front door of the demo.
@@ -113,7 +114,7 @@ export const OverviewView: React.FC<Props> = ({ onOpen, onTour }) => (
     <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-[var(--radius-card)] bg-ink text-surface px-6 py-5">
       <div>
         <div className="text-[12px] opacity-60">Case study</div>
-        <div className="text-[16px] font-semibold">Designed and engineered by Meridian Interface for All in 1 Events</div>
+        <div className="text-[16px] font-semibold">{BRAND.credit}</div>
         <div className="text-[13px] opacity-70">Product design, a design system, 3D graphics, and the flight software underneath.</div>
       </div>
       <a href={MERIDIAN_BOOK_URL} target="_blank" rel="noopener" className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-surface text-ink text-[13px] font-semibold hover:opacity-90 shrink-0">

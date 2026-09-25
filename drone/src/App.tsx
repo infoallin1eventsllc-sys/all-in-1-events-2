@@ -16,6 +16,7 @@ import { RegulatoryComplianceModal } from './components/production/RegulatoryCom
 import { LinkButton } from './link/LinkButton';
 import { OverviewView } from './dashboards/OverviewView';
 import { DemoTour, type TourView } from './dashboards/DemoTour';
+import { BRAND } from './brand';
 import { MeridianCredit } from './dashboards/MeridianCredit';
 import { useHealth } from './diagnostics/useHealth';
 import { InstallButton } from './dashboards/InstallButton';
@@ -272,8 +273,8 @@ export default function App() {
               <Compass className="w-4 h-4" />
             </div>
             <div className="leading-tight min-w-0 hidden min-[440px]:block lg:hidden xl:block">
-              <div className="text-[13px] font-semibold text-ink truncate">All in 1 · Drone Command</div>
-              <div className="text-[11px] text-ink-3 truncate hidden sm:block lg:hidden">Light show · Site survey · Surveillance</div>
+              <div className="text-[11px] text-ink-3 truncate">{BRAND.maker}</div>
+              <div className="text-[13px] font-semibold text-ink truncate">Drone Command</div>
             </div>
           </button>
 
@@ -846,7 +847,7 @@ export default function App() {
       )}
 
       <footer className={`mt-auto px-6 py-4 text-center text-[11px] ${isClient ? 'text-ink-3' : 'border-t border-slate-900 text-slate-500'}`}>
-        All in 1 Events · Drone Command ·{' '}
+        {BRAND.footer} ·{' '}
         <button onClick={() => setTourOpen(true)} className="underline hover:text-ink-2">Take the tour</button> ·{' '}
         <button onClick={() => setShowShortcuts(true)} className="underline hover:text-ink-2">Keyboard shortcuts</button>
         {isClient

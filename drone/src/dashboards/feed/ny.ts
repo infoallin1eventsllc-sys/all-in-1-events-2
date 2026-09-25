@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Metro, gauss, sstep, type MetroCtx, type MetroSpec } from './metro';
 import { spiral, type P3 } from './fly';
+import { BRAND } from '../../brand';
 
 /**
  * New York for the patrol feed: Manhattan from Central Park to the Battery as an
@@ -43,7 +44,7 @@ function adTex(seed: number): THREE.CanvasTexture {
   for (let k = 0; k < 5; k++) { g.fillStyle = `rgba(255,255,255,${0.15 + r() * 0.35})`; g.beginPath(); g.arc(r() * 256, r() * 384, 20 + r() * 70, 0, 7); g.fill(); }
   g.fillStyle = 'rgba(10,10,20,0.55)'; g.fillRect(0, 300, 256, 84);
   g.fillStyle = '#fff'; g.font = 'bold 44px sans-serif'; g.textAlign = 'center';
-  g.fillText(seed === 0 ? 'ALL IN 1' : ['LIVE', 'NOW', 'TONIGHT', 'NEW', 'SHOW', 'OPEN'][seed % 6], 128, 358);
+  g.fillText(seed === 0 ? BRAND.showText : ['LIVE', 'NOW', 'TONIGHT', 'NEW', 'SHOW', 'OPEN'][seed % 6], 128, 358);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 

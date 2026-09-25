@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { Compass } from 'lucide-react';
 import { ScrollHero } from '../dashboards/hero/ScrollHero';
 import '../index.css';
+import { BRAND } from '../brand';
 
 /**
  * A sample of the Overview hero with another drone look, for comparing before
@@ -20,7 +21,7 @@ const Sample: React.FC = () => {
     <div className="min-h-screen bg-bg text-ink">
       <header className="sticky top-0 z-40 h-14 flex items-center gap-3 px-4 sm:px-5 border-b border-line bg-surface/90 backdrop-blur">
         <span className="w-8 h-8 shrink-0 grid place-items-center rounded-lg bg-ink text-bg"><Compass className="w-4 h-4" /></span>
-        <span className="text-[14px] font-semibold truncate">All in 1 · Drone Command</span>
+        <span className="text-[14px] font-semibold truncate">{BRAND.lockup}</span>
         <div className="ml-auto flex items-center gap-1 rounded-full border border-line p-0.5 text-[12px]" role="group" aria-label="Drone look">
           {([['ember', 'Ember (sample)'], ['classic', 'Current hero']] as [Look, string][]).map(([id, label]) => (
             <button key={id} type="button" aria-pressed={look === id} onClick={() => { history.replaceState(null, '', id === 'classic' ? '#classic' : '#ember'); setLook(id); }}
