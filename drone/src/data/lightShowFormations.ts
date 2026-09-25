@@ -401,7 +401,9 @@ const SHAPES: ShowFormation[] = [
     paletteName: 'White and gold',
     generatePoints: (count, t = 0) => {
       const out: Pt[] = [];
-      const orbit = Math.floor(count * 0.22), fill = Math.floor(count * 0.18), edge = count - orbit - fill;
+      // A small fleet spends every light on the outline: at 100, splitting off the orbit and the fill
+      // left under four lights per edge and the star did not read. The extras come in from 200.
+      const extras = count >= 200, orbit = extras ? Math.floor(count * 0.22) : 0, fill = extras ? Math.floor(count * 0.18) : 0, edge = count - orbit - fill;
       const face = Math.sin(t * 0.3) * 0.45;
       // Edge lights spaced by length round the outline (not by angle, which bunches them at the tips), in layers for a big fleet.
       const layers = Math.max(1, Math.ceil((edge * 2.4) / STAR.length)), perLayer = Math.ceil(edge / layers);
