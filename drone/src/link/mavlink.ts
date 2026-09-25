@@ -86,6 +86,7 @@ export class MavParser {
       if (i + 10 > this.buf.length) break;                 // need header
       const len = this.buf[i + 1];
       const incompat = this.buf[i + 2];
+      if (incompat & ~0x01) { this.badCrc++; i++; continue; } // only the signing flag exists: a false start
       const sigLen = incompat & 0x01 ? 13 : 0;
       const total = 10 + len + 2 + sigLen;
       if (i + total > this.buf.length) break;               // wait for the rest
@@ -97,6 +98,11 @@ export class MavParser {
         let crc = x25(this.buf, i + 1, i + 10 + len);
         crc = x25Byte(crc, extra);
         ok = crc === crcRead;
+      } else {
+        // No CRC_EXTRA, so no CRC check: a stray 0xFD after line noise could claim up to 280 bytes of
+        // real frames. Trust an unknown frame only when the next frame starts right after it.
+        if (i + total === this.buf.length) break;           // wait for the next byte to decide
+        ok = this.buf[i + total] === 0xfd;
       }
       if (ok) {
         const payload = new Uint8Array(255); // v2 trims trailing zeros; re-pad so field offsets are stable
@@ -233,8 +239,8 @@ export function decodeInto(t: Telemetry, f: MavFrame): Telemetry {
     case 242: // HOME_POSITION
       t.home = { lat: p.getInt32(0, true) / 1e7, lon: p.getInt32(4, true) / 1e7, altMslM: p.getInt32(8, true) / 1000 };
       break;
-    case 162: // FENCE_STATUS
-      t.fenceBreached = p.getUint8(7) !== 0;
+    case 162: // FENCE_STATUS: breach_time u32, breach_count u16, breach_status u8 at 6, breach_type u8 at 7
+      t.fenceBreached = p.getUint8(6) !== 0;
       break;
     case 253: { // STATUSTEXT
       let s = ''; for (let i = 1; i < 51; i++) { const c = p.getUint8(i); if (!c) break; s += String.fromCharCode(c); }
@@ -281,7 +287,7 @@ export const MAV_CMD = {
 export const MAV_RESULT = { ACCEPTED: 0, TEMPORARILY_REJECTED: 1, DENIED: 2, UNSUPPORTED: 3, FAILED: 4, IN_PROGRESS: 5 } as const;
 /** ArduCopter custom modes (the reference autopilot for this platform). */
 export const COPTER_MODE = { STABILIZE: 0, ALT_HOLD: 2, AUTO: 3, GUIDED: 4, LOITER: 5, RTL: 6, LAND: 9, POSHOLD: 16 } as const;
-const MAV_FRAME_GLOBAL_RELATIVE_ALT_INT = 6;
+const MAV_FRAME_GLOBAL_RELATIVE_ALT_INT = 6, MAV_FRAME_GLOBAL_INT = 5;
 const MAV_MODE_FLAG_CUSTOM_MODE_ENABLED = 1;
 
 /** COMMAND_LONG to system 1 / autopilot component. */
@@ -358,8 +364,8 @@ export function decodeMissionAck(f: MavFrame): number | null {
 }
 
 /** Ask the autopilot to stream a message at a rate. */
-export function encodeSetInterval(msgId: number, hz: number): Uint8Array {
-  return encodeCommandLong(MAV_CMD.SET_MESSAGE_INTERVAL, [msgId, hz > 0 ? 1e6 / hz : -1]);
+export function encodeSetInterval(msgId: number, hz: number, targetSys = 1): Uint8Array {
+  return encodeCommandLong(MAV_CMD.SET_MESSAGE_INTERVAL, [msgId, hz > 0 ? 1e6 / hz : -1], targetSys);
 }
 
 export const FIX_NAMES: Record<number, string> = { 0: 'No GPS', 1: 'No fix', 2: '2D', 3: '3D', 4: 'DGPS', 5: 'RTK float', 6: 'RTK fixed' };
@@ -369,6 +375,14 @@ export const FIX_NAMES: Record<number, string> = { 0: 'No GPS', 1: 'No fix', 2: 
 // differently and treat takeoff altitude and mission item 0 differently.
 // ---------------------------------------------------------------------------
 
+/**
+ * A heartbeat from an aircraft's autopilot (component 1). Not a camera or gimbal, not a SiK radio
+ * or companion computer (MAV_AUTOPILOT_INVALID = 8), not another ground station (MAV_TYPE_GCS = 6).
+ */
+export function isVehicleHeartbeat(f: MavFrame): boolean {
+  return f.msgId === 0 && f.compId === 1 && f.payload.getUint8(5) !== 8 && f.payload.getUint8(4) !== 6;
+}
+
 export type Autopilot = 'ARDUPILOT' | 'PX4' | 'UNKNOWN';
 /** HEARTBEAT.autopilot: MAV_AUTOPILOT_ARDUPILOTMEGA = 3, MAV_AUTOPILOT_PX4 = 12. */
 export const autopilotOf = (t: Pick<Telemetry, 'autopilot'>): Autopilot => (t.autopilot === 12 ? 'PX4' : t.autopilot === 3 ? 'ARDUPILOT' : 'UNKNOWN');
@@ -376,8 +390,28 @@ export const autopilotOf = (t: Pick<Telemetry, 'autopilot'>): Autopilot => (t.au
 /** Flight modes the dashboards use, independent of autopilot. */
 export type FlightMode = 'STABILIZE' | 'ALT_HOLD' | 'POSITION' | 'GUIDED' | 'AUTO' | 'LOITER' | 'RTL' | 'LAND' | 'TAKEOFF' | 'MANUAL' | 'OTHER';
 
-const ARDU_MODE: Partial<Record<FlightMode, number>> = { STABILIZE: 0, ALT_HOLD: 2, AUTO: 3, GUIDED: 4, LOITER: 5, RTL: 6, LAND: 9, POSITION: 16 };
-const ARDU_NAME: Record<number, FlightMode> = Object.fromEntries(Object.entries(ARDU_MODE).map(([k, v]) => [v, k as FlightMode]));
+/**
+ * ArduPilot numbers custom_mode per firmware, and the firmware shows in HEARTBEAT.type
+ * (pymavlink's AP_MAV_TYPE_MODE_MAP): GUIDED is 4 on Copter but 15 on Plane and Rover,
+ * and Copter's RTL (6) is Plane's FBWB. Unknown (0, no heartbeat yet) keeps Copter, the reference.
+ */
+export type ArduFirmware = 'COPTER' | 'PLANE' | 'ROVER' | null;
+const COPTER_TYPES = [0, 2, 3, 4, 13, 14, 15, 29, 35, 43], PLANE_TYPES = [1, 19, 20, 21, 22, 23, 24, 25], VTOL_TYPES = [19, 20, 21, 22, 23, 24, 25], ROVER_TYPES = [10, 11];
+/** null: an ArduPilot firmware whose modes the dashboards do not drive (Sub, Tracker, Blimp...), so nothing is sent. */
+export const arduFirmware = (vehicleType = 0): ArduFirmware =>
+  COPTER_TYPES.includes(vehicleType) ? 'COPTER' : PLANE_TYPES.includes(vehicleType) ? 'PLANE' : ROVER_TYPES.includes(vehicleType) ? 'ROVER' : null;
+const ARDU_MODE: Record<'COPTER' | 'PLANE' | 'ROVER', Partial<Record<FlightMode, number>>> = {
+  COPTER: { STABILIZE: 0, ALT_HOLD: 2, AUTO: 3, GUIDED: 4, LOITER: 5, RTL: 6, LAND: 9, POSITION: 16 },
+  PLANE: { MANUAL: 0, STABILIZE: 2, AUTO: 10, RTL: 11, LOITER: 12, TAKEOFF: 13, GUIDED: 15 },
+  ROVER: { MANUAL: 0, LOITER: 5, AUTO: 10, RTL: 11, GUIDED: 15 },
+};
+/** QuadPlane: its VTOL modes land and hold (QLAND, QLOITER); a fixed wing has neither. */
+const VTOL_EXTRA: Partial<Record<FlightMode, number>> = { LAND: 20, POSITION: 19 };
+const invert = (m: Partial<Record<FlightMode, number>>): Record<number, FlightMode> => Object.fromEntries(Object.entries(m).map(([k, v]) => [v, k as FlightMode]));
+const ARDU_NAME: Record<'COPTER' | 'PLANE' | 'ROVER', Record<number, FlightMode>> = {
+  COPTER: invert(ARDU_MODE.COPTER), ROVER: invert(ARDU_MODE.ROVER),
+  PLANE: { ...invert(ARDU_MODE.PLANE), ...invert(VTOL_EXTRA), 21: 'RTL' /* QRTL */ },
+};
 /** PX4 custom_mode = main_mode << 16 | sub_mode << 24. AUTO sub-modes: 2 takeoff, 3 loiter, 4 mission, 5 RTL, 6 land. */
 const PX4_MODE: Partial<Record<FlightMode, [number, number]>> = {
   MANUAL: [1, 0], ALT_HOLD: [2, 0], POSITION: [3, 0], STABILIZE: [7, 0],
@@ -386,13 +420,14 @@ const PX4_MODE: Partial<Record<FlightMode, [number, number]>> = {
   GUIDED: [4, 3],
 };
 
-export function modeName(t: Pick<Telemetry, 'autopilot' | 'customMode'>): FlightMode {
+export function modeName(t: Pick<Telemetry, 'autopilot' | 'customMode'> & Partial<Pick<Telemetry, 'vehicleType'>>): FlightMode {
   if (autopilotOf(t) === 'PX4') {
     const main = (t.customMode >> 16) & 0xff, sub = (t.customMode >>> 24) & 0xff;
     if (main === 4) return ({ 2: 'TAKEOFF', 3: 'LOITER', 4: 'AUTO', 5: 'RTL', 6: 'LAND' } as Record<number, FlightMode>)[sub] ?? 'OTHER';
     return ({ 1: 'MANUAL', 2: 'ALT_HOLD', 3: 'POSITION', 6: 'GUIDED', 7: 'STABILIZE' } as Record<number, FlightMode>)[main] ?? 'OTHER';
   }
-  return ARDU_NAME[t.customMode] ?? 'OTHER';
+  const fw = arduFirmware(t.vehicleType);
+  return (fw && ARDU_NAME[fw][t.customMode]) || 'OTHER';
 }
 
 export const MODE_LABEL: Record<FlightMode, string> = {
@@ -400,13 +435,17 @@ export const MODE_LABEL: Record<FlightMode, string> = {
   RTL: 'RTL', LAND: 'Land', TAKEOFF: 'Takeoff', MANUAL: 'Manual', OTHER: 'Other',
 };
 
-/** DO_SET_MODE for the given autopilot (ArduPilot numbering when unknown). */
-export function encodeFlightMode(ap: Autopilot, mode: FlightMode, targetSys = 1): Uint8Array | null {
+/**
+ * DO_SET_MODE for the given autopilot (ArduPilot numbering when unknown), numbered for the
+ * vehicle's HEARTBEAT.type. Null when this vehicle has no such mode: nothing is sent.
+ */
+export function encodeFlightMode(ap: Autopilot, mode: FlightMode, targetSys = 1, vehicleType = 0): Uint8Array | null {
   if (ap === 'PX4') {
     const m = PX4_MODE[mode]; if (!m) return null;
     return encodeCommandLong(MAV_CMD.DO_SET_MODE, [MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, m[0], m[1]], targetSys);
   }
-  const m = ARDU_MODE[mode]; if (m === undefined) return null;
+  const fw = arduFirmware(vehicleType); if (!fw) return null;
+  const m = ARDU_MODE[fw][mode] ?? (VTOL_TYPES.includes(vehicleType) ? VTOL_EXTRA[mode] : undefined); if (m === undefined) return null;
   return encodeCommandLong(MAV_CMD.DO_SET_MODE, [MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, m], targetSys);
 }
 
@@ -422,6 +461,16 @@ export function encodeCommandInt(cmd: number, params: [number, number, number, n
 /** DO_REPOSITION: fly to a point and hold (PX4's go-to; ArduPilot 4.1+ accepts it too). Param2 bit 1 = switch mode. */
 export function encodeReposition(lat: number, lon: number, altRelM: number, targetSys = 1): Uint8Array {
   return encodeCommandInt(MAV_CMD.DO_REPOSITION, [-1, 1, 0, NaN], Math.round(lat * 1e7), Math.round(lon * 1e7), altRelM, MAV_FRAME_GLOBAL_RELATIVE_ALT_INT, targetSys);
+}
+/**
+ * DO_REPOSITION for this autopilot. PX4's navigator reads param7 as AMSL whatever the frame
+ * (QGC sends it MAV_FRAME_GLOBAL with AMSL), so a height above home would put it into the
+ * ground wherever the field is above sea level: send home AMSL + height, like takeoff does.
+ */
+export function encodeRepositionFor(ap: Autopilot, lat: number, lon: number, altRelM: number, t: Pick<Telemetry, 'altMslM' | 'altRelM'>, targetSys = 1): Uint8Array {
+  if (ap !== 'PX4') return encodeReposition(lat, lon, altRelM, targetSys);
+  const amsl = t.altMslM ? t.altMslM - t.altRelM + altRelM : NaN; // NaN: PX4 keeps its current altitude
+  return encodeCommandInt(MAV_CMD.DO_REPOSITION, [-1, 1, 0, NaN], Math.round(lat * 1e7), Math.round(lon * 1e7), amsl, MAV_FRAME_GLOBAL_INT, targetSys);
 }
 
 /**

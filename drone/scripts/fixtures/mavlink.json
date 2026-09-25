@@ -30,6 +30,40 @@
    "frame": "fd0900000001010000000400000002038104030356",
    "autopilot": 3,
    "mode": "GUIDED"
+  },
+  "fence_breached": {
+   "frame": "fd080000000101a2000040e2010003000101fd8c",
+   "breached": true
+  },
+  "fence_clear_after_breach": {
+   "frame": "fd080000000101a2000040e201000300000121d6",
+   "breached": false
+  },
+  "heartbeat_plane_guided": {
+   "frame": "fd0900000001010000000f00000001038104033e47",
+   "mode": "GUIDED"
+  },
+  "heartbeat_plane_rtl": {
+   "frame": "fd0900000001010000000b0000000103810403a2f7",
+   "mode": "RTL"
+  },
+  "heartbeat_quadplane_qland": {
+   "frame": "fd0900000001010000001400000014038104031bde",
+   "mode": "LAND"
+  },
+  "heartbeat_rover_guided": {
+   "frame": "fd0900000001010000000f0000000a038104031b6a",
+   "mode": "GUIDED"
+  },
+  "heartbeat_copter_guided_sys2": {
+   "frame": "fd0900000002010000000400000002038104037d8e",
+   "sys": 2
+  },
+  "radio_status_sik": {
+   "frame": "fd0900000033446d000000000000b4ac642826effe",
+   "rssi": 180,
+   "remrssi": 172,
+   "noise": 40
   }
  },
  "encode": {
@@ -68,6 +102,26 @@
   "reposition": {
    "msgId": 75,
    "payload": "000080bf0000803f000000000000c07fcca3211470386cb900002042c000010106"
+  },
+  "plane_mode_guided": {
+   "msgId": 76,
+   "payload": "0000803f000070410000000000000000000000000000000000000000b0000101"
+  },
+  "rover_mode_rtl": {
+   "msgId": 76,
+   "payload": "0000803f000030410000000000000000000000000000000000000000b0000101"
+  },
+  "quadplane_mode_qland": {
+   "msgId": 76,
+   "payload": "0000803f0000a0410000000000000000000000000000000000000000b0000101"
+  },
+  "px4_reposition_amsl": {
+   "msgId": 75,
+   "payload": "000080bf0000803f000000000000c07fcca3211470386cb900001143c000010105"
+  },
+  "set_interval_sys2": {
+   "msgId": 76,
+   "payload": "00000442005043480000000000000000000000000000000000000000ff010201"
   }
  },
  "health": {

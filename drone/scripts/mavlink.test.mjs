@@ -88,4 +88,78 @@ const decodeOne = h => { const pp = new m.MavParser(); const fr = pp.push(hex(h)
   assert.equal(ta.payload.getFloat32(24, true), 30, 'ArduPilot takeoff altitude is relative');
   assert.equal(m.encodeFlightMode('PX4', 'OTHER'), null);
 }
+{
+  // ArduPilot numbers modes per firmware, read from HEARTBEAT.type (pymavlink AP_MAV_TYPE_MODE_MAP).
+  const d = fx.decode, e = fx.encode;
+  const hbMode = k => m.modeName(m.decodeInto({ ...m.EMPTY_TELEMETRY }, decodeOne(d[k].frame)));
+  for (const k of ['heartbeat_plane_guided', 'heartbeat_plane_rtl', 'heartbeat_quadplane_qland', 'heartbeat_rover_guided']) assert.equal(hbMode(k), d[k].mode, k);
+  // Copter's GUIDED (4) is Plane's ACRO: not read as Guided on a plane.
+  assert.equal(m.modeName({ autopilot: 3, customMode: 4, vehicleType: 1 }), 'OTHER');
+  assert.equal(m.modeName({ autopilot: 3, customMode: 4 }), 'GUIDED', 'no type yet: Copter numbering');
+  const same = (bytes, ref, name) => assert.equal(Buffer.from(bytes.subarray(10, 10 + bytes[1])).toString('hex'), ref.payload, name);
+  same(m.encodeFlightMode('ARDUPILOT', 'GUIDED', 1, 1), e.plane_mode_guided, 'plane GUIDED is 15');
+  same(m.encodeFlightMode('ARDUPILOT', 'GUIDED', 1, 20), e.plane_mode_guided, 'quadplane GUIDED is 15');
+  same(m.encodeFlightMode('ARDUPILOT', 'RTL', 1, 10), e.rover_mode_rtl, 'rover RTL is 11');
+  same(m.encodeFlightMode('ARDUPILOT', 'LAND', 1, 20), e.quadplane_mode_qland, 'quadplane lands in QLAND');
+  same(m.encodeFlightMode('ARDUPILOT', 'GUIDED', 1, 2), e.ardu_mode_guided, 'quad GUIDED is 4');
+  assert.equal(m.encodeFlightMode('ARDUPILOT', 'LAND', 1, 1), null, 'a fixed wing has no land mode: nothing sent');
+  assert.equal(m.encodeFlightMode('ARDUPILOT', 'GUIDED', 1, 12), null, 'ArduSub: refused, not sent with Copter numbers');
+  // Stream requests are addressed to the system they are for.
+  same(m.encodeSetInterval(33, 5, 2), e.set_interval_sys2, 'SET_MESSAGE_INTERVAL to system 2');
+  // PX4 go-to: AMSL in MAV_FRAME_GLOBAL_INT, from the same home AMSL the takeoff uses; ArduPilot keeps relative.
+  const tel = { altMslM: 125, altRelM: 20 };
+  same(m.encodeRepositionFor('PX4', 33.774894, -118.409, 40, tel), e.px4_reposition_amsl, 'PX4 reposition AMSL');
+  same(m.encodeRepositionFor('ARDUPILOT', 33.774894, -118.409, 40, tel), e.reposition, 'ArduPilot reposition relative');
+}
+{
+  // FENCE_STATUS: breach_status is byte 6; byte 7 is breach_type, which stays set after the breach clears.
+  const d = fx.decode;
+  for (const k of ['fence_breached', 'fence_clear_after_breach']) {
+    const t = m.decodeInto({ ...m.EMPTY_TELEMETRY, fenceBreached: !d[k].breached }, decodeOne(d[k].frame));
+    assert.equal(t.fenceBreached, d[k].breached, k);
+  }
+  const r = decodeOne(d.radio_status_sik.frame);
+  assert.equal(r.sysId, 51); assert.equal(r.compId, 68);
+  // Only an autopilot's heartbeat makes a vehicle: not the radio, not a ground station.
+  assert.equal(m.isVehicleHeartbeat(r), false);
+  assert.equal(m.isVehicleHeartbeat(decodeOne(d.heartbeat_copter_guided_sys2.frame)), true);
+  assert.equal(m.isVehicleHeartbeat(decodeOne(d.heartbeat_plane_guided.frame)), true);
+  assert.equal(m.isVehicleHeartbeat(new m.MavParser().push(m.encodeHeartbeat())[0]), false, 'our own GCS heartbeat');
+  const radioHb = new Uint8Array(9); radioHb[4] = 18; radioHb[5] = 8; // an onboard controller, MAV_AUTOPILOT_INVALID
+  assert.equal(m.isVehicleHeartbeat(new m.MavParser().push(m.encodeRaw(0, radioHb, 51, 1))[0]), false);
+  const t = m.decodeInto({ ...m.EMPTY_TELEMETRY }, r);
+  assert.equal(t.radioRssi, 180); assert.equal(t.radioRemRssi, 172); assert.equal(t.radioNoise, 40);
+}
+{
+  // Parser resync: a stray 0xFD naming an unknown message (no CRC_EXTRA, so no CRC check) must not swallow the real frames after it.
+  const hb = m.encodeHeartbeat(), cmd = m.encodeCommandLong(m.MAV_CMD.RETURN_TO_LAUNCH);
+  const noise = Uint8Array.from([0xfd, 60, 0, 0, 7, 1, 1, 0x39, 0x30, 0x00]);  // "len 60", msg id 12345 (unknown)
+  const pp = new m.MavParser();
+  const got = pp.push(Uint8Array.from([...noise, ...hb, ...cmd, ...hb, ...cmd, ...hb]));
+  assert.deepEqual(got.map(f => f.msgId), [0, 76, 0, 76, 0], `real frames recovered after a false start: ${got.map(f => f.msgId)}`);
+  // A genuine unknown message is still passed through when the next frame follows it...
+  const unk = m.encodeRaw(12345, Uint8Array.from([1, 2, 3, 4]), 1, 1);
+  const p2 = new m.MavParser();
+  assert.deepEqual(p2.push(Uint8Array.from([...unk, ...hb])).map(f => f.msgId), [12345, 0]);
+  // ...and at the end of the buffer it waits for the next byte to decide, then is delivered.
+  const p3 = new m.MavParser();
+  assert.equal(p3.push(unk).length, 0);
+  assert.deepEqual(p3.push(hb).map(f => f.msgId), [12345, 0]);
+  // Unknown incompatibility flags (only signing exists) mark a false start.
+  const p4 = new m.MavParser(), bad = Uint8Array.from(hb); bad[2] = 0x80;
+  assert.deepEqual(p4.push(Uint8Array.from([...bad, ...hb])).map(f => f.msgId), [0]);
+}
+{
+  // BLE writes: two frames sent at once go out whole, one after the other, never interleaved.
+  const { chunkedWriter } = await (await import('./bundle.mjs')).loadModule('../src/link/writeQueue.ts');
+  const wire = [];
+  let fail = false;
+  const write = chunkedWriter(async part => { await new Promise(r => setTimeout(r, Math.random() * 3)); if (fail) throw new Error('gatt'); wire.push(...part); }, 20);
+  const a = m.encodeCommandLong(m.MAV_CMD.RETURN_TO_LAUNCH), b = m.encodeHeartbeat(), c = m.encodeTakePhoto();
+  await Promise.all([write(a), write(b), write(c)]);
+  assert.deepEqual(new m.MavParser().push(Uint8Array.from(wire)).map(f => f.msgId), [76, 0, 76], 'frames arrive whole and in order');
+  fail = true; await assert.rejects(write(a)); fail = false;
+  wire.length = 0; await write(b);
+  assert.equal(new m.MavParser().push(Uint8Array.from(wire)).length, 1, 'a failed write does not stall the next');
+}
 console.log('mavlink codec: all tests passed');

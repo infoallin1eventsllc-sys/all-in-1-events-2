@@ -1,12 +1,13 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useAircraftLink } from '../link/useAircraftLink';
-import { autopilotOf, modeName, type FlightMode } from '../link/mavlink';
+import { autopilotOf, modeName, MAV_RESULT, type FlightMode } from '../link/mavlink';
 import { useFleetHealth } from '../diagnostics/useFleetHealth';
 import { readiness, SHOW_MIN_BATTERY, type Readiness } from '../diagnostics/fleet';
 import { recorder } from '../record/recorder';
-import { Commander, counts, type Batch, type Transport } from './commander';
-import { encodeStep, stepDone, toLocal, type Cmd, type Step } from './protocol';
+import { Commander, counts, retryPlan, type Batch, type Transport } from './commander';
+import { commandRole, describe, encodeStep, stepDone, toLocal, type Cmd, type Step } from './protocol';
 import { FleetSim } from '../diagnostics/fleetSim';
+import { useOperator, ROLE_LABEL } from '../operator/operator';
 
 /**
  * Control for one aircraft or a whole fleet, over the same dispatcher.
@@ -41,13 +42,16 @@ export interface SendOpts { staggerS?: number; interlocks?: Interlocks; perTarge
 
 interface ControlApi {
   source: 'LIVE' | 'SIMULATION';
+  /** Live, but the link has dropped: `vehicles` are the last known, not reporting. */
+  linkLost: boolean;
   vehicles: VehicleView[];
   /** Positions refresh stamp (ms), for smooth drawing between updates. */
   updatedAt: number;
   batches: Batch[];
   texts: { id: string; text: string; at: number }[];
+  /** Null when nothing was sent: no aircraft, or the operator's role may not send this command. */
   send: (cmd: Cmd, ids: string[], opts?: SendOpts) => Batch | null;
-  /** Retry the aircraft in a batch that were refused or did not answer. */
+  /** Retry the aircraft in a batch that were refused or did not answer (the interlocks are checked again). */
   retry: (b: Batch) => void;
   /** Keeps the simulation running (the control screen holds it while open). */
   useActive: () => void;
@@ -62,6 +66,8 @@ const DOING: Record<string, string> = {
 export const ControlProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const fleet = useFleetHealth();
   const link = useAircraftLink();
+  const operator = useOperator();
+  const opRef = useRef(operator); opRef.current = operator;
   const source = fleet.source;
   const [vehicles, setVehicles] = useState<VehicleView[]>([]);
   const [updatedAt, setUpdatedAt] = useState(0);
@@ -97,6 +103,8 @@ export const ControlProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const o = origin.current ?? { lat: t.lat, lon: t.lon };
         const bytes = encodeStep(step, autopilotOf(t), sys, t, o);
         if (bytes) link.send(bytes).catch(() => {});
+        // Nothing to send (e.g. no such mode on this airframe): say so now rather than "no answer after 3 tries".
+        else c.ack(id, step.cmd, MAV_RESULT.UNSUPPORTED, performance.now(), 'this aircraft has no such mode');
       },
       verify: (id, step) => { const t = vehiclesLive.current[Number(id.replace(/\D/g, ''))]; return !!t && stepDone(step, { armed: t.armed, airborne: t.armed && t.altRelM > 0.5, mode: modeName(t) }); },
     };
@@ -191,8 +199,15 @@ export const ControlProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => clearInterval(t);
   }, [source, commander, running]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const sentWith = useRef(new WeakMap<Batch, Interlocks | undefined>());
   const send = useCallback((cmd: Cmd, ids: string[], opts: SendOpts = {}) => {
     if (!ids.length) return null;
+    // The role gate lives here, not only on buttons: every path to the aircraft comes through send.
+    const op = opRef.current;
+    if (commandRole(cmd) === 'fly' ? !op.canCommand : !op.canAbort) {
+      recorder.event('COMMAND', 'WARNING', `${describe(cmd)} not sent: ${ROLE_LABEL[op.role].toLowerCase()} may not command the aircraft`);
+      return null;
+    }
     const health = new Map(listRef.current.map(a => [a.id, a]));
     const byId = new Map(vehicles.map(v => [v.id, v]));
     const hold = new Map<string, string>();
@@ -217,21 +232,24 @@ export const ControlProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const now = performance.now();
     commander.tick(now);
     const b = commander.dispatch(cmd, ids, now, { hold, delayS: stagger ? id => Math.max(0, rows.get(id) ?? 0) * stagger : undefined, retries: cmd.k === 'LAND' || cmd.k === 'KILL' ? 4 : 2, perTarget: opts.perTarget });
+    sentWith.current.set(b, opts.interlocks);
     recorder.event('COMMAND', cmd.k === 'KILL' ? 'CRITICAL' : cmd.k === 'ARM' || cmd.k === 'TAKEOFF' ? 'WARNING' : 'INFO', `${b.label}: sent to ${ids.length - hold.size} aircraft${hold.size ? `, ${hold.size} held back` : ''}`);
     setBatches([...commander.batches]);
     return b;
   }, [commander, vehicles]);
 
   const retry = useCallback((b: Batch) => {
-    const ids = [...b.targets.values()].filter(t => t.status === 'REJECTED' || t.status === 'NO_RESPONSE').map(t => t.id);
-    if (ids.length) send(b.cmd, ids, { interlocks: { grounded: false, lowBattery: false, silent: false } });
+    // Same interlocks as the original send, checked again now: a pack that has sagged since, or an aircraft
+    // that has gone silent, stays on the ground. Each aircraft keeps its own target (formation moves).
+    const plan = retryPlan(b);
+    if (plan) send(plan.cmd, plan.ids, { interlocks: sentWith.current.get(b), perTarget: plan.perTarget });
   }, [send]);
 
   // Flying by hand is in real time.
   useEffect(() => { if (active > 0 && source === 'SIMULATION') fleet.setSpeed(1); }, [active > 0]); // eslint-disable-line react-hooks/exhaustive-deps
   const useActive = () => { fleet.useActive(); useEffect(() => { setActive(a => a + 1); return () => setActive(a => a - 1); }, []); };
 
-  const api: ControlApi = { source, vehicles, updatedAt, batches, texts, send, retry, useActive };
+  const api: ControlApi = { source, linkLost: source === 'LIVE' && link.lost, vehicles, updatedAt, batches, texts, send, retry, useActive };
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
 };
 

@@ -1,9 +1,10 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   MavParser, decodeInto, encodeHeartbeat, encodeCommandLong, encodeSetInterval, encodeArm, encodeGotoGlobal,
-  encodeFlightMode, encodeTakeoffFor, encodeReposition, encodeGimbalPitchYaw, encodeMountControl, encodeCameraZoom, encodeCameraSource, encodeRelay, encodeTakePhoto,
-  autopilotOf, modeName, EMPTY_TELEMETRY, MAV_CMD, MAV_RESULT, type Telemetry, type MavFrame, type MissionItem, type Autopilot, type FlightMode,
+  encodeFlightMode, encodeTakeoffFor, encodeRepositionFor, encodeGimbalPitchYaw, encodeMountControl, encodeCameraZoom, encodeCameraSource, encodeRelay, encodeTakePhoto,
+  autopilotOf, modeName, isVehicleHeartbeat, MODE_LABEL, EMPTY_TELEMETRY, MAV_CMD, MAV_RESULT, type Telemetry, type MavFrame, type MissionItem, type Autopilot, type FlightMode,
 } from './mavlink';
+import { chunkedWriter } from './writeQueue';
 import { HEALTH_STREAMS } from '../diagnostics/decode';
 import { uploadItems, startMission as startMissionOn, awaitAck as awaitAckOn, MISSION_TYPE, type MissionIO, type StartResult } from './missionClient';
 
@@ -45,6 +46,12 @@ interface LinkState {
   badCrc: number;
   lastHeartbeatAgoS: number;
   support: { bluetooth: boolean; serial: boolean; secure: boolean; network: boolean };
+  /**
+   * The link dropped while aircraft were live (not a Disconnect). `vehicles` then holds their
+   * last known state, so views keep showing the real fleet as lost rather than a simulation.
+   * Cleared by Disconnect or once a heartbeat is heard again.
+   */
+  lost: boolean;
 }
 
 interface LinkApi extends LinkState {
@@ -107,7 +114,7 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }), [nav]);
 
   const [state, setState] = useState<LinkState>({
-    transport: 'SIMULATION', status: 'DISCONNECTED', deviceName: '', error: '', telemetry: { ...EMPTY_TELEMETRY }, vehicles: {}, primarySysId: 0, bytesIn: 0, badCrc: 0, lastHeartbeatAgoS: 0, support,
+    transport: 'SIMULATION', status: 'DISCONNECTED', deviceName: '', error: '', telemetry: { ...EMPTY_TELEMETRY }, vehicles: {}, primarySysId: 0, bytesIn: 0, badCrc: 0, lastHeartbeatAgoS: 0, support, lost: false,
   });
   const [missionUpload, setMissionUpload] = useState<LinkApi['missionUpload']>({ state: 'IDLE', sent: 0, total: 0, error: '' });
 
@@ -129,7 +136,8 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
       telem.current.msgsPerSec = last ? Math.round(msgCount.current / ((now - last) / 1000)) : 0;
       msgCount.current = 0; last = now;
       setState(s => (s.status === 'CONNECTED'
-        ? { ...s, telemetry: { ...telem.current }, vehicles: Object.fromEntries(Object.entries(vehicles.current).map(([k, v]) => [k, { ...v }])), primarySysId: primarySys.current, bytesIn: bytesIn.current, badCrc: parser.current.badCrc, lastHeartbeatAgoS: telem.current.heartbeatMs ? (now - telem.current.heartbeatMs) / 1000 : 0 }
+        // Reconnecting after a drop: the lost fleet stays on screen until an aircraft is heard again.
+        ? { ...s, lost: s.lost && !telem.current.heartbeatMs, telemetry: { ...telem.current }, vehicles: s.lost && !telem.current.heartbeatMs ? s.vehicles : Object.fromEntries(Object.entries(vehicles.current).map(([k, v]) => [k, { ...v }])), primarySysId: primarySys.current, bytesIn: bytesIn.current, badCrc: parser.current.badCrc, lastHeartbeatAgoS: telem.current.heartbeatMs ? (now - telem.current.heartbeatMs) / 1000 : 0 }
         : s));
     }, 100);
     return () => clearInterval(t);
@@ -141,46 +149,68 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     return () => clearInterval(t);
   }, []);
 
+  const send = useCallback(async (bytes: Uint8Array) => { if (writer.current) await writer.current(bytes); }, []);
+
+  /** Ask one system for the messages the dashboards read; autopilots that ignore this still send their defaults. */
+  const requestStreams = useCallback(async (sys: number) => {
+    // Position, attitude, speed, status, GPS, battery; mission progress, wind estimate, home, fence state.
+    for (const [id, hz] of [[33, 5], [30, 5], [74, 4], [1, 2], [24, 2], [147, 1], [42, 1], [168, 1], [242, 0.2], [162, 1]] as const) {
+      await send(encodeSetInterval(id, hz, sys)).catch(() => {});
+    }
+    // Health: motor outputs, vibration, ESC telemetry, battery cells, navigation filter, power.
+    for (const [id, hz] of HEALTH_STREAMS) await send(encodeSetInterval(id, hz, sys)).catch(() => {});
+    // Firmware version once: REQUEST_MESSAGE(AUTOPILOT_VERSION), and the older capabilities request for older firmware.
+    await send(encodeCommandLong(MAV_CMD.REQUEST_MESSAGE, [148], sys)).catch(() => {});
+    await send(encodeCommandLong(MAV_CMD.REQUEST_MESSAGE, [242], sys)).catch(() => {});
+    await send(encodeCommandLong(520, [1], sys)).catch(() => {});
+  }, [send]);
+
   const ingest = useCallback((chunk: Uint8Array) => {
     bytesIn.current += chunk.length;
     for (const f of parser.current.push(chunk)) {
       if (f.compId !== 1 && f.msgId === 0) continue; // ignore heartbeats from cameras/gimbals; the autopilot is component 1
-      // Route by system id: the first autopilot heard is the primary; others are extra vehicles on a shared radio.
-      if (!primarySys.current && f.msgId === 0) primarySys.current = f.sysId;
-      const target = f.sysId === primarySys.current ? telem.current : (vehicles.current[f.sysId] ??= { ...EMPTY_TELEMETRY });
-      decodeInto(target, f);
-      if (f.sysId === primarySys.current) vehicles.current[f.sysId] = telem.current;
+      // A vehicle exists only once its autopilot heartbeats: a SiK radio (sys 51, comp 68), another GCS or a
+      // companion computer talking on the link is not an aircraft, and must not appear as one.
+      if (isVehicleHeartbeat(f) && !vehicles.current[f.sysId]) {
+        // The first autopilot heard is the primary; others are extra vehicles on a shared radio.
+        if (!primarySys.current) primarySys.current = f.sysId;
+        vehicles.current[f.sysId] = f.sysId === primarySys.current ? telem.current : { ...EMPTY_TELEMETRY };
+        // Stream requests go now, addressed to this system: before its heartbeat its id is unknown.
+        void requestStreams(f.sysId);
+      }
+      // RADIO_STATUS describes the link, whoever injects it (a SiK radio does, as sys 51): it is the primary's link quality.
+      const target = f.msgId === 109 ? (primarySys.current ? telem.current : undefined) : vehicles.current[f.sysId];
+      if (target) decodeInto(target, f);
       msgCount.current++;
       frameListeners.current.forEach(l => l(f));
     }
+  }, [requestStreams]);
+
+  /** Forget everything about the last connection: the next one may be a different aircraft on a different id. */
+  const resetLink = useCallback(() => {
+    closer.current = null; writer.current = null;
+    telem.current = { ...EMPTY_TELEMETRY }; vehicles.current = {}; primarySys.current = 0; parser.current = new MavParser(); bytesIn.current = 0; msgCount.current = 0;
   }, []);
-
-  const send = useCallback(async (bytes: Uint8Array) => { if (writer.current) await writer.current(bytes); }, []);
-
-  const requestStreams = useCallback(async () => {
-    // Ask for the messages the dashboards read; autopilots that ignore this still send their defaults.
-    // Position, attitude, speed, status, GPS, battery; mission progress, wind estimate, home, fence state.
-    for (const [id, hz] of [[33, 5], [30, 5], [74, 4], [1, 2], [24, 2], [147, 1], [42, 1], [168, 1], [242, 0.2], [162, 1]] as const) {
-      await send(encodeSetInterval(id, hz)).catch(() => {});
-    }
-    // Health: motor outputs, vibration, ESC telemetry, battery cells, navigation filter, power.
-    for (const [id, hz] of HEALTH_STREAMS) await send(encodeSetInterval(id, hz)).catch(() => {});
-    // Firmware version once: REQUEST_MESSAGE(AUTOPILOT_VERSION), and the older capabilities request for older firmware.
-    await send(encodeCommandLong(MAV_CMD.REQUEST_MESSAGE, [148])).catch(() => {});
-    await send(encodeCommandLong(MAV_CMD.REQUEST_MESSAGE, [242])).catch(() => {});
-    await send(encodeCommandLong(520, [1])).catch(() => {});
-  }, [send]);
+  /**
+   * The transport went away on its own. Everything from that connection is reset, but the last known state
+   * stays published with `lost` set, so a fleet in the air shows as lost instead of being swapped for the simulation.
+   */
+  const dropped = useCallback((error: string) => {
+    resetLink();
+    setMissionUpload(m => (m.state === 'UPLOADING' ? { ...m, state: 'FAILED', error } : m));
+    setState(s => ({ ...s, transport: 'SIMULATION', status: 'DISCONNECTED', error, lost: s.lost || (s.status === 'CONNECTED' && s.telemetry.heartbeatMs > 0) }));
+  }, [resetLink]);
 
   const disconnect = useCallback(async () => {
     try { await closer.current?.(); } catch { /* already gone */ }
-    closer.current = null; writer.current = null;
-    telem.current = { ...EMPTY_TELEMETRY }; vehicles.current = {}; primarySys.current = 0; parser.current = new MavParser(); bytesIn.current = 0;
+    resetLink();
     setMissionUpload({ state: 'IDLE', sent: 0, total: 0, error: '' });
-    setState(s => ({ ...s, transport: 'SIMULATION', status: 'DISCONNECTED', deviceName: '', error: '', telemetry: { ...EMPTY_TELEMETRY }, vehicles: {}, primarySysId: 0, bytesIn: 0, badCrc: 0 }));
-  }, []);
+    setState(s => ({ ...s, transport: 'SIMULATION', status: 'DISCONNECTED', deviceName: '', error: '', telemetry: { ...EMPTY_TELEMETRY }, vehicles: {}, primarySysId: 0, bytesIn: 0, badCrc: 0, lost: false }));
+  }, [resetLink]);
 
   const connectBluetooth = useCallback(async () => {
     if (!support.bluetooth) { setState(s => ({ ...s, status: 'ERROR', error: 'Web Bluetooth is not available in this browser. Use Chrome or Edge on desktop or Android, over HTTPS.' })); return; }
+    resetLink();
     setState(s => ({ ...s, transport: 'BLUETOOTH', status: 'CONNECTING', error: '' }));
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -193,24 +223,21 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
       await tx.startNotifications();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       tx.addEventListener('characteristicvaluechanged', (e: any) => { const v: DataView = e.target.value; ingest(new Uint8Array(v.buffer, v.byteOffset, v.byteLength)); });
-      writer.current = async (bytes: Uint8Array) => {
-        for (let i = 0; i < bytes.length; i += BLE_MTU) {
-          const part = bytes.subarray(i, i + BLE_MTU);
-          if (rx.writeValueWithoutResponse) await rx.writeValueWithoutResponse(part); else await rx.writeValue(part);
-        }
-      };
-      closer.current = async () => { try { await tx.stopNotifications(); } catch { /* ignore */ } device.gatt.disconnect(); };
-      device.addEventListener('gattserverdisconnected', () => { writer.current = null; closer.current = null; setState(s => ({ ...s, status: 'DISCONNECTED', error: 'Bluetooth link dropped' })); });
+      // 20-byte pieces, one frame at a time: concurrent sends would interleave their pieces (see chunkedWriter).
+      writer.current = chunkedWriter(part => (rx.writeValueWithoutResponse ? rx.writeValueWithoutResponse(part) : rx.writeValue(part)), BLE_MTU);
+      let open = true;
+      closer.current = async () => { open = false; try { await tx.stopNotifications(); } catch { /* ignore */ } device.gatt.disconnect(); };
+      device.addEventListener('gattserverdisconnected', () => { if (open) { open = false; dropped('Bluetooth link dropped'); } });
       setState(s => ({ ...s, status: 'CONNECTED', deviceName: device.name || 'BLE bridge' }));
-      await requestStreams();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setState(s => ({ ...s, status: /cancel/i.test(msg) ? 'DISCONNECTED' : 'ERROR', error: /cancel/i.test(msg) ? '' : msg, transport: 'SIMULATION' }));
     }
-  }, [support.bluetooth, ingest, requestStreams]);
+  }, [support.bluetooth, ingest, resetLink, dropped]);
 
   const connectSerial = useCallback(async () => {
     if (!support.serial) { setState(s => ({ ...s, status: 'ERROR', error: 'Web Serial is not available in this browser. Use Chrome or Edge on desktop, over HTTPS.' })); return; }
+    resetLink();
     setState(s => ({ ...s, transport: 'SERIAL', status: 'CONNECTING', error: '' }));
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -220,21 +247,26 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const name = info.usbVendorId ? `USB radio ${info.usbVendorId.toString(16)}:${(info.usbProductId ?? 0).toString(16)}` : 'Serial radio';
       const reader = port.readable.getReader();
       const w = port.writable.getWriter();
+      // port.close() rejects while either stream is still locked, leaving the port open ("already open" on
+      // the next connect): the read loop releases its lock as it ends, and the port is closed only after that.
+      const shut = async () => { try { w.releaseLock(); } catch { /* ignore */ } try { await port.close(); } catch { /* ignore */ } };
       let running = true;
-      (async () => {
+      const loop = (async () => {
         try { while (running) { const { value, done } = await reader.read(); if (done) break; if (value) ingest(value); } }
-        catch { /* port closed */ }
-        finally { if (running) setState(s => ({ ...s, status: 'DISCONNECTED', error: 'Serial link dropped' })); }
+        catch { /* unplugged, or a port error */ }
+        finally {
+          try { reader.releaseLock(); } catch { /* ignore */ }
+          if (running) { running = false; await shut(); dropped('Serial link dropped'); }
+        }
       })();
       writer.current = async (bytes: Uint8Array) => { await w.write(bytes); };
-      closer.current = async () => { running = false; try { await reader.cancel(); } catch { /* ignore */ } try { w.releaseLock(); } catch { /* ignore */ } try { await port.close(); } catch { /* ignore */ } };
+      closer.current = async () => { running = false; try { await reader.cancel(); } catch { /* ignore */ } await loop; await shut(); };
       setState(s => ({ ...s, status: 'CONNECTED', deviceName: name }));
-      await requestStreams();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setState(s => ({ ...s, status: /No port selected/i.test(msg) ? 'DISCONNECTED' : 'ERROR', error: /No port selected/i.test(msg) ? '' : msg, transport: 'SIMULATION' }));
     }
-  }, [support.serial, ingest, requestStreams]);
+  }, [support.serial, ingest, resetLink, dropped]);
 
   const connectNetwork = useCallback(async (url: string) => {
     const u = url.trim();
@@ -245,6 +277,7 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setState(s => ({ ...s, status: 'ERROR', error: 'This page is secure (https), so the browser only allows wss:// connections. Start the bridge with --cert/--key, or reach it through the relay.' }));
       return;
     }
+    resetLink();
     setState(s => ({ ...s, transport: 'NETWORK', status: 'CONNECTING', error: '' }));
     try {
       const ws = new WebSocket(u);
@@ -256,26 +289,22 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
       });
       let open = true;
       ws.onmessage = e => { if (e.data instanceof ArrayBuffer) ingest(new Uint8Array(e.data)); };
-      ws.onclose = ev => {
-        writer.current = null; closer.current = null;
-        if (open) setState(s => ({ ...s, status: 'DISCONNECTED', error: ev.code === 4001 ? 'The bridge refused the token' : 'Network link dropped' }));
-      };
+      ws.onclose = ev => { if (open) { open = false; dropped(ev.code === 4001 ? 'The bridge refused the token' : 'Network link dropped'); } };
       writer.current = async (bytes: Uint8Array) => { if (ws.readyState === WebSocket.OPEN) ws.send(bytes as Uint8Array<ArrayBuffer>); };
       closer.current = async () => { open = false; ws.close(); };
       setState(s => ({ ...s, status: 'CONNECTED', deviceName: host || 'Network bridge' }));
-      await requestStreams();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setState(s => ({ ...s, status: 'ERROR', error: msg, transport: 'SIMULATION' }));
     }
-  }, [ingest, requestStreams]);
+  }, [ingest, resetLink, dropped]);
 
   const sysId = () => primarySys.current || 1;
   const ap = () => autopilotOf(telem.current);
   const returnToLaunch = useCallback(() => send(encodeCommandLong(MAV_CMD.RETURN_TO_LAUNCH, [], sysId())), [send]);
   const land = useCallback(() => send(encodeCommandLong(MAV_CMD.LAND, [], sysId())), [send]);
   const arm = useCallback((on: boolean) => send(encodeArm(on, false, sysId())), [send]);
-  const setFlightMode = useCallback(async (mode: FlightMode) => { const b = encodeFlightMode(ap(), mode, sysId()); if (b) await send(b); }, [send]);
+  const setFlightMode = useCallback(async (mode: FlightMode) => { const b = encodeFlightMode(ap(), mode, sysId(), telem.current.vehicleType); if (b) await send(b); }, [send]);
   /** Resolve once the autopilot's heartbeat reports `mode`, or after `ms` (found flying real ArduCopter SITL). */
   const awaitMode = useCallback((mode: FlightMode, ms = 2000) => new Promise<boolean>(resolve => {
     const t0 = Date.now();
@@ -283,31 +312,51 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     tick();
   }), []);
   /**
+   * Switch mode and wait for the heartbeat to show it; throws if it does not. What follows (a takeoff,
+   * a position target, a mission) is refused or ignored in the wrong mode, so it must not be sent.
+   */
+  const changeMode = useCallback(async (mode: FlightMode) => {
+    if (modeName(telem.current) === mode) return;
+    const b = encodeFlightMode(ap(), mode, sysId(), telem.current.vehicleType);
+    if (!b) throw new Error(`This aircraft has no ${MODE_LABEL[mode]} mode`);
+    await send(b);
+    if (!(await awaitMode(mode))) throw new Error(`The aircraft did not switch to ${MODE_LABEL[mode]} (still ${MODE_LABEL[modeName(telem.current)]})`);
+  }, [send, awaitMode]);
+  /**
    * ArduCopter only takes off in GUIDED; PX4 switches to its takeoff mode by itself.
    * The mode change must land before the takeoff command, or ArduCopter refuses it.
    */
   const takeoff = useCallback(async (altM: number) => {
-    if (ap() !== 'PX4') { await setFlightMode('GUIDED'); await awaitMode('GUIDED'); }
+    if (!writer.current) throw new Error('Not connected');
+    if (ap() !== 'PX4') await changeMode('GUIDED');
     await send(encodeTakeoffFor(ap(), altM, telem.current, sysId()));
-  }, [send, setFlightMode, awaitMode]);
+  }, [send, changeMode]);
   const goTo = useCallback(async (lat: number, lon: number, altRelM: number) => {
-    if (ap() === 'PX4') { await send(encodeReposition(lat, lon, altRelM, sysId())); return; }
-    await setFlightMode('GUIDED'); await awaitMode('GUIDED');
+    if (!writer.current) throw new Error('Not connected');
+    if (ap() === 'PX4') { await send(encodeRepositionFor('PX4', lat, lon, altRelM, telem.current, sysId())); return; }
+    await changeMode('GUIDED');
     await send(encodeGotoGlobal(lat, lon, altRelM, sysId()));
-  }, [send, setFlightMode, awaitMode]);
+  }, [send, changeMode]);
 
-  /** Resolve with the COMMAND_ACK result for `command`, or null after `ms`. */
+  /** Resolve with the primary aircraft's COMMAND_ACK result for `command`, or null after `ms`. */
   const awaitAck = useCallback((command: number, ms = 900) => new Promise<number | null>(resolve => {
-    const onFrame = (f: MavFrame) => { if (f.msgId === 77 && f.payload.getUint16(0, true) === command) { done(f.payload.getUint8(2)); } };
+    // Only the primary's answer counts: on a shared radio another aircraft may be acking the same command.
+    const onFrame = (f: MavFrame) => { if (f.msgId === 77 && f.sysId === sysId() && f.payload.getUint16(0, true) === command) { done(f.payload.getUint8(2)); } };
     const done = (r: number | null) => { clearTimeout(timer); frameListeners.current.delete(onFrame); resolve(r); };
     const timer = setTimeout(() => done(null), ms);
     frameListeners.current.add(onFrame);
   }), []);
+  const gimbalYaw = useRef(NaN);
   const setGimbal = useCallback(async (pitchDeg: number, yawDeg = NaN) => {
+    if (!Number.isNaN(yawDeg)) gimbalYaw.current = yawDeg;
     const ack = awaitAck(MAV_CMD.DO_GIMBAL_MANAGER_PITCHYAW);
     await send(encodeGimbalPitchYaw(pitchDeg, yawDeg, sysId()));
     const r = await ack;
-    if (r !== MAV_RESULT.ACCEPTED && r !== MAV_RESULT.IN_PROGRESS) await send(encodeMountControl(pitchDeg, Number.isNaN(yawDeg) ? 0 : yawDeg, sysId()));
+    if (r === MAV_RESULT.ACCEPTED || r === MAV_RESULT.IN_PROGRESS) return;
+    // DO_MOUNT_CONTROL has no "leave yaw alone": a pitch-only move keeps the last yaw commanded (else the one
+    // the gimbal reports), where 0 would swing the camera back to the nose.
+    const keep = Number.isNaN(yawDeg) ? (Number.isNaN(gimbalYaw.current) ? telem.current.gimbalYawDeg : gimbalYaw.current) : yawDeg;
+    await send(encodeMountControl(pitchDeg, Number.isFinite(keep) ? keep : 0, sysId()));
   }, [send, awaitAck]);
   const setZoom = useCallback((percent: number) => send(encodeCameraZoom(percent, sysId())), [send]);
   const setCameraSource = useCallback((source: 'RGB' | 'IR') => send(encodeCameraSource(source, sysId())), [send]);
@@ -340,10 +389,14 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
       throw e;
     }
     if (!start) return;
-    if (telem.current.armed && telem.current.altRelM > 1) { await setFlightMode('AUTO'); return; }
+    if (telem.current.armed && telem.current.altRelM > 1) {
+      // Already flying: the upload only counts as started once the aircraft is in AUTO.
+      try { await changeMode('AUTO'); } catch (e) { const msg = e instanceof Error ? e.message : String(e); setMissionUpload(m => ({ ...m, state: 'FAILED', error: msg })); throw e; }
+      return;
+    }
     const r = await startMission();
     if (!r.ok) { const msg = [r.error, ...(r.detail ?? [])].join(' · '); setMissionUpload(m => ({ ...m, state: 'FAILED', error: msg })); throw new Error(msg); }
-  }, [io, setFlightMode, startMission]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [io, changeMode, startMission]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const uploadFence = useCallback(async (items: MissionItem[]) => {
     if (!writer.current) throw new Error('Not connected');
@@ -363,7 +416,8 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     { id: 'sats', label: 'At least 10 satellites', ok: tNow.satellites >= 10, detail: `${tNow.satellites} sats` },
     { id: 'hdop', label: 'HDOP under 2.0', ok: tNow.hdop < 2, detail: tNow.hdop.toFixed(1) },
     { id: 'batt', label: 'Battery at least 40%', ok: tNow.batteryPct < 0 ? tNow.voltageV > 0 : tNow.batteryPct >= 40, detail: tNow.batteryPct >= 0 ? `${tNow.batteryPct}%` : `${tNow.voltageV.toFixed(1)} V (no %)` },
-    { id: 'link', label: 'Radio link quality', ok: tNow.radioRssi === 0 || tNow.radioRssi > 60, detail: tNow.radioRssi ? `RSSI ${tNow.radioRssi}` : 'n/a on this transport' },
+    // RSSI comes from RADIO_STATUS, which the telemetry radio injects (see ingest); Bluetooth and network links have none.
+    { id: 'link', label: 'Radio link quality', ok: tNow.radioRssi === 0 || tNow.radioRssi > 60, detail: tNow.radioRssi ? `RSSI ${tNow.radioRssi}${tNow.radioRemRssi ? ` · remote ${tNow.radioRemRssi}` : ''}` : 'n/a on this transport' },
   ];
   const preflight = { ok: checks.every(c => c.ok), checks };
 
