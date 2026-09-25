@@ -14,6 +14,13 @@
  * mission, holds Start, and follows the flight. The stand-in's battery failsafe
  * brings it home mid-survey; the test uploads the resume mission, holds Resume,
  * and waits for the survey to finish. It fails on any step that doesn't happen.
+ *
+ * Fence parameters: the venue reaches ~480 m from home, past ArduCopter's default
+ * 300 m circle (FENCE_TYPE 7), which the stand-in enforces like 4.5 does. The
+ * checklist must hold the upload on that, and the test holds "Fix on the aircraft"
+ * (FENCE_RADIUS raised) before it goes on. PX4's GF_MAX_HOR_DIST is off by default,
+ * so the PX4 run starts it at 300 m to exercise the same fix. The battery failsafe
+ * is set to return (BATT_FS_LOW_ACT 2 / COM_LOW_BAT_ACT 3): both default to warn only.
  */
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -37,7 +44,8 @@ const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 const wsPort = process.env.BENCH_WS_PORT ?? '8771', udpPort = process.env.BENCH_UDP_PORT ?? '14551';
 run('python3', ['mavlink_ws.py', '--udp', `127.0.0.1:${udpPort}`, '--host', '127.0.0.1', '--port', wsPort, '--token', 'bench']);
 await new Promise(r => setTimeout(r, 1500));
-const vehicle = run('python3', ['fake_vehicle.py', '--to', `127.0.0.1:${udpPort}`, '--time', '8', ...(px4 ? ['--px4'] : [])]);
+const setup = px4 ? ['--px4', '--param', 'COM_LOW_BAT_ACT=3', '--param', 'GF_MAX_HOR_DIST=300'] : ['--param', 'BATT_FS_LOW_ACT=2'];
+const vehicle = run('python3', ['fake_vehicle.py', '--to', `127.0.0.1:${udpPort}`, '--time', '8', ...setup]);
 vehicle.stdout.on('data', d => vlog.push(...String(d).trim().split('\n')));
 
 // Software WebGL so it also runs headless on a server.
@@ -53,8 +61,15 @@ await page.mouse.click(700, 950);
 await page.getByRole('tab', { name: 'Site' }).click();
 await page.getByRole('button', { name: 'Bench test here' }).click();
 await page.getByRole('tab', { name: /Aircraft/ }).click();
-await page.getByText('Ready', { exact: true }).waitFor({ timeout: 10000 }).catch(() => fail('pre-flight checklist not ready'));
-log('checklist ready');
+// The fence check holds the checklist until the stand-in's fence limits are read, then shows the fix.
+await page.locator('#sv-fence-fix').waitFor({ timeout: 20000 }).catch(() => fail('the fence check did not offer a fix for the default fence limits'));
+if (await page.getByText('Ready', { exact: true }).count()) fail('checklist ready with a fence that would stop the survey');
+const holdFix = async () => { const b = await page.locator('#sv-fence-fix').boundingBox(); await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down(); await page.waitForTimeout(1500); await page.mouse.up(); };
+await holdFix();
+await page.getByText('Ready', { exact: true }).waitFor({ timeout: 20000 }).catch(() => fail('pre-flight checklist not ready after the fence fix'));
+const fixed = vlog.filter(l => /^PARAM set /.test(l));
+if (!fixed.some(l => /PARAM set (FENCE_RADIUS|GF_MAX_HOR_DIST) \d+/.test(l))) fail(`fence fix not set on the aircraft: ${fixed.join('; ') || 'nothing set'}`);
+log(`checklist ready after the fence fix (${fixed.join(', ')})`);
 
 const holdOnce = async () => { const b = await page.locator('#sv-primary').boundingBox(); await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await page.mouse.down(); await page.waitForTimeout(1500); await page.mouse.up(); };
 // Press and hold Start; the button disables itself if a check drops mid-hold (on a busy machine a late
@@ -101,5 +116,6 @@ if (!lines || lines[1] !== lines[2]) fail(`lines flown: ${lines ? `${lines[1]} o
 if (photos < 300) fail(`only ${photos} photos reported`);
 if (!vlog.some(l => /mission start accepted|PX4 armed in mission mode/.test(l))) fail('the autopilot never started the mission');
 if (!vlog.some(l => /fence done/.test(l))) fail('no geofence reached the autopilot');
+if (vlog.some(l => /fence breach/.test(l))) fail(`the autopilot's fence stopped the survey: ${vlog.find(l => /fence breach/.test(l))}`);
 log(`PASS: ${photos} photos, ${lines ? `${lines[1]} of ${lines[2]} lines` : 'lines n/a'}, resumed after a battery return`);
 await browser.close(); cleanup(); process.exit(0);

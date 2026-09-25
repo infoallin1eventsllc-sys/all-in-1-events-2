@@ -3,9 +3,10 @@ import * as THREE from 'three';
 import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
-import { SITE, TREES, WORLD_M, SITE_DATUM_M, heightAt, surfaceAt, siteImagery } from '../../survey/site';
-import { toLatLon, pointInPolygon, type Pt, type GeoOrigin } from '../../survey/plan';
+import { SITE, TREES, WORLD_M, heightAt, siteImagery } from '../../survey/site';
+import { toLatLon, pointInPolygon, type Pt } from '../../survey/plan';
 import type { Annotation, AreaMeasure, LineMeasure } from '../../survey/measure';
+import type { ResultsModel } from '../../survey/processed';
 import { release3d } from '../../lib/release3d';
 
 /**
@@ -22,14 +23,20 @@ import { release3d } from '../../lib/release3d';
  * Colour: elevation is one sequential blue ramp (dark low → light high); cut/fill
  * is a diverging pair, red cut / blue fill round a grey midpoint, brighter with
  * magnitude on this dark model. Both validated with the dataviz checks.
- * Elevations read above sea level (the survey datum).
+ *
+ * The model is the demo venue (terrain, structures and trees drawn from site.ts)
+ * or processed results: a mesh from the imported DSM (capped for display, holes
+ * left open) textured with the imported orthophoto. Measurements always run on
+ * the model's surface; elevations read in its datum (model.zOffset, model.datum).
  */
 
 export type ResultsLayer = 'PHOTO' | 'ELEVATION';
 export type Tool = 'LINE' | 'AREA' | 'POINT' | null;
-export type Measured = { a: Annotation; line?: LineMeasure; area?: AreaMeasure };
+/** `gap`: share of the measurement over DSM no-data (filled), 0–1. */
+export type Measured = { a: Annotation; line?: LineMeasure; area?: AreaMeasure; gap?: number };
 
 interface Props {
+  model: ResultsModel;
   items: Measured[];
   selectedId: string | null;
   onSelect: (id: string | null) => void;
@@ -39,7 +46,6 @@ interface Props {
   draft: Pt[];
   onPick: (p: Pt) => void;
   onFinish: () => void;
-  origin: GeoOrigin;
   /** Changes to this ask the camera to frame an annotation. */
   focus: { id: string; seq: number } | null;
 }
@@ -65,7 +71,7 @@ const TERRAIN_VS = /* glsl */ `
   varying vec3 vWorld; varying vec2 vUv;
   void main() { vUv = uv; vec4 w = modelMatrix * vec4(position, 1.0); vWorld = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
 const TERRAIN_FS = /* glsl */ `
-  uniform sampler2D uMap; uniform float uMode; uniform float uContours; uniform float uInterval;
+  uniform sampler2D uMap; uniform float uMode; uniform float uContours; uniform float uInterval; uniform float uZoff; uniform float uHasMap;
   uniform float uZmin; uniform float uZmax; uniform vec3 uRamp[6];
   varying vec3 vWorld; varying vec2 vUv;
   vec3 rampAt(float t) { t = clamp(t, 0.0, 1.0) * 5.0; int i = int(min(floor(t), 4.0)); float f = t - float(i);
@@ -75,12 +81,13 @@ const TERRAIN_FS = /* glsl */ `
   void main() {
     vec3 n = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
     float shade = 0.62 + 0.5 * max(dot(n, normalize(vec3(-0.55, 0.75, -0.35))), 0.0);
-    vec3 col = uMode < 0.5 ? texture2D(uMap, vUv).rgb * (0.78 + 0.32 * shade) : rampAt((vWorld.y - uZmin) / max(0.01, uZmax - uZmin)) * shade;
+    vec3 photo = uHasMap > 0.5 ? texture2D(uMap, vUv).rgb : vec3(0.52, 0.53, 0.5); // no orthophoto: plain hillshade
+    vec3 col = uMode < 0.5 ? photo * (0.78 + 0.32 * shade) : rampAt((vWorld.y - uZmin) / max(0.01, uZmax - uZmin)) * shade;
     if (uContours > 0.5) {
-      float h = vWorld.y / uInterval;
-      float minor = 1.0 - min(abs(fract(h - 0.5) - 0.5) / fwidth(h), 1.0);
+      float h = (vWorld.y + uZoff) / uInterval; // contours at true elevations
+      float minor = 1.0 - min(abs(fract(h - 0.5) - 0.5) / max(fwidth(h), 1e-4), 1.0); // flat roofs: fwidth 0, no NaN
       float h5 = h / 5.0;
-      float major = 1.0 - min(abs(fract(h5 - 0.5) - 0.5) / fwidth(h5), 1.0);
+      float major = 1.0 - min(abs(fract(h5 - 0.5) - 0.5) / max(fwidth(h5), 1e-4), 1.0);
       col = mix(col, vec3(1.0), minor * 0.28 + major * 0.5);
     }
     gl_FragColor = vec4(col, 1.0);
@@ -95,8 +102,10 @@ export const SurveyResultsViewer: React.FC<Props> = (props) => {
   const [hover, setHover] = useState<{ z: number; lat: number; lon: number } | null>(null);
   const [range, setRange] = useState<[number, number]>([0, 1]);
 
+  const model = props.model;
   useEffect(() => {
     const el = host.current, lab = labels.current; if (!el || !lab) return;
+    const M = model, surf = M.surface, P0 = M.processed;
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
@@ -104,40 +113,70 @@ export const SurveyResultsViewer: React.FC<Props> = (props) => {
     renderer.domElement.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none';
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#0b0f14');
-    scene.fog = new THREE.Fog('#0b0f14', 700, 1400);
-    const cam = new THREE.PerspectiveCamera(40, 16 / 9, 1, 3000);
-    scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x2a2f24, 1.1));
-    const sun = new THREE.DirectionalLight(0xfff4e2, 1.6); sun.position.set(-300, 400, -200); scene.add(sun);
 
-    // ---- terrain: the site plus a margin, at 1.5 m ----
-    const xs = SITE.boundary.map(p => p.x), ys = SITE.boundary.map(p => p.y);
-    const x0 = Math.min(...xs) - 70, x1 = Math.max(...xs) + 70, y0 = Math.min(...ys) - 70, y1 = Math.max(...ys) + 70;
-    const W = x1 - x0, D = y1 - y0, sx = Math.round(W / CELL), sy = Math.round(D / CELL);
-    const geo = new THREE.PlaneGeometry(W, D, sx, sy); geo.rotateX(-Math.PI / 2); geo.translate((x0 + x1) / 2, 0, (y0 + y1) / 2);
-    const pos = geo.attributes.position as THREE.BufferAttribute, uv = geo.attributes.uv as THREE.BufferAttribute;
+    // ---- terrain: the demo site plus a margin at 1.5 m, or the processed DSM's display mesh ----
+    let x0: number, x1: number, y0: number, y1: number, geo: THREE.BufferGeometry, map: THREE.Texture;
     const inside: number[] = [];
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i), y = pos.getZ(i), z = heightAt(x, y);
-      pos.setY(i, z); uv.setXY(i, (x + WORLD_M / 2) / WORLD_M, 1 - (y + WORLD_M / 2) / WORLD_M);
-      if (pointInPolygon({ x, y }, SITE.boundary)) inside.push(z);
+    if (P0) {
+      ({ x0, y0, x1, y1 } = P0.bounds);
+      const g = P0.grid, n = g.cols * g.rows, posA = new Float32Array(n * 3), uvA = new Float32Array(n * 2), idx: number[] = [];
+      for (let r = 0; r < g.rows; r++) for (let c = 0; c < g.cols; c++) {
+        const i = r * g.cols + c, x = g.x0 + c * g.cellM, y = g.y0 + r * g.cellM, z = g.z[i];
+        posA[i * 3] = x; posA[i * 3 + 1] = Number.isNaN(z) ? 0 : z; posA[i * 3 + 2] = y;
+        if (P0.orthoUv) { const [u, v] = P0.orthoUv(x, y); uvA[i * 2] = u; uvA[i * 2 + 1] = v; }
+        if (!Number.isNaN(z)) inside.push(z);
+        // Quads only where all four corners have data: holes and the no-data collar stay open.
+        if (r + 1 < g.rows && c + 1 < g.cols) {
+          const a = i, b = i + 1, d = i + g.cols, e = d + 1;
+          if (!Number.isNaN(g.z[a]) && !Number.isNaN(g.z[b]) && !Number.isNaN(g.z[d]) && !Number.isNaN(g.z[e])) idx.push(a, d, b, b, d, e);
+        }
+      }
+      geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(posA, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(uvA, 2));
+      geo.setIndex(n > 65535 ? new THREE.BufferAttribute(new Uint32Array(idx), 1) : new THREE.BufferAttribute(new Uint16Array(idx), 1));
+      geo.computeBoundingSphere();
+      if (P0.ortho) {
+        const cv = document.createElement('canvas'); cv.width = P0.ortho.w; cv.height = P0.ortho.h;
+        cv.getContext('2d')!.putImageData(new ImageData(P0.ortho.rgba as Uint8ClampedArray<ArrayBuffer>, P0.ortho.w, P0.ortho.h), 0, 0);
+        map = new THREE.CanvasTexture(cv);
+      } else map = new THREE.DataTexture(new Uint8Array([128, 128, 128, 255]), 1, 1);
+    } else {
+      const xs = SITE.boundary.map(p => p.x), ys = SITE.boundary.map(p => p.y);
+      x0 = Math.min(...xs) - 70; x1 = Math.max(...xs) + 70; y0 = Math.min(...ys) - 70; y1 = Math.max(...ys) + 70;
+      const W = x1 - x0, D = y1 - y0, sx = Math.round(W / CELL), sy = Math.round(D / CELL);
+      geo = new THREE.PlaneGeometry(W, D, sx, sy); geo.rotateX(-Math.PI / 2); geo.translate((x0 + x1) / 2, 0, (y0 + y1) / 2);
+      const pos = geo.attributes.position as THREE.BufferAttribute, uv = geo.attributes.uv as THREE.BufferAttribute;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i), y = pos.getZ(i), z = heightAt(x, y);
+        pos.setY(i, z); uv.setXY(i, (x + WORLD_M / 2) / WORLD_M, 1 - (y + WORLD_M / 2) / WORLD_M);
+        if (pointInPolygon({ x, y }, SITE.boundary)) inside.push(z);
+      }
+      map = new THREE.CanvasTexture(siteImagery(2048));
     }
+    map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 8; map.needsUpdate = true;
     // The ramp spans the site's own ground (2nd–98th percentile), so its relief reads; hills and roofs beyond clamp to the ends.
     inside.sort((a, b) => a - b);
-    const zmin = inside[Math.floor(inside.length * 0.02)], zmax = Math.max(zmin + 1, inside[Math.floor(inside.length * 0.98)]);
-    setRange([zmin + SITE_DATUM_M, zmax + SITE_DATUM_M]);
-    const map = new THREE.CanvasTexture(siteImagery(2048)); map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 8;
+    const zmin = inside[Math.floor(inside.length * 0.02)] ?? 0, zmax = Math.max(zmin + 1, inside[Math.floor(inside.length * 0.98)] ?? 1);
+    const zmid = inside[Math.floor(inside.length / 2)] ?? 0;
+    setRange([zmin + M.zOffset, zmax + M.zOffset]);
+    // Distances scale with the model: the demo venue frames at 520 m.
+    const span = Math.max(x1 - x0, y1 - y0), far = Math.max(1400, span * 2.4);
+    scene.fog = new THREE.Fog('#0b0f14', far / 2, far);
+    const cam = new THREE.PerspectiveCamera(40, 16 / 9, Math.max(0.2, span / 3000), far * 2.2);
+    scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x2a2f24, 1.1));
+    const sun = new THREE.DirectionalLight(0xfff4e2, 1.6); sun.position.set(-300, 400, -200); scene.add(sun);
     const uniforms = {
-      uMap: { value: map }, uMode: { value: 0 }, uContours: { value: 0 }, uInterval: { value: 0.5 },
+      uMap: { value: map }, uMode: { value: 0 }, uContours: { value: 0 }, uInterval: { value: 0.5 }, uZoff: { value: M.zOffset }, uHasMap: { value: P0 && !P0.ortho ? 0 : 1 },
       uZmin: { value: zmin }, uZmax: { value: zmax }, uRamp: { value: ELEV_RAMP.map(h => hex(h)) },
     };
-    const terrain = new THREE.Mesh(geo, new THREE.ShaderMaterial({ vertexShader: TERRAIN_VS, fragmentShader: TERRAIN_FS, uniforms }));
+    const terrain = new THREE.Mesh(geo, new THREE.ShaderMaterial({ vertexShader: TERRAIN_VS, fragmentShader: TERRAIN_FS, uniforms, side: THREE.DoubleSide }));
     scene.add(terrain);
 
-    // ---- structures and trees, as the processed model shows them ----
+    // ---- demo only: structures and trees, as the processed model shows them (a DSM carries its own) ----
     const struct = new THREE.Group(); scene.add(struct);
     const elevMat = new THREE.MeshStandardMaterial({ roughness: 0.9 });
     const structMats: { m: THREE.MeshStandardMaterial; photo: THREE.Color; elev: THREE.Color }[] = [];
-    for (const s of SITE.structures) {
+    if (!P0) for (const s of SITE.structures) {
       const gy = heightAt(s.x, s.y), top = gy + s.h;
       const photo = hex(s.roof), elev = ramp(ELEV_RAMP, (top - zmin) / (zmax - zmin), new THREE.Color());
       const m = new THREE.MeshStandardMaterial({ color: photo.clone(), roughness: 0.8, metalness: 0.05 });
@@ -150,7 +189,7 @@ export const SurveyResultsViewer: React.FC<Props> = (props) => {
     const trees = new THREE.InstancedMesh(treeGeo, new THREE.MeshStandardMaterial({ color: '#27432a', roughness: 1 }), TREES.length);
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), v3 = new THREE.Vector3(), s3 = new THREE.Vector3();
     TREES.forEach((t, i) => trees.setMatrixAt(i, m4.compose(v3.set(t.x, heightAt(t.x, t.y), t.y), q, s3.set(t.r, t.r * 2.4, t.r))));
-    scene.add(trees); void elevMat;
+    if (!P0) scene.add(trees); void elevMat;
 
     // ---- annotations ----
     const annot = new THREE.Group(); scene.add(annot);
@@ -161,7 +200,7 @@ export const SurveyResultsViewer: React.FC<Props> = (props) => {
       m.resolution.set(el.clientWidth || 1, el.clientHeight || 1); fatMats.push(m);
       const l = new Line2(g, m); if (dashed) l.computeLineDistances(); return l;
     };
-    const ground = (x: number, y: number, lift = 0.25) => new THREE.Vector3(x, surfaceAt(x, y) + lift, y);
+    const ground = (x: number, y: number, lift = 0.25) => new THREE.Vector3(x, surf(x, y) + lift, y);
     const along = (a: Pt, b: Pt, step: number, lift = 0.25) => { const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / step)); return Array.from({ length: n + 1 }, (_, k) => ground(a.x + (b.x - a.x) * k / n, a.y + (b.y - a.y) * k / n, lift)); };
     /** `pri`: when labels collide on screen the higher one stays (names, then over-limit grades, then grades). */
     type Label = { el: HTMLDivElement; at: THREE.Vector3; pri: number };
@@ -189,7 +228,7 @@ export const SurveyResultsViewer: React.FC<Props> = (props) => {
             const x = hp.getX(i), y = hp.getZ(i);
             const cc = Math.min(g.cols - 1, Math.max(0, Math.floor((x - g.x0) / g.cellM))), rr = Math.min(g.rows - 1, Math.max(0, Math.floor((y - g.y0) / g.cellM)));
             const dz = g.dz[rr * g.cols + cc];
-            hp.setY(i, surfaceAt(x, y) + 0.12);
+            hp.setY(i, surf(x, y) + 0.12);
             if (Number.isNaN(dz)) { cols[i * 4 + 3] = 0; continue; }
             cutFill(dz, k, c); cols[i * 4] = c.r; cols[i * 4 + 1] = c.g; cols[i * 4 + 2] = c.b; cols[i * 4 + 3] = sel ? 0.8 : 0.6;
           }
@@ -212,7 +251,7 @@ export const SurveyResultsViewer: React.FC<Props> = (props) => {
           const wg = new THREE.BufferGeometry(); wg.setAttribute('position', new THREE.Float32BufferAttribute(wallPos, 3));
           annot.add(new THREE.Mesh(wg, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: sel ? 0.16 : 0.08, side: THREE.DoubleSide, depthWrite: false })));
           annot.add(fat(top, '#ffffff', sel ? 2.5 : 1.6), fat(bottom, '#ffffff', 1.2, 0.8));
-          for (const p of a.pts) { const g0 = surfaceAt(p.x, p.y), b = A.base(p.x, p.y); annot.add(fat([new THREE.Vector3(p.x, Math.min(g0, b), p.y), new THREE.Vector3(p.x, Math.max(g0, b) + 0.15, p.y)], '#ffffff', 1.2, 0.9)); }
+          for (const p of a.pts) { const g0 = surf(p.x, p.y), b = A.base(p.x, p.y); annot.add(fat([new THREE.Vector3(p.x, Math.min(g0, b), p.y), new THREE.Vector3(p.x, Math.max(g0, b) + 0.15, p.y)], '#ffffff', 1.2, 0.9)); }
           const cx = a.pts.reduce((s, p) => s + p.x, 0) / a.pts.length, cy = a.pts.reduce((s, p) => s + p.y, 0) / a.pts.length;
           addLabel(new THREE.Vector3(cx, A.elevMax + 4, cy), a.name, `rv-label${sel ? ' rv-sel' : ''}`, 3);
         } else if (a.kind === 'LINE' && it.line && a.pts.length > 1) {
@@ -230,10 +269,10 @@ export const SurveyResultsViewer: React.FC<Props> = (props) => {
           });
           addLabel(ground(a.pts[0].x, a.pts[0].y, lift + 4), a.name, `rv-label${sel ? ' rv-sel' : ''}`, 3);
         } else if (a.kind === 'POINT' && a.pts[0]) {
-          const p = a.pts[0], z = surfaceAt(p.x, p.y);
+          const p = a.pts[0], z = surf(p.x, p.y);
           annot.add(fat([new THREE.Vector3(p.x, z, p.y), new THREE.Vector3(p.x, z + 8, p.y)], ACCENT, 2.5));
           const dot = new THREE.Mesh(new THREE.SphereGeometry(0.9, 16, 12), new THREE.MeshBasicMaterial({ color: ACCENT, toneMapped: false })); dot.position.set(p.x, z + 0.4, p.y); annot.add(dot);
-          addLabel(new THREE.Vector3(p.x, z + 10, p.y), `${a.name}<br><b>${(z + SITE_DATUM_M).toFixed(2)} m</b>`, `rv-label${sel ? ' rv-sel' : ''}`);
+          addLabel(new THREE.Vector3(p.x, z + 10, p.y), `${a.name}<br><b>${(z + M.zOffset).toFixed(2)} m</b>`, `rv-label${sel ? ' rv-sel' : ''}`);
         }
       }
       // Draft: the points placed so far.
@@ -256,13 +295,13 @@ export const SurveyResultsViewer: React.FC<Props> = (props) => {
     };
 
     // ---- camera: orbit round a target ----
-    const orbit = { theta: -2.2, phi: 0.95, radius: 520, target: new THREE.Vector3((x0 + x1) / 2, 0, (y0 + y1) / 2) };
+    const orbit = { theta: -2.2, phi: 0.95, radius: P0 ? span * 0.85 : 520, target: new THREE.Vector3((x0 + x1) / 2, P0 ? zmid : 0, (y0 + y1) / 2) };
     const goal = { theta: orbit.theta, phi: orbit.phi, radius: orbit.radius, target: orbit.target.clone() };
     const frame = (id: string) => {
       const it = propsRef.current.items.find(i => i.a.id === id); if (!it) return;
       const pts = it.a.pts; const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length, cy = pts.reduce((s, p) => s + p.y, 0) / pts.length;
       const ext = Math.max(20, ...pts.map(p => Math.hypot(p.x - cx, p.y - cy)));
-      goal.target.set(cx, surfaceAt(cx, cy), cy); goal.radius = ext * 3.2 + 30; goal.phi = 0.9;
+      goal.target.set(cx, surf(cx, cy), cy); goal.radius = ext * 3.2 + 30; goal.phi = 0.9;
     };
     let dirty = true;
     const size = () => {
@@ -296,14 +335,14 @@ export const SurveyResultsViewer: React.FC<Props> = (props) => {
       }
       const now = performance.now(); if (now - hoverT < 60) return; hoverT = now;
       const p = pick(e);
-      if (p) { const ll = toLatLon(propsRef.current.origin, p); setHover({ z: surfaceAt(p.x, p.y) + SITE_DATUM_M, lat: ll.lat, lon: ll.lon }); } else setHover(null);
+      if (p) { const ll = toLatLon(M.origin, p); setHover({ z: surf(p.x, p.y) + M.zOffset, lat: ll.lat, lon: ll.lon }); } else setHover(null);
     };
     const up = (e: PointerEvent) => {
       const d = drag; drag = null;
       if (d && d.moved < 5 && propsRef.current.tool) { const p = pick(e); if (p) propsRef.current.onPick(p); }
     };
     const dbl = () => { if (propsRef.current.tool) propsRef.current.onFinish(); };
-    const wheel = (e: WheelEvent) => { e.preventDefault(); goal.radius = Math.max(25, Math.min(1400, goal.radius * Math.exp(e.deltaY * 0.0012))); };
+    const wheel = (e: WheelEvent) => { e.preventDefault(); goal.radius = Math.max(Math.min(25, span / 20), Math.min(far, goal.radius * Math.exp(e.deltaY * 0.0012))); };
     const ctx = (e: Event) => e.preventDefault();
     const cv = renderer.domElement;
     cv.addEventListener('pointerdown', down); cv.addEventListener('pointermove', move); cv.addEventListener('pointerup', up);
@@ -345,7 +384,7 @@ export const SurveyResultsViewer: React.FC<Props> = (props) => {
       release3d(scene, renderer, null, [map]);
       renderer.domElement.remove();
     };
-  }, []);
+  }, [model]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const P = props;
   const key = JSON.stringify([P.items.map(i => [i.a.id, i.a.name, i.a.visible, i.a.pts.length, i.a.base, i.a.limitPct, i.area?.cutM3, i.line?.surfaceM]), P.selectedId, P.draft, P.tool]);
@@ -356,7 +395,7 @@ export const SurveyResultsViewer: React.FC<Props> = (props) => {
   return (
     <div className="absolute inset-0">
       <div ref={host} className={`absolute inset-0 ${P.tool ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`} role="img"
-        aria-label={`Survey results model, ${P.layer === 'ELEVATION' ? 'elevation' : 'orthophoto'} layer, ${P.items.filter(i => i.a.visible).length} measurements shown`} />
+        aria-label={`Survey results: ${P.model.name}, ${P.layer === 'ELEVATION' ? 'elevation' : 'orthophoto'} layer, ${P.items.filter(i => i.a.visible).length} measurements shown`} />
       <div ref={labels} className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden />
       {/* Legend: elevation ramp, or cut/fill when a volume is shown */}
       <div className="absolute left-3 bottom-3 flex flex-col gap-2 pointer-events-none">
@@ -365,6 +404,7 @@ export const SurveyResultsViewer: React.FC<Props> = (props) => {
             <div className="font-medium text-white">Elevation</div>
             <div className="mt-1 h-2 w-40 rounded-sm" style={{ background: `linear-gradient(90deg, ${ELEV_RAMP.join(',')})` }} />
             <div className="mt-0.5 flex justify-between num"><span>{range[0].toFixed(1)} m</span><span>{range[1].toFixed(1)} m</span></div>
+            <div className="mt-0.5 max-w-40 text-[10px] leading-tight text-white/60">{P.model.datum}</div>
           </div>
         )}
         {P.items.some(i => i.a.visible && i.a.kind === 'AREA') && (
@@ -375,6 +415,7 @@ export const SurveyResultsViewer: React.FC<Props> = (props) => {
         )}
       </div>
       <div className="absolute right-3 bottom-3 rounded-lg bg-black/60 backdrop-blur px-2.5 py-1 text-[11px] text-white/80 num pointer-events-none min-w-[220px] text-right">
+        {P.model.kind === 'PROCESSED' && <div className="text-white/60 truncate max-w-[320px] ml-auto">{P.model.name}</div>}
         {hover ? <>Elv {hover.z.toFixed(2)} m · {hover.lat.toFixed(6)}, {hover.lon.toFixed(6)}</> : 'Drag to orbit · shift-drag to pan · scroll to zoom'}
       </div>
       <style>{`
@@ -386,3 +427,15 @@ export const SurveyResultsViewer: React.FC<Props> = (props) => {
     </div>
   );
 };
+
+/** The results stage before anything is loaded (a real site has no model until its results are imported). */
+export const ResultsEmpty: React.FC<{ busy?: string | null }> = ({ busy }) => (
+  <div className="absolute inset-0 grid place-items-center bg-[#0b0f14] p-6 text-center">
+    <div className="max-w-sm">
+      <div className="text-[14px] font-medium text-white">{busy || 'No processed results yet'}</div>
+      <p className="mt-1 text-[12px] leading-relaxed text-white/70">
+        {busy ? 'The model opens here when it is ready.' : 'Open the DSM and orthophoto GeoTIFFs from WebODM, Pix4D, DroneDeploy or Metashape, or process the photos on a NodeODM node, from the Results panel.'}
+      </p>
+    </div>
+  </div>
+);

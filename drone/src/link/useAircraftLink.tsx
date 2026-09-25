@@ -3,7 +3,11 @@ import {
   MavParser, decodeInto, encodeHeartbeat, encodeCommandLong, encodeSetInterval, encodeArm, encodeGotoGlobal,
   encodeFlightMode, encodeTakeoffFor, encodeRepositionFor, encodeGimbalPitchYaw, encodeMountControl, encodeCameraZoom, encodeCameraSource, encodeRelay, encodeTakePhoto,
   autopilotOf, modeName, isVehicleHeartbeat, MODE_LABEL, EMPTY_TELEMETRY, MAV_CMD, MAV_RESULT, type Telemetry, type MavFrame, type MissionItem, type Autopilot, type FlightMode,
+  encodeParamRequestRead, encodeParamSet, decodeParamValue, decodeParamError, paramEncodingOf, paramStored, encodeFenceEnable, FENCE_TYPE, MAV_PARAM_TYPE, PARAM_ERROR_TEXT, type ParamValue,
 } from './mavlink';
+import { PREFLIGHT_PARAMS, READ_UNLESS, paramPreflight, type Params } from './paramChecks';
+import { useOperator, ROLE_LABEL } from '../operator/operator';
+import { recorder } from '../record/recorder';
 import { chunkedWriter } from './writeQueue';
 import { HEALTH_STREAMS } from '../diagnostics/decode';
 import { uploadItems, startMission as startMissionOn, awaitAck as awaitAckOn, MISSION_TYPE, type MissionIO, type StartResult } from './missionClient';
@@ -31,7 +35,8 @@ import { uploadItems, startMission as startMissionOn, awaitAck as awaitAckOn, MI
 export type Transport = 'SIMULATION' | 'BLUETOOTH' | 'SERIAL' | 'NETWORK';
 export type LinkStatus = 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'ERROR';
 
-export interface PreflightCheck { id: string; label: string; ok: boolean; detail: string }
+/** `advisory`: shown amber when not ok, but does not hold the gate (the crew decides). */
+export interface PreflightCheck { id: string; label: string; ok: boolean; detail: string; advisory?: boolean }
 
 interface LinkState {
   transport: Transport;
@@ -52,6 +57,11 @@ interface LinkState {
    * Cleared by Disconnect or once a heartbeat is heard again.
    */
   lost: boolean;
+  /**
+   * The primary aircraft's parameters the dashboards have read (see paramChecks: a missing name has not been
+   * asked for yet, null means the aircraft did not answer). Updated by every PARAM_VALUE it sends.
+   */
+  params: Params;
 }
 
 interface LinkApi extends LinkState {
@@ -95,6 +105,15 @@ interface LinkApi extends LinkState {
   live: boolean;
   /** Every frame from the link, as it arrives (the health monitor reads its messages here). Returns unsubscribe. */
   onFrame: (listener: (f: MavFrame) => void) => () => void;
+  /** Read one parameter from a system (the primary by default), retrying; null when it does not answer. */
+  readParam: (name: string, sys?: number) => Promise<ParamValue | null>;
+  /** Read several, one after another (an autopilot queues only a few requests at a time). */
+  readParams: (names: string[], sys?: number) => Promise<Params>;
+  /**
+   * Set a parameter and wait for the aircraft's PARAM_VALUE echo to show the new value; throws otherwise.
+   * Pilot in command only. `type` defaults to the type the aircraft last reported for it (read first if unknown).
+   */
+  setParam: (name: string, value: number, type?: number, sys?: number) => Promise<ParamValue>;
 }
 
 const NUS_SERVICE = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
@@ -114,7 +133,7 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }), [nav]);
 
   const [state, setState] = useState<LinkState>({
-    transport: 'SIMULATION', status: 'DISCONNECTED', deviceName: '', error: '', telemetry: { ...EMPTY_TELEMETRY }, vehicles: {}, primarySysId: 0, bytesIn: 0, badCrc: 0, lastHeartbeatAgoS: 0, support, lost: false,
+    transport: 'SIMULATION', status: 'DISCONNECTED', deviceName: '', error: '', telemetry: { ...EMPTY_TELEMETRY }, vehicles: {}, primarySysId: 0, bytesIn: 0, badCrc: 0, lastHeartbeatAgoS: 0, support, lost: false, params: {},
   });
   const [missionUpload, setMissionUpload] = useState<LinkApi['missionUpload']>({ state: 'IDLE', sent: 0, total: 0, error: '' });
 
@@ -126,6 +145,11 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const bytesIn = useRef(0);
   const msgCount = useRef(0);
   const writer = useRef<((b: Uint8Array) => Promise<void>) | null>(null);
+  /** Parameters per system id; `paramsRev` bumps on every change so the 10 Hz publish copies only then. */
+  const paramStore = useRef<Record<number, Params>>({});
+  const paramsRev = useRef(0), paramsPub = useRef(-1);
+  const operator = useOperator();
+  const opRef = useRef(operator); opRef.current = operator;
   const closer = useRef<(() => Promise<void>) | null>(null);
 
   // Publish the telemetry snapshot at 10 Hz and count message rate.
@@ -135,10 +159,13 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const now = Date.now();
       telem.current.msgsPerSec = last ? Math.round(msgCount.current / ((now - last) / 1000)) : 0;
       msgCount.current = 0; last = now;
+      // Copied here, not in the updater: React may run an updater twice.
+      const params = paramsPub.current === paramsRev.current ? null : { ...paramStore.current[primarySys.current] };
+      paramsPub.current = paramsRev.current;
       setState(s => (s.status === 'CONNECTED'
         // Reconnecting after a drop: the lost fleet stays on screen until an aircraft is heard again.
-        ? { ...s, lost: s.lost && !telem.current.heartbeatMs, telemetry: { ...telem.current }, vehicles: s.lost && !telem.current.heartbeatMs ? s.vehicles : Object.fromEntries(Object.entries(vehicles.current).map(([k, v]) => [k, { ...v }])), primarySysId: primarySys.current, bytesIn: bytesIn.current, badCrc: parser.current.badCrc, lastHeartbeatAgoS: telem.current.heartbeatMs ? (now - telem.current.heartbeatMs) / 1000 : 0 }
-        : s));
+        ? { ...s, lost: s.lost && !telem.current.heartbeatMs, telemetry: { ...telem.current }, params: params ?? s.params, vehicles: s.lost && !telem.current.heartbeatMs ? s.vehicles : Object.fromEntries(Object.entries(vehicles.current).map(([k, v]) => [k, { ...v }])), primarySysId: primarySys.current, bytesIn: bytesIn.current, badCrc: parser.current.badCrc, lastHeartbeatAgoS: telem.current.heartbeatMs ? (now - telem.current.heartbeatMs) / 1000 : 0 }
+        : params ? { ...s, params } : s));
     }, 100);
     return () => clearInterval(t);
   }, []);
@@ -165,6 +192,7 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     await send(encodeCommandLong(520, [1], sys)).catch(() => {});
   }, [send]);
 
+  const readPreflight = useRef<(sys: number) => Promise<void>>(async () => {});
   const ingest = useCallback((chunk: Uint8Array) => {
     bytesIn.current += chunk.length;
     for (const f of parser.current.push(chunk)) {
@@ -175,12 +203,18 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
         // The first autopilot heard is the primary; others are extra vehicles on a shared radio.
         if (!primarySys.current) primarySys.current = f.sysId;
         vehicles.current[f.sysId] = f.sysId === primarySys.current ? telem.current : { ...EMPTY_TELEMETRY };
-        // Stream requests go now, addressed to this system: before its heartbeat its id is unknown.
-        void requestStreams(f.sysId);
+        // Stream requests go now, addressed to this system: before its heartbeat its id is unknown. Then the
+        // pre-flight parameters (the heartbeat below has been decoded by then, so the autopilot is known).
+        void requestStreams(f.sysId).then(() => readPreflight.current(f.sysId));
       }
       // RADIO_STATUS describes the link, whoever injects it (a SiK radio does, as sys 51): it is the primary's link quality.
       const target = f.msgId === 109 ? (primarySys.current ? telem.current : undefined) : vehicles.current[f.sysId];
       if (target) decodeInto(target, f);
+      // Every PARAM_VALUE an autopilot sends is kept, asked for or not: ArduPilot announces a change made by another GCS.
+      if (f.msgId === 22 && f.compId === 1 && target) {
+        const pv = decodeParamValue(f, paramEncodingOf(autopilotOf(target)));
+        if (pv?.name) { (paramStore.current[f.sysId] ??= {})[pv.name] = pv; paramsRev.current++; }
+      }
       msgCount.current++;
       frameListeners.current.forEach(l => l(f));
     }
@@ -190,6 +224,7 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const resetLink = useCallback(() => {
     closer.current = null; writer.current = null;
     telem.current = { ...EMPTY_TELEMETRY }; vehicles.current = {}; primarySys.current = 0; parser.current = new MavParser(); bytesIn.current = 0; msgCount.current = 0;
+    paramStore.current = {}; paramsRev.current++;
   }, []);
   /**
    * The transport went away on its own. Everything from that connection is reset, but the last known state
@@ -198,14 +233,14 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const dropped = useCallback((error: string) => {
     resetLink();
     setMissionUpload(m => (m.state === 'UPLOADING' ? { ...m, state: 'FAILED', error } : m));
-    setState(s => ({ ...s, transport: 'SIMULATION', status: 'DISCONNECTED', error, lost: s.lost || (s.status === 'CONNECTED' && s.telemetry.heartbeatMs > 0) }));
+    setState(s => ({ ...s, transport: 'SIMULATION', status: 'DISCONNECTED', error, params: {}, lost: s.lost || (s.status === 'CONNECTED' && s.telemetry.heartbeatMs > 0) }));
   }, [resetLink]);
 
   const disconnect = useCallback(async () => {
     try { await closer.current?.(); } catch { /* already gone */ }
     resetLink();
     setMissionUpload({ state: 'IDLE', sent: 0, total: 0, error: '' });
-    setState(s => ({ ...s, transport: 'SIMULATION', status: 'DISCONNECTED', deviceName: '', error: '', telemetry: { ...EMPTY_TELEMETRY }, vehicles: {}, primarySysId: 0, bytesIn: 0, badCrc: 0, lost: false }));
+    setState(s => ({ ...s, transport: 'SIMULATION', status: 'DISCONNECTED', deviceName: '', error: '', telemetry: { ...EMPTY_TELEMETRY }, vehicles: {}, primarySysId: 0, bytesIn: 0, badCrc: 0, lost: false, params: {} }));
   }, [resetLink]);
 
   const connectBluetooth = useCallback(async () => {
@@ -346,6 +381,80 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const timer = setTimeout(() => done(null), ms);
     frameListeners.current.add(onFrame);
   }), []);
+  // ---- parameters ----
+  /**
+   * Send `bytes` and wait for `sys`'s PARAM_VALUE (or PARAM_ERROR) for `name` that `accept` takes, retrying up to
+   * `tries` times. Resolves with the last PARAM_VALUE seen for the name (accepted or not), the error, or neither.
+   */
+  const paramExchange = useCallback(async (bytes: Uint8Array, sys: number, name: string, accept: (p: ParamValue) => boolean, tries: number, ms: number) => {
+    const seen: { last: ParamValue | null; error: number } = { last: null, error: 0 };
+    for (let k = 0; k < tries && !seen.error; k++) {
+      const got = await new Promise<ParamValue | null>(resolve => {
+        const onFrame = (f: MavFrame) => {
+          if (f.sysId !== sys || f.compId !== 1) return;
+          const e = decodeParamError(f);
+          if (e && e.name === name) { seen.error = e.error; done(null); return; }
+          const pv = f.msgId === 22 ? decodeParamValue(f, paramEncodingOf(autopilotOf(vehicles.current[sys] ?? telem.current))) : null;
+          if (pv && pv.name === name) { seen.last = pv; if (accept(pv)) done(pv); }
+        };
+        const done = (r: ParamValue | null) => { clearTimeout(timer); frameListeners.current.delete(onFrame); resolve(r); };
+        const timer = setTimeout(() => done(null), ms);
+        frameListeners.current.add(onFrame);
+        send(bytes).catch(() => done(null));
+      });
+      if (got) return { value: got, ...seen };
+    }
+    return { value: null, ...seen };
+  }, [send]);
+
+  const readParam = useCallback(async (name: string, sys = sysId()) => {
+    if (!writer.current) return null;
+    const r = await paramExchange(encodeParamRequestRead(name, sys), sys, name, () => true, 3, 1000);
+    const store = (paramStore.current[sys] ??= {});
+    // No answer: recorded as not read, unless an earlier read had it (that is still the last the aircraft said).
+    if (!r.value && !store[name]) { store[name] = null; paramsRev.current++; }
+    return r.value;
+  }, [paramExchange]);
+
+  const readParams = useCallback(async (names: string[], sys = sysId()) => {
+    const out: Params = {};
+    for (const n of names) out[n] = await readParam(n, sys);
+    return out;
+  }, [readParam]);
+
+  const setParam = useCallback(async (name: string, value: number, type?: number, sys = sysId()) => {
+    // The role gate lives here, not only on the button: a parameter change is a command to the aircraft.
+    const op = opRef.current;
+    if (!op.canCommand) {
+      recorder.event('COMMAND', 'WARNING', `Set ${name} ${value} not sent: ${ROLE_LABEL[op.role].toLowerCase()} may not command the aircraft`);
+      throw new Error(`${ROLE_LABEL[op.role]}: only the pilot in command can change the aircraft's settings`);
+    }
+    if (!writer.current) throw new Error('Not connected');
+    // PX4 refuses a PARAM_SET whose type is not the parameter's own, so the type comes from the aircraft.
+    const known = paramStore.current[sys]?.[name] ?? (type === undefined ? await readParam(name, sys) : null);
+    const t = type ?? known?.type ?? (autopilotOf(vehicles.current[sys] ?? telem.current) === 'PX4' ? undefined : MAV_PARAM_TYPE.REAL32);
+    if (t === undefined) throw new Error(`${name}: the aircraft did not say what type it is`);
+    const want = paramStored(value, t);
+    const enc = paramEncodingOf(autopilotOf(vehicles.current[sys] ?? telem.current));
+    const r = await paramExchange(encodeParamSet(name, value, t, enc, sys), sys, name, pv => Math.abs(pv.value - want) <= 1e-6 * Math.max(1, Math.abs(want)), 3, 1500);
+    if (r.value) { recorder.event('COMMAND', 'INFO', `Set ${name} to ${r.value.value}`); return r.value; }
+    const why = r.error ? `the aircraft refused it (${PARAM_ERROR_TEXT[r.error] ?? `error ${r.error}`})` : r.last ? `the aircraft kept ${r.last.value}` : 'no answer from the aircraft';
+    recorder.event('COMMAND', 'WARNING', `Set ${name} to ${value} failed: ${why}`);
+    throw new Error(`${name} not set to ${value}: ${why}`);
+  }, [paramExchange, readParam]);
+
+  readPreflight.current = async (sys: number) => {
+    const ap = autopilotOf(vehicles.current[sys] ?? telem.current);
+    const w = writer.current;
+    if (ap === 'UNKNOWN') return;
+    for (const n of PREFLIGHT_PARAMS[ap]) {
+      const key = READ_UNLESS[n];
+      if (key && paramStore.current[sys]?.[key]) continue;
+      if (writer.current !== w) return; // disconnected meanwhile
+      await readParam(n, sys);
+    }
+  };
+
   const gimbalYaw = useRef(NaN);
   const setGimbal = useCallback(async (pitchDeg: number, yawDeg = NaN) => {
     if (!Number.isNaN(yawDeg)) gimbalYaw.current = yawDeg;
@@ -401,11 +510,14 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const uploadFence = useCallback(async (items: MissionItem[]) => {
     if (!writer.current) throw new Error('Not connected');
     await uploadItems(io, items, { missionType: MISSION_TYPE.FENCE });
-    // Switch the fence on. ArduPilot enforces the fence types in FENCE_TYPE (polygon is in the default); PX4 uses GF_ACTION.
+    // PX4 has no fence enable (DO_FENCE_ENABLE is unsupported): an uploaded fence is enforced whenever GF_ACTION is not 0.
+    if (ap() === 'PX4') { const a = await readParam('GF_ACTION'); return { enabled: !!a && a.value > 0 }; }
+    // ArduPilot: enable the polygon only (param2). 4.6+ leaves the circle and altitude fences as they were; 4.5 and
+    // earlier enable every type in FENCE_TYPE, which the survey's fence check allows for (see encodeFenceEnable).
     const ack = awaitAckOn(io, MAV_CMD.DO_FENCE_ENABLE, 1500);
-    await send(encodeCommandLong(MAV_CMD.DO_FENCE_ENABLE, [1], sysId()));
+    await send(encodeFenceEnable(true, FENCE_TYPE.POLYGON, sysId()));
     return { enabled: (await ack) === MAV_RESULT.ACCEPTED };
-  }, [io, send]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [io, send, readParam]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pre-flight gate: what must be true before the dashboard will arm a real aircraft.
   const tNow = state.telemetry;
@@ -418,8 +530,10 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     { id: 'batt', label: 'Battery at least 40%', ok: tNow.batteryPct < 0 ? tNow.voltageV > 0 : tNow.batteryPct >= 40, detail: tNow.batteryPct >= 0 ? `${tNow.batteryPct}%` : `${tNow.voltageV.toFixed(1)} V (no %)` },
     // RSSI comes from RADIO_STATUS, which the telemetry radio injects (see ingest); Bluetooth and network links have none.
     { id: 'link', label: 'Radio link quality', ok: tNow.radioRssi === 0 || tNow.radioRssi > 60, detail: tNow.radioRssi ? `RSSI ${tNow.radioRssi}${tNow.radioRemRssi ? ` · remote ${tNow.radioRemRssi}` : ''}` : 'n/a on this transport' },
+    // Read from the aircraft's parameters: what it does on a low battery and a fence breach, and how high it returns.
+    ...(hbFresh && autopilotOf(tNow) !== 'UNKNOWN' ? paramPreflight(autopilotOf(tNow) as 'ARDUPILOT' | 'PX4', state.params) : []),
   ];
-  const preflight = { ok: checks.every(c => c.ok), checks };
+  const preflight = { ok: checks.every(c => c.ok || c.advisory), checks };
 
   const onFrame = useCallback((listener: (f: MavFrame) => void) => {
     frameListeners.current.add(listener);
@@ -433,7 +547,7 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setGimbal, setZoom, setCameraSource, setRelay, takePhoto,
     autopilot: autopilotOf(state.telemetry),
     live: state.status === 'CONNECTED' && state.telemetry.heartbeatMs > 0,
-    onFrame,
+    onFrame, readParam, readParams, setParam,
   };
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
 };

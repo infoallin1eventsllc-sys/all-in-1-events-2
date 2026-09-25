@@ -4,18 +4,19 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-User=pi
+User=a1
 WorkingDirectory=/opt/a1/bridge
 # Flight controller TELEM2 on the Pi's UART at 921600 (ArduPilot SERIAL2_PROTOCOL=2, SERIAL2_BAUD=921).
 # /dev/serial0 is the GPIO 14/15 UART. On a Pi 3/4/Zero 2 W that is the weak mini-UART unless
 # Bluetooth is moved off the PL011: set enable_uart=1 and dtoverlay=disable-bt in /boot/firmware/config.txt
 # and turn off the serial console (raspi-config) — see README "Flight controller UART".
+# install.sh sets all of this up: the a1 user (in dialout), the venv, /opt/a1/token and a self-signed cert.
 # The token is a long random string: `openssl rand -hex 16 | sudo tee /opt/a1/token && sudo chmod 600 /opt/a1/token`.
 # systemd (root) reads it and hands it to the bridge as a credential file (%d/token), so the secret
 # never appears on the command line (`ps`) and the file can stay root-only. Needs systemd 248+ (Bookworm).
 LoadCredential=token:/opt/a1/token
 # TLS: see README (Tailscale cert or your own). Remove --cert/--key for ws:// on a closed network.
-ExecStart=/home/pi/a1/bin/python3 /opt/a1/bridge/mavlink_ws.py --serial /dev/serial0 --baud 921600 --port 8770 --token-file %d/token --cert /opt/a1/tls/cert.pem --key /opt/a1/tls/key.pem
+ExecStart=/opt/a1/venv/bin/python3 /opt/a1/bridge/mavlink_ws.py --serial /dev/serial0 --baud 921600 --port 8770 --token-file %d/token --cert /opt/a1/tls/cert.pem --key /opt/a1/tls/key.pem
 # A serial read/write error (cable, adapter reset) makes the bridge exit 1; this brings it back.
 Restart=always
 RestartSec=3

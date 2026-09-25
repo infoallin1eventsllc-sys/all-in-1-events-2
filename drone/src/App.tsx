@@ -16,10 +16,12 @@ import { RegulatoryComplianceModal } from './components/production/RegulatoryCom
 import { LinkButton } from './link/LinkButton';
 import { OverviewView } from './dashboards/OverviewView';
 import { DemoTour, type TourView } from './dashboards/DemoTour';
+import { MeridianCredit } from './dashboards/MeridianCredit';
 import { useHealth } from './diagnostics/useHealth';
 import { InstallButton } from './dashboards/InstallButton';
 import { OperatorMenu } from './operator/OperatorMenu';
 import { ErrorBoundary } from './dashboards/ErrorBoundary';
+import { useComplianceAttention } from './compliance/useCompliance';
 
 // The heavier views load on first use, so the landing page (Overview) opens fast; once the page is idle
 // every view is fetched in the background, so they are cached for offline use (public/sw.js).
@@ -29,6 +31,7 @@ const VIEWS = {
   SurveillanceDashboard: () => import('./dashboards/SurveillanceDashboard'),
   PlatformView: () => import('./dashboards/PlatformView'),
   RecordsView: () => import('./dashboards/RecordsView'),
+  ComplianceView: () => import('./dashboards/ComplianceView'),
   AnalyticsView: () => import('./dashboards/AnalyticsView'),
   HealthView: () => import('./dashboards/HealthView'),
   ControlView: () => import('./dashboards/control/ControlView'),
@@ -51,6 +54,7 @@ const SurveyDashboard = lazyView(() => VIEWS.SurveyDashboard().then(m => m.Surve
 const SurveillanceDashboard = lazyView(() => VIEWS.SurveillanceDashboard().then(m => m.SurveillanceDashboard));
 const PlatformView = lazyView(() => VIEWS.PlatformView().then(m => m.PlatformView));
 const RecordsView = lazyView(() => VIEWS.RecordsView().then(m => m.RecordsView));
+const ComplianceView = lazyView(() => VIEWS.ComplianceView().then(m => m.ComplianceView));
 const AnalyticsView = lazyView(() => VIEWS.AnalyticsView().then(m => m.AnalyticsView));
 const HealthView = lazyView(() => VIEWS.HealthView().then(m => m.HealthView));
 const ControlView = lazyView(() => VIEWS.ControlView().then(m => m.ControlView));
@@ -84,14 +88,14 @@ import {
   BarChart3,
   Keyboard,
   X,
-  HeartPulse, Gamepad2,
+  HeartPulse, Gamepad2, ShieldCheck,
 } from 'lucide-react';
 
 /** Product verticals (operator dashboards) and the engineering views behind them. */
 type VerticalTab = 'LIGHT_SHOW_OPS' | 'SURVEY_OPS' | 'SURVEILLANCE_OPS';
 type EngineeringTab = 'RADAR' | 'DRONE_OPERATOR' | 'LIGHT_SHOW' | 'ARCHITECTURE' | 'TABLE';
 /** 'PLATFORM' is the client-readable explanation that fronts the engineering views. */
-type ViewTab = VerticalTab | EngineeringTab | 'PLATFORM' | 'RECORDS' | 'ANALYTICS' | 'HEALTH' | 'CONTROL' | 'OVERVIEW';
+type ViewTab = VerticalTab | EngineeringTab | 'PLATFORM' | 'RECORDS' | 'ANALYTICS' | 'HEALTH' | 'CONTROL' | 'OVERVIEW' | 'COMPLIANCE';
 
 const VERTICALS: { id: VerticalTab; label: string; icon: React.ReactNode }[] = [
   { id: 'LIGHT_SHOW_OPS', label: 'Light show', icon: <Sparkles className="w-3.5 h-3.5" /> },
@@ -102,7 +106,7 @@ const VERTICALS: { id: VerticalTab; label: string; icon: React.ReactNode }[] = [
 const THEME_KEY = 'drone-command-theme';
 
 /** Home-screen shortcuts (manifest.webmanifest) open a view with ?view=… */
-const START_VIEW: Record<string, ViewTab> = { show: 'LIGHT_SHOW_OPS', survey: 'SURVEY_OPS', patrol: 'SURVEILLANCE_OPS', analytics: 'ANALYTICS', records: 'RECORDS', health: 'HEALTH', control: 'CONTROL', overview: 'OVERVIEW' };
+const START_VIEW: Record<string, ViewTab> = { show: 'LIGHT_SHOW_OPS', survey: 'SURVEY_OPS', patrol: 'SURVEILLANCE_OPS', analytics: 'ANALYTICS', records: 'RECORDS', health: 'HEALTH', control: 'CONTROL', overview: 'OVERVIEW', compliance: 'COMPLIANCE' };
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ViewTab>(() => {
@@ -115,6 +119,8 @@ export default function App() {
   const isAnalytics = activeTab === 'ANALYTICS';
   const isHealth = activeTab === 'HEALTH';
   const isControl = activeTab === 'CONTROL';
+  const isCompliance = activeTab === 'COMPLIANCE';
+  const complianceAttention = useComplianceAttention();
   // Other screens can open one (e.g. the light show's "Open fleet health").
   useEffect(() => {
     const on = (e: Event) => setActiveTab((e as CustomEvent<string>).detail as typeof activeTab);
@@ -125,7 +131,7 @@ export default function App() {
   const health = useHealth();
   // Client-facing chrome covers the three dashboards and the "How it works" page;
   // the deep engineering views keep their original dark tooling look.
-  const isClient = isVertical || isPlatform || isRecords || isAnalytics || isHealth || isControl || isOverview;
+  const isClient = isVertical || isPlatform || isRecords || isAnalytics || isHealth || isControl || isOverview || isCompliance;
   // A new screen starts at the top, not wherever the last one was scrolled to.
   useEffect(() => { window.scrollTo({ top: 0 }); }, [activeTab]);
   const [showShortcuts, setShowShortcuts] = useState<boolean>(false);
@@ -223,6 +229,7 @@ export default function App() {
       else if (e.key.toLowerCase() === 'd') setActiveTab('HEALTH');
       else if (e.key.toLowerCase() === 'c') setActiveTab('CONTROL');
       else if (e.key.toLowerCase() === 'o') setActiveTab('OVERVIEW');
+      else if (e.key.toLowerCase() === 'p') setActiveTab('COMPLIANCE');
       else if (e.key.toLowerCase() === 't') setTourOpen(v => !v);
       else if (e.key.toLowerCase() === 'h') setActiveTab('PLATFORM');
       else if (e.key === '?') setShowShortcuts(v => !v);
@@ -264,9 +271,9 @@ export default function App() {
             <div className="w-8 h-8 rounded-lg bg-ink text-surface flex items-center justify-center shrink-0">
               <Compass className="w-4 h-4" />
             </div>
-            <div className="leading-tight min-w-0 hidden min-[440px]:block">
+            <div className="leading-tight min-w-0 hidden min-[440px]:block lg:hidden xl:block">
               <div className="text-[13px] font-semibold text-ink truncate">All in 1 · Drone Command</div>
-              <div className="text-[11px] text-ink-3 truncate hidden sm:block">Light show · Site survey · Surveillance</div>
+              <div className="text-[11px] text-ink-3 truncate hidden sm:block lg:hidden">Light show · Site survey · Surveillance</div>
             </div>
           </button>
 
@@ -296,7 +303,7 @@ export default function App() {
             </button>
           )}
 
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <LinkButton />
             {isClient && <OperatorMenu />}
             {isClient && (
@@ -304,10 +311,11 @@ export default function App() {
                 id="nav-health"
                 onClick={() => setActiveTab('HEALTH')}
                 aria-pressed={isHealth}
-                className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border transition-colors ${
+                className={`inline-flex items-center gap-1.5 h-8 px-2 sm:px-3 rounded-lg text-[12px] font-medium border transition-colors ${
                   isHealth ? 'bg-accent-soft text-accent border-accent/30' : 'text-ink-2 hover:text-ink border-line'
                 }`}
                 title={`Aircraft health — ${health.report.verdict} (d)`}
+                aria-label={`Health${health.report.overall === 'FAULT' ? ': fault found' : health.report.overall === 'WATCH' ? ': something to watch' : ''}`}
               >
                 <span className="relative">
                   <HeartPulse className="w-3.5 h-3.5" />
@@ -315,8 +323,7 @@ export default function App() {
                     <span className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ring-2 ring-surface ${health.report.overall === 'FAULT' ? 'bg-bad' : 'bg-warn'}`} aria-hidden />
                   )}
                 </span>
-                <span className="hidden lg:inline">Health</span>
-                <span className="sr-only">{health.report.overall === 'FAULT' ? ': fault found' : health.report.overall === 'WATCH' ? ': something to watch' : ''}</span>
+                <span className="hidden min-[1700px]:inline">Health</span>
               </button>
             )}
             {isClient && (
@@ -324,14 +331,14 @@ export default function App() {
                 id="nav-control"
                 onClick={() => setActiveTab('CONTROL')}
                 aria-pressed={isControl}
-                className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border transition-colors ${
+                className={`inline-flex items-center gap-1.5 h-8 px-2 sm:px-3 rounded-lg text-[12px] font-medium border transition-colors ${
                   isControl ? 'bg-accent-soft text-accent border-accent/30' : 'text-ink-2 hover:text-ink border-line'
                 }`}
                 title="Control — fly one aircraft or the whole fleet (c)"
                 aria-label="Control"
               >
                 <Gamepad2 className="w-3.5 h-3.5" />
-                <span className="hidden lg:inline">Control</span>
+                <span className="hidden min-[1700px]:inline">Control</span>
               </button>
             )}
             {isClient && (
@@ -339,13 +346,14 @@ export default function App() {
                 id="nav-analytics"
                 onClick={() => setActiveTab('ANALYTICS')}
                 aria-pressed={isAnalytics}
-                className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border transition-colors ${
+                className={`inline-flex items-center gap-1.5 h-8 px-2 sm:px-3 rounded-lg text-[12px] font-medium border transition-colors ${
                   isAnalytics ? 'bg-accent-soft text-accent border-accent/30' : 'text-ink-2 hover:text-ink border-line'
                 }`}
                 title="Analytics — flight hours, products, fleet health and safety (a)"
+                aria-label="Analytics"
               >
                 <BarChart3 className="w-3.5 h-3.5" />
-                <span className="hidden lg:inline">Analytics</span>
+                <span className="hidden min-[1700px]:inline">Analytics</span>
               </button>
             )}
             {isClient && (
@@ -353,13 +361,33 @@ export default function App() {
                 id="nav-records"
                 onClick={() => setActiveTab('RECORDS')}
                 aria-pressed={isRecords}
-                className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border transition-colors ${
+                className={`inline-flex items-center gap-1.5 h-8 px-2 sm:px-3 rounded-lg text-[12px] font-medium border transition-colors ${
                   isRecords ? 'bg-accent-soft text-accent border-accent/30' : 'text-ink-2 hover:text-ink border-line'
                 }`}
                 title="Flight records — every session, exportable (r)"
+                aria-label="Records"
               >
                 <Archive className="w-3.5 h-3.5" />
-                <span className="hidden lg:inline">Records</span>
+                <span className="hidden min-[1700px]:inline">Records</span>
+              </button>
+            )}
+            {isClient && (
+              <button
+                id="nav-compliance"
+                onClick={() => setActiveTab('COMPLIANCE')}
+                aria-pressed={isCompliance}
+                className={`inline-flex items-center gap-1.5 h-8 px-2 sm:px-3 rounded-lg text-[12px] font-medium border transition-colors ${
+                  isCompliance ? 'bg-accent-soft text-accent border-accent/30' : 'text-ink-2 hover:text-ink border-line'
+                }`}
+                title={`Compliance — FAA Part 107 records and pre-flight paperwork${complianceAttention ? ` (${complianceAttention} need attention)` : ''} (p)`}
+                aria-label="Compliance"
+              >
+                <span className="relative">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  {complianceAttention > 0 && <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full ring-2 ring-surface bg-bad" aria-hidden />}
+                </span>
+                <span className="hidden min-[1700px]:inline">Compliance</span>
+                <span className="sr-only">{complianceAttention ? `: ${complianceAttention} need attention` : ''}</span>
               </button>
             )}
             <button
@@ -378,13 +406,14 @@ export default function App() {
                 id="nav-engineering-toggle"
                 onClick={() => setActiveTab('PLATFORM')}
                 aria-pressed={isPlatform}
-                className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-medium border transition-colors ${
+                className={`inline-flex items-center gap-1.5 h-8 px-2 sm:px-3 rounded-lg text-[12px] font-medium border transition-colors ${
                   isPlatform ? 'bg-accent-soft text-accent border-accent/30' : 'text-ink-2 hover:text-ink border-line'
                 }`}
                 title="How the platform works, in plain language — with the engineering detail inside"
+                aria-label="How it works"
               >
                 <Wrench className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline whitespace-nowrap">How it works</span>
+                <span className="hidden min-[1360px]:inline whitespace-nowrap">How it works</span>
               </button>
             )}
           </div>
@@ -556,6 +585,11 @@ export default function App() {
         {/* Flight records */}
         {isRecords && (
           <ErrorBoundary name="Flight records"><RecordsView /></ErrorBoundary>
+        )}
+
+        {/* Compliance: Part 107 records and the paperwork gates */}
+        {isCompliance && (
+          <ErrorBoundary name="Compliance"><ComplianceView /></ErrorBoundary>
         )}
 
         {/* A fault found in flight reaches whichever screen is open */}
@@ -800,7 +834,7 @@ export default function App() {
               <button onClick={() => setShowShortcuts(false)} aria-label="Close" className="w-8 h-8 rounded-lg border border-line text-ink-2 hover:text-ink inline-flex items-center justify-center"><X className="w-4 h-4" /></button>
             </div>
             <ul className="mt-3 divide-y divide-line">
-              {[['O', 'Overview'], ['T', 'Guided tour'], ['1', 'Light show'], ['2', 'Site survey'], ['3', 'Surveillance'], ['D', 'Aircraft health'], ['C', 'Control'], ['A', 'Analytics'], ['R', 'Flight records'], ['H', 'How it works'], ['Esc', 'Close dialogs and deselect'], ['?', 'This list']].map(([k, v]) => (
+              {[['O', 'Overview'], ['T', 'Guided tour'], ['1', 'Light show'], ['2', 'Site survey'], ['3', 'Surveillance'], ['D', 'Aircraft health'], ['C', 'Control'], ['A', 'Analytics'], ['R', 'Flight records'], ['P', 'Compliance'], ['H', 'How it works'], ['Esc', 'Close dialogs and deselect'], ['?', 'This list']].map(([k, v]) => (
                 <li key={k} className="flex items-center justify-between py-2 text-[13px]">
                   <span className="text-ink-2">{v}</span>
                   <kbd className="num rounded-md border border-line bg-surface-2 px-2 py-0.5 text-[11px] text-ink">{k}</kbd>
@@ -815,7 +849,9 @@ export default function App() {
         All in 1 Events · Drone Command ·{' '}
         <button onClick={() => setTourOpen(true)} className="underline hover:text-ink-2">Take the tour</button> ·{' '}
         <button onClick={() => setShowShortcuts(true)} className="underline hover:text-ink-2">Keyboard shortcuts</button>
-        <div className="mt-1">Designed and engineered by <a href="https://www.meridianinterface.com" target="_blank" rel="noopener" className="font-medium underline hover:text-ink-2">Meridian Interface</a></div>
+        {isClient
+          ? <div className="mt-8 mb-2"><MeridianCredit /></div>
+          : <div className="mt-1">Designed and engineered by <a href="https://www.meridianinterface.com" target="_blank" rel="noopener" className="font-medium underline hover:text-ink-2">Meridian Interface</a></div>}
       </footer>
       <DemoTour open={tourOpen} onClose={() => setTourOpen(false)} view={activeTab} go={(v: TourView) => setActiveTab(v)} />
     </div>

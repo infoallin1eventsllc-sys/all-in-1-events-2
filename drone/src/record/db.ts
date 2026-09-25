@@ -1,6 +1,7 @@
 import type { SessionRollup } from '../analytics/rollup';
 import type { ServiceRecord } from '../analytics/aggregate';
 import type { FlightHealth } from '../diagnostics/health';
+import type { ComplianceSnapshot } from '../compliance/types';
 
 /**
  * Flight recorder storage.
@@ -41,6 +42,8 @@ export interface FlightSession {
   sample?: boolean;
   /** Hash of the last event written (src/record/chain.ts). */
   chainHead?: string;
+  /** The Part 107 paperwork it started under: pilot certificate, registrations, waiver (src/compliance). */
+  compliance?: ComplianceSnapshot;
 }
 
 export interface FlightSample {

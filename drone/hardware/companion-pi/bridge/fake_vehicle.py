@@ -12,14 +12,24 @@ and starts on MISSION_START; PX4 arms in mission mode and goes. Takeoff,
 waypoints, speed, gimbal, distance camera triggering (CAMERA_FEEDBACK on
 ArduPilot, CAMERA_TRIGGER on PX4) and RTL execute in order; MISSION_CURRENT,
 HOME_POSITION, WIND and FENCE_STATUS are reported. A low battery triggers the
-battery failsafe (RTL), and a landed, disarmed aircraft gets a fresh pack after
-a few seconds, as a crew would swap it.
+battery failsafe (BATT_FS_LOW_ACT / COM_LOW_BAT_ACT), and a landed, disarmed
+aircraft gets a fresh pack after a few seconds, as a crew would swap it.
+
+Parameters: PARAM_REQUEST_READ and PARAM_SET for the fence, battery failsafe and
+RTL altitude, with the firmware's own defaults (ArduCopter 4.5: FENCE_TYPE 7,
+a 300 m circle and 100 m ceiling, warn-only battery failsafe, RTL_ALT in cm;
+PX4: GF_ACTION hold, no distance limits, warn-only battery failsafe). PX4 values
+are bytewise (an INT32's bytes in the float field), ArduPilot's are cast. The
+fences are enforced as the firmware does: ArduCopter 4.5's DO_FENCE_ENABLE
+switches on every type in FENCE_TYPE, so a survey that leaves the circle is
+turned round by FENCE_ACTION. Unknown names get no answer (4.5 has no PARAM_ERROR).
 
   python3 fake_vehicle.py --to 127.0.0.1:14550          # then: mavlink_ws.py --udp 0.0.0.0:14550
   python3 fake_vehicle.py --to 127.0.0.1:14550 --px4
   python3 fake_vehicle.py --legacy-gimbal               # refuse gimbal v2, to test the fallback
   python3 fake_vehicle.py --fault prop3                  # health screen: chipped prop on motor 3
   python3 fake_vehicle.py --time 8                       # run the world 8× faster (long survey missions)
+  python3 fake_vehicle.py --param BATT_FS_LOW_ACT=2      # start with a parameter changed from its default
       (faults: prop3, motor2, arm, vibration, cell, compass, oldfw)
 
 Health telemetry is sent like a real ArduCopter's: motor outputs (SERVO_OUTPUT_RAW),
@@ -35,6 +45,7 @@ import argparse
 import math
 import os
 import random
+import struct
 import time
 
 os.environ.setdefault("MAVLINK20", "1")
@@ -51,6 +62,16 @@ PX4 = {"TAKEOFF": (4, 2), "LOITER": (4, 3), "AUTO": (4, 4), "RTL": (4, 5), "LAND
 
 def say(*a) -> None:
     print(*a, flush=True)
+
+
+I8, I32, F32 = m.MAV_PARAM_TYPE_INT8, m.MAV_PARAM_TYPE_INT32, m.MAV_PARAM_TYPE_REAL32
+# name: [default, MAV_PARAM_TYPE]. ArduCopter 4.5 (libraries/AC_Fence/AC_Fence.cpp, AP_BattMonitor_Params.cpp,
+# ArduCopter/Parameters.cpp); PX4 main (navigator/geofence_params.yaml, rtl_params.yaml, commander/commander_params.yaml).
+ARDU_PARAMS = {"FENCE_ENABLE": (0, I8), "FENCE_TYPE": (7, I8), "FENCE_ACTION": (1, I8), "FENCE_RADIUS": (300.0, F32),
+               "FENCE_ALT_MAX": (100.0, F32), "FENCE_MARGIN": (2.0, F32), "BATT_FS_LOW_ACT": (0, I8), "RTL_ALT": (1500, I32)}
+PX4_PARAMS = {"GF_ACTION": (2, I32), "GF_MAX_HOR_DIST": (0.0, F32), "GF_MAX_VER_DIST": (0.0, F32), "COM_LOW_BAT_ACT": (0, I32),
+              "RTL_RETURN_ALT": (60.0, F32)}
+FENCE_ALT_MAX_BIT, FENCE_CIRCLE_BIT, FENCE_POLYGON_BIT, FENCE_ALT_MIN_BIT = 1, 2, 4, 8
 
 
 class Vehicle:
@@ -79,9 +100,95 @@ class Vehicle:
         self.cruise = 8.0
         self.trig_dist = 0.0
         self.trig_acc = 0.0
-        self.batt_fs = 25.0     # battery failsafe: RTL below this
+        self.batt_fs = 25.0     # battery failsafe below this, action from BATT_FS_LOW_ACT / COM_LOW_BAT_ACT
+        self.batt_warned = False
+        self.params = {k: list(v) for k, v in (PX4_PARAMS if px4 else ARDU_PARAMS).items()}
+        self.version = (1, 15, 2) if px4 else (4, 5, 7)
+        # ArduPilot fence types switched on (FENCE_ENABLE 1 switches on all of FENCE_TYPE at boot); PX4 applies GF_ limits always.
+        self.fence_types = 0
+        self.fence_breach = 0   # FENCE_STATUS breach_type while outside
         self.landed_since = 0.0
         self.events: list[tuple[str, object]] = []  # things for the main loop to send
+
+    def p(self, name: str) -> float:
+        return self.params[name][0]
+
+    def boot(self) -> None:
+        if not self.px4 and int(self.p("FENCE_ENABLE")) == 1:
+            self.fence_types = int(self.p("FENCE_TYPE")) & ~FENCE_ALT_MIN_BIT
+
+    def fence_enable(self, on: bool, mask: int) -> int:
+        """DO_FENCE_ENABLE as ArduPilot's GCS_Fence.cpp: 4.6+ takes param2 as a type mask, 4.5 enables all of FENCE_TYPE."""
+        configured = int(self.p("FENCE_TYPE"))
+        present = configured & (FENCE_ALT_MAX_BIT | FENCE_CIRCLE_BIT | FENCE_ALT_MIN_BIT | (FENCE_POLYGON_BIT if self.fence else 0))
+        mask = mask if self.version >= (4, 6, 0) and mask else 0xF
+        if on and not present & mask:
+            return m.MAV_RESULT_FAILED
+        self.fence_types = (self.fence_types | (configured & mask)) if on else (self.fence_types & ~mask)
+        return m.MAV_RESULT_ACCEPTED
+
+    def rtl_alt(self) -> float:
+        return self.p("RTL_RETURN_ALT") if self.px4 else self.p("RTL_ALT") / 100
+
+    def check_fence(self) -> None:
+        """Circle and ceiling (ArduPilot) or distance limits (PX4) round home; the breach action takes over once."""
+        if not self.armed or self.alt < 0.5 or self.mode in ("RTL", "LAND"):
+            return
+        dist = math.hypot((self.lat - HOME[0]) * M_PER_DEG, (self.lon - HOME[1]) * M_PER_DEG * math.cos(math.radians(self.lat)))
+        if self.px4:
+            h, z, act = self.p("GF_MAX_HOR_DIST"), self.p("GF_MAX_VER_DIST"), int(self.p("GF_ACTION"))
+            out = (0 < h < dist) or (0 < z < self.alt)
+            modes = {2: "LOITER", 3: "RTL", 5: "LAND"}
+        else:
+            on = self.fence_types & int(self.p("FENCE_TYPE"))
+            out = bool(on & FENCE_CIRCLE_BIT and dist > self.p("FENCE_RADIUS")) or bool(on & FENCE_ALT_MAX_BIT and self.alt > self.p("FENCE_ALT_MAX"))
+            act = int(self.p("FENCE_ACTION"))
+            modes = {1: "RTL", 2: "LAND", 3: "RTL", 4: "LAND", 5: "RTL"}
+        was, self.fence_breach = self.fence_breach, (m.FENCE_BREACH_BOUNDARY if out else 0)
+        if out and not was:
+            self.events.append(("text", f"Fence breached {dist:.0f} m from home"))
+            say(f"EVT fence breach at {dist:.0f} m, {self.alt:.0f} m up")
+            if act in modes:
+                self.mode = modes[act]
+                self.target = (self.lat, self.lon, self.alt) if self.mode == "LOITER" else None
+                self.trig_dist = 0.0
+
+    def battery_failsafe(self) -> None:
+        act = int(self.p("COM_LOW_BAT_ACT" if self.px4 else "BATT_FS_LOW_ACT"))
+        mode = ({2: "LAND", 3: "RTL", 4: "RTL"} if self.px4 else {1: "LAND", 2: "RTL", 3: "RTL", 4: "RTL", 5: "LAND", 6: "RTL", 7: "LAND"}).get(act)
+        if mode is None:
+            if not self.batt_warned:
+                self.batt_warned = True
+                self.events.append(("text", "Battery low (failsafe action: warn only)"))
+                say("EVT battery low, warn only")
+            return
+        self.mode = mode
+        self.trig_dist = 0.0
+        self.events.append(("text", f"Battery failsafe: {mode}"))
+        say(f"EVT battery failsafe {mode}")
+
+    # --- parameters -------------------------------------------------------------
+    def param_value(self, mav, name: str) -> None:
+        value, ptype = self.params[name]
+        wire = struct.unpack("<f", struct.pack("<i", int(value)))[0] if self.px4 and ptype != F32 else float(value)
+        mav.param_value_send(name.encode(), wire, ptype, len(self.params), list(self.params).index(name))
+
+    def param_set(self, mav, msg) -> None:
+        name = msg.param_id if isinstance(msg.param_id, str) else msg.param_id.decode()
+        if name not in self.params:
+            say(f"PARAM set {name} unknown")
+            return
+        ptype = self.params[name][1]
+        if self.px4 and msg.param_type != (F32 if ptype == F32 else I32):
+            say(f"PARAM set {name} REFUSED: type {msg.param_type} is not the parameter's own")  # PX4 answers PARAM_ERROR type mismatch
+            return
+        if self.px4 and ptype != F32:
+            value = struct.unpack("<i", struct.pack("<f", msg.param_value))[0]
+        else:
+            value = round(msg.param_value) if ptype != F32 else msg.param_value
+        self.params[name][0] = value
+        say(f"PARAM set {name} {value:g}")
+        self.param_value(mav, name)
 
     def first_item(self) -> int:
         return 0 if self.px4 else 1  # ArduPilot's item 0 is home
@@ -142,14 +249,13 @@ class Vehicle:
             self.landed_since += dt
             if self.landed_since > 4 and self.battery < 80:
                 self.battery = 96.0
+                self.batt_warned = False
                 say("EVT battery swapped")
             return
         self.landed_since = 0.0
         if self.battery < self.batt_fs and self.mode not in ("RTL", "LAND"):
-            self.mode = "RTL"
-            self.trig_dist = 0.0
-            self.events.append(("text", "Battery failsafe: RTL"))
-            say("EVT battery failsafe RTL")
+            self.battery_failsafe()
+        self.check_fence()
         if self.mode == "AUTO" and self.mission:
             it = self.item()
             if it is None:
@@ -167,9 +273,9 @@ class Vehicle:
                 self.mode = "RTL"
                 say("MIS rtl item: Return mode")
             elif it.command == m.MAV_CMD_NAV_RETURN_TO_LAUNCH:
-                self.target = (HOME[0], HOME[1], 0.0 if self.near_home() else max(self.alt, 15))
+                self.target = (HOME[0], HOME[1], 0.0 if self.near_home() else max(self.alt, self.rtl_alt()))
         elif self.mode in ("RTL", "LAND"):
-            self.target = (HOME[0], HOME[1], 0.0 if self.mode == "LAND" or self.near_home() else max(self.alt, 15))
+            self.target = (HOME[0], HOME[1], 0.0 if self.mode == "LAND" or self.near_home() else max(self.alt, self.rtl_alt()))
         if not self.target:
             self.speed = 0
             return
@@ -266,7 +372,7 @@ class Vehicle:
             mav.power_status_send(5120, 0, 1)
 
     def send_version(self, mav) -> None:
-        major, minor, patch = (4, 3, 7) if self.fault == "oldfw" else ((1, 15, 2) if self.px4 else (4, 5, 7))
+        major, minor, patch = self.version
         fw = (major << 24) | (minor << 16) | (patch << 8) | 255
         mav.autopilot_version_send(0, fw, 0, 0, 0x8C0000, list(b"fa4e0001"), [0] * 8, [0] * 8, 0x1209, 0x5740, 0)
         say(f"CMD version sent {major}.{minor}.{patch}")
@@ -281,6 +387,7 @@ def main() -> None:
     ap.add_argument("--px4", action="store_true")
     ap.add_argument("--legacy-gimbal", action="store_true")
     ap.add_argument("--time", type=float, default=1.0, help="world speed-up (a long survey mission in minutes)")
+    ap.add_argument("--param", action="append", default=[], metavar="NAME=VALUE", help="a parameter changed from its default (repeatable)")
     ap.add_argument("--fault", default="none", choices=["none", "prop3", "motor2", "arm", "vibration", "cell", "compass", "oldfw"],
                     help="simulate a mechanical or setup fault for the health screen")
     args = ap.parse_args()
@@ -288,6 +395,14 @@ def main() -> None:
     link = mavutil.mavlink_connection(f"udpout:{args.to}", source_system=1, source_component=1, dialect="ardupilotmega")
     mav = link.mav
     v = Vehicle(args.px4, args.legacy_gimbal, args.fault)
+    if args.fault == "oldfw":
+        v.version = (4, 3, 7)
+    for kv in args.param:
+        name, _, val = kv.partition("=")
+        if name not in v.params:
+            ap.error(f"--param {name}: not one of {', '.join(v.params)}")
+        v.params[name][0] = float(val) if v.params[name][1] == F32 else int(float(val))
+    v.boot()
     say(f"EVT fake {'PX4' if args.px4 else 'ArduCopter'} sending to {args.to}")
 
     def ack(cmd: int, result: int = m.MAV_RESULT_ACCEPTED) -> None:
@@ -321,7 +436,7 @@ def main() -> None:
             mav.mission_current_send(v.cur, len(v.mission))
             if not v.px4:
                 mav.wind_send(250.0, 4.2, 0.0)
-            mav.fence_status_send(0, 0, 0, 0)
+            mav.fence_status_send(1 if v.fence_breach else 0, 0, v.fence_breach, 0)
         if tick % 50 == 0:
             mav.home_position_send(int(HOME[0] * 1e7), int(HOME[1] * 1e7), 10000, 0, 0, 0, [1, 0, 0, 0], 0, 0, 0)
         if tick % 2 == 0:
@@ -365,10 +480,13 @@ def main() -> None:
                         v.start_mission()
                     say(f"CMD mission start {'accepted' if ok else 'DENIED (not armed)'}")
                     ack(c, m.MAV_RESULT_ACCEPTED if ok else m.MAV_RESULT_FAILED)
+                elif c == m.MAV_CMD_DO_FENCE_ENABLE and v.px4:
+                    say("CMD fence enable UNSUPPORTED (PX4 enforces an uploaded fence per GF_ACTION)"); ack(c, m.MAV_RESULT_UNSUPPORTED)
                 elif c == m.MAV_CMD_DO_FENCE_ENABLE:
-                    v.fence_on = p[0] == 1
-                    say(f"CMD fence {'on' if v.fence_on else 'off'} ({len(v.fence)} vertices)")
-                    ack(c)
+                    r = v.fence_enable(p[0] == 1, int(p[1]))
+                    v.fence_on = r == m.MAV_RESULT_ACCEPTED and p[0] == 1
+                    say(f"CMD fence {'on' if p[0] == 1 else 'off'} types {v.fence_types} ({len(v.fence)} vertices){'' if r == m.MAV_RESULT_ACCEPTED else ' FAILED'}")
+                    ack(c, r)
                 elif c == m.MAV_CMD_NAV_TAKEOFF:
                     alt = msg.param7 if t == "COMMAND_LONG" else msg.z
                     rel = (alt - 10) if v.px4 else alt  # PX4 sends AMSL; field is 10 m above sea level here
@@ -415,6 +533,15 @@ def main() -> None:
                     ack(c); v.send_version(mav)
                 else:
                     say(f"CMD other {c}"); ack(c, m.MAV_RESULT_UNSUPPORTED)
+            elif t == "PARAM_REQUEST_READ":
+                name = msg.param_id if isinstance(msg.param_id, str) else msg.param_id.decode()
+                if name in v.params:
+                    v.param_value(mav, name)
+                    say(f"PARAM read {name} {v.p(name):g}")
+                else:
+                    say(f"PARAM read {name} unknown (no answer)")
+            elif t == "PARAM_SET":
+                v.param_set(mav, msg)
             elif t == "SET_POSITION_TARGET_GLOBAL_INT":
                 v.target = (msg.lat_int / 1e7, msg.lon_int / 1e7, msg.alt)
                 say(f"CMD goto {msg.lat_int / 1e7:.6f} {msg.lon_int / 1e7:.6f} {msg.alt:.0f} m (mode {v.mode})")

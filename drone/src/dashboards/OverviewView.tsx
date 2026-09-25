@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Sparkles, ScanLine, Eye, HeartPulse, BarChart3, Archive, Radio, Smartphone, ShieldCheck, Cpu, ArrowRight, Gamepad2 } from 'lucide-react';
+import { MERIDIAN_BOOK_URL } from './MeridianCredit';
 import { ScrollHero } from './hero/ScrollHero';
 
 /**
@@ -115,8 +116,8 @@ export const OverviewView: React.FC<Props> = ({ onOpen, onTour }) => (
         <div className="text-[16px] font-semibold">Designed and engineered by Meridian Interface for All in 1 Events</div>
         <div className="text-[13px] opacity-70">Product design, a design system, 3D graphics, and the flight software underneath.</div>
       </div>
-      <a href="https://www.meridianinterface.com" target="_blank" rel="noopener" className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-surface text-ink text-[13px] font-semibold hover:opacity-90 shrink-0">
-        Start a project with Meridian<ArrowRight className="w-4 h-4" />
+      <a href={MERIDIAN_BOOK_URL} target="_blank" rel="noopener" className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-surface text-ink text-[13px] font-semibold hover:opacity-90 shrink-0">
+        Book an appointment with Meridian<ArrowRight className="w-4 h-4" />
       </a>
     </section>
   </div>

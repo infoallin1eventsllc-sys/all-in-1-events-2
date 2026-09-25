@@ -3,6 +3,7 @@ import { sampleHistory, sampleService } from '../analytics/sample';
 import { frameOf, type FlightHealth, type Finding } from '../diagnostics/health';
 import type { ServiceRecord } from '../analytics/aggregate';
 import { stamp } from '../record/chain';
+import { sampleSnapshot } from '../compliance/sample';
 
 /**
  * Demo content, so every page has something worth looking at the first time a
@@ -55,7 +56,7 @@ function surveyFlight(t0: number): Rec {
   for (let s = 0; s < 22; s++) { t += 1000; push(Math.max(0, alt - s * 2.8), 0.4); }
   ev((t - t0) / 1000, 'SUCCESS', 'SURVEY', 'Capture complete: 392 photos accepted, 100% photographed, 0 weak patches');
   ev((t - t0) / 1000 + 2, 'INFO', 'SYSTEM', 'Recording stopped');
-  return { session: { id: `sample-survey-${t0.toString(36)}`, vertical: 'SURVEY', title: 'Survey · Festival grounds', source: 'SIMULATION', startedAt: t0, endedAt: t + 2000, aircraft: ['MAP-1'], sampleCount: samples.length, eventCount: events.length, note: 'Harbour Lights Festival, pre-build map', sample: true }, samples, events };
+  return { session: { id: `sample-survey-${t0.toString(36)}`, vertical: 'SURVEY', title: 'Survey · Festival grounds', source: 'SIMULATION', startedAt: t0, endedAt: t + 2000, aircraft: ['MAP-1'], sampleCount: samples.length, eventCount: events.length, note: 'Harbour Lights Festival, pre-build map', sample: true, compliance: sampleSnapshot('SURVEY', t0) }, samples, events };
 }
 
 function patrolFlight(t0: number): Rec {
@@ -93,7 +94,7 @@ function patrolFlight(t0: number): Rec {
   ev(960, 'SUCCESS', 'DETECTION', 'Vehicle identified as a caterer delivery, cleared', 'T-70M');
   ev(1210, 'WARNING', 'HEALTH', 'Motor 3 working 9% harder than average: inspect after landing', 'T-70M');
   ev(dur, 'INFO', 'SYSTEM', 'Recording stopped');
-  return { session: { id: `sample-patrol-${t0.toString(36)}`, vertical: 'SURVEILLANCE', title: 'Patrol · Venue compound', source: 'SIMULATION', startedAt: t0, endedAt: t0 + dur * 1000, aircraft: craft.map(c => c.id), sampleCount: samples.length, eventCount: events.length, note: 'Overnight security, Harbour Lights Festival', sample: true }, samples, events };
+  return { session: { id: `sample-patrol-${t0.toString(36)}`, vertical: 'SURVEILLANCE', title: 'Patrol · Venue compound', source: 'SIMULATION', startedAt: t0, endedAt: t0 + dur * 1000, aircraft: craft.map(c => c.id), sampleCount: samples.length, eventCount: events.length, note: 'Overnight security, Harbour Lights Festival', sample: true, compliance: sampleSnapshot('SURVEILLANCE', t0) }, samples, events };
 }
 
 function showFlight(t0: number): Rec {
@@ -125,7 +126,7 @@ function showFlight(t0: number): Rec {
       samples.push({ t: t0 + s * 1000, aircraft: id, lat: p.lat, lon: p.lon, altM: alt, speedMps: on ? 3.5 : 0, headingDeg: (ang * 180) / Math.PI % 360, batteryPct: Math.round(batt), extra: { formation: cues[Math.max(0, Math.min(5, Math.floor(ph)))] } });
     }
   });
-  return { session: { id: `sample-show-${t0.toString(36)}`, vertical: 'LIGHT_SHOW', title: 'Show · Harbour Lights finale', source: 'SIMULATION', startedAt: t0, endedAt: t0 + dur * 1000, aircraft: ids, sampleCount: samples.length, eventCount: events.length, note: '100 aircraft, 11 formations', sample: true }, samples, events };
+  return { session: { id: `sample-show-${t0.toString(36)}`, vertical: 'LIGHT_SHOW', title: 'Show · Harbour Lights finale', source: 'SIMULATION', startedAt: t0, endedAt: t0 + dur * 1000, aircraft: ids, sampleCount: samples.length, eventCount: events.length, note: '100 aircraft, 11 formations', sample: true, compliance: sampleSnapshot('LIGHT_SHOW', t0) }, samples, events };
 }
 
 /** Eight flights on SIM-1 where motor 3 works a little harder each time, and a parts log. */

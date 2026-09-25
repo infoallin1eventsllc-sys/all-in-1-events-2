@@ -107,6 +107,32 @@ e["quadplane_mode_qland"] = L(m.MAV_CMD_DO_SET_MODE, [1, 20, 0, 0, 0, 0, 0])
 e["px4_reposition_amsl"] = payload(m.MAVLink_command_int_message(1, 1, 5, m.MAV_CMD_DO_REPOSITION, 0, 0, -1, 1, 0, nan, 337748940, -1184090000, 145.0), g)
 e["set_interval_sys2"] = payload(m.MAVLink_command_long_message(2, 1, m.MAV_CMD_SET_MESSAGE_INTERVAL, 0, 33, 200000, 0, 0, 0, 0, 0), g)
 
+# --- parameters: ArduPilot casts integers to the float field, PX4 copies their bytes (bytewise) ---
+import struct
+bw = lambda i: struct.unpack("<f", struct.pack("<i", i))[0]  # PX4: an int32's bytes read as a float
+ap_, px_ = mav(), mav()
+pv = fx["param"] = {}
+pv["ap_fence_type"] = {"frame": m.MAVLink_param_value_message(b"FENCE_TYPE", 7.0, m.MAV_PARAM_TYPE_INT8, 1210, 403).pack(ap_).hex(), "name": "FENCE_TYPE", "value": 7, "type": 2, "enc": "CAST"}
+pv["ap_fence_radius"] = {"frame": m.MAVLink_param_value_message(b"FENCE_RADIUS", 300.0, m.MAV_PARAM_TYPE_REAL32, 1210, 405).pack(ap_).hex(), "name": "FENCE_RADIUS", "value": 300, "type": 9, "enc": "CAST"}
+pv["ap_16_chars"] = {"frame": m.MAVLink_param_value_message(b"FENCE_ALT_MAX_TP", 1.0, m.MAV_PARAM_TYPE_INT8, 1210, 414).pack(ap_).hex(), "name": "FENCE_ALT_MAX_TP", "value": 1, "type": 2, "enc": "CAST"}
+pv["px4_gf_action"] = {"frame": m.MAVLink_param_value_message(b"GF_ACTION", bw(2), m.MAV_PARAM_TYPE_INT32, 980, 312).pack(px_).hex(), "name": "GF_ACTION", "value": 2, "type": 6, "enc": "BYTEWISE"}
+pv["px4_negative"] = {"frame": m.MAVLink_param_value_message(b"COM_FLTMODE1", bw(-1), m.MAV_PARAM_TYPE_INT32, 980, 100).pack(px_).hex(), "name": "COM_FLTMODE1", "value": -1, "type": 6, "enc": "BYTEWISE"}
+pv["px4_float"] = {"frame": m.MAVLink_param_value_message(b"GF_MAX_HOR_DIST", 0.0, m.MAV_PARAM_TYPE_REAL32, 980, 315).pack(px_).hex(), "name": "GF_MAX_HOR_DIST", "value": 0, "type": 9, "enc": "BYTEWISE"}
+e["param_read_radius"] = payload(m.MAVLink_param_request_read_message(1, 1, b"FENCE_RADIUS", -1), g)
+e["param_read_16_chars"] = payload(m.MAVLink_param_request_read_message(1, 1, b"FENCE_ALT_MAX_TP", -1), g)
+e["param_set_ap_radius"] = payload(m.MAVLink_param_set_message(1, 1, b"FENCE_RADIUS", 450.0, m.MAV_PARAM_TYPE_REAL32), g)
+e["param_set_ap_type"] = payload(m.MAVLink_param_set_message(1, 1, b"FENCE_TYPE", 5.0, m.MAV_PARAM_TYPE_INT8), g)
+e["param_set_px4_action"] = payload(m.MAVLink_param_set_message(1, 1, b"GF_ACTION", bw(3), m.MAV_PARAM_TYPE_INT32), g)
+e["param_set_px4_dist"] = payload(m.MAVLink_param_set_message(1, 1, b"GF_MAX_HOR_DIST", 450.0, m.MAV_PARAM_TYPE_REAL32), g)
+e["fence_enable_polygon"] = L(m.MAV_CMD_DO_FENCE_ENABLE, [1, 4, 0, 0, 0, 0, 0])
+# PARAM_ERROR (common.xml, not in this pymavlink build): ArduPilot master and PX4 answer an unknown name with it.
+xml = os.path.join(os.path.dirname(__file__), "fixtures", "param_error.xml")
+with tempfile.TemporaryDirectory() as d:
+    mod = os.path.join(d, "perrdialect.py")
+    mavgen.mavgen(mavgen.Opts(mod, wire_protocol=mavparse.PROTOCOL_2_0, language="Python3", validate=False), [xml])
+    spec = importlib.util.spec_from_file_location("perrdialect", mod); pe = importlib.util.module_from_spec(spec); spec.loader.exec_module(pe)
+    pv["error_missing"] = {"frame": pe.MAVLink_param_error_message(255, 190, b"RTL_ALT", -1, 1).pack(pe.MAVLink(Sink(), srcSystem=1, srcComponent=1)).hex(), "name": "RTL_ALT", "error": 1}
+
 out = os.path.join(os.path.dirname(__file__), "fixtures", "mavlink.json")
 with open(out, "w") as f:
     json.dump(fx, f, indent=1)
