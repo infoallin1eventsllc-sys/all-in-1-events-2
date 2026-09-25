@@ -260,6 +260,24 @@ Caveat: `app.strix.ai` and `docs.strix.ai` were not reachable from this
 sandbox's egress proxy; the tiers above come from the project's own README on
 GitHub, which was readable.
 
+## Blender — three routes, and the best one needs no MCP
+
+Checked 25 Sep 2026.
+
+| Route | Where it runs | Verdict |
+|---|---|---|
+| **`pip install bpy`** | Real Blender 5.0.1 as a Python module, inside the cloud session | **Use this.** Verified: models and exports GLB. No MCP, no credits, no install on his machine |
+| Higgsfield 3D Jutsu (`scene_builder_3d_*`) | Hosted Blender 5.2, via the connected Higgsfield server | Works for modelling, but each operation is capped at **5 minutes** — two ray-traced renders timed out and committed nothing. Credit-billed |
+| Official Blender MCP (blender.org Lab) | Blender on Otis's own computer, `localhost:9876`, via Claude Desktop | Real and vendor-made, needs Blender 5.1+. Unreachable from a browser or cloud session. Not found in the connector directory search from here |
+
+Install `bpy` in a venv (`python3 -m venv bpyenv && bpyenv/bin/pip install bpy==5.0.1`)
+— it pins Python 3.11. Modelling and GLB export are verified; headless
+rendering is not, because EEVEE wants a GPU. For a website that does not matter:
+the GLB renders in Three.js in the visitor's browser.
+
+**Codex is not needed for any of this.** It is OpenAI's equivalent of Claude
+Code. Tutorials that say "Codex + Blender" work the same with Claude Code.
+
 ## Real, but not installable from a browser session
 
 These exist and are not vapor — they are simply outside the claude.ai plugin
