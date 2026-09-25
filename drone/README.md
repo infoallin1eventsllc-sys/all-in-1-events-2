@@ -227,13 +227,52 @@ model, checked against a limit such as 5 % for an accessible route), average,
 steepest and gentlest, lengths, and a cross-section with a table view. **Spot
 height** pins an elevation. Measurements export as GeoJSON. The demo measures the
 gravel stockpile, the accessible route across the swale (two segments over 5 %)
-and a second-stage pad. For a real site, the same measurements run in the
-processing software on its elevation model.
+and a second-stage pad.
+
+**Processing.** The photos become a DSM and an orthophoto in any processor
+(OpenDroneMap / WebODM, Pix4D, DroneDeploy, Metashape). **Results → Data →
+Processed results** measures those instead of the demo model:
+
+- **Open DSM + orthophoto** reads the two GeoTIFFs in the browser (nothing is
+  uploaded): float or integer elevations with no-data, 8/16-bit RGB(A) imagery;
+  strips or tiles, Deflate, LZW, PackBits or JPEG; georeferenced by tie point and
+  pixel scale or a transformation matrix, in WGS 84 (EPSG:4326), UTM (326zz / 327zz)
+  or Web Mercator (3857). Anything else is refused with the `gdalwarp` line that
+  fixes it. The results are placed in the survey site's local metres (or round
+  their own centre if they are not over the site).
+- Measurements run on the DSM at full resolution (up to 25 Mpx; bigger files read
+  their nearest overview), sampled bilinearly. No-data holes are filled from the
+  surrounding surface for sampling, and a measurement that crosses one says how
+  much of it does. The 3D view draws at most 768 vertices a side and a 4096 px
+  orthophoto, read from the file's overviews when it has them (a 20k × 20k
+  orthophoto is decimated block by block rather than loaded whole). Heights stay in
+  the file's datum (e.g. EGM96 ≈ mean sea level), which the legend and the GeoJSON
+  export name.
+- **Process on a NodeODM node** (WebODM's engine; `docker run -p 3000:3000
+  opendronemap/nodeodm`): pick the survey's JPEGs (plus `geo.txt`, or send the one
+  this session's capture wrote), and the dashboard creates a task with a chunked
+  upload (`/task/new/init` → `/task/new/upload/:uuid` → `/task/new/commit/:uuid`),
+  options from the plan (`dsm`, `orthophoto-resolution` = the plan's GSD,
+  `dem-resolution` twice that, `fast-orthophoto` off, `cog`), follows
+  `/task/:uuid/info` to completion (a failure shows the log's last lines), then
+  downloads `dsm.tif` and `orthophoto.tif` and opens them. The last task can be
+  resumed after a reload. The browser calls the node directly: the node must
+  allow the page's origin (CORS; put it behind a proxy that adds
+  `Access-Control-Allow-Origin` if not), and an https page can only reach an https
+  node or one on localhost. With WebODM, point it at WebODM's NodeODM node, not
+  the WebODM site.
+- **Load sample processed results** opens the demo venue as a processor delivers
+  it (`public/demo/processed/`: a 0.5 m DSM and 0.25 m orthophoto in UTM 11N with
+  a no-data collar, 1.5 MB, made by `node scripts/gen_processed_sample.mjs`). Its
+  measurements match the demo model's (tested).
 
 Tests: planning maths, missions, fence, resume, boundaries and package
 (`scripts/survey.test.mjs`); the mission protocol and start sequence against a
 scripted ArduPilot and PX4 (`scripts/mission.test.mjs`); measurements against
-known shapes (`scripts/measure.test.mjs`).
+known shapes (`scripts/measure.test.mjs`); GeoTIFF reading, georeferencing,
+UTM / Web Mercator, no-data, surface sampling and the sample against the demo
+model (`scripts/processed.test.mjs`); the NodeODM client against a mock node
+(`scripts/nodeodm.test.mjs`).
 
 The Defense (counter-UAS) dashboard was retired in favour of Site survey. Flight
 records made with it still open in Records; the Remote ID receiver in `hardware/`
