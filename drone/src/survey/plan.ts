@@ -354,11 +354,23 @@ export function gapFillLines(grid: CoverageGrid, plan: SurveyPlan, poly: Pt[], m
 
 export interface GeoOrigin { lat: number; lon: number }
 
+/**
+ * Metres per degree at a latitude on the WGS84 ellipsoid: the meridional and prime-vertical
+ * radii as their standard series. A flat 111 320 m per degree of latitude is 0.4 % short at
+ * 34° and 0.3 % long at 60°; this is within millimetres per kilometre.
+ */
+export function metresPerDegree(lat: number): { lat: number; lon: number } {
+  const f = (lat * Math.PI) / 180;
+  return { lat: 111132.954 - 559.822 * Math.cos(2 * f) + 1.175 * Math.cos(4 * f), lon: 111412.84 * Math.cos(f) - 93.5 * Math.cos(3 * f) };
+}
+/** Local metres (x east, y south) round an origin: equirectangular with the ellipsoid's scale at the origin. */
 export function toLatLon(o: GeoOrigin, p: Pt): { lat: number; lon: number } {
-  return { lat: o.lat - p.y / 111320, lon: o.lon + p.x / (111320 * Math.cos((o.lat * Math.PI) / 180)) };
+  const k = metresPerDegree(o.lat);
+  return { lat: o.lat - p.y / k.lat, lon: o.lon + p.x / k.lon };
 }
 export function fromLatLon(o: GeoOrigin, lat: number, lon: number): Pt {
-  return { x: (lon - o.lon) * 111320 * Math.cos((o.lat * Math.PI) / 180), y: -(lat - o.lat) * 111320 };
+  const k = metresPerDegree(o.lat);
+  return { x: (lon - o.lon) * k.lon, y: -(lat - o.lat) * k.lat };
 }
 
 /** MAVLink commands used by a survey mission. */
@@ -371,16 +383,65 @@ export const SURVEY_CMD = {
 export const FRAME_MISSION = 2;
 export const FRAME_GLOBAL = 0;
 export const FRAME_GLOBAL_RELATIVE_ALT = 3;
+/** MAV_FRAME_GLOBAL_TERRAIN_ALT: height above the autopilot's own terrain data (ArduPilot with TERRAIN_ENABLE). */
+export const FRAME_GLOBAL_TERRAIN_ALT = 10;
 /** The most mission items the smallest common flight controllers hold (ArduPilot on F4 boards stores about 700). */
 export const MAX_MISSION_ITEMS = 700;
 
 export interface SurveyMissionItem { command: number; lat: number; lon: number; altRelM: number; params: [number, number, number, number]; frame: number }
-/** What each item is for, so live MISSION_CURRENT maps back onto the plan. `line` is the plan line (or orbit segment), −1 for none. */
+/** What each item is for, so live MISSION_CURRENT maps back onto the plan. `line` is the plan line (or orbit segment), −1 for none.
+ *  Terrain-following waypoints take the role of the item they lead to (mid-line ones LINE_END, the way home RTL). */
 export interface ItemRole { kind: 'TAKEOFF' | 'SETUP' | 'LINE_START' | 'LINE_END' | 'TRIGGER_ON' | 'TRIGGER_OFF' | 'RTL'; line: number }
 /** Where to pick a survey up again: a line and a point on it (map metres). */
 export interface ResumePoint { line: number; at: Pt }
 
 export type MissionAutopilot = 'ARDUPILOT' | 'PX4' | 'UNKNOWN';
+
+// ---- terrain following -----------------------------------------------------------
+
+/**
+ * Holding the planned height above ground over land that is not flat. PLANNED sets
+ * each waypoint's height above home to AGL + (ground there − ground at home) and adds
+ * waypoints wherever the ground between two of them strays from a straight line by
+ * more than the tolerance (the autopilot climbs linearly between waypoints). AUTOPILOT
+ * sends the AGL in MAV_FRAME_GLOBAL_TERRAIN_ALT and lets ArduPilot follow its own
+ * terrain data (TERRAIN_ENABLE and tiles on the SD card); PX4 missions have no terrain frame.
+ */
+export interface TerrainFollow {
+  mode: 'PLANNED' | 'AUTOPILOT';
+  /** Ground height at a map point (any fixed datum), NaN where unknown. */
+  ground: (p: Pt) => number;
+  /** Largest allowed departure from the planned AGL, m. Default followTolerance(AGL). */
+  tolM?: number;
+}
+/** 3 m, or 10 % of the height when that is more. */
+export const followTolerance = (aglM: number) => Math.max(3, aglM * 0.1);
+
+/**
+ * Points to add between a and b so the ground under a straight climb or descent between
+ * them stays within tolM of a straight line: Douglas–Peucker on the ground profile,
+ * sampled every stepM. The aircraft's height above ground then departs from the plan
+ * by at most tolM (between samples, by what the ground does in stepM). In order a → b.
+ */
+export function terrainSplits(a: Pt, b: Pt, ground: (p: Pt) => number, tolM: number, stepM = 4): Pt[] {
+  const len = dist(a, b), n = Math.max(1, Math.ceil(len / stepM));
+  const at = (k: number): Pt => ({ x: a.x + ((b.x - a.x) * k) / n, y: a.y + ((b.y - a.y) * k) / n });
+  const g = Array.from({ length: n + 1 }, (_, k) => ground(at(k)));
+  if (!Number.isFinite(g[0]) || !Number.isFinite(g[n])) return [];
+  const keep: number[] = [];
+  const dp = (i0: number, i1: number) => {
+    let worst = -1, dev = tolM;
+    for (let k = i0 + 1; k < i1; k++) {
+      if (!Number.isFinite(g[k])) continue;
+      const d = Math.abs(g[k] - (g[i0] + ((g[i1] - g[i0]) * (k - i0)) / (i1 - i0)));
+      if (d > dev) { dev = d; worst = k; }
+    }
+    if (worst < 0) return;
+    dp(i0, worst); keep.push(worst); dp(worst, i1);
+  };
+  dp(0, n);
+  return keep.map(at);
+}
 
 /**
  * The mission the autopilot flies, with what each item is for.
@@ -394,16 +455,29 @@ export type MissionAutopilot = 'ARDUPILOT' | 'PX4' | 'UNKNOWN';
  *   gimbal   ArduPilot takes DO_MOUNT_CONTROL on every version; PX4 1.13+ flies the
  *            gimbal-v2 DO_GIMBAL_MANAGER_PITCHYAW (mount control is deprecated there).
  *   takeoff  carries home's position: ArduCopter ignores it, PX4 validates it.
+ *   terrain  `follow` (see TerrainFollow): planned heights and extra waypoints on both, or
+ *            ArduPilot's terrain frame; either way the way home ends at a waypoint over home.
  * `from` resumes a survey interrupted by a battery swap: the same setup, then the
  * interrupted line from where it stopped, then the rest.
  */
-export function surveyMission(plan: SurveyPlan, origin: GeoOrigin, opts: { autopilot?: MissionAutopilot; home?: Pt; from?: ResumePoint | null } = {}): { items: SurveyMissionItem[]; roles: ItemRole[] } {
+export function surveyMission(plan: SurveyPlan, origin: GeoOrigin, opts: { autopilot?: MissionAutopilot; home?: Pt; from?: ResumePoint | null; follow?: TerrainFollow | null } = {}): { items: SurveyMissionItem[]; roles: ItemRole[] } {
   const alt = plan.params.altitudeM;
   const px4 = opts.autopilot === 'PX4';
   const items: SurveyMissionItem[] = [], roles: ItemRole[] = [];
   const put = (it: SurveyMissionItem, role: ItemRole) => { items.push(it); roles.push(role); };
   const cmd = (command: number, params: [number, number, number, number], z = 0): SurveyMissionItem => ({ command, lat: 0, lon: 0, altRelM: z, params, frame: FRAME_MISSION });
-  const wp = (p: Pt): SurveyMissionItem => ({ command: SURVEY_CMD.NAV_WAYPOINT, ...toLatLon(origin, p), altRelM: alt, params: [0, 0, 0, NaN], frame: FRAME_GLOBAL_RELATIVE_ALT });
+  // Terrain: PX4 has no terrain frame in missions, so it always gets the planned heights.
+  const F = opts.follow ?? null, homeP = opts.home ?? { x: 0, y: 0 };
+  const byAutopilot = F?.mode === 'AUTOPILOT' && !px4, planned = !!F && !byAutopilot;
+  const gHome = F ? F.ground(homeP) : NaN;
+  const G = (p: Pt) => { const v = F!.ground(p); return Number.isFinite(v) ? v : gHome; };
+  const tol = F?.tolM ?? followTolerance(alt);
+  const altAt = (p: Pt) => (planned && Number.isFinite(gHome) ? Math.round((alt + G(p) - gHome) * 10) / 10 : alt);
+  const wp = (p: Pt): SurveyMissionItem => ({ command: SURVEY_CMD.NAV_WAYPOINT, ...toLatLon(origin, p), altRelM: altAt(p), params: [0, 0, 0, NaN], frame: byAutopilot ? FRAME_GLOBAL_TERRAIN_ALT : FRAME_GLOBAL_RELATIVE_ALT });
+  // Extra waypoints where the ground between two strays; they share the role of the item they lead to
+  // (on a line they read as "capturing line i", on the way to one as "heading for line i").
+  let at: Pt = homeP;
+  const via = (to: Pt, role: ItemRole) => { if (planned && Number.isFinite(gHome)) for (const q of terrainSplits(at, to, G, tol)) put(wp(q), role); at = to; };
   const setup = (it: SurveyMissionItem) => put(it, { kind: 'SETUP', line: -1 });
   const home = opts.home ? toLatLon(origin, opts.home) : { lat: 0, lon: 0 };
   put({ command: SURVEY_CMD.NAV_TAKEOFF, ...home, altRelM: alt, params: [0, 0, 0, NaN], frame: FRAME_GLOBAL_RELATIVE_ALT }, { kind: 'TAKEOFF', line: -1 });
@@ -417,18 +491,27 @@ export function surveyMission(plan: SurveyPlan, origin: GeoOrigin, opts: { autop
   const first = opts.from ? Math.max(0, Math.min(plan.lines.length - 1, opts.from.line)) : 0;
   if (plan.params.pattern === 'ORBIT') {
     const c = toLatLon(origin, plan.params.orbit.center);
-    setup({ command: SURVEY_CMD.DO_SET_ROI_LOCATION, ...c, altRelM: 0, params: [0, 0, 0, 0], frame: FRAME_GLOBAL_RELATIVE_ALT });
+    // The camera looks at the structure's foot: its ground, relative to home, when the terrain is known.
+    const roiAlt = F && Number.isFinite(gHome) ? Math.round((G(plan.params.orbit.center) - gHome) * 10) / 10 : 0;
+    setup({ command: SURVEY_CMD.DO_SET_ROI_LOCATION, ...c, altRelM: roiAlt, params: [0, 0, 0, 0], frame: FRAME_GLOBAL_RELATIVE_ALT });
+    via(plan.lines[first].a, { kind: 'LINE_START', line: first });
     put(wp(plan.lines[first].a), { kind: 'LINE_START', line: first }); on(first);
-    for (let i = first; i < plan.lines.length; i++) put(wp(plan.lines[i].b), { kind: 'LINE_END', line: i });
+    for (let i = first; i < plan.lines.length; i++) { via(plan.lines[i].b, { kind: 'LINE_END', line: i }); put(wp(plan.lines[i].b), { kind: 'LINE_END', line: i }); }
     off(plan.lines.length - 1);
     setup(cmd(SURVEY_CMD.DO_SET_ROI_NONE, [0, 0, 0, 0]));
   } else {
     for (let i = first; i < plan.lines.length; i++) {
       const l = plan.lines[i];
       const start = i === first && opts.from ? projectOnSegment(opts.from.at, l.a, l.b) : l.a;
-      put(wp(start), { kind: 'LINE_START', line: i }); on(i); put(wp(l.b), { kind: 'LINE_END', line: i }); off(i);
+      via(start, { kind: 'LINE_START', line: i });
+      put(wp(start), { kind: 'LINE_START', line: i }); on(i);
+      via(l.b, { kind: 'LINE_END', line: i });
+      put(wp(l.b), { kind: 'LINE_END', line: i }); off(i);
     }
   }
+  // Following terrain, the way home follows it too, to a waypoint over home: RTL alone would fly back level
+  // at whatever height the last line ended (below home's ground, after a valley).
+  if (F && Number.isFinite(gHome)) { via(homeP, { kind: 'RTL', line: -1 }); put(wp(homeP), { kind: 'RTL', line: -1 }); }
   put({ command: SURVEY_CMD.NAV_RETURN_TO_LAUNCH, lat: 0, lon: 0, altRelM: 0, params: [0, 0, 0, 0], frame: FRAME_MISSION }, { kind: 'RTL', line: -1 });
   return { items, roles };
 }

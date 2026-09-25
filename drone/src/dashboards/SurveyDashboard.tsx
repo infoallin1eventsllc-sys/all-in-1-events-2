@@ -140,7 +140,9 @@ export const SurveyDashboard: React.FC = () => {
   useEffect(() => { if (link.live) setRail('AIRCRAFT'); else setRail(r => (r === 'AIRCRAFT' ? 'PLAN' : r)); }, [link.live]);
   const demoGeo = usesDemoGeometry(sim.site);
   useEffect(() => { if (!demoGeo) setHero('MAP'); }, [demoGeo]);
-  const siteKey = `${sim.site.origin.lat},${sim.site.origin.lon},${sim.site.boundary.length},${sim.site.kind}`;
+  useEffect(() => { if (sim.boundaryEdit.mode !== 'OFF') setHero('MAP'); }, [sim.boundaryEdit.mode]); // editing happens on the full-size map
+  // Boundary edits keep the origin, so the map stays mounted (and in its view) while the outline changes.
+  const siteKey = `${sim.site.origin.lat},${sim.site.origin.lon},${sim.site.kind}`;
   const exportPackage = () => downloadSurveyPackage(plan, sim.photosRef.current ?? [], sim.grid, sim.site, sim.camera, link.autopilot === 'PX4' ? 'PX4' : 'ARDUPILOT');
 
   // Flight record: one session per survey, 1 Hz, with the event log mirrored in.
@@ -177,7 +179,8 @@ export const SurveyDashboard: React.FC = () => {
       lines={orbit ? { done: angles, total: ORBIT_PHOTOS, current: null, angles } : { done: sim.linesDone, total: plan.lines.length, current: phase === 'CAPTURING' || phase === 'TRANSIT' ? sim.currentLine : null }} />
   );
   const map = (
-    <SurveyMapCanvas key={siteKey} site={sim.site} fence={flight.fence} draft={draft} plan={plan} legs={sim.legs} legIndex={sim.legIndex} aircraft={ac} photosRef={sim.photosRef} grid={sim.grid} gridVersion={sim.gridVersion} layer={layer} compact={hero !== 'MAP'} />
+    <SurveyMapCanvas key={siteKey} site={sim.site} fence={flight.fence} draft={draft} plan={plan} legs={sim.legs} legIndex={sim.legIndex} aircraft={ac} photosRef={sim.photosRef} grid={sim.grid} gridVersion={sim.gridVersion} layer={layer} compact={hero !== 'MAP'}
+      edit={sim.boundaryEdit} terrain={sim.terrain} clearance={flight.clearance} />
   );
   const HERO = 'absolute inset-0';
   const PIP = 'hidden md:block absolute bottom-3 right-3 w-[26%] min-w-[190px] aspect-video rounded-lg overflow-hidden border border-white/25 shadow-xl bg-imagery z-10';

@@ -1,8 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
-  surveyMission, fencePolygon, fenceItems, fromLatLon, pointInPolygon, projectOnSegment, MAX_MISSION_ITEMS, USABLE_BATTERY_MIN,
-  type SurveyPlan, type MissionAutopilot, type Pt, type ResumePoint, type FlightLine,
+  surveyMission, fencePolygon, fenceItems, fromLatLon, pointInPolygon, projectOnSegment, MAX_MISSION_ITEMS, USABLE_BATTERY_MIN, followTolerance,
+  type SurveyPlan, type MissionAutopilot, type Pt, type ResumePoint, type FlightLine, type TerrainFollow,
 } from '../../survey/plan';
+import { missionClearance, aglFloor } from '../../survey/terrain';
 import type { useSurveyMission } from '../../hooks/useSurveyMission';
 import type { useAircraftLink } from '../../link/useAircraftLink';
 
@@ -30,8 +31,12 @@ export function useSurveyFlight(sim: Sim, link: Link, plan: SurveyPlan) {
   const ap: MissionAutopilot = link.autopilot === 'PX4' ? 'PX4' : 'ARDUPILOT';
   const [useFence, setUseFence] = useState(true);
   const fence = useMemo(() => fencePolygon(plan, site.boundary, site.home, 30), [plan, site]);
-  const mission = useMemo(() => surveyMission(plan, site.origin, { autopilot: ap, home: site.home }), [plan, site, ap]);
-  const key = `${JSON.stringify(plan.params)}|${site.origin.lat.toFixed(7)},${site.origin.lon.toFixed(7)}|${site.home.x.toFixed(0)},${site.home.y.toFixed(0)}|${site.boundary.length}|${ap}|${useFence}`;
+  // Terrain following: planned heights (both autopilots), or ArduPilot's own terrain frame when chosen.
+  const tr = sim.terrain;
+  const follow = useMemo<TerrainFollow | null>(() => (tr.follow && tr.model ? { mode: tr.method === 'AUTOPILOT' && ap === 'ARDUPILOT' ? 'AUTOPILOT' : 'PLANNED', ground: tr.model.at } : null), [tr.follow, tr.model, tr.method, ap]);
+  const mission = useMemo(() => surveyMission(plan, site.origin, { autopilot: ap, home: site.home, follow }), [plan, site, ap, follow]);
+  const clearance = useMemo(() => (tr.model ? missionClearance(mission.items, site.origin, site.home, tr.model.at) : null), [mission, site, tr.model]);
+  const key = `${JSON.stringify(plan.params)}|${site.origin.lat.toFixed(7)},${site.origin.lon.toFixed(7)}|${site.home.x.toFixed(0)},${site.home.y.toFixed(0)}|${site.boundary.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(';')}|${ap}|${useFence}|${follow ? `${follow.mode}:${tr.model?.label}` : 'flat'}`;
 
   const [up, setUp] = useState<{ state: 'IDLE' | 'UPLOADING' | 'READY' | 'FAILED'; key: string; msg: string; fence: 'OFF' | 'ON' | 'UNCONFIRMED' | 'FAILED'; resume: ResumePoint | null; kind: 'NEW' | 'RESUME' | 'REFLY'; flown: boolean; fencePoly?: Pt[] }>({ state: 'IDLE', key: '', msg: '', fence: 'OFF', resume: null, kind: 'NEW', flown: false });
   const [start, setStart] = useState<{ state: 'IDLE' | 'STARTING' | 'FAILED'; msg: string[] }>({ state: 'IDLE', msg: [] });
@@ -62,13 +67,30 @@ export function useSurveyFlight(sim: Sim, link: Link, plan: SurveyPlan) {
     checks.push({ id: 'fence-types', label: 'Autopilot fence: FENCE_TYPE 4 (polygon only), or circle and altitude big enough', ok: reachM <= 300 && altM <= 100,
       detail: `needs FENCE_RADIUS ≥ ${reachM} m, FENCE_ALT_MAX ≥ ${altM} m (defaults 300, 100)`, advisory: true });
   }
+  // Terrain: what the ground does under this mission. Heights are checked above the ground below, not above home.
+  {
+    const agl = plan.params.altitudeM, tol = followTolerance(agl), floor = aglFloor(agl, tol), c = clearance, R = tr.relief;
+    const need = !!follow && follow.mode === 'PLANNED';
+    checks.push({ id: 'terrain-data', label: 'Terrain data loaded', ok: tr.state === 'READY' && !!tr.model && !c?.missing, advisory: !need,
+      detail: tr.state === 'LOADING' ? 'loading…' : tr.state === 'FAILED' ? `unavailable: ${tr.error}` : c?.missing ? `${tr.model?.label} · part of the route not covered` : tr.model?.label ?? '—' });
+    if (R && Number.isFinite(R.range)) checks.push({ id: 'terrain-relief', label: 'Ground height change across the site', ok: R.range <= tol || !!follow, advisory: true,
+      detail: `${R.range.toFixed(0)} m (${R.min.toFixed(0)}–${R.max.toFixed(0)} m)${!follow && R.range > tol ? ' · consider following terrain' : ''}` });
+    if (c && Number.isFinite(c.minAglM)) {
+      checks.push({ id: 'terrain-min-agl', label: `Route stays ≥ ${floor} m above the ground`, ok: c.minAglM >= floor, detail: `lowest ${c.minAglM.toFixed(0)} m` });
+      checks.push({ id: 'terrain-120', label: 'Every waypoint within 120 m (400 ft) of the ground below it', ok: c.maxWpAglM <= 120, detail: `highest ${c.maxWpAglM.toFixed(0)} m above ground` });
+    }
+    if (follow?.mode === 'AUTOPILOT') checks.push({ id: 'terrain-ap', label: 'Autopilot terrain: TERRAIN_ENABLE 1, terrain data for this area on the SD card', ok: false, advisory: true, detail: 'heights sent above terrain (frame 10)' });
+    // An altitude fence counts from home: following the ground uphill needs room above the plan's height.
+    if (follow && useFence && ap === 'ARDUPILOT' && c && Number.isFinite(c.maxRelM) && c.maxRelM > agl + 1)
+      checks.push({ id: 'terrain-fence-alt', label: 'Altitude fence allows the climb over rising ground', ok: false, advisory: true, detail: `needs FENCE_ALT_MAX ≥ ${Math.ceil((c.maxRelM + 10) / 10) * 10} m` });
+  }
   const gateOk = link.live && checks.every(c => c.ok || c.advisory);
 
   // ---- actions ----
   const upload = useCallback(async (from: ResumePoint | null = null, reflyLines: FlightLine[] | null = null) => {
     const kind = reflyLines ? 'REFLY' as const : from ? 'RESUME' as const : 'NEW' as const;
-    const m = reflyLines ? surveyMission({ ...plan, lines: reflyLines }, site.origin, { autopilot: ap, home: site.home })
-      : from ? surveyMission(plan, site.origin, { autopilot: ap, home: site.home, from }) : mission;
+    const m = reflyLines ? surveyMission({ ...plan, lines: reflyLines }, site.origin, { autopilot: ap, home: site.home, follow })
+      : from ? surveyMission(plan, site.origin, { autopilot: ap, home: site.home, from, follow }) : mission;
     // Re-fly passes can reach a little past the plan's own lead-ins: fence them in too.
     const fencePoly = reflyLines ? fencePolygon({ ...plan, lines: [...plan.lines, ...reflyLines] }, site.boundary, site.home, 30) : fence;
     setStart({ state: 'IDLE', msg: [] });
@@ -85,7 +107,7 @@ export function useSurveyFlight(sim: Sim, link: Link, plan: SurveyPlan) {
     } catch (e) {
       setUp({ state: 'FAILED', key, msg: e instanceof Error ? e.message : String(e), fence: fenceState, resume: from, kind, flown: false, fencePoly });
     }
-  }, [plan, site, ap, mission, key, useFence, fence, link, sim]);
+  }, [plan, site, ap, mission, key, useFence, fence, link, sim, follow]);
 
   const begin = useCallback(async () => {
     setStart({ state: 'STARTING', msg: [] });
@@ -102,7 +124,7 @@ export function useSurveyFlight(sim: Sim, link: Link, plan: SurveyPlan) {
   const armable = uploaded && !up.flown && !sim.liveStarted;
   const onGround = !t.armed || t.altRelM < 1;
   return {
-    checks, gateOk, fence: useFence ? (up.kind === 'REFLY' && up.fencePoly) || fence : null, useFence, setUseFence, mission, count,
+    checks, gateOk, fence: useFence ? (up.kind === 'REFLY' && up.fencePoly) || fence : null, useFence, setUseFence, mission, count, clearance, follow,
     upload: up, uploaded, armable, start, onGround,
     uploadMission: () => upload(null),
     /** The interrupted point, or the one last uploaded (a resume that has not flown yet can be sent again). */

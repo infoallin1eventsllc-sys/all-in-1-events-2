@@ -11,7 +11,7 @@ import { SITE, structureAt } from './site';
  * its own origin, which is what the planner works in.
  */
 
-export type SiteKind = 'DEMO' | 'BENCH' | 'IMPORTED' | 'WALKED';
+export type SiteKind = 'DEMO' | 'BENCH' | 'IMPORTED' | 'WALKED' | 'DRAWN';
 
 export interface SurveySite {
   name: string;
@@ -43,7 +43,7 @@ export function benchSite(home: LatLon): SurveySite {
 export const usesDemoGeometry = (s: SurveySite) => s.kind === 'DEMO' || s.kind === 'BENCH';
 
 /** A site from a WGS84 ring. Its origin is the ring's centre; home starts there until the aircraft reports one. */
-export function siteFromRing(name: string, ring: LatLon[], kind: 'IMPORTED' | 'WALKED'): SurveySite {
+export function siteFromRing(name: string, ring: LatLon[], kind: 'IMPORTED' | 'WALKED' | 'DRAWN'): SurveySite {
   const o = { lat: ring.reduce((s, p) => s + p.lat, 0) / ring.length, lon: ring.reduce((s, p) => s + p.lon, 0) / ring.length };
   const boundary = ring.map(p => fromLatLon(o, p.lat, p.lon));
   return { name, kind, origin: o, boundary, home: { x: 0, y: 0 }, orbitCenter: { x: 0, y: 0 } };
@@ -74,6 +74,52 @@ export function checkBoundary(ring: LatLon[]): { errors: string[]; warnings: str
   const span = Math.max(...s.boundary.map(p => Math.hypot(p.x, p.y)));
   if (span > 3000) warnings.push('Parts of the site are over 3 km from its centre: check the radio will reach.');
   return { errors, warnings, areaM2: area };
+}
+
+/** Pairs of edges (index of each edge's first corner) that cross: what a self-intersection error points at. */
+export function crossingEdges(b: Pt[]): [number, number][] {
+  const out: [number, number][] = [], n = b.length;
+  for (let i = 0; i < n; i++) for (let j = i + 2; j < n; j++) {
+    if (i === 0 && j === n - 1) continue;
+    if (segmentsCross(b[i], b[(i + 1) % n], b[j], b[(j + 1) % n])) out.push([i, j]);
+  }
+  return out;
+}
+
+// ---- editing on the map ------------------------------------------------------------
+// Pure operations on a boundary in the site's local metres; the site keeps its origin while
+// it is edited, so the view, home and plan stay put. Each returns a new array.
+
+export const moveCorner = (b: Pt[], i: number, p: Pt): Pt[] => b.map((q, k) => (k === i ? { x: p.x, y: p.y } : q));
+/** A corner on edge i (from corner i to i + 1), at its midpoint unless given. It becomes corner i + 1. */
+export const insertCorner = (b: Pt[], i: number, p?: Pt): Pt[] => {
+  const a = b[i], c = b[(i + 1) % b.length];
+  return [...b.slice(0, i + 1), p ?? { x: (a.x + c.x) / 2, y: (a.y + c.y) / 2 }, ...b.slice(i + 1)];
+};
+/** Without corner i; a boundary keeps at least three, so null when it has only three. */
+export const deleteCorner = (b: Pt[], i: number): Pt[] | null => (b.length <= 3 ? null : b.filter((_, k) => k !== i));
+export const edgeMidpoints = (b: Pt[]): Pt[] => b.map((a, i) => { const c = b[(i + 1) % b.length]; return { x: (a.x + c.x) / 2, y: (a.y + c.y) / 2 }; });
+/** checkBoundary for local corners, plus the crossing edges to highlight. */
+export function checkLocal(origin: LatLon, b: Pt[]): ReturnType<typeof checkBoundary> & { crossing: [number, number][] } {
+  return { ...checkBoundary(b.map(p => toLatLon(origin, p))), crossing: b.length > 3 ? crossingEdges(b) : [] };
+}
+/** The same site with a new outline: origin, home and orbit centre stay. */
+export const withBoundary = (site: SurveySite, boundary: Pt[]): SurveySite => ({ ...site, boundary });
+
+/** Undo history of boundaries. `merge` folds a run of the same edit (arrow-key nudges of one corner) into one step. */
+export interface EditHistory { past: Pt[][]; future: Pt[][]; mergeKey?: string }
+export const emptyHistory = (): EditHistory => ({ past: [], future: [] });
+export function historyPush(h: EditHistory, before: Pt[], mergeKey?: string, limit = 60): EditHistory {
+  if (mergeKey && h.mergeKey === mergeKey && h.past.length) return { ...h, future: [] };
+  return { past: [...h.past, before].slice(-limit), future: [], mergeKey };
+}
+export function historyUndo(h: EditHistory, present: Pt[]): { h: EditHistory; boundary: Pt[] } | null {
+  if (!h.past.length) return null;
+  return { h: { past: h.past.slice(0, -1), future: [present, ...h.future] }, boundary: h.past[h.past.length - 1] };
+}
+export function historyRedo(h: EditHistory, present: Pt[]): { h: EditHistory; boundary: Pt[] } | null {
+  if (!h.future.length) return null;
+  return { h: { past: [...h.past, present], future: h.future.slice(1) }, boundary: h.future[0] };
 }
 
 // ---- reading files ---------------------------------------------------------------
