@@ -271,9 +271,9 @@ export default function App() {
             <div className="w-8 h-8 rounded-lg bg-ink text-surface flex items-center justify-center shrink-0">
               <Compass className="w-4 h-4" />
             </div>
-            <div className="leading-tight min-w-0 hidden min-[440px]:block">
+            <div className="leading-tight min-w-0 hidden min-[440px]:block lg:hidden xl:block">
               <div className="text-[13px] font-semibold text-ink truncate">All in 1 · Drone Command</div>
-              <div className="text-[11px] text-ink-3 truncate hidden sm:block">Light show · Site survey · Surveillance</div>
+              <div className="text-[11px] text-ink-3 truncate hidden sm:block lg:hidden">Light show · Site survey · Surveillance</div>
             </div>
           </button>
 
@@ -315,6 +315,7 @@ export default function App() {
                   isHealth ? 'bg-accent-soft text-accent border-accent/30' : 'text-ink-2 hover:text-ink border-line'
                 }`}
                 title={`Aircraft health — ${health.report.verdict} (d)`}
+                aria-label={`Health${health.report.overall === 'FAULT' ? ': fault found' : health.report.overall === 'WATCH' ? ': something to watch' : ''}`}
               >
                 <span className="relative">
                   <HeartPulse className="w-3.5 h-3.5" />
@@ -322,8 +323,7 @@ export default function App() {
                     <span className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ring-2 ring-surface ${health.report.overall === 'FAULT' ? 'bg-bad' : 'bg-warn'}`} aria-hidden />
                   )}
                 </span>
-                <span className="hidden lg:inline">Health</span>
-                <span className="sr-only">{health.report.overall === 'FAULT' ? ': fault found' : health.report.overall === 'WATCH' ? ': something to watch' : ''}</span>
+                <span className="hidden min-[1700px]:inline">Health</span>
               </button>
             )}
             {isClient && (
@@ -338,7 +338,7 @@ export default function App() {
                 aria-label="Control"
               >
                 <Gamepad2 className="w-3.5 h-3.5" />
-                <span className="hidden lg:inline">Control</span>
+                <span className="hidden min-[1700px]:inline">Control</span>
               </button>
             )}
             {isClient && (
@@ -350,9 +350,10 @@ export default function App() {
                   isAnalytics ? 'bg-accent-soft text-accent border-accent/30' : 'text-ink-2 hover:text-ink border-line'
                 }`}
                 title="Analytics — flight hours, products, fleet health and safety (a)"
+                aria-label="Analytics"
               >
                 <BarChart3 className="w-3.5 h-3.5" />
-                <span className="hidden lg:inline">Analytics</span>
+                <span className="hidden min-[1700px]:inline">Analytics</span>
               </button>
             )}
             {isClient && (
@@ -364,9 +365,10 @@ export default function App() {
                   isRecords ? 'bg-accent-soft text-accent border-accent/30' : 'text-ink-2 hover:text-ink border-line'
                 }`}
                 title="Flight records — every session, exportable (r)"
+                aria-label="Records"
               >
                 <Archive className="w-3.5 h-3.5" />
-                <span className="hidden lg:inline">Records</span>
+                <span className="hidden min-[1700px]:inline">Records</span>
               </button>
             )}
             {isClient && (
@@ -384,7 +386,7 @@ export default function App() {
                   <ShieldCheck className="w-3.5 h-3.5" />
                   {complianceAttention > 0 && <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full ring-2 ring-surface bg-bad" aria-hidden />}
                 </span>
-                <span className="hidden 2xl:inline">Compliance</span>
+                <span className="hidden min-[1700px]:inline">Compliance</span>
                 <span className="sr-only">{complianceAttention ? `: ${complianceAttention} need attention` : ''}</span>
               </button>
             )}
@@ -408,9 +410,10 @@ export default function App() {
                   isPlatform ? 'bg-accent-soft text-accent border-accent/30' : 'text-ink-2 hover:text-ink border-line'
                 }`}
                 title="How the platform works, in plain language — with the engineering detail inside"
+                aria-label="How it works"
               >
                 <Wrench className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline whitespace-nowrap">How it works</span>
+                <span className="hidden min-[1360px]:inline whitespace-nowrap">How it works</span>
               </button>
             )}
           </div>
