@@ -160,9 +160,13 @@ export const DroneHero: React.FC<{ className?: string; progress?: { current: num
     // Edge anti-aliasing after tone mapping: crisp arms and blades at every pixel ratio.
     const smaa = new SMAAPass(); composer.addPass(smaa);
 
-    let spread = 1;
+    let spread = 1, sized = false;
     const size = () => {
       const w = el.clientWidth, h = el.clientHeight;
+      // Before layout settles the box can be 0 tall: that would build zero-size render targets and an
+      // infinite aspect. Wait for the ResizeObserver to report a real size.
+      if (!w || !h) return;
+      sized = true;
       cam.aspect = w / h; cam.updateProjectionMatrix();
       spread = Math.min(1, Math.max(0.38, cam.aspect / 1.55));      // portrait screens: pull the fleet in so it stays in frame
       renderer.setSize(w, h, false); composer.setSize(w, h);
@@ -247,14 +251,14 @@ export const DroneHero: React.FC<{ className?: string; progress?: { current: num
       });
       if (bokeh) { bokeh.enabled = gov.level === 0; (bokeh.uniforms as { focus: { value: number } }).focus.value += (nearest - (bokeh.uniforms as { focus: { value: number } }).focus.value) * 0.1; }
       bloom.enabled = gov.level < 2; smaa.enabled = gov.level < 2;
-      composer.render();
+      if (sized) composer.render();
       if (gov.tick(dt * 1000)) { renderer.setPixelRatio(gov.pixelRatio(2)); size(); }
       raf = requestAnimationFrame(frame);
     };
 
     if (reduced) {
       drones.forEach((d, i) => { place(d, i, 0.5, 0); d.group.rotation.y = -Math.PI * 0.5 + 0.55; d.props.forEach(pr => { pr.rotation.y = i; }); d.blur.forEach(b => { b.visible = false; }); });
-      cam.position.set(0, 6.2, 18); cam.lookAt(0, 1.0, 0); composer.render();
+      cam.position.set(0, 6.2, 18); cam.lookAt(0, 1.0, 0); if (sized) composer.render();
     } else {
       raf = requestAnimationFrame(frame);
     }
