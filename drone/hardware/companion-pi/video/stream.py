@@ -15,9 +15,20 @@ Camera sources:
 
 The dashboard's Surveillance → video source → "WebRTC" takes the URL http://<pi>:8080.
 Run one instance per camera (different --port) for EO + thermal.
+
+Access (the port is on 0.0.0.0, so anyone on the network can otherwise watch):
+  --token-file FILE / A1_VIDEO_TOKEN / --token SECRET
+                                  /offer then needs ?token=SECRET (or Authorization: Bearer);
+                                  the dashboard URL becomes http://<pi>:8080/?token=SECRET
+  --allow-origin https://allin1events.com
+                                  only this page origin may call /offer from a browser (repeatable).
+                                  Default: with a token, the caller's origin is echoed back only
+                                  when the token is right; with no token, any origin ("*").
+  --max-peers 3                   viewers at once; more get 503 (each one costs CPU and uplink)
 """
 import os
 import argparse
+import hmac
 import asyncio
 import json
 import logging
@@ -43,7 +54,24 @@ def open_camera(args: argparse.Namespace) -> MediaPlayer:
     return MediaPlayer(args.device)  # rtsp://, file, etc.
 
 
+def token_ok(request: web.Request) -> bool:
+    want = request.app["token"]
+    if not want:
+        return True
+    got = request.query.get("token", "")
+    auth = request.headers.get("Authorization", "")
+    if not got and auth.startswith("Bearer "):
+        got = auth[7:]
+    return hmac.compare_digest(got.encode(), want.encode())  # bytes: compare_digest raises on non-ASCII str
+
+
 async def offer(request: web.Request) -> web.Response:
+    if not token_ok(request):
+        log.warning("refused /offer from %s: bad token", request.remote)
+        return web.Response(status=401, headers=cors_headers(request))
+    if len(pcs) >= request.app["args"].max_peers:
+        log.warning("refused /offer from %s: %d viewers already", request.remote, len(pcs))
+        return web.Response(status=503, text="viewer limit reached", headers=cors_headers(request))
     params = await request.json()
     desc = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
@@ -58,7 +86,7 @@ async def offer(request: web.Request) -> web.Response:
     @pc.on("connectionstatechange")
     async def on_state():
         log.info("[%s] %s", pc_id, pc.connectionState)
-        if pc.connectionState in ("failed", "closed", "disconnected"):
+        if pc.connectionState in ("failed", "closed"):  # "disconnected" is often a Wi-Fi blip that recovers; ICE fails it if not
             await pc.close()
             pcs.discard(pc)
 
@@ -70,26 +98,52 @@ async def offer(request: web.Request) -> web.Response:
     if player.audio and request.app["args"].audio:
         pc.addTrack(relay.subscribe(player.audio))
 
-    await pc.setRemoteDescription(desc)
-    answer = await pc.createAnswer()
-    await pc.setLocalDescription(answer)
+    async def drop_if_never_connected():
+        # An offer whose browser went away never reaches "failed" on its own; don't let it hold a viewer slot.
+        await asyncio.sleep(30)
+        if pc.connectionState not in ("connected", "closed"):
+            log.info("[%s] never connected; closing", pc_id)
+            await pc.close()
+            pcs.discard(pc)
+
+    try:
+        await pc.setRemoteDescription(desc)
+        answer = await pc.createAnswer()
+        await pc.setLocalDescription(answer)
+    except Exception:
+        await pc.close()
+        pcs.discard(pc)
+        raise
+    asyncio.ensure_future(drop_if_never_connected())
     return web.json_response(
         {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type},
-        headers=cors_headers(),
+        headers=cors_headers(request),
     )
 
 
-def cors_headers() -> dict:
-    # The dashboard is served from another origin (the events site); allow it.
-    return {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type"}
+def cors_headers(request: web.Request) -> dict:
+    """The dashboard is served from another origin (the events site). Which origins may read the answer:
+    --allow-origin if given; else, with a token, the caller's own origin only when its token is right
+    (the browser's preflight carries the same ?token=); else anyone."""
+    allowed, origin = request.app["args"].allow_origin, request.headers.get("Origin", "")
+    h = {"Access-Control-Allow-Headers": "Content-Type, Authorization", "Vary": "Origin"}
+    if allowed:
+        if origin in allowed:
+            h["Access-Control-Allow-Origin"] = origin
+    elif request.app["token"]:
+        if origin and token_ok(request):
+            h["Access-Control-Allow-Origin"] = origin
+    else:
+        h["Access-Control-Allow-Origin"] = "*"
+    return h
 
 
-async def options(_: web.Request) -> web.Response:
-    return web.Response(headers=cors_headers())
+async def options(request: web.Request) -> web.Response:
+    return web.Response(headers=cors_headers(request))
 
 
-async def health(_: web.Request) -> web.Response:
-    return web.json_response({"ok": True, "peers": len(pcs)}, headers=cors_headers())
+async def health(request: web.Request) -> web.Response:
+    return web.json_response({"ok": True, "peers": len(pcs)}, headers=cors_headers(request))
 
 
 async def on_shutdown(app: web.Application):
@@ -110,6 +164,11 @@ def main():
     ap.add_argument("--turn-pass", default=os.environ.get("A1_TURN_PASS"), help="TURN password (or env A1_TURN_PASS)")
     ap.add_argument("--cert", help="TLS cert for https (needed when the dashboard page is https and the Pi is not on localhost)")
     ap.add_argument("--key")
+    ap.add_argument("--host", default="0.0.0.0")
+    ap.add_argument("--token", help="shared secret for /offer (visible in ps; prefer --token-file or A1_VIDEO_TOKEN)")
+    ap.add_argument("--token-file", help="read the /offer secret from this file (e.g. systemd LoadCredential: %%d/video-token)")
+    ap.add_argument("--allow-origin", action="append", default=[], help="page origin allowed to call /offer, repeatable (e.g. https://allin1events.com)")
+    ap.add_argument("--max-peers", type=int, default=3, help="viewers at once (default 3)")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args()
 
@@ -118,6 +177,13 @@ def main():
     app = web.Application()
     app["args"] = args
     app["ice_servers"] = args.ice
+    if args.token_file:
+        with open(args.token_file, encoding="utf-8") as f:
+            app["token"] = f.read().strip()
+    else:
+        app["token"] = args.token or os.environ.get("A1_VIDEO_TOKEN", "")
+    if not app["token"]:
+        log.warning("no --token: anyone who can reach port %d can watch the camera", args.port)
     app.on_shutdown.append(on_shutdown)
     app.router.add_post("/offer", offer)
     app.router.add_options("/offer", options)
@@ -129,7 +195,7 @@ def main():
         ssl_ctx.load_cert_chain(args.cert, args.key)
 
     log.info("A1 video streamer on port %d, camera %s @ %s/%dfps", args.port, args.device, args.size, args.fps)
-    web.run_app(app, host="0.0.0.0", port=args.port, ssl_context=ssl_ctx, access_log=None)
+    web.run_app(app, host=args.host, port=args.port, ssl_context=ssl_ctx, access_log=None)
 
 
 if __name__ == "__main__":

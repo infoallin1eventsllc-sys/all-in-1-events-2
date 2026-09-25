@@ -166,6 +166,7 @@ export const DroneHero: React.FC<{ className?: string; progress?: { current: num
       cam.aspect = w / h; cam.updateProjectionMatrix();
       spread = Math.min(1, Math.max(0.38, cam.aspect / 1.55));      // portrait screens: pull the fleet in so it stays in frame
       renderer.setSize(w, h, false); composer.setSize(w, h);
+      if (reduced) composer.render();   // no frame loop with reduced motion: resizing clears the canvas, so redraw the still
     };
     size();
     const ro = new ResizeObserver(size); ro.observe(el);

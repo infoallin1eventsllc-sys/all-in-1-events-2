@@ -6,7 +6,8 @@
 Starts the three processes on free local ports, then checks telemetry fan-out,
 pilot commands, the read-only watch role, token rejection, the status page, the
 aircraft going offline and coming back, the bridge reconnecting after a relay
-restart, and the bridge still serving local dashboards without --relay.
+restart, the bridge still serving local dashboards without --relay, and the bridge's
+own guards (token required, --token-file, pinned UDP peer, exit on a serial error).
 """
 from __future__ import annotations
 
@@ -224,6 +225,51 @@ async def run() -> None:
     check(await local.fresh_heartbeat(), "without --relay: local dashboard receives HEARTBEAT")
     await local.close()
     check(status(rp).get("aircraft", {}).get("A1") is None, "without --relay: nothing connects to the relay")
+
+    # Bridge hardening: token required, token from a file, bytes-safe compare, pinned UDP peer, serial errors exit.
+    stop("bridge")
+    p = subprocess.run([sys.executable, BRIDGE, "--udp", f"127.0.0.1:{udp}", "--host", "127.0.0.1", "--port", str(bp)], capture_output=True, text=True, timeout=10)
+    check(p.returncode != 0 and "--insecure" in p.stderr, "bridge refuses to start without a token", p.stderr[-200:])
+    tf = os.path.join(logs, "token")
+    with open(tf, "w") as f:
+        f.write("from-file\n")
+    start("bridge", BRIDGE, "--udp", f"127.0.0.1:{udp}", "--host", "127.0.0.1", "--port", str(bp), "--token-file", tf)
+    await asyncio.sleep(1)
+    local = Client(await connect(f"ws://127.0.0.1:{bp}/?token=from-file", proxy=None))
+    check(await local.fresh_heartbeat(), "--token-file: dashboard with the file's token receives HEARTBEAT")
+    try:
+        ws = await connect(f"ws://127.0.0.1:{bp}/?token=%C3%A9t%C3%A9", proxy=None)
+        await ws.close()
+        check(False, "non-ASCII token rejected with 401", "connection was accepted")
+    except InvalidStatus as e:
+        check(e.response.status_code == 401, "non-ASCII token rejected with 401", f"got {e.response.status_code}")
+    stranger = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    stranger.bind(("127.0.0.2", 0))  # another host: must not take over the autopilot link
+    stranger.settimeout(0.5)
+    stranger.sendto(b"\xfd\x09\x00\x00\x00\xff\xbe\x00\x00\x00", ("127.0.0.1", udp))
+    await asyncio.sleep(0.3)
+    arms = sum("CMD arm True" in line for line in vehicle_lines)
+    await local.command(mavlink.MAV_CMD_COMPONENT_ARM_DISARM, 1)
+    check(await until(lambda: sum("CMD arm True" in line for line in vehicle_lines) > arms, 5), "udp: commands still reach the pinned autopilot after a stranger sends")
+    try:
+        got = stranger.recv(4096)
+    except (socket.timeout, OSError):
+        got = b""
+    stranger.close()
+    check(got == b"", "udp: a stranger's packet does not redirect commands to it", repr(got[:20]))
+    await local.close()
+
+    import pty  # a pseudo-terminal stands in for the flight controller's UART; closing it is a pulled cable
+    master, slave = pty.openpty()
+    p = subprocess.Popen([sys.executable, BRIDGE, "--serial", os.ttyname(slave), "--host", "127.0.0.1", "--port", str(free_port()), "--insecure"],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    await asyncio.sleep(1.5)
+    os.close(master)
+    os.close(slave)
+    await until(lambda: p.poll() is not None, 10)
+    if p.poll() is None:
+        p.kill()
+    check(p.wait() == 1, "serial read error: bridge exits with status 1 (systemd restarts it)", f"returncode {p.returncode}")
 
 
 def main() -> int:

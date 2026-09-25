@@ -11,12 +11,15 @@ import { recorder } from '../record/recorder';
  */
 
 interface Props { name: string; children: React.ReactNode; onReset?: () => void }
-interface State { error: Error | null }
+interface State { error: Error | null; retries: number }
+
+/** The view's code didn't download (offline, or a deploy replaced the file). */
+const isChunkError = (e: Error) => /dynamically imported module|Importing a module script failed|error loading dynamically imported module|ChunkLoadError|Failed to fetch/i.test(e.message);
 
 export class ErrorBoundary extends React.Component<Props, State> {
-  state: State = { error: null };
+  state: State = { error: null, retries: 0 };
 
-  static getDerivedStateFromError(error: Error): State { return { error }; }
+  static getDerivedStateFromError(error: Error): Partial<State> { return { error }; }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     // Goes into the flight record: a crash during an operation is evidence.
@@ -24,7 +27,13 @@ export class ErrorBoundary extends React.Component<Props, State> {
     console.error(`[${this.props.name}]`, error, info.componentStack);
   }
 
-  private reset = () => { this.setState({ error: null }); this.props.onReset?.(); };
+  // A view whose code failed to load is fetched again on retry (App's lazyView); if that fails too,
+  // reload the page (the service worker serves it offline).
+  private pageReload = () => !!this.state.error && isChunkError(this.state.error) && this.state.retries > 0;
+  private reset = () => {
+    if (this.pageReload()) { location.reload(); return; }
+    this.setState(s => ({ error: null, retries: s.retries + 1 })); this.props.onReset?.();
+  };
 
   render() {
     if (!this.state.error) return this.props.children;
@@ -43,7 +52,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
             <pre className="mt-3 rounded-lg bg-surface-2 px-3 py-2 text-[11px] text-ink-2 overflow-x-auto num">{this.state.error.message}</pre>
             <button onClick={this.reset}
               className="mt-3 inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-accent text-accent-ink text-[13px] font-medium hover:opacity-90">
-              <RotateCcw className="w-4 h-4" />Reload this view
+              <RotateCcw className="w-4 h-4" />{this.pageReload() ? 'Reload the page' : 'Reload this view'}
             </button>
           </div>
         </div>

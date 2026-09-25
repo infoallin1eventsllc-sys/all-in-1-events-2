@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Circle, Maximize2, Crosshair as CrosshairIcon, Thermometer } from 'lucide-react';
-import { feedEngine, FEED_W, FEED_H, THUMB_W, THUMB_H, type Lock, type World } from './feed/engine';
+import { feedEngine, onFeedEngineReset, FEED_W, FEED_H, THUMB_W, THUMB_H, type Lock, type World } from './feed/engine';
 
 /** The rendered worlds: HUD badge, caption and a plain description. */
 const WORLD_LABEL: Partial<Record<World, { badge: string; caption: string; title: string }>> = {
@@ -38,6 +38,8 @@ interface Props {
   world?: World;
   onSetSensorMode?: (mode: SensorMode) => void;
   onSetZoom?: (zoom: number) => void;
+  /** Set when this operator may not command the payload: the sensor and zoom buttons are disabled with this reason. */
+  lockedReason?: string;
   className?: string;
   /** A real MediaStream (capture device or WebRTC) replaces the synthetic renderer; the HUD stays. */
   videoStream?: MediaStream | null;
@@ -57,7 +59,7 @@ const CSS_LOOK: Record<SensorMode, string> = {
 };
 const GRAIN = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
 
-export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = false, footage = null, world, onSetSensorMode, onSetZoom, className = '', videoStream = null, videoLabel }) => {
+export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = false, footage = null, world, onSetSensorMode, onSetZoom, lockedReason, className = '', videoStream = null, videoLabel }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const clipRef = useRef<HTMLVideoElement>(null);
@@ -100,6 +102,7 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = fal
   const rendered = WORLD_LABEL[simWorld];
   const glVideo = useFootage && !!src?.sameOrigin;   // same-origin: WebGL reads the frames, full sensor stage
   const nextSource = () => {
+    setPlaying(false);  // the next source has to prove itself: re-arms the 10 s watchdog below
     if (srcs && srcIdx + 1 < srcs.length) { setSrcIdx(srcIdx + 1); return; }
     misses.current++;
     if (misses.current >= clips.length) setFailed(true); else setClipIdx(i => i + 1);
@@ -111,6 +114,9 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = fal
     return () => clearTimeout(id);
   }, [useFootage, src, playing]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // The shared engine is rebuilt after a lost WebGL context; re-attach to the new one.
+  const [engineGen, setEngineGen] = useState(0);
+  useEffect(() => onFeedEngineReset(() => setEngineGen(g => g + 1)), []);
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || videoStream || (useFootage && !glVideo)) return;
@@ -126,7 +132,7 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = fal
       }),
     });
     return () => { off(); setLock(null); };
-  }, [compact, videoStream, useFootage, glVideo, src, simWorld]);
+  }, [compact, videoStream, useFootage, glVideo, src, simWorld, engineGen]);
 
   useEffect(() => {
     if (compact) return;
@@ -224,14 +230,14 @@ export const DroneFeedCanvas: React.FC<Props> = ({ drone, isNight, compact = fal
             </div>
             <div className="pointer-events-auto flex items-center gap-1">
               {!videoStream && (['RGB_4K', 'THERMAL_WHITE_HOT', 'THERMAL_IRONBOW', 'NIGHT_VISION'] as SensorMode[]).map(m => (
-                <button key={m} onClick={() => onSetSensorMode?.(m)} disabled={offline} aria-pressed={drone.sensorMode === m}
+                <button key={m} onClick={() => onSetSensorMode?.(m)} disabled={offline || !!lockedReason} title={lockedReason} aria-pressed={drone.sensorMode === m}
                   className={`px-1.5 py-0.5 rounded bg-black/60 border ${drone.sensorMode === m ? 'border-white/60 text-white' : 'border-transparent text-slate-400 hover:text-slate-100'} disabled:opacity-40`}>
                   {m === 'RGB_4K' ? 'EO' : m === 'THERMAL_WHITE_HOT' ? 'IR·WH' : m === 'THERMAL_IRONBOW' ? 'IR·IB' : 'NV'}
                 </button>
               ))}
               <span className="w-px h-3 bg-white/20 mx-0.5" />
-              <button onClick={() => onSetZoom?.(Math.max(1, drone.zoom - 1))} disabled={offline} className="px-1.5 py-0.5 rounded bg-black/60 text-slate-300 disabled:opacity-40">−</button>
-              <button onClick={() => onSetZoom?.(Math.min(10, drone.zoom + 1))} disabled={offline} className="px-1.5 py-0.5 rounded bg-black/60 text-slate-300 disabled:opacity-40">+</button>
+              <button onClick={() => onSetZoom?.(Math.max(1, drone.zoom - 1))} disabled={offline || !!lockedReason} title={lockedReason ?? 'Zoom out'} aria-label="Zoom out" className="px-1.5 py-0.5 rounded bg-black/60 text-slate-300 disabled:opacity-40">−</button>
+              <button onClick={() => onSetZoom?.(Math.min(10, drone.zoom + 1))} disabled={offline || !!lockedReason} title={lockedReason ?? 'Zoom in'} aria-label="Zoom in" className="px-1.5 py-0.5 rounded bg-black/60 text-slate-300 disabled:opacity-40">+</button>
               <button onClick={e => (e.currentTarget.closest('[data-feed]') as HTMLElement | null)?.requestFullscreen?.()} className="px-1.5 py-0.5 rounded bg-black/60 text-slate-300" title="Fullscreen"><Maximize2 className="w-3 h-3" /></button>
             </div>
           </div>

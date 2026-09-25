@@ -168,9 +168,12 @@ class Engine {
   private depthMat = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
   private raf = 0; private last = 0; private frame = 0;
   private level = 0; private slow = 1 / 60; private settled = 0;
+  private disposed = false;
 
-  constructor() {
+  constructor(onLost: (e: Engine) => void) {
     this.renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true, powerPreference: 'high-performance' });
+    // A lost context (GPU reset, driver update, too many contexts) never renders again; hand it back so a fresh engine is built.
+    this.renderer.domElement.addEventListener('webglcontextlost', () => { if (!this.disposed) onLost(this); });
     this.renderer.setPixelRatio(1);
     this.renderer.setSize(FEED_W, FEED_H, false);
     this.renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
@@ -209,7 +212,19 @@ class Engine {
       this.pos.set(id, { x: wrap(EVENT_CENTER.x - Math.sin(h) * back + Math.cos(h) * side), z: wrap(EVENT_CENTER.z + Math.cos(h) * back + Math.sin(h) * side) });
     }
     if (!this.raf) { this.last = performance.now(); this.raf = requestAnimationFrame(this.tick); }
-    return () => { this.views.delete(v); };
+    return () => { this.views.delete(v); if (!this.views.size) idle(this); };
+  }
+
+  get viewCount() { return this.views.size; }
+
+  /** Free the GPU: stop drawing, drop render targets and the WebGL context (browsers allow only a few at once). */
+  dispose() {
+    if (this.disposed) return;
+    this.disposed = true;
+    cancelAnimationFrame(this.raf); this.raf = 0; this.views.clear();
+    this.rt.dispose(); this.sfRt?.dispose(); this.sfDepth?.dispose(); this.post.dispose(); this.depthMat.dispose();
+    this.renderer.dispose();
+    this.renderer.forceContextLoss();
   }
 
   private tick = (now: number) => {
@@ -528,9 +543,29 @@ class Engine {
 }
 
 let engine: Engine | null | undefined;
+let idleTimer = 0, rebuilds = 0;
+const resetListeners = new Set<() => void>();
+/** Called when the shared engine was thrown away (context lost): views should add themselves to a new one. */
+export function onFeedEngineReset(fn: () => void) { resetListeners.add(fn); return () => { resetListeners.delete(fn); }; }
+
+function lost(e: Engine) {
+  if (engine !== e) return;
+  console.warn('Patrol feed: WebGL context lost; rebuilding');
+  e.dispose(); engine = undefined;
+  if (++rebuilds > 3) engine = null;                  // keeps failing: stop, the views show "needs WebGL"
+  resetListeners.forEach(fn => fn());
+}
+/** Last view gone: keep the (costly to build) worlds a little while for a quick return, then free the GPU. */
+function idle(e: Engine) {
+  if (engine !== e) return;                           // an engine already thrown away
+  clearTimeout(idleTimer);
+  idleTimer = window.setTimeout(() => { if (engine === e && !e.viewCount) { e.dispose(); engine = undefined; } }, 30_000);
+}
+
 /** The shared feed engine, or null where WebGL is unavailable. */
 export function feedEngine(): Engine | null {
+  clearTimeout(idleTimer);
   if (engine !== undefined) return engine;
-  try { engine = new Engine(); } catch (e) { console.warn('Patrol feed: WebGL unavailable', e); engine = null; }
+  try { engine = new Engine(lost); } catch (e) { console.warn('Patrol feed: WebGL unavailable', e); engine = null; }
   return engine;
 }

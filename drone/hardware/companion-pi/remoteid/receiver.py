@@ -157,7 +157,7 @@ async def main():
         clients.add(ws)
         log.info("dashboard connected (%d)", len(clients))
         try:
-            for rec in tracks.by_addr.values():
+            for rec in list(tracks.by_addr.values()):  # snapshot: tracks change while we await sends
                 await ws.send(json.dumps({"event": "track", "track": rec}))
             async for _ in ws:
                 pass

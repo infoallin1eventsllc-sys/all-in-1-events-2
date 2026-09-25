@@ -11,6 +11,7 @@ import { PLACES, PLACE_LABEL, type Place } from './feed/footage';
 
 const FLY_LABEL: Record<'SF_FLY' | 'LA_FLY' | 'NY_FLY', string> = { SF_FLY: 'San Francisco', LA_FLY: 'Los Angeles', NY_FLY: 'New York' };
 import { useRecorder, useRecordedEvents } from '../record/useRecorder';
+import { useOperator, ROLE_LABEL } from '../operator/operator';
 import {
   Headline, Card, Section, Divider, Tabs, Stat, Row, Chip, Dot, Meter, Sparkline, ToolButton, IconButton, Toggle, Segmented, Activity, formatClock, useAccentHex, type Tone,
 } from './ui';
@@ -39,14 +40,39 @@ export const SurveillanceDashboard: React.FC = () => {
     liveSysIds.forEach((sys, i) => { const id = drones[i]?.id; if (id) sim.applyLiveTelemetry(id, link.vehicles[sys]); });
   }, [link.vehicles]); // eslint-disable-line react-hooks/exhaustive-deps
   const liveKey = liveIds.join(',');
-  useEffect(() => () => { liveKey.split(',').filter(Boolean).forEach(id => sim.releaseLive(id)); }, [liveKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Hand back to the simulation only the aircraft that left the link; the others (and the map origin) stay put.
+  const prevLive = useRef<string[]>([]);
+  useEffect(() => {
+    const now = liveKey.split(',').filter(Boolean);
+    prevLive.current.filter(id => !now.includes(id)).forEach(id => sim.releaseLive(id));
+    prevLive.current = now;
+  }, [liveKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const liveId = liveIds.includes(selectedDroneId) ? selectedDroneId : null;
   const isPrimary = liveId === liveIds[0];
 
+  // Only the pilot in command steers or points anything (the simulation included, as the Spotlight/Send buttons do);
+  // a visual observer or a client watching the same aircraft must not be able to move it or its camera.
+  const op = useOperator();
+  const canFly = op.canCommand;
+  const viewOnly = `${ROLE_LABEL[op.role]}: only the pilot in command can do this`;
+
   // Send an aircraft to a waypoint: the simulation always; the real aircraft when it is the linked one.
   const sendToWaypoint = (i: number) => {
+    if (!canFly) return;
     sim.goToWaypoint(selectedDroneId, i);
     if (liveId && isPrimary) { const ll = sim.waypointLatLon(i); if (ll) link.goTo(ll.lat, ll.lon, WAYPOINTS[i].altM).catch(() => {}); }
+  };
+  // Send the selected aircraft to a detection: the simulation, and the real aircraft when it is the linked one.
+  // Another live aircraft (not the one commands go to) or one with no position fix yet can't be sent.
+  const detLatLon = (det: Detection) => sim.pointLatLon(det.x, det.y);
+  const sendToDetection = (det: Detection) => {
+    if (!canFly) return;
+    if (liveId) {
+      const ll = detLatLon(det);
+      if (!isPrimary || !ll) return;
+      link.goTo(ll.lat, ll.lon, 45).catch(() => {});
+    }
+    sim.dispatchToDetection(selectedDroneId, det.id);
   };
   /**
    * Payload controls. The simulation always follows so the feed stays in step;
@@ -57,13 +83,15 @@ export const SurveillanceDashboard: React.FC = () => {
   const toAircraft = !!liveId && isPrimary;
   const payload = {
     gimbal: (delta: number) => {
+      if (!canFly) return;
       const pitch = Math.max(-90, Math.min(15, d.gimbalPitchDeg + delta));
       sim.setGimbal(d.id, delta);
       if (toAircraft) link.setGimbal(pitch).catch(() => {});
     },
-    zoom: (z: number) => { sim.setZoom(d.id, z); if (toAircraft) link.setZoom(((z - 1) / 9) * 100).catch(() => {}); },
-    sensor: (mode: SensorMode) => sim.setSensorMode(d.id, mode),
+    zoom: (z: number) => { if (!canFly) return; sim.setZoom(d.id, z); if (toAircraft) link.setZoom(((z - 1) / 9) * 100).catch(() => {}); },
+    sensor: (mode: SensorMode) => { if (canFly) sim.setSensorMode(d.id, mode); },
     task: (task: keyof PatrolDrone['tasks']) => {
+      if (!canFly && (task === 'thermalScan' || task === 'illumination')) return;  // these reach the aircraft
       const on = !d.tasks[task];
       sim.toggleTask(d.id, task);
       if (toAircraft && task === 'illumination') link.setRelay(0, on).catch(() => {});
@@ -72,16 +100,23 @@ export const SurveillanceDashboard: React.FC = () => {
   // The aircraft camera follows the dashboard's sensor state — including the night
   // protocol switching every payload to thermal after dark — whenever it changes.
   const wantSource = d.sensorMode.startsWith('THERMAL') ? 'IR' : 'RGB';
-  useEffect(() => { if (toAircraft) link.setCameraSource(wantSource).catch(() => {}); }, [toAircraft, wantSource]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Only from the pilot's console: a view-only screen on the same link must not send it (e.g. when night falls).
+  useEffect(() => { if (toAircraft && canFly) link.setCameraSource(wantSource).catch(() => {}); }, [toAircraft, canFly, wantSource]); // eslint-disable-line react-hooks/exhaustive-deps
   const liveGimbal = toAircraft && Number.isFinite(link.telemetry.gimbalPitchDeg) ? Math.round(link.telemetry.gimbalPitchDeg) : null;
 
+  // What the upload-and-start actually did: the link reports DONE as soon as the items are on the
+  // aircraft, while arming and starting are still running (or about to fail).
+  const [patrolStart, setPatrolStart] = useState<{ state: 'IDLE' | 'STARTING' | 'STARTED' | 'FAILED'; error: string }>({ state: 'IDLE', error: '' });
   const uploadPatrol = () => {
     const items = WAYPOINTS.map((w, i) => { const ll = sim.waypointLatLon(i); return ll ? { lat: ll.lat, lon: ll.lon, altRelM: w.altM, holdS: w.holdSec } : null; });
     if (items.some(x => !x)) return;
     // From the ground the mission must open with a takeoff (ArduCopter refuses AUTO without one); in the air it starts at the first waypoint.
     const t = link.telemetry, onGround = !t.armed || t.altRelM < 1;
     const takeoff = { command: 22, lat: t.home?.lat ?? t.lat, lon: t.home?.lon ?? t.lon, altRelM: WAYPOINTS[0].altM, params: [0, 0, 0, NaN] as [number, number, number, number], frame: 3 };
-    link.uploadMission([...(onGround ? [takeoff] : []), ...(items as { lat: number; lon: number; altRelM: number; holdS: number }[])], true).catch(() => {});
+    setPatrolStart({ state: 'STARTING', error: '' });
+    link.uploadMission([...(onGround ? [takeoff] : []), ...(items as { lat: number; lon: number; altRelM: number; holdS: number }[])], true)
+      .then(() => setPatrolStart({ state: 'STARTED', error: '' }))
+      .catch(e => setPatrolStart({ state: 'FAILED', error: e instanceof Error ? e.message : String(e) }));
   };
 
   // Flight record: one session per patrol, sampled at 1 Hz, with the dashboard's
@@ -106,7 +141,7 @@ export const SurveillanceDashboard: React.FC = () => {
   // Real footage: the selected aircraft flies the chosen place; the others each get a different one.
   const place = videoSource.kind === 'FOOTAGE' ? videoSource.place : null;
   const simWorld = videoSource.kind === 'SIM' ? videoSource.world ?? 'CITY' : undefined;
-  const placeFor = (i: number): Place | null => place ? PLACES[(PLACES.indexOf(place) + i) % PLACES.length] : null;
+  const placeFor = (i: number): Place | null => place ? PLACES[(((PLACES.indexOf(place) + i) % PLACES.length) + PLACES.length) % PLACES.length] : null;  // i may be negative
 
   const airborne = drones.filter(x => x.status !== 'OFFLINE');
   const unacked = detections.filter(x => !x.acknowledged);
@@ -115,14 +150,14 @@ export const SurveillanceDashboard: React.FC = () => {
   const battTone: Tone = d.battery > 30 ? 'ok' : d.battery > 15 ? 'warn' : 'bad';
 
   const feed = (
-    <DroneFeedCanvas key={d.id} drone={d} isNight={isNight} footage={placeFor(drones.findIndex(x => x.id === d.id) - Math.max(0, drones.findIndex(x => x.id === selectedDroneId)))} world={simWorld} onSetSensorMode={payload.sensor} onSetZoom={payload.zoom} className="w-full h-full" videoStream={video.stream} videoLabel={videoLabel} />
+    <DroneFeedCanvas key={d.id} drone={d} isNight={isNight} footage={placeFor(drones.findIndex(x => x.id === d.id) - Math.max(0, drones.findIndex(x => x.id === selectedDroneId)))} world={simWorld} onSetSensorMode={payload.sensor} onSetZoom={payload.zoom} lockedReason={canFly ? undefined : viewOnly} className="w-full h-full" videoStream={video.stream} videoLabel={videoLabel} />
   );
   // In the picture-in-picture the camera is compact (no controls of its own): a click there only swaps the views.
   const feedPip = (
     <DroneFeedCanvas key={`${d.id}-pip`} drone={d} isNight={isNight} footage={placeFor(drones.findIndex(x => x.id === d.id) - Math.max(0, drones.findIndex(x => x.id === selectedDroneId)))} world={simWorld} videoStream={video.stream} videoLabel={videoLabel} compact />
   );
   const map = (
-    <SurveillanceMapCanvas drones={drones} detections={detections} selectedDroneId={selectedDroneId} onSelectDrone={setSelectedDroneId} onSelectWaypoint={sendToWaypoint} />
+    <SurveillanceMapCanvas drones={drones} detections={detections} selectedDroneId={selectedDroneId} onSelectDrone={setSelectedDroneId} onSelectWaypoint={canFly ? sendToWaypoint : () => {}} />
   );
 
   return (
@@ -187,20 +222,20 @@ export const SurveillanceDashboard: React.FC = () => {
           <Card padded={false} className="px-3 py-2.5">
             <div className="flex flex-wrap items-center gap-2">
               <ToolButton icon={<Crosshair />} label="Auto-track" active={d.tasks.autoTrack} disabled={offline} onClick={() => payload.task('autoTrack')} title={toAircraft ? 'Needs onboard detection (companion computer); on this screen only for now' : undefined} />
-              <ToolButton icon={<Flame />} label="Thermal" active={d.tasks.thermalScan} disabled={offline} onClick={() => payload.task('thermalScan')} title={toAircraft ? 'Switches the aircraft camera to its thermal sensor' : undefined} />
+              <ToolButton command="fly" icon={<Flame />} label="Thermal" active={d.tasks.thermalScan} disabled={offline} onClick={() => payload.task('thermalScan')} title={toAircraft ? 'Switches the aircraft camera to its thermal sensor' : undefined} />
               <ToolButton icon={<Moon />} label="Night vision" active={d.tasks.nightVision} disabled={offline} onClick={() => payload.task('nightVision')} />
               <ToolButton command="fly" icon={<Sun />} label="Spotlight" active={d.tasks.illumination} disabled={offline} onClick={() => payload.task('illumination')} title={toAircraft ? 'Relay 1 on the flight controller (RELAY1_PIN)' : undefined} />
               <ToolButton icon={<UserSearch />} label="Survivor detect" active={d.tasks.survivorDetect} disabled={offline} onClick={() => payload.task('survivorDetect')} />
               {toAircraft && <ToolButton command="fly" icon={<Camera />} label="Photo" onClick={() => link.takePhoto().catch(() => {})} title="Still photo on the aircraft camera (IMAGE_START_CAPTURE)" />}
               <span className="w-px h-6 bg-line mx-1" />
               <span className="text-[11px] text-ink-3">Gimbal</span>
-              <IconButton icon={<ChevronUp />} label="Gimbal up" disabled={offline} onClick={() => payload.gimbal(5)} />
+              <IconButton icon={<ChevronUp />} label={canFly ? 'Gimbal up' : `Gimbal up · ${viewOnly}`} disabled={offline || !canFly} onClick={() => payload.gimbal(5)} />
               <span className="num text-[12px] text-ink w-9 text-center" title={liveGimbal != null ? 'Reported by the aircraft gimbal' : undefined}>{liveGimbal ?? d.gimbalPitchDeg}°</span>
-              <IconButton icon={<ChevronDown />} label="Gimbal down" disabled={offline} onClick={() => payload.gimbal(-5)} />
+              <IconButton icon={<ChevronDown />} label={canFly ? 'Gimbal down' : `Gimbal down · ${viewOnly}`} disabled={offline || !canFly} onClick={() => payload.gimbal(-5)} />
               <span className="text-[11px] text-ink-3 ml-1">Zoom</span>
-              <IconButton icon={<ZoomOut />} label="Zoom out" disabled={offline} onClick={() => payload.zoom(Math.max(1, d.zoom - 1))} />
+              <IconButton icon={<ZoomOut />} label={canFly ? 'Zoom out' : `Zoom out · ${viewOnly}`} disabled={offline || !canFly} onClick={() => payload.zoom(Math.max(1, d.zoom - 1))} />
               <span className="num text-[12px] text-ink w-7 text-center">{d.zoom}×</span>
-              <IconButton icon={<ZoomIn />} label="Zoom in" disabled={offline} onClick={() => payload.zoom(Math.min(10, d.zoom + 1))} />
+              <IconButton icon={<ZoomIn />} label={canFly ? 'Zoom in' : `Zoom in · ${viewOnly}`} disabled={offline || !canFly} onClick={() => payload.zoom(Math.min(10, d.zoom + 1))} />
               <span className="ml-auto flex flex-wrap items-center gap-3 max-sm:ml-0 max-sm:w-full">
                 <span className="relative">
                   <ToolButton icon={videoSource.kind === 'FOOTAGE' ? <Film /> : videoSource.kind === 'SIM' ? <Cpu /> : videoSource.kind === 'CAPTURE' ? <Cable /> : <Globe />} label={videoSource.kind === 'FOOTAGE' ? `Video: ${PLACE_LABEL[videoSource.place]}` : videoSource.kind === 'SIM' ? (videoSource.world === 'SF' ? 'Video: San Francisco tour' : videoSource.world && videoSource.world !== 'CITY' ? `Video: ${FLY_LABEL[videoSource.world]} fly-through` : 'Video: 3D simulation') : videoSource.kind === 'CAPTURE' ? 'Video: capture' : 'Video: aircraft'} active={videoSource.kind === 'CAPTURE' || videoSource.kind === 'WEBRTC'} onClick={() => setVideoMenu(m => !m)} />
@@ -323,21 +358,23 @@ export const SurveillanceDashboard: React.FC = () => {
                   <div className="rounded-lg bg-accent-soft px-3 py-2.5">
                     <div className="flex items-center justify-between gap-2">
                       <div className="text-[12px] text-ink">Fly this loop on {liveId}</div>
-                      <ToolButton command="fly" size="sm" primary icon={<Upload />} label={link.missionUpload.state === 'UPLOADING' ? `Uploading ${link.missionUpload.sent}/${link.missionUpload.total}` : 'Upload patrol'} disabled={link.missionUpload.state === 'UPLOADING' || !link.preflight.ok} onClick={uploadPatrol} title={link.preflight.ok ? 'Sends the five waypoints as a MAVLink mission and starts AUTO' : 'Pre-flight gate not satisfied (see link popover)'} />
+                      <ToolButton command="fly" size="sm" primary icon={<Upload />} label={link.missionUpload.state === 'UPLOADING' ? `Uploading ${link.missionUpload.sent}/${link.missionUpload.total}` : 'Upload patrol'} disabled={link.missionUpload.state === 'UPLOADING' || patrolStart.state === 'STARTING' || !link.preflight.ok} onClick={uploadPatrol} title={link.preflight.ok ? 'Sends the five waypoints as a MAVLink mission and starts AUTO' : 'Pre-flight gate not satisfied (see link popover)'} />
                     </div>
-                    {link.missionUpload.state === 'DONE' && <div className="mt-1 text-[11px] text-ok">Mission on the aircraft · started</div>}
-                    {link.missionUpload.state === 'FAILED' && <div className="mt-1 text-[11px] text-bad">{link.missionUpload.error}</div>}
+                    {link.missionUpload.state === 'DONE' && patrolStart.state === 'STARTING' && <div className="mt-1 text-[11px] text-ink-2">Mission on the aircraft · starting…</div>}
+                    {link.missionUpload.state === 'DONE' && patrolStart.state === 'STARTED' && <div className="mt-1 text-[11px] text-ok">Mission on the aircraft · started</div>}
+                    {link.missionUpload.state === 'FAILED' ? <div className="mt-1 text-[11px] text-bad">{link.missionUpload.error}</div>
+                      : patrolStart.state === 'FAILED' && <div className="mt-1 text-[11px] text-bad">{link.missionUpload.state === 'DONE' ? 'Mission on the aircraft · not started: ' : ''}{patrolStart.error}</div>}
                     {link.telemetry.missionCurrent > 0 && <div className="mt-1 text-[11px] text-ink-2">Aircraft reports mission item {link.telemetry.missionCurrent}</div>}
                   </div>
                 )}
                 <Divider />
-                <Section title="Waypoints" right="click to send the aircraft">
+                <Section title="Waypoints" right={canFly ? 'click to send the aircraft' : 'view only'}>
                   <ol className="-mx-2">
                     {WAYPOINTS.map((w, i) => {
                       const isNext = i === d.targetWpIndex;
                       return (
                         <li key={w.id}>
-                          <button onClick={() => sendToWaypoint(i)} disabled={offline}
+                          <button onClick={() => sendToWaypoint(i)} disabled={offline || !canFly} title={canFly ? undefined : viewOnly}
                             className={`w-full flex items-center justify-between gap-3 rounded-lg px-2 py-2 text-[13px] transition-colors disabled:opacity-40 ${isNext ? 'bg-accent-soft text-ink' : 'text-ink-2 hover:bg-surface-2'}`}>
                             <span className="flex items-center gap-2.5"><span className={`num text-[11px] font-semibold w-8 ${isNext ? 'text-accent' : 'text-ink-3'}`}>{w.id}</span>{w.label}</span>
                             <span className="num text-[11px] text-ink-3">{w.altM} m · hold {w.holdSec}s</span>
@@ -364,7 +401,8 @@ export const SurveillanceDashboard: React.FC = () => {
                         </div>
                         {!det.acknowledged && (
                           <div className="mt-2 flex gap-2">
-                            <ToolButton command="fly" size="sm" primary label={`Send ${selectedDroneId}`} disabled={offline} onClick={() => sim.dispatchToDetection(selectedDroneId, det.id)} />
+                            <ToolButton command="fly" size="sm" primary label={`Send ${selectedDroneId}`} disabled={offline || (!!liveId && (!isPrimary || !detLatLon(det)))} onClick={() => sendToDetection(det)}
+                              title={liveId ? (!isPrimary ? `${liveId} is not the aircraft this console commands` : !detLatLon(det) ? 'Waiting for a GPS fix to place the detection' : 'Sends the aircraft there (go-to)') : undefined} />
                             <ToolButton size="sm" label="Dismiss" onClick={() => sim.acknowledgeDetection(det.id)} />
                           </div>
                         )}

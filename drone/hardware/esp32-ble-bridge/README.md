@@ -54,9 +54,10 @@ Reboot the flight controller after changing serial parameters.
 
 1. Arduino IDE 2.x → Boards Manager → install **esp32 by Espressif Systems**.
 2. Tools → Board → **ESP32 Dev Module**; Upload Speed 921600; pick the USB port.
-3. Open `esp32_ble_bridge.ino` → Upload. Hold **BOOT** on the DevKit if the upload
+3. Open `esp32_ble_bridge.ino`, set `BLE_PASSKEY` to your own 6-digit number (the sketch
+   refuses to compile with the placeholder; write it on a label on the aircraft) → Upload. Hold **BOOT** on the DevKit if the upload
    stalls at "Connecting…".
-4. Serial Monitor at 115200 shows `A1 bridge advertising as A1-Drone-Bridge`.
+4. Serial Monitor at 115200 shows `A1 bridge advertising as A1-Drone-Bridge (pairing needs the passkey)`.
 
 The onboard blue LED blinks while advertising and goes solid when the dashboard is
 connected.
@@ -67,6 +68,13 @@ Open the dashboard over HTTPS in Chrome or Edge → link button (top-right) →
 **Bluetooth** → choose **A1-Drone-Bridge**. Within a second the popover shows the
 flight mode, GPS fix and battery, and the stream rate (expect 10–30 msg/s).
 
+The first time a computer or phone connects, the operating system asks for the
+**passkey** and pairs (bonds) with the bridge; later connections don't ask. Until a
+device has paired, the bridge refuses both its commands and its telemetry
+subscription (encrypted, passkey-authenticated link required), so someone in range
+with the dashboard open cannot fly the aircraft. To forget all paired devices,
+re-flash with **Tools → Erase All Flash Before Sketch Upload: Enabled**.
+
 ## Range and use
 
 ~30 m line of sight. This is the pad link: pre-flight checks, arming, uploading the
@@ -75,6 +83,8 @@ reaches kilometres.
 
 ## Troubleshooting
 
+- **Connects, then drops / asks for a PIN every time** — cancelled or wrong passkey.
+  Remove the bridge in the OS Bluetooth settings and connect again.
 - **Not in the picker** — the DevKit must be advertising (blinking). The picker only
   lists devices exposing the NUS service UUID; other BLE serial bridges won't show.
 - **Connected, no heartbeat** — TX/RX swapped, wrong baud, or `SERIALn_PROTOCOL` not

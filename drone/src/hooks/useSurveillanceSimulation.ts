@@ -30,6 +30,8 @@ export interface PatrolDrone {
   verticalSpeedMps: number;
   status: PatrolStatus;
   targetWpIndex: number;
+  /** With targetWpIndex -1: the detection this aircraft was sent to. */
+  targetDetId?: string;
   holdRemainingSec: number;
   battery: number;
   voltageV: number;
@@ -147,9 +149,11 @@ export function useSurveillanceSimulation() {
       let sensorMode = d.sensorMode;
       if (task === 'thermalScan') sensorMode = on ? 'THERMAL_WHITE_HOT' : 'RGB_4K';
       if (task === 'nightVision') sensorMode = on ? 'NIGHT_VISION' : d.tasks.thermalScan ? 'THERMAL_WHITE_HOT' : 'RGB_4K';
-      log('INFO', `${id}: ${task.replace(/([A-Z])/g, ' $1').toLowerCase()} ${on ? 'on' : 'off'}`, id);
       return { ...d, tasks, sensorMode };
     });
+    // Logged here, not in the updater: React may run an updater twice (StrictMode), which logged it twice.
+    const cur = dronesRef.current.find(d => d.id === id);
+    if (cur) log('INFO', `${id}: ${task.replace(/([A-Z])/g, ' $1').toLowerCase()} ${cur.tasks[task] ? 'off' : 'on'}`, id);
   }, [patch, log]);
 
   const setAutopilot = useCallback((id: string, on: boolean) => {
@@ -158,7 +162,7 @@ export function useSurveillanceSimulation() {
   }, [patch, log]);
 
   const goToWaypoint = useCallback((id: string, wpIndex: number) => {
-    patch(id, d => ({ ...d, targetWpIndex: wpIndex, status: 'EN_ROUTE', holdRemainingSec: 0, autopilot: true }));
+    patch(id, d => ({ ...d, targetWpIndex: wpIndex, targetDetId: undefined, status: 'EN_ROUTE', holdRemainingSec: 0, autopilot: true }));
     log('INFO', `${id}: rerouted to ${WAYPOINTS[wpIndex].id} ${WAYPOINTS[wpIndex].label}`, id);
   }, [patch, log]);
 
@@ -208,15 +212,18 @@ export function useSurveillanceSimulation() {
   }, [patch]);
 
   /** Map pixel → WGS84 using the live origin; null until a real fix has been seen. */
-  const waypointLatLon = useCallback((index: number): { lat: number; lon: number } | null => {
+  const pointLatLon = useCallback((x: number, y: number): { lat: number; lon: number } | null => {
     const o = originRef.current; if (!o) return null;
-    const w = WAYPOINTS[index]; if (!w) return null;
     const mPerDegLat = 111320, mPerDegLon = 111320 * Math.cos((o.lat * Math.PI) / 180);
-    return { lat: o.lat - ((w.y - SITE.y) * METERS_PER_PX) / mPerDegLat, lon: o.lon + ((w.x - SITE.x) * METERS_PER_PX) / mPerDegLon };
+    return { lat: o.lat - ((y - SITE.y) * METERS_PER_PX) / mPerDegLat, lon: o.lon + ((x - SITE.x) * METERS_PER_PX) / mPerDegLon };
   }, []);
+  const waypointLatLon = useCallback((index: number) => { const w = WAYPOINTS[index]; return w ? pointLatLon(w.x, w.y) : null; }, [pointLatLon]);
 
-  /** Hand an aircraft back to the simulation (link dropped or disconnected). */
-  const releaseLive = useCallback((id: string) => { liveRef.current.delete(id); if (liveRef.current.size === 0) originRef.current = null; }, []);
+  /**
+   * Hand an aircraft back to the simulation (link dropped or disconnected). The map origin stays:
+   * the next fix may come from an aircraft already in the air, far from the site marker.
+   */
+  const releaseLive = useCallback((id: string) => { liveRef.current.delete(id); }, []);
 
   const acknowledgeDetection = useCallback((id: string) => {
     setDetections(prev => prev.map(d => (d.id === id ? { ...d, acknowledged: true } : d)));
@@ -225,7 +232,7 @@ export function useSurveillanceSimulation() {
   const dispatchToDetection = useCallback((droneId: string, detId: string) => {
     const det = detections.find(d => d.id === detId);
     if (!det) return;
-    patch(droneId, d => ({ ...d, status: 'EN_ROUTE', autopilot: true, tasks: { ...d.tasks, autoTrack: true }, targetWpIndex: -1 }));
+    patch(droneId, d => ({ ...d, status: 'EN_ROUTE', autopilot: true, tasks: { ...d.tasks, autoTrack: true }, targetWpIndex: -1, targetDetId: detId }));
     setDetections(prev => prev.map(d => (d.id === detId ? { ...d, acknowledged: true } : d)));
     log('WARNING', `${droneId} dispatched to ${det.kind.toLowerCase().replace('_', ' ')} ${det.id}`, droneId);
   }, [detections, patch, log]);
@@ -272,8 +279,8 @@ export function useSurveillanceSimulation() {
         let tx = SITE.x, ty = SITE.y, talt = 30;
         if (d.status === 'RTH') { tx = SITE.x; ty = SITE.y; talt = 30; }
         else if (d.targetWpIndex === -1) {
-          const det = detectionsRef.current.find(x => x.byDroneId === d.id || !x.acknowledged) ?? detectionsRef.current[0];
-          if (det) { tx = det.x; ty = det.y; talt = 45; } else { d.targetWpIndex = 0; }
+          const det = d.targetDetId ? detectionsRef.current.find(x => x.id === d.targetDetId) : undefined;  // the one it was sent to
+          if (det) { tx = det.x; ty = det.y; talt = 45; } else { d.targetWpIndex = 0; d.targetDetId = undefined; }
         }
         if (d.targetWpIndex >= 0 && d.status !== 'RTH') {
           const wp = WAYPOINTS[d.targetWpIndex]; tx = wp.x; ty = wp.y; talt = wp.altM;
@@ -340,7 +347,6 @@ export function useSurveillanceSimulation() {
             signal: [...d.history.signal.slice(1), d.signalPct],
           };
         }
-        if (d.battery < 20 && d0.battery >= 20) log('WARNING', `${d.id}: battery 20% — RTH recommended`, d.id);
         return d;
       }));
 
@@ -364,6 +370,16 @@ export function useSurveillanceSimulation() {
     }, 100);
     return () => clearInterval(timer);
   }, [log]);
+
+  // Battery warning from committed state, not from inside the tick's updater (which React may run twice).
+  const battPrev = useRef<Map<string, number>>(new Map());
+  useEffect(() => {
+    for (const d of drones) {
+      const was = battPrev.current.get(d.id);
+      if (was != null && was >= 20 && d.battery < 20 && !liveRef.current.has(d.id)) log('WARNING', `${d.id}: battery 20% — RTH recommended`, d.id);
+      battPrev.current.set(d.id, d.battery);
+    }
+  }, [drones, log]);
 
   const selected = drones.find(d => d.id === selectedDroneId) ?? drones[0];
 
@@ -390,6 +406,6 @@ export function useSurveillanceSimulation() {
     missionElapsedSec, uplinkGbps, routeProgress,
     isNight, nightMode, setNightMode, setSensorMode,
     toggleTask, setAutopilot, goToWaypoint, returnHome, setGimbal, setZoom, acknowledgeDetection, dispatchToDetection,
-    applyLiveTelemetry, releaseLive, waypointLatLon,
+    applyLiveTelemetry, releaseLive, waypointLatLon, pointLatLon,
   };
 }

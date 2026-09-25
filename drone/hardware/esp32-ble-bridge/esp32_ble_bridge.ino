@@ -20,6 +20,12 @@
  * Libraries: none beyond the core (uses the bundled BLE stack).
  * Flash: Tools → Board → ESP32 Dev Module, Upload speed 921600, then Upload.
  *
+ * Security: the link is encrypted and authenticated. The first connection from a computer or
+ * phone pairs with the 6-digit BLE_PASSKEY below (the OS asks for it) and bonds; after that the
+ * device reconnects without asking. Unpaired centrals can neither send commands (write) nor
+ * subscribe to telemetry (notify): both need an encrypted, MITM-protected (passkey) link.
+ * Set BLE_PASSKEY to your own number before flashing; it will not compile with the placeholder.
+ *
  * Range: ~30 m line of sight with the DevKit's PCB antenna — for pad checks and pairing,
  * not for flight. Use the USB telemetry radio path for flight.
  */
@@ -28,6 +34,7 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <BLE2902.h>
+#include <esp_gap_ble_api.h>
 
 // ---- configuration --------------------------------------------------------
 static const char*    DEVICE_NAME     = "A1-Drone-Bridge";   // shows in the browser's picker
@@ -36,6 +43,8 @@ static const int      TELEM_RX_PIN    = 16;
 static const int      TELEM_TX_PIN    = 17;
 static const int      LED_PIN         = 2;                   // onboard LED: solid = linked, blink = advertising
 static const size_t   BLE_CHUNK_MAX   = 180;                 // ≤ negotiated MTU − 3; browser asks for 185+
+#define BLE_PASSKEY 0                                        // your own 6-digit pairing code, e.g. 402917
+static_assert(BLE_PASSKEY >= 100000 && BLE_PASSKEY <= 999999, "Set BLE_PASSKEY to your own 6-digit number before flashing");
 
 // Nordic UART Service UUIDs — the dashboard filters on these.
 #define NUS_SERVICE_UUID "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -72,8 +81,9 @@ class ServerCallbacks : public BLEServerCallbacks {
 class RxCallbacks : public BLECharacteristicCallbacks {
   // Dashboard → autopilot (heartbeats, commands, mission items).
   void onWrite(BLECharacteristic* c) override {
-    std::string v = c->getValue();
-    if (!v.empty()) Serial2.write((const uint8_t*)v.data(), v.size());
+    // getData/getLength: getValue() is std::string on core 2.x but Arduino String on 3.x.
+    size_t n = c->getLength();
+    if (n) Serial2.write(c->getData(), n);
   }
 };
 
@@ -91,6 +101,25 @@ static void flushTx() {
   txLen = 0;
 }
 
+// Passkey pairing with bonding, LE Secure Connections, MITM protection; nothing weaker is accepted.
+// The ESP32 has no screen or keypad: it "displays" a fixed passkey (the one printed on your label),
+// and the phone or computer types it in. Set through the IDF GAP API, which is the same on core 2.x and 3.x.
+static void requirePairing() {
+  uint32_t passkey = BLE_PASSKEY;
+  esp_ble_auth_req_t auth = ESP_LE_AUTH_REQ_SC_MITM_BOND;
+  esp_ble_io_cap_t iocap = ESP_IO_CAP_OUT;
+  uint8_t keySize = 16;
+  uint8_t onlyThis = ESP_BLE_ONLY_ACCEPT_SPECIFIED_AUTH_ENABLE;
+  uint8_t keys = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
+  esp_ble_gap_set_security_param(ESP_BLE_SM_SET_STATIC_PASSKEY, &passkey, sizeof(passkey));
+  esp_ble_gap_set_security_param(ESP_BLE_SM_AUTHEN_REQ_MODE, &auth, sizeof(auth));
+  esp_ble_gap_set_security_param(ESP_BLE_SM_IOCAP_MODE, &iocap, sizeof(iocap));
+  esp_ble_gap_set_security_param(ESP_BLE_SM_MAX_KEY_SIZE, &keySize, sizeof(keySize));
+  esp_ble_gap_set_security_param(ESP_BLE_SM_ONLY_ACCEPT_SPECIFIED_SEC_AUTH, &onlyThis, sizeof(onlyThis));
+  esp_ble_gap_set_security_param(ESP_BLE_SM_SET_INIT_KEY, &keys, sizeof(keys));
+  esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &keys, sizeof(keys));
+}
+
 void setup() {
   pinMode(LED_PIN, OUTPUT);
   Serial.begin(115200);                                    // USB debug
@@ -98,13 +127,18 @@ void setup() {
 
   BLEDevice::init(DEVICE_NAME);
   BLEDevice::setMTU(BLE_CHUNK_MAX + 3);
+  BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT_MITM);  // ask for an encrypted link as soon as a central connects
+  requirePairing();
   server = BLEDevice::createServer();
   server->setCallbacks(new ServerCallbacks());
 
   BLEService* svc = server->createService(NUS_SERVICE_UUID);
   txChar = svc->createCharacteristic(NUS_TX_UUID, BLECharacteristic::PROPERTY_NOTIFY);
-  txChar->addDescriptor(new BLE2902());
+  BLE2902* cccd = new BLE2902();
+  cccd->setAccessPermissions(ESP_GATT_PERM_READ_ENC_MITM | ESP_GATT_PERM_WRITE_ENC_MITM);  // subscribing to telemetry needs a paired link
+  txChar->addDescriptor(cccd);
   BLECharacteristic* rxChar = svc->createCharacteristic(NUS_RX_UUID, BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_WRITE_NR);
+  rxChar->setAccessPermissions(ESP_GATT_PERM_WRITE_ENC_MITM);  // commands only over an encrypted, passkey-authenticated link
   rxChar->setCallbacks(new RxCallbacks());
   svc->start();
 
@@ -112,9 +146,9 @@ void setup() {
   adv->addServiceUUID(NUS_SERVICE_UUID);                 // the dashboard's picker filters on this
   adv->setScanResponse(true);
   adv->setMinPreferred(0x06);                            // iOS-friendly intervals
-  adv->setMinPreferred(0x12);
+  adv->setMaxPreferred(0x12);
   BLEDevice::startAdvertising();
-  Serial.println("A1 bridge advertising as " DEVICE_NAME);
+  Serial.printf("A1 bridge advertising as %s (pairing needs the passkey)\n", DEVICE_NAME);
 }
 
 void loop() {

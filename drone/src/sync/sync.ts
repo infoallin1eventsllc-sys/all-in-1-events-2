@@ -69,7 +69,10 @@ async function token(): Promise<Auth | null> {
   const r = await fetchImpl(`${config.url}/auth/v1/token?grant_type=refresh_token`, {
     method: 'POST', headers: { apikey: config.key, 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: a.refresh }),
   });
-  if (!r.ok) { signOut(); return null; }
+  if (!r.ok) {
+    if (r.status === 400 || r.status === 401) signOut();  // refresh token refused; a 5xx/429 is transient and keeps the session
+    return null;
+  }
   const j = await r.json();
   const n: Auth = { ...a, access: j.access_token, refresh: j.refresh_token, expiresAt: Date.now() + j.expires_in * 1000 };
   store.set(TOKEN_KEY, n); return n;
@@ -93,10 +96,14 @@ export async function member(): Promise<Member | null> {
 
 /** Upload one closed flight: session row, then the events the server lacks, in chain order. */
 export async function pushSession(s: FlightSession, events: FlightEvent[]): Promise<number> {
+  // Insert if absent, then close: the server lets crew change only ended_at and note once a row exists
+  // (migration 0002), so a merge-duplicates upsert (which SETs every column) would be refused.
+  const close = { ended_at: s.endedAt ? new Date(s.endedAt).toISOString() : null, note: s.note ?? null };
   await rest('dc_sessions?on_conflict=id', {
-    method: 'POST', prefer: 'resolution=merge-duplicates,return=minimal',
-    body: JSON.stringify({ id: s.id, vertical: s.vertical, title: s.title, source: s.source, started_at: new Date(s.startedAt).toISOString(), ended_at: s.endedAt ? new Date(s.endedAt).toISOString() : null, aircraft: s.aircraft, note: s.note ?? null }),
+    method: 'POST', prefer: 'resolution=ignore-duplicates,return=minimal',
+    body: JSON.stringify({ id: s.id, vertical: s.vertical, title: s.title, source: s.source, started_at: new Date(s.startedAt).toISOString(), aircraft: s.aircraft, ...close }),
   });
+  await rest(`dc_sessions?id=eq.${encodeURIComponent(s.id)}`, { method: 'PATCH', prefer: 'return=minimal', body: JSON.stringify(close) });
   const last = await rest(`dc_events?session_id=eq.${encodeURIComponent(s.id)}&select=seq&order=seq.desc&limit=1`) as { seq: number }[] | null;
   const have = last?.length ? last[0].seq + 1 : 0;
   const ordered = [...events].sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
@@ -128,28 +135,37 @@ export const queue = {
 };
 
 let running: Promise<{ sent: number; left: number }> | null = null;
+const jobKey = (j: Job) => JSON.stringify(j);
 /** Send what is queued; keep what fails. Returns how many jobs went and how many are left. */
 export function flush(): Promise<{ sent: number; left: number }> {
   if (running) return running;
   running = (async () => {
     let sent = 0;
     if (!enabled() || !auth()) return { sent, left: queue.list().length };
-    const left: Job[] = [];
-    const done = queue.done();
-    for (const job of queue.list()) {
-      try {
-        if (job.kind === 'session') {
-          const s = await recordDb.getSession(job.id);
-          if (!s || s.sample) continue;                      // deleted locally, or demo content: nothing to send
-          await pushSession(s, await recordDb.eventsFor(s.id));
-          done.add(s.id);
-        } else if (job.kind === 'health') { if (!job.report.sample) await pushHealth(job.report); }
-        else if (!job.record.sample) await pushService(job.record);
-        sent++;
-      } catch { left.push(job); }
+    // Jobs queued while this runs (add() gets this same promise back) are picked up by the next
+    // pass, and each pass re-reads the queue before writing it, so nothing added meanwhile is lost.
+    const tried = new Set<string>();
+    for (;;) {
+      const batch = queue.list().filter(j => !tried.has(jobKey(j)));
+      if (!batch.length) break;
+      const drop = new Set<string>(), done = new Set<string>();
+      for (const job of batch) {
+        const k = jobKey(job); tried.add(k);
+        try {
+          if (job.kind === 'session') {
+            const s = await recordDb.getSession(job.id);
+            if (!s || s.sample) { drop.add(k); continue; }      // deleted locally, or demo content: nothing to send
+            await pushSession(s, await recordDb.eventsFor(s.id));
+            done.add(s.id);
+          } else if (job.kind === 'health') { if (!job.report.sample) await pushHealth(job.report); }
+          else if (!job.record.sample) await pushService(job.record);
+          drop.add(k); sent++;
+        } catch { /* stays queued */ }
+      }
+      store.set(QUEUE_KEY, queue.list().filter(j => !drop.has(jobKey(j))));
+      store.set(DONE_KEY, [...new Set([...queue.done(), ...done])]);
     }
-    store.set(QUEUE_KEY, left); store.set(DONE_KEY, [...done]);
-    return { sent, left: left.length };
+    return { sent, left: queue.list().length };
   })().finally(() => { running = null; });
   return running;
 }
