@@ -61,6 +61,27 @@ for (const n of [100, 250, 500]) {
   assert.equal(ok.go, true); assert.equal(F.goSentence(ok), 'Go: all 20 aircraft are ready.');
   const due = F.fleetStats([mk(0, { propHours: 55 }), mk(1, { motorHours: 210 }), mk(2)]);
   assert.deepEqual(due.service.propsDue, ['A01']); assert.deepEqual(due.service.motorsDue, ['A02']);
+
+  // Gates pass on what an aircraft reports, never on what it does not: no charge reading or no GPS report holds the show.
+  const noPack = F.fleetStats([...Array.from({ length: 5 }, (_, i) => mk(i)), mk(5, { batteryPct: null })]);
+  const bg = noPack.gates.find(g => g.id === 'battery');
+  assert.equal(bg.ok, false, 'an aircraft with no battery reading fails the battery gate'); assert.deepEqual(bg.pads, ['A06']); assert.match(bg.detail, /1 not reporting a charge/);
+  assert.equal(noPack.go, false); assert.match(F.goSentence(noPack), /battery reading from 1 aircraft/);
+  const noGps = F.fleetStats([mk(0), mk(1, { systems: { GPS: 'UNKNOWN' } }), mk(2, { systems: {} })]);
+  const gg = noGps.gates.find(g => g.id === 'gps');
+  assert.equal(gg.ok, false, 'no GPS report (fix type 0) is not a 3D fix'); assert.deepEqual(gg.pads, ['A02', 'A03']);
+  assert.equal(F.fleetStats([mk(0, { systems: { GPS: 'WATCH' } })]).gates.find(g => g.id === 'gps').ok, true, 'a weak but 3D fix passes');
+}
+
+// --- one launch grid: fleet health, the light show sim and the exported package put aircraft n on the same pad ------
+{
+  const P = await loadModule('../src/lightshow/pads.ts');
+  for (const n of [100, 500]) {
+    const sim = new FS.FleetSim(n);
+    sim.vehicles.forEach((v, i) => { const p = P.padXY(i, n); assert.ok(Math.abs(v.x - p.x) < 1e-9 && Math.abs(v.y - p.y) < 1e-9, `pad ${i} of ${n}`); });
+    assert.equal(FS.FleetSim.PAD_M, P.PAD_SPACING_M);
+  }
+  assert.equal(F.gridCols(100), P.padCols(100)); assert.equal(F.padLabel(30, 13), P.padLabel(30, 13));
 }
 
 console.log('fleet: all tests passed');

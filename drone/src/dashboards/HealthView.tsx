@@ -194,7 +194,7 @@ const NowTab: React.FC<{ report: HealthReport; onReplace?: (part: string, note: 
         <div className="relative lg:col-span-7 min-h-[340px] sm:min-h-[460px] rounded-[14px] overflow-hidden" id="health-airframe">
           {r.motors.length || r.frame.kind === 'PLANE' || r.frame.kind === 'VTOL'
             ? <HoloAirframe motors={r.motors} frame={r.frame} findings={r.findings} flying={flying} />
-            : <div className="absolute inset-0 grid place-items-center text-[13px] text-[#7f93ad]">Waiting for motor outputs.</div>}
+            : <div className="absolute inset-0 grid place-items-center text-[13px] text-[#7f93ad]">{r.frame.balance === false ? 'Motor balance not analysed for this airframe type.' : 'Waiting for motor outputs.'}</div>}
           <div className="absolute left-4 top-3.5 pointer-events-none">
             <div className="text-[10.5px] font-semibold uppercase tracking-[0.18em] text-[#5ad2ff]">Diagnostic scan</div>
             <div className="mt-0.5 text-[13px] text-[#dbe7f5]">{r.frame.label}{r.motors.length ? ` · ${r.motors.length} motors` : ''}</div>
@@ -227,7 +227,7 @@ const NowTab: React.FC<{ report: HealthReport; onReplace?: (part: string, note: 
       </Card>
       <Card className="xl:col-span-5" id="health-motors">
         <Section title="Motors" right="rpm, temperature and current from ESC telemetry">
-          {r.motors.length ? <MotorTable motors={r.motors} /> : <p className="text-[13px] text-ink-3 py-6">{r.frame.kind === 'PLANE' ? 'Fixed-wing aircraft: motor balance does not apply; the other checks do.' : 'Waiting for motor outputs.'}</p>}
+          {r.motors.length ? <MotorTable motors={r.motors} /> : <p className="text-[13px] text-ink-3 py-6">{r.frame.kind === 'PLANE' ? 'Fixed-wing aircraft: motor balance does not apply; the other checks do.' : r.frame.balance === false ? `${r.frame.label}: which output drives which motor varies by airframe, so motor balance is not analysed; the other checks are.` : 'Waiting for motor outputs.'}</p>}
         </Section>
       </Card>
 

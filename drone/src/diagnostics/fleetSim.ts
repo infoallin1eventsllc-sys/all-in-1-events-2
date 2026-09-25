@@ -1,5 +1,6 @@
 import { HealthSim, type SimFault } from './sim';
-import { gridCols, type FleetHealth } from './fleet';
+import type { FleetHealth } from './fleet';
+import { PAD_SPACING_M, padXY } from '../lightshow/pads';
 import { SimVehicle } from '../control/simVehicle';
 import { MAV_CMD } from '../link/mavlink';
 
@@ -32,8 +33,8 @@ export class FleetSim {
   readonly vehicles: SimVehicle[];
   /** What the aircraft said lately (STATUSTEXT), newest first. */
   texts: { id: string; text: string; t: number }[] = [];
-  /** Launch pad spacing, metres. */
-  static readonly PAD_M = 3;
+  /** Launch pad spacing, metres (the show's one launch grid). */
+  static readonly PAD_M = PAD_SPACING_M;
 
   constructor(readonly n: number, seed = 21) {
     const r = rng(seed * 7919 + n);
@@ -47,10 +48,9 @@ export class FleetSim {
     for (let k = Math.max(1, Math.round(n * 0.004)); k > 0; k--) { let i = Math.floor(r() * n); while (this.faults[i] !== 'NONE') i = (i + 1) % n; this.silent.add(i); }
     this.hours = Array.from({ length: n }, () => ({ props: Math.round(4 + r() * 50 + (r() < 0.06 ? 8 : 0)), motors: Math.round(20 + r() * 170 + (r() < 0.04 ? 30 : 0)) }));
     this.sims = this.ids.map((_, i) => { const s = new HealthSim(seed * 1000 + i, wear[i]); s.fault = this.faults[i]; return s; });
-    // Pads on a grid, centred on the origin, rows running north to south.
-    const cols = gridCols(n), rows = Math.ceil(n / cols), P = FleetSim.PAD_M;
+    // Pads on the show's launch grid, centred on the origin, rows running north to south.
     this.vehicles = this.ids.map((id, i) => {
-      const v = new SimVehicle(id, { x: ((i % cols) - (cols - 1) / 2) * P, y: -(Math.floor(i / cols) - (rows - 1) / 2) * P });
+      const v = new SimVehicle(id, padXY(i, n));
       const hs = this.sims[i];
       hs.ext = { armed: false, alt: 0, speed: 0, vz: 0 };
       v.prearm = () => (hs.remainingPct < 30 ? `PreArm: Battery ${hs.remainingPct}% below arming minimum 30%` : null);

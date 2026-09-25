@@ -18,6 +18,18 @@ import { encodeCommandLong, MAV_CMD, modeName } from '../link/mavlink';
 
 type RailTab = 'CUES' | 'FLEET' | 'PREFLIGHT';
 
+/** The `k` items with the largest `key`, largest first, in one pass (no sorting the whole fleet). */
+function topBy<T>(xs: T[], key: (x: T) => number, k: number): T[] {
+  const top: T[] = [];
+  for (const x of xs) {
+    if (top.length === k && key(x) <= key(top[k - 1])) continue;
+    let i = top.length < k ? top.length : k - 1;
+    while (i > 0 && key(top[i - 1]) < key(x)) { if (i < k) top[i] = top[i - 1]; i--; }
+    top[i] = x;
+  }
+  return top;
+}
+
 /** Pre-flight gates derived from live state; all must pass before ARM is enabled. */
 function useShowGates(drones: LightShowDrone[], windMps: number, jitterMs: number) {
   return useMemo(() => {
@@ -38,7 +50,7 @@ function useShowGates(drones: LightShowDrone[], windMps: number, jitterMs: numbe
 
 export const LightShowDashboard: React.FC = () => {
   const {
-    droneCount, setDroneCount, drones, selectedDroneId, setSelectedDroneId,
+    droneCount, setDroneCount, drones, liveDrones, selectedDroneId, setSelectedDroneId,
     conductorState: cs, togglePlay, rewind, seek, selectFormation, armShow, emergencyAbort,
     showTrajectories, setShowTrajectories, showGeofence, setShowGeofence,
   } = useLightShowSimulation(100);
@@ -51,6 +63,16 @@ export const LightShowDashboard: React.FC = () => {
   const [audioLocked, setAudioLocked] = useState(true);
   const [ltc, setLtc] = useState(true);
   const [modal, setModal] = useState<null | 'CHOREO' | 'SYNC' | 'PADS' | 'WAIVER'>(null);
+  const [exporting, setExporting] = useState(false);
+  // Export is refused (with the cue, time and the two aircraft) rather than hand over a show with aircraft closer than 1.5 m.
+  const exportShow = () => {
+    setExporting(true);
+    setTimeout(() => {   // let the button say so before a big fleet's export takes a few seconds
+      try { downloadShowPackage('All in 1 show', droneCount); recorder.event('SHOW', 'SUCCESS', `Show package exported for ${droneCount} aircraft`); }
+      catch (e) { const msg = e instanceof Error ? e.message : String(e); recorder.event('SHOW', 'CRITICAL', msg.split('\n')[0]); window.alert(msg); }
+      finally { setExporting(false); }
+    }, 30);
+  };
 
   // Airfield weather mast; slow-moving readings.
   useEffect(() => {
@@ -100,12 +122,12 @@ export const LightShowDashboard: React.FC = () => {
     if (!live.length) return simGates;
     const stale = live.filter(v => !v.t.heartbeatMs || Date.now() - v.t.heartbeatMs > 3000).length;
     const noFix = live.filter(v => v.t.fixType < 3).length;
-    const low = live.filter(v => v.t.batteryPct >= 0 && v.t.batteryPct < 40).length;
+    const low = live.filter(v => v.t.batteryPct < 40).length;   // -1 (no reading) holds the launch too
     return [
       ...simGates,
       { id: 'live-hb', label: `All ${live.length} connected aircraft reporting`, ok: stale === 0, detail: stale ? `${stale} silent` : 'heartbeat < 3 s' },
       { id: 'live-gps', label: 'Connected aircraft: 3D GPS fix or better', ok: noFix === 0, detail: noFix ? `${noFix} without` : `${Math.min(...live.map(v => v.t.satellites))} sats min` },
-      { id: 'live-batt', label: 'Connected aircraft: battery above 40%', ok: low === 0, detail: low ? `${low} low` : `min ${Math.min(...live.map(v => v.t.batteryPct))}%` },
+      { id: 'live-batt', label: 'Connected aircraft: battery above 40%', ok: low === 0, detail: low ? `${low} low or not reporting` : `min ${Math.min(...live.map(v => v.t.batteryPct))}%` },
     ];
   }, [simGates, live.length, link.vehicles]); // eslint-disable-line react-hooks/exhaustive-deps
   const abortAll = () => {
@@ -132,13 +154,15 @@ export const LightShowDashboard: React.FC = () => {
       onPad: drones.filter(d => ['LAUNCH_PAD', 'ARMED', 'LANDED'].includes(d.status)).length,
       avgBatt: drones.reduce((s, d) => s + d.battery, 0) / n,
       synced: drones.filter(d => d.hasCommsSync).length,
-      watch: [...drones].sort((a, b) => b.deviationMeters - a.deviationMeters).slice(0, 5),
+      watch: topBy(drones, d => d.deviationMeters, 5),
     };
   }, [drones]);
 
   const status = cs.status;
-  const statusTone: Tone = status === 'RUNNING' ? 'ok' : status === 'ARMED' ? 'warn' : status === 'ABORTING' ? 'bad' : status === 'SHOW_COMPLETE' ? 'accent' : 'neutral';
-  const statusLabel = { PRE_FLIGHT: 'Pre-flight', ARMED: 'Armed', RUNNING: 'Running', PAUSED: 'Holding', ABORTING: 'Aborting', SHOW_COMPLETE: 'Complete' }[status];
+  const statusTone: Tone = status === 'RUNNING' ? 'ok' : status === 'ARMED' ? 'warn' : status === 'ABORTING' || status === 'ABORTED' ? 'bad' : status === 'SHOW_COMPLETE' ? 'accent' : 'neutral';
+  const statusLabel = { PRE_FLIGHT: 'Pre-flight', ARMED: 'Armed', RUNNING: 'Running', PAUSED: 'Holding', ABORTING: 'Aborting', ABORTED: 'Aborted · landed', SHOW_COMPLETE: 'Complete' }[status];
+  // The show starts only once the fleet is armed (the gates are checked at arming) and resumes only from a hold.
+  const canPlay = status === 'ARMED' || status === 'PAUSED' || status === 'RUNNING';
   const fmt = (secs: number) => { const m = Math.floor(secs / 60), s = Math.floor(secs % 60), t = Math.floor((secs % 1) * 10); return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${t}`; };
   const cueMarks = useMemo(() => { const total = SHOW_FORMATIONS.reduce((s, f) => s + f.durationSeconds, 0) || 1; let acc = 0; return SHOW_FORMATIONS.map((f, i) => { const start = acc / total; acc += f.durationSeconds; return { i, f, start }; }); }, []);
 
@@ -161,7 +185,7 @@ export const LightShowDashboard: React.FC = () => {
         {/* ---------------- Stage ---------------- */}
         <div className="space-y-3 min-w-0">
           <div className="rounded-[var(--radius-card)] overflow-hidden border border-line bg-imagery">
-            <LightShowCanvas3D drones={drones} selectedDroneId={selectedDroneId} onSelectDrone={setSelectedDroneId} showTrajectories={showTrajectories} showGeofence={showGeofence} formationName={formation.name} />
+            <LightShowCanvas3D drones={drones} live={liveDrones} selectedDroneId={selectedDroneId} onSelectDrone={setSelectedDroneId} showTrajectories={showTrajectories} showGeofence={showGeofence} formationName={formation.name} />
           </div>
 
           {/* Transport bar */}
@@ -169,7 +193,7 @@ export const LightShowDashboard: React.FC = () => {
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2">
                 <IconButton icon={<RotateCcw />} label="Rewind to start" onClick={rewind} />
-                <ToolButton command="fly" id="ls-play" icon={status === 'RUNNING' ? <Pause /> : <Play />} label={status === 'RUNNING' ? 'Hold' : status === 'PAUSED' ? 'Resume' : 'Start show'} primary disabled={status === 'ABORTING'} onClick={togglePlay} />
+                <ToolButton command="fly" id="ls-play" icon={status === 'RUNNING' ? <Pause /> : <Play />} label={status === 'RUNNING' ? 'Hold' : status === 'PAUSED' ? 'Resume' : 'Start show'} primary disabled={!canPlay} onClick={togglePlay} title={canPlay ? undefined : status === 'PRE_FLIGHT' ? 'Arm the fleet first' : 'Rewind to reset after an abort'} />
                 {status === 'PRE_FLIGHT' && <ToolButton command="fly" id="ls-arm" icon={<ShieldCheck />} label="Arm fleet" disabled={!allGatesPass} onClick={armShow} title={allGatesPass ? 'All pre-flight gates pass' : 'Pre-flight gates not satisfied'} />}
               </div>
               <div className="flex-1 min-w-[260px]">
@@ -218,7 +242,7 @@ export const LightShowDashboard: React.FC = () => {
                 </Section>
                 {/* The hand-off actions stay in view while the cue list scrolls under them. */}
                 <div className="sticky bottom-0 z-[1] -mx-1 px-1 pt-3 pb-1 bg-surface border-t border-line">
-                  <ToolButton size="sm" primary icon={<Download />} label={`Export show package (${droneCount})`} onClick={() => downloadShowPackage('All in 1 show', droneCount)} title="CSV per aircraft + manifest, for Skybrush Studio / Blender or Verge Aero" />
+                  <ToolButton size="sm" primary icon={<Download />} label={exporting ? 'Exporting…' : `Export show package (${droneCount})`} disabled={exporting} onClick={exportShow} title="CSV per aircraft + manifest, for Skybrush Studio / Blender or Verge Aero; checked for 1.5 m separation" />
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <ToolButton size="sm" icon={<Layers />} label="Choreography engine" onClick={() => setModal('CHOREO')} />

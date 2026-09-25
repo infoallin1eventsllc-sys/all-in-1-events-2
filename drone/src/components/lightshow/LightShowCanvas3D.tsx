@@ -27,6 +27,8 @@ import { emberFleet, type EmberFleet } from '../hero/droneModel';
 
 interface LightShowCanvas3DProps {
   drones: LightShowDrone[];
+  /** The fleet as of this animation frame, when the owner keeps it in a ref (React state then only refreshes the overlays). */
+  live?: { current: LightShowDrone[] };
   selectedDroneId: string | null;
   onSelectDrone: (id: string | null) => void;
   showTrajectories: boolean;
@@ -115,7 +117,7 @@ function makeGroundTexture(): THREE.CanvasTexture {
 }
 
 export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
-  drones, selectedDroneId, onSelectDrone, showTrajectories, showGeofence, formationName, bare = false, initialPreset = 'AUDIENCE', heightClass,
+  drones, live, selectedDroneId, onSelectDrone, showTrajectories, showGeofence, formationName, bare = false, initialPreset = 'AUDIENCE', heightClass,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [preset, setPreset] = useState<Preset>(initialPreset);
@@ -128,6 +130,7 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
     history: Float32Array; historyHead: number;
   } | null>(null);
   const dronesRef = useRef(drones); dronesRef.current = drones;
+  const liveRef = useRef(live); liveRef.current = live;
   const flagsRef = useRef({ selectedDroneId, showTrajectories, showGeofence, glow });
   flagsRef.current = { selectedDroneId, showTrajectories, showGeofence, glow };
 
@@ -271,7 +274,7 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
       raf = requestAnimationFrame(tick);
       const st = scene.current; if (!st) return;
       const dt = Math.min(0.1, (now - last) / 1000); last = now; frame++;
-      const list = dronesRef.current; const n = Math.min(list.length, CAPACITY);
+      const list = liveRef.current?.current ?? dronesRef.current; const n = Math.min(list.length, CAPACITY);
       const { selectedDroneId, showTrajectories, showGeofence, glow } = flagsRef.current;
 
       // Camera: ease to the goal; idle orbit after 6 s without input (a slow drift round the aircraft in close-up).

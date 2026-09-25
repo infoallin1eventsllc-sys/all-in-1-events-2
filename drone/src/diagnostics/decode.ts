@@ -24,8 +24,8 @@ export type HealthMsg =
   | { k: 'OUTPUTS'; us: number[] }
   | { k: 'VIBE'; x: number; y: number; z: number; clip: [number, number, number] }
   | { k: 'ESC'; first: number; rpm: number[]; currentA: number[]; voltageV: number[]; tempC: (number | null)[] }
-  | { k: 'BATTERY'; cellsV: number[]; packV: number | null; tempC: number | null; currentA: number | null; remainingPct: number | null; faults: number }
-  | { k: 'SENSORS'; present: number; enabled: number; health: number; dropRatePct: number; packV: number; currentA: number | null }
+  | { k: 'BATTERY'; /** Battery monitor instance; several packs or monitors report separately. */ id?: number; cellsV: number[]; packV: number | null; tempC: number | null; currentA: number | null; remainingPct: number | null; faults: number }
+  | { k: 'SENSORS'; present: number; enabled: number; health: number; dropRatePct: number; packV: number | null; currentA: number | null }
   | { k: 'NAV'; source: 'EKF' | 'ESTIMATOR'; velocity: number; posHoriz: number; posVert: number; compass: number; flags: number }
   | { k: 'POWER'; vccV: number; servoV: number; flags: number }
   | { k: 'VERSION'; major: number; minor: number; patch: number; type: number; board: number; git: string }
@@ -69,24 +69,28 @@ export function decodeHealth(f: MavFrame): HealthMsg | null {
       return { k: 'ESC', first: p.getUint8(56), rpm, currentA, voltageV, tempC: [null, null, null, null] };
     }
     case 147: {
-      const raw: number[] = [];
-      for (let i = 0; i < 10; i++) raw.push(p.getUint16(10 + i * 2, true));
+      const main: number[] = [];
+      for (let i = 0; i < 10; i++) main.push(p.getUint16(10 + i * 2, true));
+      const raw = main.slice();
       for (let i = 0; i < 4; i++) { const v = p.getUint16(41 + i * 2, true); if (v !== 0) raw.push(v); } // voltages_ext: 0 = unused
       const used = raw.filter(v => v !== NO_CELL && v !== 0);
-      // One entry means the pack voltage, not a cell (MAVLink: "if cells are unknown, fill cell 0 with the total").
-      const packOnly = used.length === 1 && used[0] > 5000;
-      const cellsV = packOnly ? [] : used.map(v => v / 1000);
+      let cellsV: number[] = [], packV: number | null = null;
+      if (main[0] === NO_CELL - 1) {
+        // No cell readings and a pack over 65.534 V: cell 0 holds 65534 and the rest carries into cell 1, 2, … (MAVLink BATTERY_STATUS.voltages).
+        let mv = 0; for (const v of main) { if (v === NO_CELL || v === 0) break; mv += v; }
+        packV = mv / 1000;
+      } else if (used.length === 1 && used[0] > 5000) packV = used[0] / 1000; // one entry is the pack, not a cell ("if cells are unknown, fill cell 0 with the total")
+      else { cellsV = used.map(v => v / 1000); packV = cellsV.length ? cellsV.reduce((s, v) => s + v, 0) : null; }
       const t = p.getInt16(8, true), c = p.getInt16(30, true), rem = p.getInt8(35);
       return {
-        k: 'BATTERY', cellsV,
-        packV: packOnly ? used[0] / 1000 : cellsV.length ? cellsV.reduce((s, v) => s + v, 0) : null,
+        k: 'BATTERY', id: p.getUint8(32), cellsV, packV,
         tempC: t === 0x7fff ? null : t / 100, currentA: c === -1 ? null : c / 100, remainingPct: rem < 0 ? null : rem,
         faults: p.getUint32(50, true),
       };
     }
     case 1: {
-      const c = p.getInt16(16, true);
-      return { k: 'SENSORS', present: p.getUint32(0, true), enabled: p.getUint32(4, true), health: p.getUint32(8, true), dropRatePct: p.getUint16(18, true) / 100, packV: p.getUint16(14, true) / 1000, currentA: c === -1 ? null : c / 100 };
+      const c = p.getInt16(16, true), mv = p.getUint16(14, true);
+      return { k: 'SENSORS', present: p.getUint32(0, true), enabled: p.getUint32(4, true), health: p.getUint32(8, true), dropRatePct: p.getUint16(18, true) / 100, packV: mv === NO_CELL ? null : mv / 1000, currentA: c === -1 ? null : c / 100 }; // UINT16_MAX: voltage not sent
     }
     case 193:
       return { k: 'NAV', source: 'EKF', velocity: p.getFloat32(0, true), posHoriz: p.getFloat32(4, true), posVert: p.getFloat32(8, true), compass: p.getFloat32(12, true), flags: p.getUint16(20, true) };
