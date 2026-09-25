@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  planSurvey, gapFillLines, CoverageGrid, fromLatLon, toLatLon, CAMERAS,
-  type SurveyParams, type SurveyPlan, type Leg, type Pt, type GeoOrigin,
+  planSurvey, gapFillLines, CoverageGrid, fromLatLon, projectOnSegment, polygonArea, CAMERAS,
+  type SurveyParams, type SurveyPlan, type Leg, type Pt, type GeoOrigin, type ItemRole, type ResumePoint, type FlightLine,
 } from '../survey/plan';
-import { SITE, structureAt } from '../survey/site';
-import { modeName } from '../link/mavlink';
+import { DEMO_SITE, type SurveySite } from '../survey/boundary';
+import { modeName, type Telemetry } from '../link/mavlink';
 
 /**
  * Site survey mission: one mapping aircraft flying a planned capture pattern.
@@ -15,9 +15,13 @@ import { modeName } from '../link/mavlink';
  * Gusts raise vibration and blur photos; a low battery flies home, swaps, and
  * resumes from where it left the line — the way real multi-battery surveys run.
  *
- * On a real link the aircraft's position comes from telemetry. Photos come from
- * the autopilot's CAMERA_FEEDBACK when the camera reports them, otherwise they
- * are estimated from distance flown in AUTO at survey height.
+ * On a real link the aircraft's position comes from telemetry and the phase,
+ * line and progress come from the mission item the autopilot is flying
+ * (MISSION_CURRENT, mapped back onto the plan by the item roles the dashboard
+ * registers after upload). Photos come from whatever the aircraft reports:
+ * ArduPilot's CAMERA_FEEDBACK, PX4's CAMERA_TRIGGER or a MAVLink camera's
+ * CAMERA_IMAGE_CAPTURED; with none of those they are estimated by distance
+ * flown while the camera trigger is on, and marked as estimated.
  */
 
 export type Phase = 'READY' | 'TAKEOFF' | 'TRANSIT' | 'CAPTURING' | 'PAUSED' | 'RETURNING' | 'LANDING' | 'SWAP' | 'HELD' | 'COMPLETE';
@@ -32,14 +36,24 @@ export interface SurveyAircraft {
   history: { vibration: number[]; wind: number[]; speed: number[] };
 }
 
-export interface Photo { id: number; x: number; y: number; altM: number; headingDeg: number; pitchDeg: number; t: number; line: number; ok: boolean; reason?: 'Blur' | 'Exposure' }
+export interface Photo { id: number; x: number; y: number; altM: number; headingDeg: number; pitchDeg: number; t: number; line: number; ok: boolean; reason?: 'Blur' | 'Exposure' | 'Capture failed'; /** Position estimated (no photo report from the aircraft); use the image's own EXIF. */ est?: boolean }
+
+/** Live telemetry the survey reads (a subset of the link's). */
+export type LiveTelemetry = Pick<Telemetry, 'lat' | 'lon' | 'altRelM' | 'headingDeg' | 'groundspeedMps' | 'batteryPct' | 'voltageV' | 'currentA' | 'armed' | 'customMode' | 'autopilot' | 'radioRssi' | 'photoLog' | 'photoSource' | 'missionCurrent' | 'home' | 'windMps'>;
 
 export interface SurveyEvent { id: string; ts: string; severity: 'INFO' | 'WARNING' | 'SUCCESS' | 'CRITICAL'; text: string }
 
 export const DEFAULT_PARAMS: SurveyParams = {
   pattern: 'GRID', altitudeM: 60, frontOverlap: 0.75, sideOverlap: 0.7, speedMps: 10, lineAngleDeg: 0, camera: 'MAVIC_3E',
-  orbit: { center: { x: structureAt(SITE.orbitTarget)!.x, y: structureAt(SITE.orbitTarget)!.y }, radiusM: 45 },
+  orbit: { center: DEMO_SITE.orbitCenter, radiusM: 45 },
 };
+
+const SITE_KEY = 'a1-survey-site';
+function savedSite(): SurveySite | null {
+  try { const j = JSON.parse(localStorage.getItem(SITE_KEY) ?? 'null'); return j && Array.isArray(j.boundary) && j.boundary.length >= 3 ? j : null; } catch { return null; }
+}
+/** Coverage cells: 5 m, coarser on very large sites so the grid stays small. */
+const cellFor = (boundary: Pt[]) => Math.max(5, Math.ceil(Math.sqrt(polygonArea(boundary)) / 200));
 
 const RESERVE_PCT = 27;
 const SWAP_S = 45;
@@ -48,24 +62,26 @@ const CLIMB = 5, DESCEND = 3;
 
 const dist = (a: Pt, b: Pt) => Math.hypot(b.x - a.x, b.y - a.y);
 
-function freshAircraft(): SurveyAircraft {
+function freshAircraft(home: Pt): SurveyAircraft {
   return {
-    x: SITE.home.x, y: SITE.home.y, altM: 0, headingDeg: 90, speedMps: 0,
+    x: home.x, y: home.y, altM: 0, headingDeg: 90, speedMps: 0,
     battery: 100, voltageV: 17.2, currentA: 0.6, tempC: 29, vibrationG: 0.02, windMps: 5.2, signalPct: 99,
     history: { vibration: Array(HIST).fill(0.02), wind: Array.from({ length: HIST }, () => 5 + Math.random()), speed: Array(HIST).fill(0) },
   };
 }
 
 export function useSurveyMission() {
-  const [params, setParamsState] = useState<SurveyParams>(DEFAULT_PARAMS);
-  const plan = useMemo(() => planSurvey(SITE.boundary, SITE.home, params), [params]);
+  const [site, setSiteState] = useState<SurveySite>(() => savedSite() ?? DEMO_SITE);
+  const siteRef = useRef(site); siteRef.current = site;
+  const [params, setParamsState] = useState<SurveyParams>(() => ({ ...DEFAULT_PARAMS, orbit: { ...DEFAULT_PARAMS.orbit, center: site.orbitCenter } }));
+  const plan = useMemo(() => planSurvey(site.boundary, site.home, params), [site, params]);
 
   // ---- mutable flight state (the 10 Hz loop works on refs, React gets snapshots) ----
   const planRef = useRef<SurveyPlan>(plan);
-  const gridRef = useRef(new CoverageGrid(SITE.boundary, 5));
+  const gridRef = useRef(new CoverageGrid(site.boundary, cellFor(site.boundary)));
   const legsRef = useRef<Leg[]>(plan.legs);
   const legRef = useRef({ index: 0, progressM: 0, sinceTriggerM: 0, onCapture: false });
-  const acRef = useRef<SurveyAircraft>(freshAircraft());
+  const acRef = useRef<SurveyAircraft>(freshAircraft(site.home));
   const phaseRef = useRef<Phase>('READY');
   const pausedFrom = useRef<Phase>('CAPTURING');
   const photosRef = useRef<Photo[]>([]);
@@ -76,7 +92,10 @@ export function useSurveyMission() {
   const flightS = useRef(0);
   const batteries = useRef(1);
   const refly = useRef(false);
-  const liveRef = useRef<{ origin: GeoOrigin; lastPos: Pt | null; since: number; reported: number; feedback: boolean } | null>(null);
+  const liveRef = useRef<{ lastPos: Pt | null; since: number; reported: number; lastMs: number } | null>(null);
+  /** The mission on the aircraft: what each item is for, and where MISSION_CURRENT's numbering starts. */
+  const liveMission = useRef<{ roles: ItemRole[]; seqOffset: number; kind: 'NEW' | 'RESUME' | 'REFLY'; lines: FlightLine[]; lastLine: number; lastAt: Pt | null; finished: boolean } | null>(null);
+  const [liveResume, setLiveResume] = useState<ResumePoint | null>(null);
 
   const [phase, setPhase] = useState<Phase>('READY');
   const [snap, setSnap] = useState(() => ({ ac: acRef.current, photos: 0, rejected: 0, version: 0, legIndex: 0, flightS: 0, batteries: 1 }));
@@ -110,7 +129,7 @@ export function useSurveyMission() {
       if (ph === 'COMPLETE') { gridRef.current.reset(); photosRef.current = []; }
       planRef.current = plan; legsRef.current = plan.legs; refly.current = false;
       legRef.current = { index: 0, progressM: 0, sinceTriggerM: 0, onCapture: false };
-      acRef.current = freshAircraft();
+      acRef.current = freshAircraft(siteRef.current.home);
       flightS.current = 0; batteries.current = 1; resumeRef.current = null; detourRef.current = null;
       go('TAKEOFF');
       const p = plan;
@@ -142,9 +161,10 @@ export function useSurveyMission() {
     if (phaseRef.current !== 'COMPLETE' || planRef.current.params.pattern === 'ORBIT') return 0;
     const fill = gapFillLines(gridRef.current, planRef.current);
     if (!fill.length) { log('SUCCESS', 'No weak patches — coverage is good everywhere'); return 0; }
-    const legs: Leg[] = []; let at = SITE.home;
+    const home = siteRef.current.home;
+    const legs: Leg[] = []; let at = home;
     fill.forEach((l, i) => { legs.push({ a: at, b: l.a, capture: false, line: 1000 + i }, { a: l.a, b: l.b, capture: true, line: 1000 + i }); at = l.b; });
-    legs.push({ a: at, b: SITE.home, capture: false, line: -1 });
+    legs.push({ a: at, b: home, capture: false, line: -1 });
     legsRef.current = legs; refly.current = true;
     legRef.current = { index: 0, progressM: 0, sinceTriggerM: 0, onCapture: false };
     if (acRef.current.battery < 50) { acRef.current = { ...acRef.current, battery: 100 }; batteries.current++; }
@@ -153,7 +173,8 @@ export function useSurveyMission() {
   }, [go, log]);
 
   const reset = useCallback(() => {
-    gridRef.current.reset(); photosRef.current = []; acRef.current = freshAircraft();
+    gridRef.current.reset(); photosRef.current = []; acRef.current = freshAircraft(siteRef.current.home);
+    liveMission.current = null; setLiveResume(null);
     legsRef.current = plan.legs; legRef.current = { index: 0, progressM: 0, sinceTriggerM: 0, onCapture: false };
     resumeRef.current = null; detourRef.current = null; flightS.current = 0; batteries.current = 1;
     go('READY'); log('INFO', 'Survey cleared');
@@ -186,50 +207,136 @@ export function useSurveyMission() {
     gridRef.current.addFootprint({ x: cx, y: cy }, headingRad, across, along);
   }, []);
 
+  // ---- sites ------------------------------------------------------------------
+  /** Survey a different site. Only on the ground: clears the capture and re-plans. */
+  const setSite = useCallback((next: SurveySite) => {
+    const ph = phaseRef.current;
+    if (ph !== 'READY' && ph !== 'COMPLETE' && ph !== 'HELD') return false;
+    siteRef.current = next; setSiteState(next);
+    gridRef.current = new CoverageGrid(next.boundary, cellFor(next.boundary));
+    photosRef.current = []; acRef.current = freshAircraft(next.home);
+    liveMission.current = null; setLiveResume(null); resumeRef.current = null;
+    setParamsState(p => ({ ...p, orbit: { ...p.orbit, center: next.orbitCenter } }));
+    try { if (next.kind === 'IMPORTED' || next.kind === 'WALKED') localStorage.setItem(SITE_KEY, JSON.stringify(next)); else localStorage.removeItem(SITE_KEY); } catch { /* storage unavailable */ }
+    go('READY'); log('INFO', `Site: ${next.name}`);
+    return true;
+  }, [go, log]);
+
   // ---- real aircraft --------------------------------------------------------
   /**
-   * Replace the simulated aircraft with telemetry. The first fix is taken as the
-   * home point, and the site is placed so home lands on SITE.home.
+   * After a mission upload the dashboard registers what each item is for, so
+   * MISSION_CURRENT reads as "capturing line 4" rather than "item 17".
    */
-  const applyLive = useCallback((t: {
-    lat: number; lon: number; altRelM: number; headingDeg: number; groundspeedMps: number; batteryPct: number; voltageV: number; currentA: number;
-    armed: boolean; customMode: number; autopilot: number; radioRssi: number;
-    photosReported: number; lastPhoto: { lat: number; lon: number; altRelM: number } | null;
-  }) => {
+  const setLiveMission = useCallback((roles: ItemRole[], seqOffset: number, kind: 'NEW' | 'RESUME' | 'REFLY' = 'NEW', lines?: FlightLine[]) => {
+    liveMission.current = { roles, seqOffset, kind, lines: lines ?? planRef.current.lines, lastLine: -1, lastAt: null, finished: false };
+    refly.current = kind === 'REFLY';
+    setLiveResume(null);
+    if (kind === 'NEW') { gridRef.current.reset(); photosRef.current = []; flightS.current = 0; batteries.current = 1; }
+    else batteries.current++;
+    log('INFO', kind === 'RESUME' ? 'Resume mission on the aircraft' : kind === 'REFLY' ? `Weak-patch mission on the aircraft: ${lines?.length ?? 0} passes` : `Mission on the aircraft: ${roles.length} items`);
+  }, [log]);
+  /** Extra passes over the weak patches of a finished capture (for a live re-fly mission). */
+  const gapLines = useCallback(() => gapFillLines(gridRef.current, planRef.current), []);
+
+  /** Legs of the plan by line, so the map and 3D view can show a live flight's progress. */
+  const legOfLine = useMemo(() => {
+    const capture = new Map<number, number>(), transit = new Map<number, number>();
+    plan.legs.forEach((g, i) => { if (g.line < 0) return; (g.capture ? capture : transit).set(g.line, i); });
+    return { capture, transit };
+  }, [plan]);
+
+  /** Replace the simulated aircraft with telemetry, in the site's own coordinates. */
+  const applyLive = useCallback((t: LiveTelemetry) => {
     if (!t.lat) return;
-    if (!liveRef.current) {
-      const origin = toLatLon({ lat: t.lat, lon: t.lon }, { x: -SITE.home.x, y: -SITE.home.y });
-      liveRef.current = { origin, lastPos: null, since: 0, reported: t.photosReported, feedback: false };
-    }
+    const S = siteRef.current, now = Date.now();
+    if (!liveRef.current) liveRef.current = { lastPos: null, since: 0, reported: t.photoLog.length ? t.photoLog[t.photoLog.length - 1].n : 0, lastMs: now };
     const L = liveRef.current;
-    const p = fromLatLon(L.origin, t.lat, t.lon);
+    const dtS = Math.min(1, (now - L.lastMs) / 1000); L.lastMs = now;
+    // Home: the autopilot's own home point once it reports one. Moving it re-plans (on the ground only).
+    const homeLL = t.home ?? (!t.armed ? { lat: t.lat, lon: t.lon } : null);
+    if (homeLL && S.kind !== 'DEMO' && phaseRef.current === 'READY') {
+      const h = fromLatLon(S.origin, homeLL.lat, homeLL.lon);
+      if (dist(h, S.home) > 1) { const next = { ...S, home: h }; siteRef.current = next; setSiteState(next); }
+    }
+    const p = fromLatLon(S.origin, t.lat, t.lon);
     const ac = acRef.current;
     acRef.current = {
       ...ac, x: p.x, y: p.y, altM: Math.max(0, t.altRelM), headingDeg: t.headingDeg, speedMps: t.groundspeedMps,
       battery: t.batteryPct >= 0 ? t.batteryPct : ac.battery, voltageV: t.voltageV || ac.voltageV, currentA: t.currentA || ac.currentA,
+      windMps: t.windMps >= 0 ? t.windMps : ac.windMps,
       signalPct: t.radioRssi ? Math.round((t.radioRssi / 254) * 100) : ac.signalPct,
     };
+    if (t.armed && t.altRelM > 0.2) flightS.current += dtS;
     const hRad = ((t.headingDeg - 90) * Math.PI) / 180;
-    if (t.photosReported > L.reported && t.lastPhoto) {
-      // The autopilot reports every photo it takes (CAMERA_FEEDBACK): use its exact position.
-      L.feedback = true; L.reported = t.photosReported;
-      const at = fromLatLon(L.origin, t.lastPhoto.lat, t.lastPhoto.lon);
-      const save = acRef.current; acRef.current = { ...save, x: at.x, y: at.y, altM: t.lastPhoto.altRelM };
-      takePhoto(hRad, -1, false); acRef.current = save;
-    } else if (!L.feedback) {
-      // No feedback from this camera: estimate by distance flown in AUTO at survey height,
-      // which is what the trigger-distance command makes the autopilot do.
-      const P = planRef.current;
-      const surveying = t.armed && modeName(t) === 'AUTO' && t.altRelM > P.params.altitudeM * 0.7;
-      if (surveying && L.lastPos) {
-        L.since += dist(L.lastPos, p);
-        if (L.since >= P.triggerM) { L.since = 0; takePhoto(hRad, -1, false); }
+    const P = planRef.current;
+
+    // ---- phase and progress from the mission item being flown ----
+    const M = liveMission.current;
+    const mode = modeName(t);
+    const idx = M ? t.missionCurrent - M.seqOffset : -1;
+    const role = M && idx >= 0 && idx < M.roles.length ? M.roles[idx] : null;
+    const wasFlying = !['READY', 'COMPLETE', 'HELD'].includes(phaseRef.current);
+    const interrupted = () => {
+      // Left the mission before its end (battery failsafe, RTL, a landing): remember where, to resume from there.
+      if (M && !M.finished && M.lastLine >= 0 && !liveResume) {
+        if (M.kind === 'REFLY') return; // a short re-fly is simply flown again
+        const r = { line: M.lastLine, at: M.lastAt ?? M.lines[M.lastLine].a };
+        setLiveResume(r); log('WARNING', `Survey interrupted on line ${r.line + 1}; it can resume from that point`);
       }
+    };
+    let ph: Phase = phaseRef.current;
+    if (!t.armed) {
+      ph = M?.finished ? 'COMPLETE' : liveResume || (M && M.lastLine >= 0) ? 'HELD' : wasFlying ? 'HELD' : 'READY';
+      if (ph === 'HELD') interrupted();
+    } else if (mode === 'AUTO' && role) {
+      if (role.kind === 'TAKEOFF' || (role.kind === 'SETUP' && idx < 4)) ph = 'TAKEOFF';
+      else if (role.kind === 'LINE_START') { ph = 'TRANSIT'; M!.lastLine = role.line; M!.lastAt = M!.lines[role.line]?.a ?? null; }
+      else if (role.kind === 'LINE_END' || role.kind === 'TRIGGER_ON') {
+        ph = 'CAPTURING'; M!.lastLine = role.line;
+        const l = M!.lines[role.line]; if (l) M!.lastAt = projectOnSegment(p, l.a, l.b);
+      } else if (role.kind === 'RTL') { ph = 'RETURNING'; M!.finished = true; }
+      else ph = 'TRANSIT';
+    } else if (mode === 'RTL' || mode === 'LAND') {
+      ph = mode === 'LAND' || dist(p, S.home) < 5 ? 'LANDING' : 'RETURNING';
+      interrupted();
+    } else if (mode === 'TAKEOFF') ph = 'TAKEOFF';
+    // A hold only counts as a pause when it interrupts the mission in the air (Guided is also how ArduPilot arms for a start).
+    else if ((mode === 'LOITER' || mode === 'POSITION' || mode === 'GUIDED') && t.altRelM > 2 && ['TRANSIT', 'CAPTURING', 'PAUSED'].includes(phaseRef.current)) ph = 'PAUSED';
+    if (ph !== phaseRef.current) {
+      go(ph);
+      const say: Partial<Record<Phase, string>> = { TAKEOFF: 'Taking off', RETURNING: 'Returning home', LANDING: 'Landing', PAUSED: 'Holding position', COMPLETE: 'Survey complete: landed', HELD: 'Landed with the survey unfinished' };
+      if (ph === 'CAPTURING' && M) log('INFO', M.kind === 'REFLY' ? `Weak patch ${M.lastLine + 1} of ${M.lines.length}` : P.params.pattern === 'ORBIT' ? 'Orbit: capturing' : `Line ${M.lastLine + 1} of ${P.lines.length}`);
+      else if (say[ph]) log(ph === 'COMPLETE' ? 'SUCCESS' : ph === 'RETURNING' && !M?.finished ? 'WARNING' : 'INFO', say[ph]!);
+    }
+    // Where on the plan: drives the flown/remaining path on the map and the 3D view.
+    if (role && role.line >= 0 && M?.kind !== 'REFLY') {
+      const ci = legOfLine.capture.get(role.line), ti = legOfLine.transit.get(role.line);
+      const onLine = role.kind === 'LINE_END' || role.kind === 'TRIGGER_ON' || role.kind === 'TRIGGER_OFF';
+      const li = onLine ? ci : ti ?? ci;
+      if (li !== undefined) { const g = P.legs[li]; legRef.current = { ...legRef.current, index: li, progressM: onLine ? dist(g.a, projectOnSegment(p, g.a, g.b)) : 0, onCapture: onLine }; }
+    } else if (role?.kind === 'RTL') legRef.current = { ...legRef.current, index: P.legs.length - 1, progressM: 0, onCapture: false };
+
+    // ---- photos ----
+    const fresh = t.photoLog.filter(ph => ph.n > L.reported);
+    if (fresh.length) {
+      for (const f of fresh) {
+        const at = fromLatLon(S.origin, f.lat, f.lon);
+        const save = acRef.current; acRef.current = { ...save, x: at.x, y: at.y, altM: f.altRelM || save.altM };
+        takePhoto(hRad, M?.lastLine ?? -1, false);
+        const last = photosRef.current[photosRef.current.length - 1];
+        if (!f.ok) { last.ok = false; last.reason = 'Capture failed'; }
+        acRef.current = save;
+      }
+      L.reported = fresh[fresh.length - 1].n;
+    } else if (t.photoSource === 'NONE' && phaseRef.current === 'CAPTURING' && L.lastPos) {
+      // Nothing reports photos on this aircraft: estimate them by distance flown with the trigger on.
+      L.since += dist(L.lastPos, p);
+      if (L.since >= P.triggerM) { L.since = 0; takePhoto(hRad, M?.lastLine ?? -1, false); photosRef.current[photosRef.current.length - 1].est = true; }
     }
     L.lastPos = p;
-  }, [takePhoto]);
+  }, [takePhoto, go, log, legOfLine, liveResume]);
   const releaseLive = useCallback(() => { liveRef.current = null; }, []);
-  const origin: GeoOrigin = liveRef.current?.origin ?? SITE.origin;
+  const origin: GeoOrigin = site.origin;
 
   // ---- the 10 Hz loop -------------------------------------------------------
   useEffect(() => {
@@ -321,7 +428,7 @@ export function useSurveyMission() {
           }
         } else if (ph === 'RETURNING') {
           ac.speedMps += (12 - ac.speedMps) * Math.min(1, 0.3 * k);
-          if (moveAlong(SITE.home, ac.speedMps)) go('LANDING');
+          if (moveAlong(siteRef.current.home, ac.speedMps)) go('LANDING');
         } else if (ph === 'LANDING') {
           ac.speedMps = 0; ac.altM = Math.max(0, ac.altM - DESCEND * dt);
           if (ac.altM <= 0) {
@@ -346,7 +453,7 @@ export function useSurveyMission() {
         ac.voltageV = 13.2 + (ac.battery / 100) * 3.9 - (airborne ? ac.currentA * 0.012 : 0);
         ac.tempC += ((airborne ? 38 + ac.currentA * 0.2 : 29) - ac.tempC) * 0.01 * k;
         ac.vibrationG = airborne ? Math.max(0.05, 0.26 + ac.speedMps * 0.018 + ac.windMps * 0.016 + (gust ? 0.16 : 0) + (Math.random() - 0.5) * 0.06) : 0.02;
-        const range = dist(ac, SITE.home);
+        const range = dist(ac, siteRef.current.home);
         ac.signalPct = Math.max(40, Math.min(99, 99 - range / 18 + (Math.random() - 0.5) * 2));
         if (airborne) flightS.current += dt;
         acRef.current = ac;
@@ -390,6 +497,7 @@ export function useSurveyMission() {
     legs, legIndex: L.index, legProgressM: L.progressM, currentLine, linesDone,
     flightS: snap.flightS, remainingS, batteriesUsed: snap.batteries,
     simSpeed, setSimSpeed, events, live: !!liveRef.current, origin,
+    site, setSite, setLiveMission, liveResume, clearLiveResume: () => setLiveResume(null), gapLines,
     camera: CAMERAS[(active ? planRef.current : plan).params.camera],
     start, pause, returnHome, reflyGaps, reset, applyLive, releaseLive,
     isRefly: refly.current,

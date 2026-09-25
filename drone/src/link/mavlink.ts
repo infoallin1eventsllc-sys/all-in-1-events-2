@@ -36,7 +36,12 @@ const CRC_EXTRA: Record<number, number> = {
   86: 5,    // SET_POSITION_TARGET_GLOBAL_INT
   75: 158,  // COMMAND_INT
   158: 134, // MOUNT_STATUS (ArduPilot, legacy gimbal report)
-  180: 52,  // CAMERA_FEEDBACK (ArduPilot: one per photo taken)
+  180: 52,  // CAMERA_FEEDBACK (ArduPilot: one per photo taken, with its position)
+  112: 174, // CAMERA_TRIGGER (PX4: one per trigger pulse, no position)
+  263: 133, // CAMERA_IMAGE_CAPTURED (MAVLink camera: one per image, with position and result)
+  168: 1,   // WIND (ArduPilot estimate)
+  242: 104, // HOME_POSITION
+  162: 189, // FENCE_STATUS
   285: 137, // GIMBAL_DEVICE_ATTITUDE_STATUS
   // Health (decoded in src/diagnostics/decode.ts)
   36: 222,    // SERVO_OUTPUT_RAW
@@ -125,9 +130,23 @@ export interface Telemetry {
   lastAck: { command: number; result: number; atMs: number } | null;
   /** Gimbal pointing reported by the aircraft (NaN until a gimbal reports). */
   gimbalPitchDeg: number; gimbalYawDeg: number;
-  /** Last photo the autopilot reports taking (CAMERA_FEEDBACK), and how many it has reported. */
+  /** Last photo the autopilot reports taking, and how many it has reported. */
   lastPhoto: { idx: number; lat: number; lon: number; altRelM: number; atMs: number } | null;
   photosReported: number;
+  /**
+   * Every reported photo, newest last (the last 64). Readers keep their own count
+   * and take the ones past it, so several photos arriving between two UI updates
+   * are never lost. `ok` false: the camera reported a failed capture.
+   */
+  photoLog: { n: number; lat: number; lon: number; altRelM: number; atMs: number; ok: boolean }[];
+  /** Which message the photos come from. The first source heard is kept, so a camera and the autopilot reporting the same photo are not counted twice. */
+  photoSource: 'NONE' | 'FEEDBACK' | 'TRIGGER' | 'CAMERA';
+  /** Wind estimate (ArduPilot WIND); speed −1 until reported. Direction the wind comes from, degrees. */
+  windMps: number; windFromDeg: number;
+  /** Home the autopilot will return to (HOME_POSITION), null until reported. */
+  home: { lat: number; lon: number; altMslM: number } | null;
+  /** Geofence breached right now (FENCE_STATUS). */
+  fenceBreached: boolean;
 }
 
 export const EMPTY_TELEMETRY: Telemetry = {
@@ -137,7 +156,17 @@ export const EMPTY_TELEMETRY: Telemetry = {
   batteryPct: -1, voltageV: 0, currentA: 0, fixType: 0, satellites: 0, hdop: 99,
   radioRssi: 0, radioNoise: 0, radioRemRssi: 0, statusText: '', msgsPerSec: 0, missionCurrent: 0, lastAck: null,
   gimbalPitchDeg: NaN, gimbalYawDeg: NaN, lastPhoto: null, photosReported: 0,
+  photoLog: [], photoSource: 'NONE', windMps: -1, windFromDeg: 0, home: null, fenceBreached: false,
 };
+
+function logPhoto(t: Telemetry, source: Telemetry['photoSource'], lat: number, lon: number, altRelM: number, ok: boolean, idx: number) {
+  if (t.photoSource === 'NONE') t.photoSource = source;
+  if (t.photoSource !== source) return;
+  t.photosReported++;
+  t.lastPhoto = { idx, lat, lon, altRelM, atMs: Date.now() };
+  // Replace the array rather than push: snapshots copied with {...t} must not share a growing list.
+  t.photoLog = [...t.photoLog.slice(-63), { n: t.photosReported, lat, lon, altRelM, atMs: Date.now(), ok }];
+}
 
 const R2D = 180 / Math.PI;
 
@@ -189,9 +218,23 @@ export function decodeInto(t: Telemetry, f: MavFrame): Telemetry {
     case 158: // MOUNT_STATUS: pitch, roll, yaw in centidegrees
       t.gimbalPitchDeg = p.getInt32(0, true) / 100; t.gimbalYawDeg = p.getInt32(8, true) / 100;
       break;
-    case 180: // CAMERA_FEEDBACK
-      t.lastPhoto = { idx: p.getUint16(40, true), lat: p.getInt32(8, true) / 1e7, lon: p.getInt32(12, true) / 1e7, altRelM: p.getFloat32(20, true), atMs: Date.now() };
-      t.photosReported++;
+    case 180: // CAMERA_FEEDBACK (ArduPilot): where the aircraft was when the shutter fired
+      logPhoto(t, 'FEEDBACK', p.getInt32(8, true) / 1e7, p.getInt32(12, true) / 1e7, p.getFloat32(20, true), true, p.getUint16(40, true));
+      break;
+    case 112: // CAMERA_TRIGGER (PX4): a trigger pulse; the position is the aircraft's latest
+      logPhoto(t, 'TRIGGER', t.lat, t.lon, t.altRelM, true, p.getUint32(8, true));
+      break;
+    case 263: // CAMERA_IMAGE_CAPTURED (MAVLink camera): position in 1e7 degrees, altitude in mm, and a result
+      logPhoto(t, 'CAMERA', p.getInt32(12, true) / 1e7, p.getInt32(16, true) / 1e7, p.getInt32(24, true) / 1000, p.getInt8(49) === 1, p.getInt32(44, true));
+      break;
+    case 168: // WIND: direction the wind comes from, speed
+      t.windFromDeg = (p.getFloat32(0, true) + 360) % 360; t.windMps = p.getFloat32(4, true);
+      break;
+    case 242: // HOME_POSITION
+      t.home = { lat: p.getInt32(0, true) / 1e7, lon: p.getInt32(4, true) / 1e7, altMslM: p.getInt32(8, true) / 1000 };
+      break;
+    case 162: // FENCE_STATUS
+      t.fenceBreached = p.getUint8(7) !== 0;
       break;
     case 253: { // STATUSTEXT
       let s = ''; for (let i = 1; i < 51; i++) { const c = p.getUint8(i); if (!c) break; s += String.fromCharCode(c); }
@@ -208,17 +251,20 @@ export function decodeInto(t: Telemetry, f: MavFrame): Telemetry {
 let seq = 0;
 const GCS_SYS = 255, GCS_COMP = 190;
 
-function frame(msgId: number, payload: Uint8Array): Uint8Array {
+function frame(msgId: number, payload: Uint8Array, sys = GCS_SYS, comp = GCS_COMP): Uint8Array {
   // Trim trailing zeros (v2), keep at least one byte.
   let len = payload.length; while (len > 1 && payload[len - 1] === 0) len--;
   const out = new Uint8Array(12 + len);
-  out[0] = 0xfd; out[1] = len; out[2] = 0; out[3] = 0; out[4] = seq = (seq + 1) & 0xff; out[5] = GCS_SYS; out[6] = GCS_COMP;
+  out[0] = 0xfd; out[1] = len; out[2] = 0; out[3] = 0; out[4] = seq = (seq + 1) & 0xff; out[5] = sys; out[6] = comp;
   out[7] = msgId & 0xff; out[8] = (msgId >> 8) & 0xff; out[9] = (msgId >> 16) & 0xff;
   out.set(payload.subarray(0, len), 10);
   let crc = x25(out, 1, 10 + len); crc = x25Byte(crc, CRC_EXTRA[msgId] ?? 0);
   out[10 + len] = crc & 0xff; out[11 + len] = crc >> 8;
   return out;
 }
+
+/** Any message, framed as if from `sys`/`comp` (tests use it to play the autopilot's side). */
+export function encodeRaw(msgId: number, payload: Uint8Array, sys = GCS_SYS, comp = GCS_COMP): Uint8Array { return frame(msgId, payload, sys, comp); }
 
 /** GCS heartbeat — most autopilots want to see one before they'll stream. */
 export function encodeHeartbeat(): Uint8Array {
@@ -230,7 +276,7 @@ export function encodeHeartbeat(): Uint8Array {
 export const MAV_CMD = {
   NAV_WAYPOINT: 16, RETURN_TO_LAUNCH: 20, LAND: 21, TAKEOFF: 22, DO_SET_MODE: 176, COMPONENT_ARM_DISARM: 400, SET_MESSAGE_INTERVAL: 511, REQUEST_MESSAGE: 512,
   DO_SET_RELAY: 181, DO_REPOSITION: 192, DO_MOUNT_CONTROL: 205, SET_CAMERA_ZOOM: 531, SET_CAMERA_SOURCE: 534,
-  DO_GIMBAL_MANAGER_PITCHYAW: 1000, IMAGE_START_CAPTURE: 2000,
+  DO_GIMBAL_MANAGER_PITCHYAW: 1000, IMAGE_START_CAPTURE: 2000, MISSION_START: 300, DO_FENCE_ENABLE: 207,
 } as const;
 export const MAV_RESULT = { ACCEPTED: 0, TEMPORARILY_REJECTED: 1, DENIED: 2, UNSUPPORTED: 3, FAILED: 4, IN_PROGRESS: 5 } as const;
 /** ArduCopter custom modes (the reference autopilot for this platform). */
@@ -276,23 +322,26 @@ export function encodeGotoGlobal(lat: number, lon: number, altRelM: number, targ
  */
 export interface MissionItem { lat: number; lon: number; altRelM: number; holdS?: number; command?: number; params?: [number, number, number, number]; frame?: number }
 
-export function encodeMissionCount(count: number, targetSys = 1, targetComp = 1): Uint8Array {
+/** `missionType`: 0 mission, 1 geofence, 2 rally points. */
+export function encodeMissionCount(count: number, targetSys = 1, targetComp = 1, missionType = 0): Uint8Array {
   const p = new Uint8Array(5); const v = new DataView(p.buffer);
-  v.setUint16(0, count, true); p[2] = targetSys; p[3] = targetComp; p[4] = 0;
+  v.setUint16(0, count, true); p[2] = targetSys; p[3] = targetComp; p[4] = missionType;
   return frame(44, p);
 }
-export function encodeMissionClearAll(targetSys = 1, targetComp = 1): Uint8Array {
-  const p = new Uint8Array(3); p[0] = targetSys; p[1] = targetComp; p[2] = 0;
+export function encodeMissionClearAll(targetSys = 1, targetComp = 1, missionType = 0): Uint8Array {
+  const p = new Uint8Array(3); p[0] = targetSys; p[1] = targetComp; p[2] = missionType;
   return frame(45, p);
 }
+/** Mission items carry the plain frame numbers; on the wire MISSION_ITEM_INT uses the _INT variants. */
+const INT_FRAME: Record<number, number> = { 0: 5 /* GLOBAL → GLOBAL_INT */, 3: 6 /* GLOBAL_RELATIVE_ALT → _INT */, 10: 11 /* GLOBAL_TERRAIN_ALT → _INT */ };
 /** MISSION_ITEM_INT; seq 0 is the home item ArduPilot expects, so callers offset by one. */
-export function encodeMissionItemInt(seq: number, item: MissionItem, current = 0, targetSys = 1, targetComp = 1): Uint8Array {
+export function encodeMissionItemInt(seq: number, item: MissionItem, current = 0, targetSys = 1, targetComp = 1, missionType = 0): Uint8Array {
   const p = new Uint8Array(38); const v = new DataView(p.buffer);
   const pr = item.params;
   v.setFloat32(0, pr ? pr[0] : item.holdS ?? 0, true); v.setFloat32(4, pr ? pr[1] : 0, true); v.setFloat32(8, pr ? pr[2] : 0, true); v.setFloat32(12, pr ? pr[3] : NaN, true);
   v.setInt32(16, Math.round(item.lat * 1e7), true); v.setInt32(20, Math.round(item.lon * 1e7), true); v.setFloat32(24, item.altRelM, true);
   v.setUint16(28, seq, true); v.setUint16(30, item.command ?? MAV_CMD.NAV_WAYPOINT, true);
-  p[32] = targetSys; p[33] = targetComp; p[34] = item.frame === 2 ? 2 : MAV_FRAME_GLOBAL_RELATIVE_ALT_INT; p[35] = current; p[36] = 1; p[37] = 0;
+  p[32] = targetSys; p[33] = targetComp; p[34] = item.frame === undefined ? MAV_FRAME_GLOBAL_RELATIVE_ALT_INT : INT_FRAME[item.frame] ?? item.frame; p[35] = current; p[36] = 1; p[37] = missionType;
   return frame(73, p);
 }
 export function encodeMissionAck(type = 0, targetSys = 1, targetComp = 1): Uint8Array {

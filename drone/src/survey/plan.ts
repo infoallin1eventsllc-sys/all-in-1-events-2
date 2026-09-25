@@ -31,6 +31,10 @@ export const CAMERAS = {
   MAVIC_3E: { name: 'Mavic 3 Enterprise', sensorWmm: 17.3, sensorHmm: 13.0, focalMm: 12.29, imageWpx: 5280, imageHpx: 3956, minIntervalS: 0.7 },
   /** Sony a6100 with a 16 mm lens on a Pixhawk airframe, triggered by the autopilot. */
   SONY_A6100: { name: 'Pixhawk + Sony a6100', sensorWmm: 23.5, sensorHmm: 15.6, focalMm: 16, imageWpx: 6000, imageHpx: 4000, minIntervalS: 1.0 },
+  /** Sony RX100 VII at its wide end: the light 1" mapping camera on small Pixhawk and PX4 quads. */
+  SONY_RX100: { name: 'Pixhawk + Sony RX100 VII', sensorWmm: 13.2, sensorHmm: 8.8, focalMm: 8.8, imageWpx: 5472, imageHpx: 3648, minIntervalS: 1.0 },
+  /** Sony a7R IV with a 35 mm lens: full-frame, 61 MP, for survey-grade detail from higher up. */
+  SONY_A7R4: { name: 'Pixhawk + Sony a7R IV 35 mm', sensorWmm: 35.7, sensorHmm: 23.8, focalMm: 35, imageWpx: 9504, imageHpx: 6336, minIntervalS: 1.2 },
 } satisfies Record<string, Camera>;
 export type CameraId = keyof typeof CAMERAS;
 
@@ -338,60 +342,147 @@ export function fromLatLon(o: GeoOrigin, lat: number, lon: number): Pt {
 export const SURVEY_CMD = {
   NAV_WAYPOINT: 16, NAV_RETURN_TO_LAUNCH: 20, NAV_TAKEOFF: 22,
   DO_CHANGE_SPEED: 178, DO_SET_ROI_LOCATION: 195, DO_SET_ROI_NONE: 197, DO_MOUNT_CONTROL: 205, DO_SET_CAM_TRIGG_DIST: 206,
+  DO_GIMBAL_MANAGER_PITCHYAW: 1000, NAV_FENCE_POLYGON_VERTEX_INCLUSION: 5001,
 } as const;
 /** MAV_FRAME_MISSION: frame for DO_ commands that carry no position. */
 export const FRAME_MISSION = 2;
+export const FRAME_GLOBAL = 0;
 export const FRAME_GLOBAL_RELATIVE_ALT = 3;
+/** The most mission items the smallest common flight controllers hold (ArduPilot on F4 boards stores about 700). */
+export const MAX_MISSION_ITEMS = 700;
 
 export interface SurveyMissionItem { command: number; lat: number; lon: number; altRelM: number; params: [number, number, number, number]; frame: number }
+/** What each item is for, so live MISSION_CURRENT maps back onto the plan. `line` is the plan line (or orbit segment), −1 for none. */
+export interface ItemRole { kind: 'TAKEOFF' | 'SETUP' | 'LINE_START' | 'LINE_END' | 'TRIGGER_ON' | 'TRIGGER_OFF' | 'RTL'; line: number }
+/** Where to pick a survey up again: a line and a point on it (map metres). */
+export interface ResumePoint { line: number; at: Pt }
+
+export type MissionAutopilot = 'ARDUPILOT' | 'PX4' | 'UNKNOWN';
 
 /**
- * The mission the autopilot flies (ArduCopter conventions; the link adds the home item).
+ * The mission the autopilot flies, with what each item is for.
  *
- *   TAKEOFF → speed → gimbal pitch → for each line: waypoint at start, camera
- *   trigger on (every triggerM, one photo immediately), waypoint at end, trigger
- *   off (no photos in the turns) → RTL.
+ *   TAKEOFF (at home) → speed → gimbal pitch → for each line: waypoint at its start,
+ *   camera trigger on (every triggerM, one photo straight away), waypoint at its end,
+ *   trigger off (no photos in the turns) → RTL.
  * An orbit locks the camera on the structure with DO_SET_ROI_LOCATION instead.
+ *
+ * Autopilot differences handled here:
+ *   gimbal   ArduPilot takes DO_MOUNT_CONTROL on every version; PX4 1.13+ flies the
+ *            gimbal-v2 DO_GIMBAL_MANAGER_PITCHYAW (mount control is deprecated there).
+ *   takeoff  carries home's position: ArduCopter ignores it, PX4 validates it.
+ * `from` resumes a survey interrupted by a battery swap: the same setup, then the
+ * interrupted line from where it stopped, then the rest.
  */
-export function missionItems(plan: SurveyPlan, origin: GeoOrigin): SurveyMissionItem[] {
+export function surveyMission(plan: SurveyPlan, origin: GeoOrigin, opts: { autopilot?: MissionAutopilot; home?: Pt; from?: ResumePoint | null } = {}): { items: SurveyMissionItem[]; roles: ItemRole[] } {
   const alt = plan.params.altitudeM;
+  const px4 = opts.autopilot === 'PX4';
+  const items: SurveyMissionItem[] = [], roles: ItemRole[] = [];
+  const put = (it: SurveyMissionItem, role: ItemRole) => { items.push(it); roles.push(role); };
   const cmd = (command: number, params: [number, number, number, number], z = 0): SurveyMissionItem => ({ command, lat: 0, lon: 0, altRelM: z, params, frame: FRAME_MISSION });
   const wp = (p: Pt): SurveyMissionItem => ({ command: SURVEY_CMD.NAV_WAYPOINT, ...toLatLon(origin, p), altRelM: alt, params: [0, 0, 0, NaN], frame: FRAME_GLOBAL_RELATIVE_ALT });
-  const items: SurveyMissionItem[] = [
-    { command: SURVEY_CMD.NAV_TAKEOFF, lat: 0, lon: 0, altRelM: alt, params: [0, 0, 0, NaN], frame: FRAME_GLOBAL_RELATIVE_ALT },
-    cmd(SURVEY_CMD.DO_CHANGE_SPEED, [1, Math.round(plan.speedMps * 10) / 10, -1, 0]),
-    // DO_MOUNT_CONTROL: param1 pitch, param7 (z) mount mode 2 = MAVLink targeting.
-    cmd(SURVEY_CMD.DO_MOUNT_CONTROL, [plan.gimbalPitchDeg, 0, 0, 0], 2),
-  ];
+  const setup = (it: SurveyMissionItem) => put(it, { kind: 'SETUP', line: -1 });
+  const home = opts.home ? toLatLon(origin, opts.home) : { lat: 0, lon: 0 };
+  put({ command: SURVEY_CMD.NAV_TAKEOFF, ...home, altRelM: alt, params: [0, 0, 0, NaN], frame: FRAME_GLOBAL_RELATIVE_ALT }, { kind: 'TAKEOFF', line: -1 });
+  setup(cmd(SURVEY_CMD.DO_CHANGE_SPEED, [1, Math.round(plan.speedMps * 10) / 10, -1, 0]));
+  // Gimbal pitch. Mount control: param1 pitch, param7 (z) mount mode 2 = MAVLink targeting.
+  // Gimbal v2: param1 pitch, param2 yaw (0 = straight ahead), rates unset, flags 0 (yaw follows the aircraft), gimbal 0 = all.
+  setup(px4 ? cmd(SURVEY_CMD.DO_GIMBAL_MANAGER_PITCHYAW, [plan.gimbalPitchDeg, 0, NaN, NaN], 0) : cmd(SURVEY_CMD.DO_MOUNT_CONTROL, [plan.gimbalPitchDeg, 0, 0, 0], 2));
   const trig = Math.round(plan.triggerM * 10) / 10;
+  const on = (line: number) => put(cmd(SURVEY_CMD.DO_SET_CAM_TRIGG_DIST, [trig, 0, 1, 0]), { kind: 'TRIGGER_ON', line });
+  const off = (line: number) => put(cmd(SURVEY_CMD.DO_SET_CAM_TRIGG_DIST, [0, 0, 0, 0]), { kind: 'TRIGGER_OFF', line });
+  const first = opts.from ? Math.max(0, Math.min(plan.lines.length - 1, opts.from.line)) : 0;
   if (plan.params.pattern === 'ORBIT') {
     const c = toLatLon(origin, plan.params.orbit.center);
-    items.push({ command: SURVEY_CMD.DO_SET_ROI_LOCATION, ...c, altRelM: 0, params: [0, 0, 0, 0], frame: FRAME_GLOBAL_RELATIVE_ALT });
-    items.push(wp(plan.lines[0].a), cmd(SURVEY_CMD.DO_SET_CAM_TRIGG_DIST, [trig, 0, 1, 0]));
-    for (const l of plan.lines) items.push(wp(l.b));
-    items.push(cmd(SURVEY_CMD.DO_SET_CAM_TRIGG_DIST, [0, 0, 0, 0]), cmd(SURVEY_CMD.DO_SET_ROI_NONE, [0, 0, 0, 0]));
+    setup({ command: SURVEY_CMD.DO_SET_ROI_LOCATION, ...c, altRelM: 0, params: [0, 0, 0, 0], frame: FRAME_GLOBAL_RELATIVE_ALT });
+    put(wp(plan.lines[first].a), { kind: 'LINE_START', line: first }); on(first);
+    for (let i = first; i < plan.lines.length; i++) put(wp(plan.lines[i].b), { kind: 'LINE_END', line: i });
+    off(plan.lines.length - 1);
+    setup(cmd(SURVEY_CMD.DO_SET_ROI_NONE, [0, 0, 0, 0]));
   } else {
-    for (const l of plan.lines) {
-      items.push(wp(l.a), cmd(SURVEY_CMD.DO_SET_CAM_TRIGG_DIST, [trig, 0, 1, 0]), wp(l.b), cmd(SURVEY_CMD.DO_SET_CAM_TRIGG_DIST, [0, 0, 0, 0]));
+    for (let i = first; i < plan.lines.length; i++) {
+      const l = plan.lines[i];
+      const start = i === first && opts.from ? projectOnSegment(opts.from.at, l.a, l.b) : l.a;
+      put(wp(start), { kind: 'LINE_START', line: i }); on(i); put(wp(l.b), { kind: 'LINE_END', line: i }); off(i);
     }
   }
-  items.push({ command: SURVEY_CMD.NAV_RETURN_TO_LAUNCH, lat: 0, lon: 0, altRelM: 0, params: [0, 0, 0, 0], frame: FRAME_MISSION });
-  return items;
+  put({ command: SURVEY_CMD.NAV_RETURN_TO_LAUNCH, lat: 0, lon: 0, altRelM: 0, params: [0, 0, 0, 0], frame: FRAME_MISSION }, { kind: 'RTL', line: -1 });
+  return { items, roles };
+}
+
+/** The mission items only (ArduCopter conventions unless told otherwise; the link adds ArduPilot's home item). */
+export function missionItems(plan: SurveyPlan, origin: GeoOrigin, opts: Parameters<typeof surveyMission>[2] = {}): SurveyMissionItem[] {
+  return surveyMission(plan, origin, opts).items;
+}
+
+/** The closest point on segment a–b to p. */
+export function projectOnSegment(p: Pt, a: Pt, b: Pt): Pt {
+  const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy || 1;
+  const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / L2));
+  return { x: a.x + dx * t, y: a.y + dy * t };
+}
+
+// ---- geofence ------------------------------------------------------------------
+
+/** Convex hull (monotone chain), counter-clockwise in map axes. */
+export function convexHull(pts: Pt[]): Pt[] {
+  const p = [...pts].sort((a, b) => a.x - b.x || a.y - b.y);
+  if (p.length < 3) return p;
+  const cross = (o: Pt, a: Pt, b: Pt) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  const lower: Pt[] = [], upper: Pt[] = [];
+  for (const q of p) { while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], q) <= 0) lower.pop(); lower.push(q); }
+  for (let i = p.length - 1; i >= 0; i--) { const q = p[i]; while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], q) <= 0) upper.pop(); upper.push(q); }
+  return lower.slice(0, -1).concat(upper.slice(0, -1));
+}
+
+/**
+ * The inclusion fence for a survey: the hull of the site, home and every point the
+ * plan flies (lead-ins overshoot the boundary), pushed out by `marginM` so turns and
+ * wind drift stay inside. Each hull edge moves out by the margin and the corners are
+ * rounded, so the fence stays convex and never comes closer than the margin.
+ */
+export function fencePolygon(plan: SurveyPlan, boundary: Pt[], home: Pt, marginM = 30): Pt[] {
+  const pts = [...boundary, home];
+  for (const l of plan.lines) pts.push(l.a, l.b);
+  if (plan.params.pattern === 'ORBIT') { const { center, radiusM } = plan.params.orbit; for (let k = 0; k < 16; k++) pts.push({ x: center.x + radiusM * Math.cos(k * Math.PI / 8), y: center.y + radiusM * Math.sin(k * Math.PI / 8) }); }
+  const hull = convexHull(pts);
+  const n = hull.length, out: Pt[] = [];
+  // Hull winding in these axes: outward normal of edge a→b is (dy, −dx) for counter-clockwise.
+  const area2 = hull.reduce((s, a, i) => { const b = hull[(i + 1) % n]; return s + a.x * b.y - b.x * a.y; }, 0);
+  const sgn = area2 > 0 ? 1 : -1;
+  for (let i = 0; i < n; i++) {
+    const prev = hull[(i + n - 1) % n], a = hull[i], next = hull[(i + 1) % n];
+    const nrm = (u: Pt, v: Pt) => { const dx = v.x - u.x, dy = v.y - u.y, L = Math.hypot(dx, dy) || 1; return { x: sgn * dy / L, y: -sgn * dx / L }; };
+    const n1 = nrm(prev, a), n2 = nrm(a, next);
+    // Round the corner from one edge's normal to the next in steps of ≤ 30°, at the radius that
+    // keeps every chord (and the edges between corners) at least the margin away from the hull.
+    const a1 = Math.atan2(n1.y, n1.x);
+    let turn = Math.atan2(n2.y, n2.x) - a1; while (turn > Math.PI) turn -= 2 * Math.PI; while (turn < -Math.PI) turn += 2 * Math.PI;
+    const k = Math.max(1, Math.ceil(Math.abs(turn) / (Math.PI / 6))), step = turn / k, r = marginM / Math.cos(Math.abs(step) / 2);
+    for (let j = 0; j <= k; j++) { const t = a1 + step * j; out.push({ x: a.x + Math.cos(t) * r, y: a.y + Math.sin(t) * r }); }
+  }
+  return out;
+}
+
+/** Fence vertices as MAVLink mission items (upload with mission type 1). */
+export function fenceItems(poly: Pt[], origin: GeoOrigin): SurveyMissionItem[] {
+  return poly.map(p => ({ command: SURVEY_CMD.NAV_FENCE_POLYGON_VERTEX_INCLUSION, ...toLatLon(origin, p), altRelM: 0, params: [poly.length, 0, 0, 0], frame: FRAME_GLOBAL }));
 }
 
 /** QGroundControl .plan (JSON), which QGC opens directly. */
-export function qgcPlan(plan: SurveyPlan, origin: GeoOrigin, home: Pt): object {
+export function qgcPlan(plan: SurveyPlan, origin: GeoOrigin, home: Pt, opts: { boundary?: Pt[]; autopilot?: MissionAutopilot } = {}): object {
   const h = toLatLon(origin, home);
-  const items = missionItems(plan, origin).map((it, i) => ({
+  const fence = opts.boundary ? fencePolygon(plan, opts.boundary, home).map(p => { const ll = toLatLon(origin, p); return [+ll.lat.toFixed(7), +ll.lon.toFixed(7)]; }) : null;
+  const items = missionItems(plan, origin, { autopilot: opts.autopilot, home }).map((it, i) => ({
     type: 'SimpleItem', autoContinue: true, command: it.command, doJumpId: i + 1, frame: it.frame === FRAME_MISSION ? FRAME_MISSION : FRAME_GLOBAL_RELATIVE_ALT,
     params: [...it.params.map(v => (Number.isNaN(v) ? null : v)), it.lat ? +it.lat.toFixed(7) : 0, it.lon ? +it.lon.toFixed(7) : 0, it.altRelM],
     ...(it.frame === FRAME_MISSION ? {} : { Altitude: it.altRelM, AltitudeMode: 1, AMSLAltAboveTerrain: null }),
   }));
   return {
     fileType: 'Plan', version: 1, groundStation: 'All in 1 Drone Command',
-    geoFence: { circles: [], polygons: [], version: 2 },
+    geoFence: { circles: [], polygons: fence ? [{ inclusion: true, polygon: fence, version: 1 }] : [], version: 2 },
     rallyPoints: { points: [], version: 2 },
-    mission: { version: 2, firmwareType: 3, vehicleType: 2, cruiseSpeed: +plan.speedMps.toFixed(1), hoverSpeed: 5, plannedHomePosition: [+h.lat.toFixed(7), +h.lon.toFixed(7), 0], items },
+    mission: { version: 2, firmwareType: opts.autopilot === 'PX4' ? 12 : 3, vehicleType: 2, cruiseSpeed: +plan.speedMps.toFixed(1), hoverSpeed: 5, plannedHomePosition: [+h.lat.toFixed(7), +h.lon.toFixed(7), 0], items },
   };
 }
 
@@ -400,7 +491,7 @@ export function wplText(plan: SurveyPlan, origin: GeoOrigin, home: Pt): string {
   const h = toLatLon(origin, home);
   const f = (v: number) => (Number.isNaN(v) ? 0 : v);
   const rows = [`0\t1\t0\t16\t0\t0\t0\t0\t${h.lat.toFixed(7)}\t${h.lon.toFixed(7)}\t0\t1`];
-  missionItems(plan, origin).forEach((it, i) => {
+  missionItems(plan, origin, { home }).forEach((it, i) => {
     rows.push([i + 1, 0, it.frame, it.command, ...it.params.map(f), it.lat.toFixed(7), it.lon.toFixed(7), it.altRelM, 1].join('\t'));
   });
   return `QGC WPL 110\n${rows.join('\n')}\n`;

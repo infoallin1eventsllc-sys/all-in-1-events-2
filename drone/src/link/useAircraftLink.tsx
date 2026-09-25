@@ -1,11 +1,11 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   MavParser, decodeInto, encodeHeartbeat, encodeCommandLong, encodeSetInterval, encodeArm, encodeGotoGlobal,
-  encodeMissionCount, encodeMissionClearAll, encodeMissionItemInt, encodeMissionAck, decodeMissionRequestSeq, decodeMissionAck,
   encodeFlightMode, encodeTakeoffFor, encodeReposition, encodeGimbalPitchYaw, encodeMountControl, encodeCameraZoom, encodeCameraSource, encodeRelay, encodeTakePhoto,
   autopilotOf, modeName, EMPTY_TELEMETRY, MAV_CMD, MAV_RESULT, type Telemetry, type MavFrame, type MissionItem, type Autopilot, type FlightMode,
 } from './mavlink';
 import { HEALTH_STREAMS } from '../diagnostics/decode';
+import { uploadItems, startMission as startMissionOn, awaitAck as awaitAckOn, MISSION_TYPE, type MissionIO, type StartResult } from './missionClient';
 
 /**
  * Aircraft link: the one place the browser talks to real hardware.
@@ -63,9 +63,19 @@ interface LinkApi extends LinkState {
   setFlightMode: (mode: FlightMode) => Promise<void>;
   /** Go-to: ArduPilot switches to GUIDED and sends a position target; PX4 uses DO_REPOSITION. */
   goTo: (lat: number, lon: number, altRelM: number) => Promise<void>;
-  /** Upload a waypoint mission (home item is added automatically) and optionally start it in AUTO. */
+  /**
+   * Upload a waypoint mission (ArduPilot's home item is added automatically). With `start`,
+   * an aircraft already flying switches to AUTO; one on the ground is armed and started
+   * (see startMission), so the mission must begin with a takeoff item.
+   */
   uploadMission: (items: MissionItem[], start?: boolean) => Promise<void>;
   missionUpload: { state: 'IDLE' | 'UPLOADING' | 'DONE' | 'FAILED'; sent: number; total: number; error: string };
+  /** Where MISSION_CURRENT's sequence numbers start: 1 on ArduPilot (item 0 is home), 0 on PX4. */
+  missionSeqOffset: number;
+  /** Upload an inclusion geofence (polygon vertices, mission type 1) and switch the fence on. */
+  uploadFence: (items: MissionItem[]) => Promise<{ enabled: boolean }>;
+  /** Arm and start the uploaded mission from the ground, the right way for this autopilot. */
+  startMission: () => Promise<StartResult>;
   preflight: { ok: boolean; checks: PreflightCheck[] };
   // Payload (sent to the autopilot, which drives its gimbal / camera / relays)
   /** Point the gimbal. Uses gimbal protocol v2 and falls back to DO_MOUNT_CONTROL if the autopilot refuses. */
@@ -149,13 +159,15 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const requestStreams = useCallback(async () => {
     // Ask for the messages the dashboards read; autopilots that ignore this still send their defaults.
-    for (const [id, hz] of [[33, 5], [30, 5], [74, 4], [1, 2], [24, 2], [147, 1]] as const) {
+    // Position, attitude, speed, status, GPS, battery; mission progress, wind estimate, home, fence state.
+    for (const [id, hz] of [[33, 5], [30, 5], [74, 4], [1, 2], [24, 2], [147, 1], [42, 1], [168, 1], [242, 0.2], [162, 1]] as const) {
       await send(encodeSetInterval(id, hz)).catch(() => {});
     }
     // Health: motor outputs, vibration, ESC telemetry, battery cells, navigation filter, power.
     for (const [id, hz] of HEALTH_STREAMS) await send(encodeSetInterval(id, hz)).catch(() => {});
     // Firmware version once: REQUEST_MESSAGE(AUTOPILOT_VERSION), and the older capabilities request for older firmware.
     await send(encodeCommandLong(MAV_CMD.REQUEST_MESSAGE, [148])).catch(() => {});
+    await send(encodeCommandLong(MAV_CMD.REQUEST_MESSAGE, [242])).catch(() => {});
     await send(encodeCommandLong(520, [1])).catch(() => {});
   }, [send]);
 
@@ -302,41 +314,45 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const setRelay = useCallback((instance: number, on: boolean) => send(encodeRelay(instance, on, sysId())), [send]);
   const takePhoto = useCallback(() => send(encodeTakePhoto(sysId())), [send]);
 
-  /**
-   * Mission upload handshake: MISSION_COUNT → autopilot asks for each item with
-   * MISSION_REQUEST(_INT) → we answer → MISSION_ACK. ArduPilot treats item 0 as home,
-   * so the caller's first waypoint becomes seq 1; PX4 starts at seq 0.
-   */
+  // The mission protocol runs in missionClient (unit-tested); this adapts the link to it.
+  const io = useMemo<MissionIO>(() => ({
+    send: b => send(b),
+    subscribe: fn => { frameListeners.current.add(fn); return () => { frameListeners.current.delete(fn); }; },
+    telemetry: () => telem.current,
+    sysId,
+  }), [send]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const startMission = useCallback(() => startMissionOn(io, ap()), [io]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const uploadMission = useCallback(async (items: MissionItem[], start = false) => {
     if (!writer.current) throw new Error('Not connected');
     const t = telem.current;
     // ArduPilot reserves item 0 for home; PX4 flies item 0 as the first real item.
-    const all = ap() === 'PX4' ? [...items] : [{ lat: t.lat, lon: t.lon, altRelM: 0 } as MissionItem, ...items];
-    const firstCurrent = ap() === 'PX4' ? 0 : 1;
+    const home = t.home ?? { lat: t.lat, lon: t.lon };
+    const all = ap() === 'PX4' ? [...items] : [{ lat: home.lat, lon: home.lon, altRelM: 0 } as MissionItem, ...items];
     setMissionUpload({ state: 'UPLOADING', sent: 0, total: all.length, error: '' });
-    await new Promise<void>((resolve, reject) => {
-      let done = false;
-      const finish = (err?: string) => {
-        if (done) return; done = true; frameListeners.current.delete(onFrame); clearTimeout(timer);
-        if (err) { setMissionUpload(m => ({ ...m, state: 'FAILED', error: err })); reject(new Error(err)); }
-        else { setMissionUpload(m => ({ ...m, state: 'DONE', sent: all.length })); resolve(); }
-      };
-      let timer = setTimeout(() => finish('Autopilot did not respond to MISSION_COUNT'), 5000);
-      const onFrame = (f: MavFrame) => {
-        const seq = decodeMissionRequestSeq(f);
-        if (seq !== null) {
-          clearTimeout(timer); timer = setTimeout(() => finish(`Timed out waiting for request after item ${seq}`), 5000);
-          if (seq < all.length) { send(encodeMissionItemInt(seq, all[seq], seq === firstCurrent ? 1 : 0, sysId())).catch(() => {}); setMissionUpload(m => ({ ...m, sent: seq + 1 })); }
-          return;
-        }
-        const ack = decodeMissionAck(f);
-        if (ack !== null) finish(ack === 0 ? undefined : `Mission rejected (MAV_MISSION_RESULT ${ack})`);
-      };
-      frameListeners.current.add(onFrame);
-      send(encodeMissionClearAll(sysId())).then(() => send(encodeMissionCount(all.length, sysId()))).catch(e => finish(String(e)));
-    });
-    if (start) await setFlightMode('AUTO');
-  }, [send, setFlightMode]);
+    try {
+      await uploadItems(io, all, { missionType: MISSION_TYPE.MISSION, firstCurrent: ap() === 'PX4' ? 0 : 1, onProgress: p => setMissionUpload(m => ({ ...m, sent: p.sent })) });
+      setMissionUpload(m => ({ ...m, state: 'DONE', sent: all.length }));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setMissionUpload(m => ({ ...m, state: 'FAILED', error: msg }));
+      throw e;
+    }
+    if (!start) return;
+    if (telem.current.armed && telem.current.altRelM > 1) { await setFlightMode('AUTO'); return; }
+    const r = await startMission();
+    if (!r.ok) { const msg = [r.error, ...(r.detail ?? [])].join(' · '); setMissionUpload(m => ({ ...m, state: 'FAILED', error: msg })); throw new Error(msg); }
+  }, [io, setFlightMode, startMission]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const uploadFence = useCallback(async (items: MissionItem[]) => {
+    if (!writer.current) throw new Error('Not connected');
+    await uploadItems(io, items, { missionType: MISSION_TYPE.FENCE });
+    // Switch the fence on. ArduPilot enforces the fence types in FENCE_TYPE (polygon is in the default); PX4 uses GF_ACTION.
+    const ack = awaitAckOn(io, MAV_CMD.DO_FENCE_ENABLE, 1500);
+    await send(encodeCommandLong(MAV_CMD.DO_FENCE_ENABLE, [1], sysId()));
+    return { enabled: (await ack) === MAV_RESULT.ACCEPTED };
+  }, [io, send]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pre-flight gate: what must be true before the dashboard will arm a real aircraft.
   const tNow = state.telemetry;
@@ -350,7 +366,6 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     { id: 'link', label: 'Radio link quality', ok: tNow.radioRssi === 0 || tNow.radioRssi > 60, detail: tNow.radioRssi ? `RSSI ${tNow.radioRssi}` : 'n/a on this transport' },
   ];
   const preflight = { ok: checks.every(c => c.ok), checks };
-  void encodeMissionAck;
 
   const onFrame = useCallback((listener: (f: MavFrame) => void) => {
     frameListeners.current.add(listener);
@@ -360,6 +375,7 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const api: LinkApi = {
     ...state, support,
     connectBluetooth, connectSerial, connectNetwork, disconnect, send, returnToLaunch, land, arm, takeoff, setFlightMode, goTo, uploadMission, missionUpload, preflight,
+    uploadFence, startMission, missionSeqOffset: autopilotOf(state.telemetry) === 'PX4' ? 0 : 1,
     setGimbal, setZoom, setCameraSource, setRelay, takePhoto,
     autopilot: autopilotOf(state.telemetry),
     live: state.status === 'CONNECTED' && state.telemetry.heartbeatMs > 0,

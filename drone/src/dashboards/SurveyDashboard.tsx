@@ -2,16 +2,20 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Play, Pause, Home, Upload, Download, RefreshCw, Minus, Plus, Map as MapIcon, Box, Maximize2, RotateCcw,
 } from 'lucide-react';
+import { SurveySitePanel } from '../components/survey/SurveySitePanel';
+import { SurveyFlightPanel } from '../components/survey/SurveyFlightPanel';
+import { useSurveyFlight } from '../components/survey/useSurveyFlight';
+import { usesDemoGeometry } from '../survey/boundary';
 import { useSurveyMission, type Phase } from '../hooks/useSurveyMission';
 import { SurveyScanCanvas3D, type SurveyLayer } from '../components/survey/SurveyScanCanvas3D';
 import { SurveyMapCanvas } from '../components/survey/SurveyMapCanvas';
 import { SITE } from '../survey/site';
-import { CAMERAS, GOOD_VIEWS, ORBIT_PHOTOS, missionItems, toLatLon, type CameraId, type Pattern } from '../survey/plan';
+import { CAMERAS, GOOD_VIEWS, ORBIT_PHOTOS, toLatLon, fromLatLon, type CameraId, type Pattern, type Pt } from '../survey/plan';
 import { downloadSurveyPackage } from '../survey/exportSurvey';
 import { useAircraftLink } from '../link/useAircraftLink';
 import { useRecorder, useRecordedEvents } from '../record/useRecorder';
 import {
-  Headline, Card, Section, Divider, Tabs, Stat, Row, Chip, Meter, Sparkline, ToolButton, IconButton, Segmented, Activity, formatClock, useAccentHex, type Tone,
+  Headline, Card, Section, Divider, Tabs, Stat, Row, Chip, Meter, Sparkline, ToolButton, IconButton, Segmented, Activity, HoldButton, formatClock, useAccentHex, type Tone,
 } from './ui';
 
 /**
@@ -62,7 +66,7 @@ const PHASE: Record<Phase, { label: string; tone: Tone; pulse?: boolean }> = {
   COMPLETE: { label: 'Capture complete', tone: 'ok' },
 };
 
-type RailTab = 'PLAN' | 'COVERAGE' | 'DELIVERABLES' | 'ACTIVITY';
+type RailTab = 'SITE' | 'PLAN' | 'AIRCRAFT' | 'COVERAGE' | 'DELIVERABLES' | 'ACTIVITY';
 
 export const SurveyDashboard: React.FC = () => {
   const sim = useSurveyMission();
@@ -81,11 +85,18 @@ export const SurveyDashboard: React.FC = () => {
   useEffect(() => { if (link.live) sim.applyLive(link.telemetry); }, [link.telemetry]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (!link.live) sim.releaseLive(); }, [link.live]); // eslint-disable-line react-hooks/exhaustive-deps
   const connected = link.status === 'CONNECTED';
-  const uploadAndStart = () => { link.uploadMission(missionItems(plan, sim.origin), true).catch(() => {}); };
+  const flight = useSurveyFlight(sim, link, plan);
+  const [draft, setDraft] = useState<Pt[]>([]);
+  // Connecting an aircraft opens its checklist; the demo venue's 3D model is not a real site's, so real sites fly on the plan view.
+  useEffect(() => { if (link.live) setRail('AIRCRAFT'); else setRail(r => (r === 'AIRCRAFT' ? 'PLAN' : r)); }, [link.live]);
+  const demoGeo = usesDemoGeometry(sim.site);
+  useEffect(() => { if (!demoGeo) setHero('MAP'); }, [demoGeo]);
+  const siteKey = `${sim.site.origin.lat},${sim.site.origin.lon},${sim.site.boundary.length},${sim.site.kind}`;
+  const exportPackage = () => downloadSurveyPackage(plan, sim.photosRef.current ?? [], sim.grid, sim.site, sim.camera, link.autopilot === 'PX4' ? 'PX4' : 'ARDUPILOT');
 
   // Flight record: one session per survey, 1 Hz, with the event log mirrored in.
   const linkSource = connected ? link.transport : 'SIMULATION';
-  useRecorder('SURVEY', `Survey · ${SITE.name}`, linkSource, () => {
+  useRecorder('SURVEY', `Survey · ${sim.site.name}`, linkSource, () => {
     if (ac.altM <= 0.2 && onGround) return [];
     const ll = toLatLon(sim.origin, ac);
     return [{ t: Date.now(), aircraft: 'MAP-1', lat: ll.lat, lon: ll.lon, altM: ac.altM, speedMps: ac.speedMps, headingDeg: ac.headingDeg, batteryPct: ac.battery,
@@ -105,7 +116,7 @@ export const SurveyDashboard: React.FC = () => {
   const leg = sim.legs[Math.min(sim.legIndex, sim.legs.length - 1)];
   const transitLabel = !leg || leg.line === -1 ? 'Heading home' : sim.legIndex === 0 ? (orbit ? 'Heading to the orbit' : 'Heading to the first line') : 'On the way to the next line';
   const status = sim.live
-    ? { label: `Live · ${link.deviceName}`, tone: 'ok' as Tone, pulse: true }
+    ? { ...PHASE[phase], label: `Live · ${phase === 'CAPTURING' ? `Capturing · ${sim.isRefly ? 'weak patches' : lineLabel}` : phase === 'READY' ? link.deviceName : PHASE[phase].label}`, pulse: phase !== 'READY' && phase !== 'COMPLETE' && phase !== 'HELD' }
     : phase === 'CAPTURING' ? { label: `Capturing · ${sim.isRefly ? 'weak patches' : lineLabel}`, tone: 'ok' as Tone, pulse: true }
     : phase === 'TRANSIT' ? { ...PHASE.TRANSIT, label: transitLabel } : PHASE[phase];
 
@@ -117,14 +128,27 @@ export const SurveyDashboard: React.FC = () => {
       lines={orbit ? { done: angles, total: ORBIT_PHOTOS, current: null, angles } : { done: sim.linesDone, total: plan.lines.length, current: phase === 'CAPTURING' || phase === 'TRANSIT' ? sim.currentLine : null }} />
   );
   const map = (
-    <SurveyMapCanvas plan={plan} legs={sim.legs} legIndex={sim.legIndex} aircraft={ac} photosRef={sim.photosRef} grid={sim.grid} gridVersion={sim.gridVersion} layer={layer} compact={hero !== 'MAP'} />
+    <SurveyMapCanvas key={siteKey} site={sim.site} fence={flight.fence} draft={draft} plan={plan} legs={sim.legs} legIndex={sim.legIndex} aircraft={ac} photosRef={sim.photosRef} grid={sim.grid} gridVersion={sim.gridVersion} layer={layer} compact={hero !== 'MAP'} />
   );
   const HERO = 'absolute inset-0';
   const PIP = 'hidden md:block absolute bottom-3 right-3 w-[26%] min-w-[190px] aspect-video rounded-lg overflow-hidden border border-white/25 shadow-xl bg-imagery z-10';
 
-  // Primary action by phase.
+  // Primary action by phase. On a live link: upload (or resume) → hold to start → hold/continue in the air.
+  const resumeLine = sim.liveResume ? sim.liveResume.line + 1 : null;
+  const reflyLabel = sim.weakPatches ? `Re-fly ${sim.weakPatches} weak patch${sim.weakPatches > 1 ? 'es' : ''}` : 'Re-fly weak patches';
+  const livePrimary: React.ReactNode = !sim.live ? null
+    : flight.upload.state === 'UPLOADING'
+      ? <ToolButton primary icon={<Upload />} label={`Uploading ${link.missionUpload.sent}/${link.missionUpload.total}`} disabled />
+    : !flight.onGround ? null
+    : flight.armable
+      ? <HoldButton id="sv-primary" icon={<Play />} label={flight.start.state === 'STARTING' ? 'Starting…' : flight.upload.kind === 'RESUME' ? 'Resume survey' : flight.upload.kind === 'REFLY' ? 'Start re-fly' : 'Start survey'} disabled={flight.start.state === 'STARTING' || !flight.gateOk} onFire={flight.begin} title="Arms the aircraft and starts the mission" />
+    : resumeLine
+      ? <ToolButton command="fly" id="sv-primary" primary icon={<Upload />} label={`Upload resume · line ${resumeLine}`} disabled={!flight.gateOk} onClick={flight.uploadResume} title="A new mission from the point the survey stopped: take off, fly back, carry on" />
+    : phase === 'COMPLETE' && sim.weakPatches && !orbit
+      ? <ToolButton command="fly" id="sv-primary" primary icon={<RefreshCw />} label={reflyLabel} disabled={!flight.gateOk} onClick={flight.uploadRefly} title="Short extra passes over every patch seen by fewer than five photos" />
+      : <ToolButton command="fly" id="sv-primary" primary icon={<Upload />} label={phase === 'COMPLETE' ? 'Upload to fly again' : 'Upload mission'} disabled={!flight.gateOk} onClick={flight.uploadMission} title={flight.gateOk ? 'Geofence and survey mission to the aircraft' : 'See the checklist in the Aircraft tab'} />;
   const primary = sim.live
-    ? { label: link.missionUpload.state === 'UPLOADING' ? `Uploading ${link.missionUpload.sent}/${link.missionUpload.total}` : 'Upload & start', icon: <Upload />, onClick: uploadAndStart, disabled: !link.preflight.ok || link.missionUpload.state === 'UPLOADING', title: link.preflight.ok ? 'Uploads the survey as a MAVLink mission and starts AUTO' : 'Pre-flight gate not satisfied (see the link popover)' }
+    ? { label: '', icon: null, onClick: () => {} }
     : phase === 'READY' ? { label: 'Start survey', icon: <Play />, onClick: sim.start }
     : phase === 'COMPLETE' ? { label: 'Fly again', icon: <Play />, onClick: sim.start }
     : phase === 'HELD' ? { label: 'Resume survey', icon: <Play />, onClick: sim.start }
@@ -136,7 +160,7 @@ export const SurveyDashboard: React.FC = () => {
     <div ref={rootRef} data-accent="survey" id="survey-dashboard" className="space-y-5">
       <Headline
         title="Site survey"
-        context={`${SITE.name} · ${(plan.areaM2 / 10000).toFixed(1)} ha · ${PATTERNS[P.pattern].short} at ${P.altitudeM} m`}
+        context={`${sim.site.name} · ${(plan.areaM2 / 10000).toFixed(1)} ha · ${PATTERNS[P.pattern].short} at ${P.altitudeM} m`}
         status={status}
         stats={[
           orbit
@@ -161,23 +185,23 @@ export const SurveyDashboard: React.FC = () => {
         {/* ---------------- Stage ---------------- */}
         <div className="space-y-3 min-w-0">
           <div className="relative rounded-[var(--radius-card)] overflow-hidden bg-imagery border border-line" style={{ aspectRatio: '16 / 9' }}>
-            <div className={hero === '3D' ? HERO : PIP}>{stage}</div>
-            <div className={hero === 'MAP' ? HERO : PIP}>{map}</div>
-            <button onClick={() => setHero(h => (h === '3D' ? 'MAP' : '3D'))} title={hero === '3D' ? 'Show the plan view full size' : 'Show the 3D view full size'}
+            {demoGeo && <div className={hero === '3D' ? HERO : PIP}>{stage}</div>}
+            <div className={hero === 'MAP' || !demoGeo ? HERO : PIP}>{map}</div>
+            {demoGeo && <button onClick={() => setHero(h => (h === '3D' ? 'MAP' : '3D'))} title={hero === '3D' ? 'Show the plan view full size' : 'Show the 3D view full size'}
               className="hidden md:block absolute bottom-3 right-3 w-[26%] min-w-[190px] aspect-video rounded-lg z-20 group">
               <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
                 {hero === '3D' ? <><MapIcon className="w-3 h-3" />Plan view</> : <><Box className="w-3 h-3" />3D view</>}
               </span>
               <span className="absolute top-1.5 right-1.5 rounded bg-black/60 p-1 text-white opacity-0 group-hover:opacity-100 transition-opacity"><Maximize2 className="w-3 h-3" /></span>
-            </button>
+            </button>}
           </div>
 
           {/* Action bar */}
           <Card padded={false} className="px-3 py-2.5">
             <div className="flex flex-wrap items-center gap-2">
-              <ToolButton command="fly" id="sv-primary" primary icon={primary.icon} label={primary.label} onClick={primary.onClick} disabled={primary.disabled} title={primary.title} />
+              {sim.live ? livePrimary : <ToolButton command="fly" id="sv-primary" primary icon={primary.icon} label={primary.label} onClick={primary.onClick} disabled={primary.disabled} />}
               {sim.live ? (
-                <>
+                !flight.onGround && <>
                   <ToolButton icon={<Pause />} label="Hold" onClick={() => link.setFlightMode('LOITER')} title="Hold position (Loiter)" />
                   <ToolButton command="fly" icon={<Play />} label="Continue" onClick={() => link.setFlightMode('AUTO')} title="Continue the mission (Auto)" />
                 </>
@@ -197,8 +221,8 @@ export const SurveyDashboard: React.FC = () => {
                 </>
               )}
               <span className="ml-auto flex items-center gap-2">
-                {connected && !sim.live && <ToolButton command="fly" icon={<Upload />} label="Upload to aircraft" disabled={!link.preflight.ok} onClick={uploadAndStart} title="Waiting for GPS and telemetry from the aircraft" />}
-                <ToolButton icon={<Download />} label="Export package" onClick={() => downloadSurveyPackage(plan, sim.photosRef.current ?? [], sim.grid, sim.origin, sim.camera)} title="Mission plan, photo geotags and coverage for WebODM / Pix4D / DroneDeploy" />
+                {connected && !sim.live && <span className="text-[11px] text-ink-3">Waiting for the autopilot's heartbeat…</span>}
+                <ToolButton icon={<Download />} label="Export package" onClick={exportPackage} title="Mission plan with geofence, site KML, photo geotags and coverage, for QGroundControl, Google Earth / DJI Pilot 2 and WebODM / Pix4D / DroneDeploy" />
                 <ToolButton command="abort" icon={<Home />} label="Return home" danger disabled={sim.live ? false : !flying || phase === 'RETURNING' || phase === 'LANDING'}
                   onClick={() => (sim.live ? link.returnToLaunch() : sim.returnHome())} />
               </span>
@@ -209,18 +233,22 @@ export const SurveyDashboard: React.FC = () => {
         {/* ---------------- Inspector rail ---------------- */}
         <Card className="xl:sticky xl:top-[72px]">
           <Tabs value={rail} onChange={setRail} items={[
+            { id: 'SITE', label: 'Site' },
             { id: 'PLAN', label: 'Plan' },
+            ...(link.live ? [{ id: 'AIRCRAFT' as const, label: 'Aircraft', badge: flight.gateOk ? undefined : flight.checks.filter(c => !c.ok && !c.advisory).length || undefined }] : []),
             { id: 'COVERAGE', label: 'Coverage', badge: phase === 'COMPLETE' && sim.weakPatches ? sim.weakPatches : undefined },
-            { id: 'DELIVERABLES', label: 'Deliverables' },
-            { id: 'ACTIVITY', label: 'Activity' },
+            { id: 'DELIVERABLES', label: 'Results' },
+            { id: 'ACTIVITY', label: 'Log' },
           ]} />
 
           <div className="mt-4 rail-scroll max-h-[calc(100vh-180px)] overflow-y-auto pr-1">
+            {rail === 'SITE' && <SurveySitePanel sim={sim} link={link} onDraft={setDraft} />}
+            {rail === 'AIRCRAFT' && link.live && <SurveyFlightPanel flight={flight} link={link} />}
             {rail === 'PLAN' && (
               <div className="space-y-5">
                 <div>
                   <div className="text-[15px] font-semibold text-ink">{PATTERNS[P.pattern].product}</div>
-                  <p className="mt-1 text-[13px] leading-relaxed text-ink-2">{PATTERNS[P.pattern].plain}</p>
+                  <p className="mt-1 text-[13px] leading-relaxed text-ink-2">{P.pattern === 'ORBIT' && !demoGeo ? 'Circles the structure at the orbit centre with the camera locked on it — for rigging checks and insurer photos.' : PATTERNS[P.pattern].plain}</p>
                   <p className="mt-1 text-[11px] text-ink-3">{PATTERNS[P.pattern].technical} · {sim.camera.name}</p>
                 </div>
 
@@ -238,7 +266,17 @@ export const SurveyDashboard: React.FC = () => {
                     <Slider label="Overlap between lines" value={Math.round(P.sideOverlap * 100)} min={50} max={85} step={5} unit="%" onChange={v => sim.setParams({ sideOverlap: v / 100 })} />
                     <Slider label="Speed" value={P.speedMps} min={4} max={15} step={1} unit="m/s" onChange={v => sim.setParams({ speedMps: v })} />
                     {P.pattern === 'ORBIT' ? (
-                      <Slider label="Orbit radius" value={P.orbit.radiusM} min={25} max={80} step={5} unit="m" onChange={v => sim.setParams({ orbit: { ...P.orbit, radiusM: v } })} />
+                      <>
+                        <Slider label="Orbit radius" value={P.orbit.radiusM} min={25} max={80} step={5} unit="m" onChange={v => sim.setParams({ orbit: { ...P.orbit, radiusM: v } })} />
+                        {!demoGeo && (
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[13px] text-ink-2">Orbit centre</span>
+                            <ToolButton size="sm" label="Aircraft's position" disabled={!link.live || link.telemetry.fixType < 3}
+                              title={link.live ? 'Hover over (or stand the aircraft at) the structure, then press' : 'Connect the aircraft first'}
+                              onClick={() => sim.setParams({ orbit: { ...P.orbit, center: fromLatLon(sim.origin, link.telemetry.lat, link.telemetry.lon) } })} />
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <div className="flex items-center justify-between">
                         <span className="text-[13px] text-ink-2">Line direction</span>
@@ -247,7 +285,10 @@ export const SurveyDashboard: React.FC = () => {
                     )}
                     <div className="flex items-center justify-between">
                       <span className="text-[13px] text-ink-2">Camera</span>
-                      <Segmented size="sm" value={P.camera} onChange={(v: CameraId) => sim.setParams({ camera: v })} items={[{ id: 'MAVIC_3E', label: 'Mavic 3E' }, { id: 'SONY_A6100', label: 'Pixhawk + Sony' }]} />
+                      <select value={P.camera} onChange={e => sim.setParams({ camera: e.target.value as CameraId })} aria-label="Camera"
+                        className="h-8 max-w-[190px] rounded-lg border border-line bg-surface px-2 text-[12px] text-ink">
+                        {(Object.keys(CAMERAS) as CameraId[]).map(id => <option key={id} value={id}>{CAMERAS[id].name}</option>)}
+                      </select>
                     </div>
                   </fieldset>
                 </Section>
@@ -310,7 +351,7 @@ export const SurveyDashboard: React.FC = () => {
                     <div className="mt-3 rounded-lg bg-warn-soft px-3 py-2.5">
                       <div className="text-[13px] font-medium text-warn">{sim.weakPatches} weak patch{sim.weakPatches > 1 ? 'es' : ''}</div>
                       <p className="mt-0.5 text-[12px] text-ink-2">Seen by fewer than {GOOD_VIEWS} photos, so the model may have holes there. Re-fly them before the crew leaves — it takes minutes now and a return trip later.</p>
-                      <ToolButton size="sm" className="mt-2" icon={<RefreshCw />} label="Re-fly weak patches" onClick={() => sim.reflyGaps()} />
+                      <ToolButton size="sm" className="mt-2" icon={<RefreshCw />} label="Re-fly weak patches" onClick={() => (sim.live ? flight.uploadRefly() : sim.reflyGaps())} disabled={sim.live && (!flight.gateOk || !flight.onGround)} />
                     </div>
                   )}
                   {phase === 'COMPLETE' && sim.weakPatches === 0 && <div className="mt-3 rounded-lg bg-ok-soft px-3 py-2 text-[12px] text-ok">Every point inside the boundary is seen by {GOOD_VIEWS} or more photos. Ready to process.</div>}
@@ -364,7 +405,7 @@ export const SurveyDashboard: React.FC = () => {
                     <li><span className="num text-ink">geotags.csv</span>, <span className="num text-ink">geo.txt</span> · Pix4D, WebODM</li>
                     <li><span className="num text-ink">coverage.csv</span> · the quality map, per 5 m</li>
                   </ul>
-                  <ToolButton className="mt-3" icon={<Download />} label={`Export package${sim.photoCount ? ` · ${accepted} photos` : ' · plan only'}`} onClick={() => downloadSurveyPackage(plan, sim.photosRef.current ?? [], sim.grid, sim.origin, sim.camera)} />
+                  <ToolButton className="mt-3" icon={<Download />} label={`Export package${sim.photoCount ? ` · ${accepted} photos` : ' · plan only'}`} onClick={exportPackage} />
                   <p className="mt-2 text-[11px] text-ink-3">Process in WebODM (free, self-hosted), Pix4D, DroneDeploy or Metashape. Processing a site this size takes 1–3 hours.</p>
                 </Section>
               </div>

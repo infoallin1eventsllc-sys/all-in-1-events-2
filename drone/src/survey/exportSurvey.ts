@@ -1,13 +1,15 @@
 import { zipStore } from '../lightshow/exportShow';
-import { qgcPlan, wplText, toLatLon, GOOD_VIEWS, type SurveyPlan, type CoverageGrid, type GeoOrigin, type Camera } from './plan';
+import { qgcPlan, wplText, toLatLon, GOOD_VIEWS, type SurveyPlan, type CoverageGrid, type Camera, type MissionAutopilot } from './plan';
 import type { Photo } from '../hooks/useSurveyMission';
-import { SITE } from './site';
+import { boundaryKml, type SurveySite } from './boundary';
 
 /**
  * Survey package: everything the processing software and the next crew need.
  *
- *   mission.plan       QGroundControl plan (open in QGC to re-fly or edit)
+ *   mission.plan       QGroundControl plan with the site geofence (open in QGC to re-fly or edit)
  *   mission.waypoints  Mission Planner / QGC WPL 110 text
+ *   site.kml           boundary and flight lines for Google Earth, DJI Pilot 2 (import as a
+ *                      mapping area) or a client's GIS
  *   geotags.csv        one row per photo: position, attitude, time, accepted/rejected
  *   geo.txt            the same positions in the OpenDroneMap / WebODM format
  *   coverage.csv       views per 5 m cell — the quality report, computed in flight
@@ -20,15 +22,16 @@ import { SITE } from './site';
 
 const imageName = (id: number) => `DJI_${String(id).padStart(4, '0')}.JPG`;
 
-export function buildSurveyFiles(plan: SurveyPlan, photos: Photo[], grid: CoverageGrid, origin: GeoOrigin, camera: Camera) {
+export function buildSurveyFiles(plan: SurveyPlan, photos: Photo[], grid: CoverageGrid, site: SurveySite, camera: Camera, autopilot: MissionAutopilot = 'ARDUPILOT') {
+  const origin = site.origin;
   const enc = new TextEncoder();
-  const geotags = ['image,latitude,longitude,altitude_m,yaw_deg,pitch_deg,roll_deg,timestamp_utc,accepted,reject_reason'];
+  const geotags = ['image,latitude,longitude,altitude_m,yaw_deg,pitch_deg,roll_deg,timestamp_utc,accepted,reject_reason,position_source'];
   const geo = ['EPSG:4326'];
   for (const p of photos) {
     const ll = toLatLon(origin, p);
     const yaw = ((p.headingDeg + 90) % 360 + 360) % 360; // map heading (east = 0) → compass (north = 0)
-    geotags.push([imageName(p.id), ll.lat.toFixed(7), ll.lon.toFixed(7), p.altM.toFixed(1), yaw.toFixed(1), p.pitchDeg, 0, new Date(p.t).toISOString(), p.ok ? 1 : 0, p.reason ?? ''].join(','));
-    if (p.ok) geo.push(`${imageName(p.id)} ${ll.lon.toFixed(7)} ${ll.lat.toFixed(7)} ${p.altM.toFixed(1)} ${yaw.toFixed(1)} ${p.pitchDeg} 0`);
+    geotags.push([imageName(p.id), ll.lat.toFixed(7), ll.lon.toFixed(7), p.altM.toFixed(1), yaw.toFixed(1), p.pitchDeg, 0, new Date(p.t).toISOString(), p.ok ? 1 : 0, p.reason ?? '', p.est ? 'estimated' : 'reported'].join(','));
+    if (p.ok && !p.est) geo.push(`${imageName(p.id)} ${ll.lon.toFixed(7)} ${ll.lat.toFixed(7)} ${p.altM.toFixed(1)} ${yaw.toFixed(1)} ${p.pitchDeg} 0`);
   }
   const cov = ['latitude,longitude,views,quality'];
   for (let r = 0; r < grid.rows; r++) for (let c = 0; c < grid.cols; c++) {
@@ -38,16 +41,16 @@ export function buildSurveyFiles(plan: SurveyPlan, photos: Photo[], grid: Covera
   }
   const st = grid.stats();
   const manifest = {
-    site: SITE.name, generator: 'All in 1 Drone Command', exportedAt: new Date().toISOString(),
+    site: site.name, siteKind: site.kind, generator: 'All in 1 Drone Command', exportedAt: new Date().toISOString(),
     origin, pattern: plan.params.pattern, camera: camera.name, altitudeM: plan.params.altitudeM,
     groundSampleDistanceCm: +plan.gsdCm.toFixed(2), frontOverlap: plan.params.frontOverlap, sideOverlap: plan.params.sideOverlap,
     lineSpacingM: +plan.spacingM.toFixed(1), photoSpacingM: +plan.triggerM.toFixed(1), speedMps: +plan.speedMps.toFixed(1), gimbalPitchDeg: plan.gimbalPitchDeg,
     areaHa: +(plan.areaM2 / 10000).toFixed(2), lines: plan.lines.length,
-    photos: { taken: photos.length, accepted: photos.filter(p => p.ok).length, rejected: photos.filter(p => !p.ok).length },
+    photos: { taken: photos.length, accepted: photos.filter(p => p.ok).length, rejected: photos.filter(p => !p.ok).length, positionsEstimated: photos.filter(p => p.est).length },
     coverage: { coveredPct: +st.coveredPct.toFixed(1), goodPct: +st.goodPct.toFixed(1), goodMeans: `at least ${GOOD_VIEWS} photos see the point` },
   };
   const readme = [
-    `${SITE.name} — site survey package`,
+    `${site.name} — site survey package`,
     '',
     `Pattern ${plan.params.pattern.replace('_', ' ').toLowerCase()} at ${plan.params.altitudeM} m, ${plan.gsdCm.toFixed(1)} cm/px, ${manifest.photos.accepted} usable photos.`,
     '',
@@ -57,12 +60,15 @@ export function buildSurveyFiles(plan: SurveyPlan, photos: Photo[], grid: Covera
     '  DroneDeploy / Agisoft Metashape: images carry EXIF GPS already; use geotags.csv to drop rejected frames.',
     '',
     'Skip every image marked accepted=0 in geotags.csv (blurred or badly exposed in flight).',
+    ...(manifest.photos.positionsEstimated ? ['Rows marked position_source=estimated were not reported by the aircraft: use the positions in the images\' own EXIF (geo.txt leaves them out).'] : []),
+    'site.kml opens in Google Earth; DJI Pilot 2 imports it as the mapping area for a DJI aircraft.',
     'Re-fly: open mission.plan in QGroundControl, or mission.waypoints in Mission Planner.',
     '',
   ].join('\n');
   return [
-    { name: 'mission.plan', data: enc.encode(JSON.stringify(qgcPlan(plan, origin, SITE.home), null, 2)) },
-    { name: 'mission.waypoints', data: enc.encode(wplText(plan, origin, SITE.home)) },
+    { name: 'mission.plan', data: enc.encode(JSON.stringify(qgcPlan(plan, origin, site.home, { boundary: site.boundary, autopilot }), null, 2)) },
+    { name: 'mission.waypoints', data: enc.encode(wplText(plan, origin, site.home)) },
+    { name: 'site.kml', data: enc.encode(boundaryKml(site, { name: 'Flight lines', lines: plan.lines.map(l => [l.a, l.b]) })) },
     { name: 'geotags.csv', data: enc.encode(geotags.join('\n') + '\n') },
     { name: 'geo.txt', data: enc.encode(geo.join('\n') + '\n') },
     { name: 'coverage.csv', data: enc.encode(cov.join('\n') + '\n') },
@@ -71,12 +77,12 @@ export function buildSurveyFiles(plan: SurveyPlan, photos: Photo[], grid: Covera
   ];
 }
 
-export function downloadSurveyPackage(plan: SurveyPlan, photos: Photo[], grid: CoverageGrid, origin: GeoOrigin, camera: Camera) {
-  const files = buildSurveyFiles(plan, photos, grid, origin, camera);
+export function downloadSurveyPackage(plan: SurveyPlan, photos: Photo[], grid: CoverageGrid, site: SurveySite, camera: Camera, autopilot?: MissionAutopilot) {
+  const files = buildSurveyFiles(plan, photos, grid, site, camera, autopilot);
   const blob = zipStore(files);
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `${SITE.name.replace(/[^\w-]+/g, '_')}_${plan.params.pattern.toLowerCase()}_${new Date().toISOString().slice(0, 10)}.zip`;
+  a.download = `${site.name.replace(/[^\w-]+/g, '_')}_${plan.params.pattern.toLowerCase()}_${new Date().toISOString().slice(0, 10)}.zip`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   return files.length;

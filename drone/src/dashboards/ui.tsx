@@ -100,11 +100,11 @@ interface TabsProps<T extends string> { items: { id: T; label: string; badge?: R
 /** Segmented tabs for the rail. One visible section at a time. */
 export function Tabs<T extends string>({ items, value, onChange, className = '' }: TabsProps<T>) {
   return (
-    <div role="tablist" className={`flex items-center gap-0.5 bg-surface-2 rounded-lg p-0.5 ${className}`}>
+    <div role="tablist" className={`flex items-center gap-0.5 bg-surface-2 rounded-lg p-0.5 overflow-x-auto ${className}`}>
       {items.map(t => (
         <button
           key={t.id} role="tab" aria-selected={value === t.id} onClick={() => onChange(t.id)}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[12px] font-medium transition-colors ${value === t.id ? 'bg-surface text-ink shadow-[var(--shadow-card)]' : 'text-ink-2 hover:text-ink'}`}
+          className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[12px] whitespace-nowrap font-medium transition-colors ${value === t.id ? 'bg-surface text-ink shadow-[var(--shadow-card)]' : 'text-ink-2 hover:text-ink'}`}
         >
           {t.label}{t.badge != null && <span className="num text-[10px] text-ink-3">{t.badge}</span>}
         </button>
@@ -259,3 +259,37 @@ export const Activity: React.FC<{ items: { id: string; ts: string; tone: Tone; t
     ))}
   </ul>
 );
+
+/**
+ * Press and hold to confirm: for commands that start motors or can't be taken back.
+ * Fills as it is held; releasing early cancels. Space or Enter held works the same.
+ */
+export const HoldButton: React.FC<{ icon?: React.ReactNode; label: string; onFire: () => void; ms?: number; disabled?: boolean; title?: string; id?: string; command?: 'fly' | 'abort'; hint?: string }> = ({ icon, label, onFire, ms = 1200, disabled, title, id, command = 'fly', hint = 'Hold' }) => {
+  const op = useOperator();
+  const blocked = command === 'fly' ? !op.canCommand : !op.canAbort;
+  const [p, setP] = React.useState(0);
+  const t0 = React.useRef(0), raf = React.useRef(0), fired = React.useRef(false);
+  const stop = () => { cancelAnimationFrame(raf.current); t0.current = 0; setP(0); };
+  const start = () => {
+    if (disabled || blocked || t0.current) return;
+    fired.current = false; t0.current = performance.now();
+    const tick = () => {
+      const k = Math.min(1, (performance.now() - t0.current) / ms); setP(k);
+      if (k >= 1) { if (!fired.current) { fired.current = true; onFire(); } stop(); return; }
+      raf.current = requestAnimationFrame(tick);
+    };
+    raf.current = requestAnimationFrame(tick);
+  };
+  React.useEffect(() => () => cancelAnimationFrame(raf.current), []);
+  const off = disabled || blocked;
+  return (
+    <button id={id} type="button" disabled={off} title={blocked ? `${ROLE_LABEL[op.role]}: only the pilot in command can do this` : title}
+      onPointerDown={start} onPointerUp={stop} onPointerLeave={stop} onPointerCancel={stop}
+      onKeyDown={e => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); start(); } }} onKeyUp={e => { if (e.key === ' ' || e.key === 'Enter') stop(); }}
+      aria-label={`${label} (press and hold)`}
+      className="relative overflow-hidden inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-[13px] font-medium bg-accent text-accent-ink hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed touch-none select-none [&_svg]:w-4 [&_svg]:h-4">
+      <span aria-hidden className="absolute inset-y-0 left-0 bg-black/25" style={{ width: `${p * 100}%` }} />
+      <span className="relative inline-flex items-center gap-1.5">{icon}{label}<span className="ml-1 text-[10px] uppercase tracking-[0.08em] opacity-75">{p > 0 ? `${Math.round(p * 100)}%` : hint}</span></span>
+    </button>
+  );
+};

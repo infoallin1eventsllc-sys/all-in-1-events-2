@@ -78,7 +78,10 @@ export const SurveillanceDashboard: React.FC = () => {
   const uploadPatrol = () => {
     const items = WAYPOINTS.map((w, i) => { const ll = sim.waypointLatLon(i); return ll ? { lat: ll.lat, lon: ll.lon, altRelM: w.altM, holdS: w.holdSec } : null; });
     if (items.some(x => !x)) return;
-    link.uploadMission(items as { lat: number; lon: number; altRelM: number; holdS: number }[], true).catch(() => {});
+    // From the ground the mission must open with a takeoff (ArduCopter refuses AUTO without one); in the air it starts at the first waypoint.
+    const t = link.telemetry, onGround = !t.armed || t.altRelM < 1;
+    const takeoff = { command: 22, lat: t.home?.lat ?? t.lat, lon: t.home?.lon ?? t.lon, altRelM: WAYPOINTS[0].altM, params: [0, 0, 0, NaN] as [number, number, number, number], frame: 3 };
+    link.uploadMission([...(onGround ? [takeoff] : []), ...(items as { lat: number; lon: number; altRelM: number; holdS: number }[])], true).catch(() => {});
   };
 
   // Flight record: one session per patrol, sampled at 1 Hz, with the dashboard's
@@ -322,7 +325,7 @@ export const SurveillanceDashboard: React.FC = () => {
                       <div className="text-[12px] text-ink">Fly this loop on {liveId}</div>
                       <ToolButton command="fly" size="sm" primary icon={<Upload />} label={link.missionUpload.state === 'UPLOADING' ? `Uploading ${link.missionUpload.sent}/${link.missionUpload.total}` : 'Upload patrol'} disabled={link.missionUpload.state === 'UPLOADING' || !link.preflight.ok} onClick={uploadPatrol} title={link.preflight.ok ? 'Sends the five waypoints as a MAVLink mission and starts AUTO' : 'Pre-flight gate not satisfied (see link popover)'} />
                     </div>
-                    {link.missionUpload.state === 'DONE' && <div className="mt-1 text-[11px] text-ok">Mission on the aircraft · AUTO started</div>}
+                    {link.missionUpload.state === 'DONE' && <div className="mt-1 text-[11px] text-ok">Mission on the aircraft · started</div>}
                     {link.missionUpload.state === 'FAILED' && <div className="mt-1 text-[11px] text-bad">{link.missionUpload.error}</div>}
                     {link.telemetry.missionCurrent > 0 && <div className="mt-1 text-[11px] text-ink-2">Aircraft reports mission item {link.telemetry.missionCurrent}</div>}
                   </div>

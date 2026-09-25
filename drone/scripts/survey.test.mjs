@@ -115,7 +115,7 @@ console.log('survey planning: all tests passed');
 {
   const x = await loadModule('../src/survey/exportSurvey.ts');
   const photos = shots.slice(0, 20).map((s, i) => ({ id: i + 1, x: s.p.x, y: s.p.y, altM: 60, headingDeg: 0, pitchDeg: -90, t: 0, line: s.line, ok: i !== 3, reason: i === 3 ? 'Blur' : undefined }));
-  const files = x.buildSurveyFiles(grid, photos, cov, SITE.origin, m.CAMERAS.MAVIC_3E);
+  const files = x.buildSurveyFiles(grid, photos, cov, { name: SITE.name, kind: 'DEMO', origin: SITE.origin, boundary: SITE.boundary, home: SITE.home, orbitCenter: { x: 60, y: -70 } }, m.CAMERAS.MAVIC_3E);
   const byName = Object.fromEntries(files.map(f => [f.name, new TextDecoder().decode(f.data)]));
   for (const n of ['mission.plan', 'mission.waypoints', 'geotags.csv', 'geo.txt', 'coverage.csv', 'manifest.json', 'README.txt']) assert.ok(byName[n], `package has ${n}`);
   assert.equal(byName['geotags.csv'].trim().split('\n').length, 21, 'header + one row per photo');
@@ -127,3 +127,87 @@ console.log('survey planning: all tests passed');
   JSON.parse(byName['mission.plan']);
 }
 console.log('survey package: all tests passed');
+
+// --- autopilot-aware mission, resume, geofence ------------------------------
+{
+  const C = m.SURVEY_CMD;
+  const ardu = m.surveyMission(grid, SITE.origin, { autopilot: 'ARDUPILOT', home: SITE.home });
+  const px4 = m.surveyMission(grid, SITE.origin, { autopilot: 'PX4', home: SITE.home });
+  assert.ok(ardu.items.some(i => i.command === C.DO_MOUNT_CONTROL) && !ardu.items.some(i => i.command === C.DO_GIMBAL_MANAGER_PITCHYAW), 'ArduPilot: mount control');
+  const g2 = px4.items.find(i => i.command === C.DO_GIMBAL_MANAGER_PITCHYAW);
+  assert.ok(g2 && g2.params[0] === -90 && !px4.items.some(i => i.command === C.DO_MOUNT_CONTROL), 'PX4: gimbal v2 pitch');
+  const home = m.toLatLon(SITE.origin, SITE.home);
+  near(ardu.items[0].lat, home.lat, 1e-9, 'takeoff at home lat'); near(ardu.items[0].lon, home.lon, 1e-9, 'takeoff at home lon');
+  assert.equal(ardu.items.length, ardu.roles.length, 'a role for every item');
+  const ends = ardu.roles.filter(r => r.kind === 'LINE_END');
+  assert.deepEqual(ends.map(r => r.line), grid.lines.map((_, i) => i), 'every line has its end waypoint, in order');
+  assert.ok(ardu.items.length <= m.MAX_MISSION_ITEMS, 'a site map fits any flight controller');
+
+  // Resume from the middle of line 5.
+  const l5 = grid.lines[5], mid = { x: (l5.a.x + l5.b.x) / 2, y: (l5.a.y + l5.b.y) / 2 + 3 };
+  const res = m.surveyMission(grid, SITE.origin, { home: SITE.home, from: { line: 5, at: mid } });
+  const firstStart = res.roles.findIndex(r => r.kind === 'LINE_START');
+  assert.equal(res.roles[firstStart].line, 5, 'resume starts at the interrupted line');
+  const p0 = m.fromLatLon(SITE.origin, res.items[firstStart].lat, res.items[firstStart].lon);
+  near(p0.x, (l5.a.x + l5.b.x) / 2, 0.05, 'from the point it stopped (projected onto the line)');
+  near(p0.y, l5.a.y, 0.05, 'on the line, not where the aircraft drifted');
+  assert.equal(res.items[0].command, C.NAV_TAKEOFF, 'resume takes off first');
+  assert.equal(res.roles.filter(r => r.kind === 'LINE_END').length, grid.lines.length - 5, 'then the remaining lines');
+
+  // Geofence: convex, contains the site, home and every waypoint with margin.
+  const fence = m.fencePolygon(grid, SITE.boundary, SITE.home, 30);
+  const inside = (p) => m.pointInPolygon(p, fence);
+  assert.ok(SITE.boundary.every(inside) && inside(SITE.home), 'fence holds the site and home');
+  assert.ok(grid.lines.every(l => inside(l.a) && inside(l.b)), 'fence holds every lead-in');
+  const edgeDist = (p) => Math.min(...fence.map((a, i) => { const b = fence[(i + 1) % fence.length]; const q = m.projectOnSegment(p, a, b); return Math.hypot(q.x - p.x, q.y - p.y); }));
+  assert.ok(grid.lines.every(l => edgeDist(l.a) >= 29.9 && edgeDist(l.b) >= 29.9), 'every waypoint at least the margin from the fence');
+  const qp = m.qgcPlan(grid, SITE.origin, SITE.home, { boundary: SITE.boundary, autopilot: 'PX4' });
+  assert.equal(qp.geoFence.polygons[0].inclusion, true); assert.equal(qp.geoFence.polygons[0].polygon.length, fence.length);
+  assert.equal(qp.mission.firmwareType, 12, 'PX4 plan');
+}
+
+// --- site boundaries ---------------------------------------------------------
+{
+  const b = await loadModule('../src/survey/boundary.ts');
+  const kml = `<?xml version="1.0"?><kml><Document><Placemark><name>North field</name><Polygon><outerBoundaryIs><LinearRing><coordinates>
+    -118.2000,33.7700,0 -118.1980,33.7700,0 -118.1980,33.7715,0 -118.2000,33.7715,0 -118.2000,33.7700,0
+  </coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark></Document></kml>`;
+  const k = b.parseBoundaryText(kml);
+  assert.equal(k.name, 'North field'); assert.equal(k.ring.length, 4, 'closing point dropped');
+  assert.deepEqual(k.ring[0], { lat: 33.77, lon: -118.2 }, 'KML is lon,lat');
+  const gj = b.parseBoundaryText(JSON.stringify({ type: 'FeatureCollection', features: [
+    { type: 'Feature', properties: { name: 'small' }, geometry: { type: 'Polygon', coordinates: [[[-118, 33], [-118.0001, 33], [-118.0001, 33.0001], [-118, 33]]] } },
+    { type: 'Feature', properties: { name: 'big' }, geometry: { type: 'MultiPolygon', coordinates: [[[[-118.2, 33.77], [-118.198, 33.77], [-118.198, 33.7715], [-118.2, 33.7715], [-118.2, 33.77]]]] } },
+  ] }));
+  assert.equal(gj.ring.length, 4, 'GeoJSON: the largest polygon'); near(gj.ring[1].lon, -118.198, 1e-12, 'GeoJSON lon');
+  const csv = b.parseBoundaryText('33.7700, -118.2000\n33.7700, -118.1980\n33.7715, -118.1980\n33.7715, -118.2000');
+  assert.deepEqual(csv.ring[1], { lat: 33.77, lon: -118.198 }, 'coordinate list: lat, lon');
+  const csv2 = b.parseBoundaryText('lon,lat\n-118.2,33.77\n-118.198,33.77\n-118.198,33.7715');
+  assert.deepEqual(csv2.ring[0], { lat: 33.77, lon: -118.2 }, 'header lon,lat swaps');
+  const ok = b.checkBoundary(k.ring);
+  assert.deepEqual(ok.errors, []); assert.ok(ok.areaM2 > 30000 && ok.areaM2 < 32000, `~185 × 167 m, got ${ok.areaM2}`);
+  const bow = b.checkBoundary([k.ring[0], k.ring[2], k.ring[1], k.ring[3]]);
+  assert.ok(bow.errors.some(e => /crosses itself/.test(e)), 'a bow-tie is refused');
+  assert.ok(b.checkBoundary(k.ring.slice(0, 2)).errors.length, 'two corners are refused');
+  const site = b.siteFromRing('North field', k.ring, 'IMPORTED');
+  near(m.polygonArea(site.boundary), ok.areaM2, 1e-6, 'site in local metres');
+  const back = m.toLatLon(site.origin, site.boundary[2]);
+  near(back.lat, 33.7715, 1e-7, 'round-trip lat'); near(back.lon, -118.198, 1e-7, 'round-trip lon');
+  // KMZ with a deflated doc.kml.
+  const raw = new TextEncoder().encode(kml);
+  const def = new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer());
+  const name = new TextEncoder().encode('doc.kml');
+  const zip = new Uint8Array(30 + name.length + def.length); const zv = new DataView(zip.buffer);
+  zv.setUint32(0, 0x04034b50, true); zv.setUint16(8, 8, true); zv.setUint32(18, def.length, true); zv.setUint32(22, raw.length, true); zv.setUint16(26, name.length, true);
+  zip.set(name, 30); zip.set(def, 30 + name.length);
+  const fromKmz = b.parseBoundaryText(await b.kmlFromKmz(zip.buffer));
+  assert.equal(fromKmz.ring.length, 4, 'KMZ opens');
+  // The package carries the boundary as KML and the fence in the QGC plan.
+  const x = await loadModule('../src/survey/exportSurvey.ts');
+  const plan2 = m.planSurvey(site.boundary, site.home, { ...base, altitudeM: 50 });
+  const files = Object.fromEntries(x.buildSurveyFiles(plan2, [], new m.CoverageGrid(site.boundary, 5), site, m.CAMERAS.SONY_RX100).map(f => [f.name, new TextDecoder().decode(f.data)]));
+  const back2 = b.parseBoundaryText(files['site.kml']);
+  assert.equal(back2.ring.length, 4, 'site.kml re-imports'); near(back2.ring[0].lat, 33.77, 1e-7, 'site.kml round-trip');
+  assert.equal(JSON.parse(files['mission.plan']).geoFence.polygons.length, 1, 'plan carries the fence');
+}
+console.log('survey sites and fence: all tests passed');

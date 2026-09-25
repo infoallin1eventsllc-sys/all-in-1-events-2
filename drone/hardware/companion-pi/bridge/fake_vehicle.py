@@ -3,14 +3,23 @@
 
 Speaks enough ArduCopter (default) or PX4 (--px4) MAVLink to exercise every
 command the dashboard sends: heartbeat, GPS, position, battery, arming, flight
-modes, takeoff, go-to, RTL/land, the mission upload handshake, gimbal, zoom,
-camera source, relay and photos (with CAMERA_FEEDBACK). It flies a point mass,
-not physics — for flight dynamics use ArduPilot SITL.
+modes, takeoff, go-to, RTL/land, the mission and geofence upload handshakes,
+gimbal, zoom, camera source, relay and photos. It flies a point mass, not
+physics — for flight dynamics use ArduPilot SITL.
+
+Missions run the way the autopilots run them: ArduCopter refuses to arm in AUTO
+and starts on MISSION_START; PX4 arms in mission mode and goes. Takeoff,
+waypoints, speed, gimbal, distance camera triggering (CAMERA_FEEDBACK on
+ArduPilot, CAMERA_TRIGGER on PX4) and RTL execute in order; MISSION_CURRENT,
+HOME_POSITION, WIND and FENCE_STATUS are reported. A low battery triggers the
+battery failsafe (RTL), and a landed, disarmed aircraft gets a fresh pack after
+a few seconds, as a crew would swap it.
 
   python3 fake_vehicle.py --to 127.0.0.1:14550          # then: mavlink_ws.py --udp 0.0.0.0:14550
   python3 fake_vehicle.py --to 127.0.0.1:14550 --px4
   python3 fake_vehicle.py --legacy-gimbal               # refuse gimbal v2, to test the fallback
   python3 fake_vehicle.py --fault prop3                  # health screen: chipped prop on motor 3
+  python3 fake_vehicle.py --time 8                       # run the world 8× faster (long survey missions)
       (faults: prop3, motor2, arm, vibration, cell, compass, oldfw)
 
 Health telemetry is sent like a real ArduCopter's: motor outputs (SERVO_OUTPUT_RAW),
@@ -59,10 +68,50 @@ class Vehicle:
         self.heading = 0.0
         self.speed = 0.0
         self.gimbal_pitch = 0.0
-        self.mission: list[m.MAVLink_mission_item_int_message] = []
+        self.mission: list = []
+        self.fence: list = []
+        self.fence_on = False
         self.expect = 0
-        self.wp = 0
+        self.upload_type = 0
+        self.upload: list = []
+        self.cur = 0            # mission item being flown (MISSION_CURRENT)
         self.photos = 0
+        self.cruise = 8.0
+        self.trig_dist = 0.0
+        self.trig_acc = 0.0
+        self.batt_fs = 25.0     # battery failsafe: RTL below this
+        self.landed_since = 0.0
+        self.events: list[tuple[str, object]] = []  # things for the main loop to send
+
+    def first_item(self) -> int:
+        return 0 if self.px4 else 1  # ArduPilot's item 0 is home
+
+    def start_mission(self) -> None:
+        self.mode = "AUTO"
+        self.cur = self.first_item()
+        self.target = None
+        self.run_do_items()
+
+    def item(self):
+        return self.mission[self.cur] if 0 <= self.cur < len(self.mission) else None
+
+    def run_do_items(self) -> None:
+        """Execute DO_ commands at the current position until the next NAV command."""
+        while True:
+            it = self.item()
+            if it is None or it.command < 80 or it.command in (m.MAV_CMD_NAV_TAKEOFF, m.MAV_CMD_NAV_WAYPOINT, m.MAV_CMD_NAV_RETURN_TO_LAUNCH):
+                return
+            c = it.command
+            if c == m.MAV_CMD_DO_CHANGE_SPEED and it.param2 > 0:
+                self.cruise = it.param2
+            elif c in (m.MAV_CMD_DO_MOUNT_CONTROL, m.MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW):
+                self.gimbal_pitch = it.param1
+            elif c == m.MAV_CMD_DO_SET_CAM_TRIGG_DIST:
+                self.trig_dist, self.trig_acc = it.param1, 0.0
+                if it.param3 == 1 and it.param1 > 0:
+                    self.photo()
+            say(f"MIS do {c} {it.param1:.1f}")
+            self.cur += 1
 
     # --- modes ------------------------------------------------------------------
     def custom_mode(self) -> int:
@@ -82,16 +131,38 @@ class Vehicle:
                 return name
         return self.mode
 
+    def photo(self) -> None:
+        self.photos += 1
+        self.events.append(("photo", self.photos))
+
     # --- motion -----------------------------------------------------------------
     def step(self, dt: float) -> None:
         if not self.armed:
             self.speed = 0
+            self.landed_since += dt
+            if self.landed_since > 4 and self.battery < 80:
+                self.battery = 96.0
+                say("EVT battery swapped")
             return
+        self.landed_since = 0.0
+        if self.battery < self.batt_fs and self.mode not in ("RTL", "LAND"):
+            self.mode = "RTL"
+            self.trig_dist = 0.0
+            self.events.append(("text", "Battery failsafe: RTL"))
+            say("EVT battery failsafe RTL")
         if self.mode == "AUTO" and self.mission:
-            items = [i for i in self.mission if i.command == m.MAV_CMD_NAV_WAYPOINT]
-            if self.wp < len(items):
-                it = items[self.wp]
+            it = self.item()
+            if it is None:
+                self.target = None
+            elif it.command == m.MAV_CMD_NAV_TAKEOFF:
+                self.target = (self.lat, self.lon, it.z)
+                if self.alt >= it.z - 0.5:
+                    self.cur += 1
+                    self.run_do_items()
+            elif it.command == m.MAV_CMD_NAV_WAYPOINT:
                 self.target = (it.x / 1e7, it.y / 1e7, it.z)
+            elif it.command == m.MAV_CMD_NAV_RETURN_TO_LAUNCH:
+                self.target = (HOME[0], HOME[1], 0.0 if self.near_home() else max(self.alt, 15))
         elif self.mode in ("RTL", "LAND"):
             self.target = (HOME[0], HOME[1], 0.0 if self.mode == "LAND" or self.near_home() else max(self.alt, 15))
         if not self.target:
@@ -101,21 +172,31 @@ class Vehicle:
         dy = (tlat - self.lat) * M_PER_DEG
         dx = (tlon - self.lon) * M_PER_DEG * math.cos(math.radians(self.lat))
         d = math.hypot(dx, dy)
-        v = 8.0
+        v = self.cruise if self.mode == "AUTO" else 8.0
         if d > 0.5:
             s = min(d, v * dt)
+            if self.trig_dist > 0 and self.mode == "AUTO":
+                self.trig_acc += s
+                while self.trig_acc >= self.trig_dist:
+                    self.trig_acc -= self.trig_dist
+                    self.photo()
             self.lat += (dy / d) * s / M_PER_DEG
             self.lon += (dx / d) * s / (M_PER_DEG * math.cos(math.radians(self.lat)))
             self.heading = (math.degrees(math.atan2(dx, dy)) + 360) % 360
             self.speed = v
         else:
             self.speed = 0
-            if self.mode == "AUTO":
-                self.wp += 1
+            it = self.item()
+            if self.mode == "AUTO" and it is not None and it.command == m.MAV_CMD_NAV_WAYPOINT and abs(self.alt - it.z) < 1:
+                say(f"MIS reached {self.cur}")
+                self.cur += 1
+                self.run_do_items()
         self.alt += max(-3 * dt, min(4 * dt, talt - self.alt))
         self.battery = max(10, self.battery - 0.01 * dt * (2 + self.speed))
         self.cell_wear = min(1.0, self.cell_wear + dt / 900)
-        if self.alt <= 0.05 and self.mode in ("LAND", "RTL") and self.near_home():
+        it = self.item()
+        rtl_item = self.mode == "AUTO" and it is not None and it.command == m.MAV_CMD_NAV_RETURN_TO_LAUNCH
+        if self.alt <= 0.05 and (self.mode in ("LAND", "RTL") or rtl_item) and self.near_home():
             self.armed = False
             say("EVT landed and disarmed")
 
@@ -194,6 +275,7 @@ def main() -> None:
     ap.add_argument("--to", default="127.0.0.1:14550", help="where the bridge listens for UDP")
     ap.add_argument("--px4", action="store_true")
     ap.add_argument("--legacy-gimbal", action="store_true")
+    ap.add_argument("--time", type=float, default=1.0, help="world speed-up (a long survey mission in minutes)")
     ap.add_argument("--fault", default="none", choices=["none", "prop3", "motor2", "arm", "vibration", "cell", "compass", "oldfw"],
                     help="simulate a mechanical or setup fault for the health screen")
     args = ap.parse_args()
@@ -211,7 +293,16 @@ def main() -> None:
     while True:
         now = time.time()
         dt, last = now - last, now
-        v.step(dt)
+        v.step(dt * args.time)
+        for kind, val in v.events:
+            if kind == "photo":
+                if v.px4:
+                    mav.camera_trigger_send(int(now * 1e6), val)
+                else:
+                    mav.camera_feedback_send(int(now * 1e6), 1, 0, val, int(v.lat * 1e7), int(v.lon * 1e7), 10 + v.alt, v.alt, 0, v.gimbal_pitch, v.heading, 12.29, 0)
+            elif kind == "text":
+                mav.statustext_send(m.MAV_SEVERITY_WARNING, str(val).encode())
+        v.events.clear()
         tick += 1
         # 10 Hz loop: position 5 Hz, the rest 1–2 Hz.
         if tick % 10 == 0:
@@ -222,6 +313,12 @@ def main() -> None:
             mav.gps_raw_int_send(int(now * 1e6), 3, int(v.lat * 1e7), int(v.lon * 1e7), int(v.alt * 1000), 80, 120, 0, 0, 14)
             q = [math.cos(math.radians(v.gimbal_pitch) / 2), 0, math.sin(math.radians(v.gimbal_pitch) / 2), 0]
             mav.gimbal_device_attitude_status_send(0, 0, int(now * 1000) & 0xFFFFFFFF, 0, q, 0, 0, 0, 0)
+            mav.mission_current_send(v.cur, len(v.mission))
+            if not v.px4:
+                mav.wind_send(250.0, 4.2, 0.0)
+            mav.fence_status_send(0, 0, 0, 0)
+        if tick % 50 == 0:
+            mav.home_position_send(int(HOME[0] * 1e7), int(HOME[1] * 1e7), 10000, 0, 0, 0, [1, 0, 0, 0], 0, 0, 0)
         if tick % 2 == 0:
             mav.global_position_int_send(int(now * 1000) & 0xFFFFFFFF, int(v.lat * 1e7), int(v.lon * 1e7), int((10 + v.alt) * 1000), int(v.alt * 1000), 0, 0, 0, int(v.heading * 100))
             mav.vfr_hud_send(v.speed, v.speed, int(v.heading), 48 if v.armed else 0, v.alt, 0)
@@ -236,18 +333,36 @@ def main() -> None:
             if t == "COMMAND_LONG" or t == "COMMAND_INT":
                 c = msg.command
                 p = [msg.param1, msg.param2, msg.param3, msg.param4]
-                if c == m.MAV_CMD_COMPONENT_ARM_DISARM:
+                if c == m.MAV_CMD_COMPONENT_ARM_DISARM and p[0] == 1 and not v.px4 and v.mode == "AUTO":
+                    mav.statustext_send(m.MAV_SEVERITY_CRITICAL, b"Arm: Mode not armable")
+                    say("CMD arm DENIED (ArduCopter does not arm in AUTO)")
+                    ack(c, m.MAV_RESULT_FAILED)
+                elif c == m.MAV_CMD_COMPONENT_ARM_DISARM:
                     if p[0] == 1 and not v.armed and v.mode in ("LAND", "RTL"):
                         v.mode = "LOITER" if v.px4 else "STABILIZE"  # after a landing, arm in a flyable mode
                         v.target = None
                     v.armed = p[0] == 1
                     say(f"CMD arm {v.armed}")
                     ack(c)
+                    if v.armed and v.px4 and v.mode == "AUTO" and v.mission:
+                        v.start_mission()  # PX4 flies its mission once armed in mission mode
+                        say("MIS start (PX4 armed in mission mode)")
                 elif c == m.MAV_CMD_DO_SET_MODE:
+                    was = v.mode
                     v.mode = v.set_mode_from(p[1], p[2])
-                    if v.mode == "AUTO":
-                        v.wp = 0
+                    if v.mode == "AUTO" and was != "AUTO" and v.armed and v.alt > 1:
+                        v.start_mission()  # AUTO in the air starts (continues) the mission
                     say(f"CMD mode {v.mode}")
+                    ack(c)
+                elif c == m.MAV_CMD_MISSION_START:
+                    ok = v.armed and bool(v.mission)
+                    if ok:
+                        v.start_mission()
+                    say(f"CMD mission start {'accepted' if ok else 'DENIED (not armed)'}")
+                    ack(c, m.MAV_RESULT_ACCEPTED if ok else m.MAV_RESULT_FAILED)
+                elif c == m.MAV_CMD_DO_FENCE_ENABLE:
+                    v.fence_on = p[0] == 1
+                    say(f"CMD fence {'on' if v.fence_on else 'off'} ({len(v.fence)} vertices)")
                     ack(c)
                 elif c == m.MAV_CMD_NAV_TAKEOFF:
                     alt = msg.param7 if t == "COMMAND_LONG" else msg.z
@@ -289,6 +404,8 @@ def main() -> None:
                     ack(c)
                 elif c == m.MAV_CMD_REQUEST_MESSAGE and int(p[0]) == 148:
                     ack(c); v.send_version(mav)
+                elif c == m.MAV_CMD_REQUEST_MESSAGE and int(p[0]) == 242:
+                    ack(c); mav.home_position_send(int(HOME[0] * 1e7), int(HOME[1] * 1e7), 10000, 0, 0, 0, [1, 0, 0, 0], 0, 0, 0)
                 elif c == m.MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES:
                     ack(c); v.send_version(mav)
                 else:
@@ -297,19 +414,30 @@ def main() -> None:
                 v.target = (msg.lat_int / 1e7, msg.lon_int / 1e7, msg.alt)
                 say(f"CMD goto {msg.lat_int / 1e7:.6f} {msg.lon_int / 1e7:.6f} {msg.alt:.0f} m (mode {v.mode})")
             elif t == "MISSION_CLEAR_ALL":
-                v.mission = []
-            elif t == "MISSION_COUNT":
-                v.mission, v.expect = [], msg.count
-                say(f"CMD mission count {msg.count}")
-                mav.mission_request_int_send(255, 190, 0)
-            elif t == "MISSION_ITEM_INT":
-                v.mission.append(msg)
-                if msg.seq + 1 < v.expect:
-                    mav.mission_request_int_send(255, 190, msg.seq + 1)
+                # Like ArduPilot: clear, and acknowledge the clear.
+                if msg.mission_type == 1:
+                    v.fence = []
                 else:
-                    first = v.mission[0]
-                    say(f"CMD mission done {len(v.mission)} items, item0 cmd {first.command}, commands {sorted(set(i.command for i in v.mission))}")
-                    mav.mission_ack_send(255, 190, m.MAV_MISSION_ACCEPTED)
+                    v.mission = []
+                mav.mission_ack_send(255, 190, m.MAV_MISSION_ACCEPTED, msg.mission_type)
+            elif t == "MISSION_COUNT":
+                v.upload, v.expect, v.upload_type = [], msg.count, msg.mission_type
+                say(f"CMD {'fence' if msg.mission_type == 1 else 'mission'} count {msg.count}")
+                mav.mission_request_int_send(255, 190, 0, msg.mission_type)
+            elif t == "MISSION_ITEM_INT":
+                if msg.mission_type != v.upload_type or msg.seq != len(v.upload):
+                    continue
+                v.upload.append(msg)
+                if msg.seq + 1 < v.expect:
+                    mav.mission_request_int_send(255, 190, msg.seq + 1, v.upload_type)
+                else:
+                    if v.upload_type == 1:
+                        v.fence = v.upload
+                        say(f"CMD fence done {len(v.fence)} vertices")
+                    else:
+                        v.mission, v.cur = v.upload, 0
+                        say(f"CMD mission done {len(v.mission)} items, item0 cmd {v.mission[0].command}, commands {sorted(set(i.command for i in v.mission))}")
+                    mav.mission_ack_send(255, 190, m.MAV_MISSION_ACCEPTED, v.upload_type)
         time.sleep(0.1)
 
 

@@ -1,13 +1,15 @@
 import React, { useEffect, useRef } from 'react';
-import { SITE, WORLD_M, siteImagery } from '../../survey/site';
-import { GOOD_VIEWS, type CoverageGrid, type Leg, type SurveyPlan } from '../../survey/plan';
+import { WORLD_M, siteImagery } from '../../survey/site';
+import { usesDemoGeometry, type SurveySite } from '../../survey/boundary';
+import { GOOD_VIEWS, type CoverageGrid, type Leg, type SurveyPlan, type Pt } from '../../survey/plan';
 import type { Photo, SurveyAircraft } from '../../hooks/useSurveyMission';
 import type { SurveyLayer } from './SurveyScanCanvas3D';
 
 /**
- * Plan view of the survey: the orthophoto revealed where photographed, the
- * boundary, flight lines (flown in accent, remaining dashed), every photo, and
- * the aircraft with its camera footprint.
+ * Plan view of the survey: the orthophoto revealed where photographed (on the
+ * demo venue; a real site draws on a survey grid), the boundary, the geofence,
+ * flight lines (flown in accent, remaining dashed), every photo, and the
+ * aircraft with its camera footprint. Remount it (key) when the site changes.
  */
 
 interface Props {
@@ -19,6 +21,11 @@ interface Props {
   grid: CoverageGrid;
   gridVersion: number;
   layer: SurveyLayer;
+  site: SurveySite;
+  /** Inclusion geofence to draw, local metres. */
+  fence?: Pt[] | null;
+  /** Corners being walked with the aircraft, not yet a site. */
+  draft?: Pt[];
   compact?: boolean;
 }
 
@@ -35,11 +42,15 @@ export const SurveyMapCanvas: React.FC<Props> = (props) => {
     const ctx = cv.getContext('2d'); if (!ctx) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     cv.width = MAP_W * dpr; cv.height = MAP_H * dpr;
-    const img = siteImagery(2048); const ipm = img.width / WORLD_M;
+    const site = propsRef.current.site, demo = usesDemoGeometry(site);
+    const img = demo ? siteImagery(2048) : null; const ipm = img ? img.width / WORLD_M : 1;
 
-    // View: fit the boundary with a margin, centred.
-    const xs = SITE.boundary.map(p => p.x), ys = SITE.boundary.map(p => p.y);
-    const x0 = Math.min(...xs) - MARGIN_M, x1 = Math.max(...xs) + MARGIN_M, y0 = Math.min(...ys) - MARGIN_M, y1 = Math.max(...ys) + MARGIN_M;
+    // View: fit the boundary (and home) with a margin, centred.
+    const fitPts = [...site.boundary, site.home];
+    const xs = fitPts.map(p => p.x), ys = fitPts.map(p => p.y);
+    const span = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
+    const margin = Math.max(MARGIN_M, span * 0.12);
+    const x0 = Math.min(...xs) - margin, x1 = Math.max(...xs) + margin, y0 = Math.min(...ys) - margin, y1 = Math.max(...ys) + margin;
     const s = Math.min(MAP_W / (x1 - x0), MAP_H / (y1 - y0));
     const ox = MAP_W / 2 - ((x0 + x1) / 2) * s, oy = MAP_H / 2 - ((y0 + y1) / 2) * s;
     const X = (x: number) => ox + x * s, Y = (y: number) => oy + y * s;
@@ -82,12 +93,30 @@ export const SurveyMapCanvas: React.FC<Props> = (props) => {
       const P = propsRef.current; const a = P.aircraft; const pl = P.plan;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.fillStyle = '#0b0f14'; ctx.fillRect(0, 0, MAP_W, MAP_H);
-      ctx.drawImage(img, (vx0 + WORLD_M / 2) * ipm, (vy0 + WORLD_M / 2) * ipm, (MAP_W / s) * ipm, (MAP_H / s) * ipm, 0, 0, MAP_W, MAP_H);
+      if (img) ctx.drawImage(img, (vx0 + WORLD_M / 2) * ipm, (vy0 + WORLD_M / 2) * ipm, (MAP_W / s) * ipm, (MAP_H / s) * ipm, 0, 0, MAP_W, MAP_H);
+      else {
+        // A real site: no imagery here, so a survey grid at a step that suits the scale.
+        const stepM = [10, 25, 50, 100, 250, 500, 1000].find(m => m * s >= 28) ?? 1000;
+        ctx.fillStyle = '#101722'; ctx.fillRect(0, 0, MAP_W, MAP_H);
+        for (let m = Math.floor(vx0 / stepM) * stepM; m < vx0 + MAP_W / s; m += stepM) { ctx.fillStyle = m % (stepM * 4) === 0 ? 'rgba(120,150,200,0.22)' : 'rgba(120,150,200,0.09)'; ctx.fillRect(X(m), 0, 1, MAP_H); }
+        for (let m = Math.floor(vy0 / stepM) * stepM; m < vy0 + MAP_H / s; m += stepM) { ctx.fillStyle = m % (stepM * 4) === 0 ? 'rgba(120,150,200,0.22)' : 'rgba(120,150,200,0.09)'; ctx.fillRect(0, Y(m), MAP_W, 1); }
+      }
       drawVeil(P.grid, P.layer); ctx.drawImage(veil, 0, 0);
 
       // Boundary
-      ctx.beginPath(); SITE.boundary.forEach((p, i) => (i ? ctx.lineTo(X(p.x), Y(p.y)) : ctx.moveTo(X(p.x), Y(p.y)))); ctx.closePath();
+      ctx.beginPath(); site.boundary.forEach((p, i) => (i ? ctx.lineTo(X(p.x), Y(p.y)) : ctx.moveTo(X(p.x), Y(p.y)))); ctx.closePath();
       ctx.strokeStyle = ACCENT; ctx.lineWidth = 1.5; ctx.setLineDash([8, 6]); ctx.stroke(); ctx.setLineDash([]);
+      // Geofence: where the autopilot will stop the aircraft.
+      if (P.fence?.length) {
+        ctx.beginPath(); P.fence.forEach((p, i) => (i ? ctx.lineTo(X(p.x), Y(p.y)) : ctx.moveTo(X(p.x), Y(p.y)))); ctx.closePath();
+        ctx.strokeStyle = 'rgba(248,113,113,0.7)'; ctx.lineWidth = 1; ctx.setLineDash([2, 4]); ctx.stroke(); ctx.setLineDash([]);
+      }
+      // Corners marked so far while walking the boundary.
+      if (P.draft?.length) {
+        ctx.beginPath(); P.draft.forEach((p, i) => (i ? ctx.lineTo(X(p.x), Y(p.y)) : ctx.moveTo(X(p.x), Y(p.y)))); if (P.draft.length > 2) ctx.closePath();
+        ctx.strokeStyle = '#fde68a'; ctx.lineWidth = 2; ctx.stroke();
+        P.draft.forEach((p, i) => { ctx.beginPath(); ctx.arc(X(p.x), Y(p.y), 5, 0, Math.PI * 2); ctx.fillStyle = '#fde68a'; ctx.fill(); ctx.fillStyle = '#111'; ctx.font = '600 9px Inter, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(String(i + 1), X(p.x), Y(p.y) + 3); ctx.textAlign = 'left'; });
+      }
 
       // Flight path
       const legs = P.legs;
@@ -107,8 +136,9 @@ export const SurveyMapCanvas: React.FC<Props> = (props) => {
       }
 
       // Home
-      ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(X(SITE.home.x), Y(SITE.home.y), 8, 0, Math.PI * 2); ctx.stroke();
-      ctx.font = '600 10px Inter, system-ui, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.textAlign = 'center'; ctx.fillText('H', X(SITE.home.x), Y(SITE.home.y) + 3.5); ctx.textAlign = 'left';
+      const home = P.site.home;
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(X(home.x), Y(home.y), 8, 0, Math.PI * 2); ctx.stroke();
+      ctx.font = '600 10px Inter, system-ui, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.textAlign = 'center'; ctx.fillText('H', X(home.x), Y(home.y) + 3.5); ctx.textAlign = 'left';
 
       // Camera footprint + aircraft
       if (a.altM > 0.3) {
@@ -131,10 +161,10 @@ export const SurveyMapCanvas: React.FC<Props> = (props) => {
 
       if (!P.compact) {
         // Scale bar + north
-        const m100 = 100 * s;
-        ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(16, MAP_H - 38, m100 + 24, 24);
-        ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(28, MAP_H - 22); ctx.lineTo(28 + m100, MAP_H - 22); ctx.stroke();
-        ctx.font = '11px Inter, system-ui, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillText('100 m', 28, MAP_H - 27);
+        const barM = [25, 50, 100, 250, 500, 1000, 2000].find(m => m * s >= 90) ?? 2000, bar = barM * s;
+        ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(16, MAP_H - 38, bar + 24, 24);
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(28, MAP_H - 22); ctx.lineTo(28 + bar, MAP_H - 22); ctx.stroke();
+        ctx.font = '11px Inter, system-ui, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillText(barM >= 1000 ? `${barM / 1000} km` : `${barM} m`, 28, MAP_H - 27);
         ctx.beginPath(); ctx.moveTo(MAP_W - 28, 44); ctx.lineTo(MAP_W - 22, 30); ctx.lineTo(MAP_W - 16, 44); ctx.closePath(); ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fill();
         ctx.textAlign = 'center'; ctx.fillText('N', MAP_W - 22, 58); ctx.textAlign = 'left';
       }
