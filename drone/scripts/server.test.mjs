@@ -4,7 +4,7 @@
 // chain link exactly as the console does, events are append-only, companies only
 // see their own rows, and a client (view-only) account cannot write.
 import assert from 'assert';
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { PGlite } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import { loadModule } from './bundle.mjs';
@@ -19,7 +19,8 @@ await db.exec(`
   create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
   create role authenticated nologin;
 `);
-await db.exec(readFileSync(new URL('../server/supabase/migrations/0001_drone_command.sql', import.meta.url), 'utf8'));
+const MIGRATIONS = new URL('../server/supabase/migrations/', import.meta.url);
+for (const f of readdirSync(MIGRATIONS).filter(f => f.endsWith('.sql')).sort()) await db.exec(readFileSync(new URL(f, MIGRATIONS), 'utf8'));
 
 const U = { pilot: '11111111-1111-1111-1111-111111111111', client: '22222222-2222-2222-2222-222222222222', rival: '33333333-3333-3333-3333-333333333333', observer: '44444444-4444-4444-4444-444444444444' };
 await db.exec(`
@@ -64,6 +65,14 @@ await as(U.pilot, async () => {
   await fails(db.query(`delete from public.dc_events where session_id = $1`, [sid]), /permission denied|append-only/, 'delete events');
   await db.query(`insert into public.dc_health (aircraft, started_at, ended_at, airborne_s, overall, report) values ('SIM-1', now(), now(), 90, 'WATCH', '{"findings":[]}')`);
   await db.query(`insert into public.dc_service (aircraft, t, note, part) values ('SIM-1', now(), 'Prop 3 replaced', 'prop-3')`);
+  // Closing a flight changes only ended_at and note; the rest of the row, and who uploaded it, are fixed (0002).
+  await db.query(`update public.dc_sessions set ended_at = now(), note = 'Closed' where id = $1`, [sid]);
+  for (const set of [`title = 'Renamed'`, `chain_head = repeat('f', 64)`, `uploaded_by = '${U.observer}'`, `started_at = now()`, `id = 'moved'`])
+    await fails(db.query(`update public.dc_sessions set ${set} where id = $1`, [sid]), /permission denied/, `update ${set}`);
+  await fails(db.query(`delete from public.dc_sessions where id = $1`, [sid]), /permission denied/, 'delete a session');
+  await fails(db.query(`insert into public.dc_sessions (id, vertical, title, source, started_at, uploaded_by) values ('forged', 'SURVEY', 'x', 'SIMULATION', now(), '${U.observer}')`), /row-level security/, 'upload as someone else');
+  await fails(db.query(`insert into public.dc_health (aircraft, started_at, ended_at, airborne_s, overall, report, uploaded_by) values ('SIM-2', now(), now(), 1, 'OK', '{}', '${U.observer}')`), /row-level security/, 'health report as someone else');
+  await fails(db.query(`insert into public.dc_service (aircraft, t, note, logged_by) values ('SIM-1', now(), 'x', '${U.observer}')`), /row-level security/, 'parts log as someone else');
 });
 
 // Even the database owner cannot quietly edit history.

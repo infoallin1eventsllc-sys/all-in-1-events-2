@@ -156,19 +156,23 @@ headers, and `proxy_read_timeout 300s`.
 Give the aircraft its token on the Pi:
 
 ```bash
-echo -n '<AIRCRAFT_TOKEN>' | sudo tee /opt/a1/relay-token && sudo chmod 600 /opt/a1/relay-token && sudo chown pi /opt/a1/relay-token
+echo -n '<AIRCRAFT_TOKEN>' | sudo tee /opt/a1/relay-token && sudo chmod 600 /opt/a1/relay-token
 ```
 
 Then in `/etc/systemd/system/a1-bridge.service` (from `../systemd/a1-bridge.service`)
-add `--relay` to `ExecStart`; everything else stays. The local `:8770` server keeps
-working for a laptop on site.
+add a second credential and `--relay` to `ExecStart`; everything else stays. The
+local `:8770` server keeps working for a laptop on site. The token is read from the
+credential file, so it is never on the command line (`ps`).
 
 ```ini
 # before
-ExecStart=/bin/sh -c 'exec /home/pi/a1/bin/python3 /opt/a1/bridge/mavlink_ws.py --serial /dev/ttyAMA0 --baud 921600 --port 8770 --token "$(cat /opt/a1/token)" --cert /opt/a1/tls/cert.pem --key /opt/a1/tls/key.pem'
+LoadCredential=token:/opt/a1/token
+ExecStart=/home/pi/a1/bin/python3 /opt/a1/bridge/mavlink_ws.py --serial /dev/serial0 --baud 921600 --port 8770 --token-file %d/token --cert /opt/a1/tls/cert.pem --key /opt/a1/tls/key.pem
 
 # after: also connect out to the relay as aircraft A1
-ExecStart=/bin/sh -c 'exec /home/pi/a1/bin/python3 /opt/a1/bridge/mavlink_ws.py --serial /dev/ttyAMA0 --baud 921600 --port 8770 --token "$(cat /opt/a1/token)" --cert /opt/a1/tls/cert.pem --key /opt/a1/tls/key.pem --relay "wss://relay.example.com/aircraft/A1?token=$(cat /opt/a1/relay-token)"'
+LoadCredential=token:/opt/a1/token
+LoadCredential=relay-token:/opt/a1/relay-token
+ExecStart=/home/pi/a1/bin/python3 /opt/a1/bridge/mavlink_ws.py --serial /dev/serial0 --baud 921600 --port 8770 --token-file %d/token --cert /opt/a1/tls/cert.pem --key /opt/a1/tls/key.pem --relay wss://relay.example.com/aircraft/A1 --relay-token-file %d/relay-token
 ```
 
 ```bash

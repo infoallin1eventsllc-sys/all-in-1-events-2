@@ -35,16 +35,27 @@ const VIEWS = {
   LightShowStudioView: () => import('./components/lightshow/LightShowStudioView'),
   LiveDroneCockpitView: () => import('./components/cockpit/LiveDroneCockpitView'),
 };
-const LightShowDashboard = lazy(() => VIEWS.LightShowDashboard().then(m => ({ default: m.LightShowDashboard })));
-const SurveyDashboard = lazy(() => VIEWS.SurveyDashboard().then(m => ({ default: m.SurveyDashboard })));
-const SurveillanceDashboard = lazy(() => VIEWS.SurveillanceDashboard().then(m => ({ default: m.SurveillanceDashboard })));
-const PlatformView = lazy(() => VIEWS.PlatformView().then(m => ({ default: m.PlatformView })));
-const RecordsView = lazy(() => VIEWS.RecordsView().then(m => ({ default: m.RecordsView })));
-const AnalyticsView = lazy(() => VIEWS.AnalyticsView().then(m => ({ default: m.AnalyticsView })));
-const HealthView = lazy(() => VIEWS.HealthView().then(m => ({ default: m.HealthView })));
-const ControlView = lazy(() => VIEWS.ControlView().then(m => ({ default: m.ControlView })));
-const LightShowStudioView = lazy(() => VIEWS.LightShowStudioView().then(m => ({ default: m.LightShowStudioView })));
-const LiveDroneCockpitView = lazy(() => VIEWS.LiveDroneCockpitView().then(m => ({ default: m.LiveDroneCockpitView })));
+/**
+ * A lazily loaded view that can be retried. React.lazy keeps a failed import (a chunk that didn't
+ * load on a flaky venue connection) forever, so the view could never come back without a page
+ * reload; this one builds a fresh lazy component after a failure, and the error boundary's
+ * "Reload this view" then really loads it again.
+ */
+function lazyView<P extends object>(load: () => Promise<React.ComponentType<P>>): React.FC<P> {
+  const make = () => lazy(() => load().then(C => ({ default: C }), e => { current = make(); throw e; }));
+  let current = make();
+  return (props: P) => React.createElement(current, props as P & React.JSX.IntrinsicAttributes);
+}
+const LightShowDashboard = lazyView(() => VIEWS.LightShowDashboard().then(m => m.LightShowDashboard));
+const SurveyDashboard = lazyView(() => VIEWS.SurveyDashboard().then(m => m.SurveyDashboard));
+const SurveillanceDashboard = lazyView(() => VIEWS.SurveillanceDashboard().then(m => m.SurveillanceDashboard));
+const PlatformView = lazyView(() => VIEWS.PlatformView().then(m => m.PlatformView));
+const RecordsView = lazyView(() => VIEWS.RecordsView().then(m => m.RecordsView));
+const AnalyticsView = lazyView(() => VIEWS.AnalyticsView().then(m => m.AnalyticsView));
+const HealthView = lazyView(() => VIEWS.HealthView().then(m => m.HealthView));
+const ControlView = lazyView(() => VIEWS.ControlView().then(m => m.ControlView));
+const LightShowStudioView = lazyView(() => VIEWS.LightShowStudioView().then(m => m.LightShowStudioView));
+const LiveDroneCockpitView = lazyView(() => VIEWS.LiveDroneCockpitView().then(m => m.LiveDroneCockpitView));
 
 /** Shown for the moment a view's code is loading. */
 const ViewLoading: React.FC = () => (
@@ -180,6 +191,12 @@ export default function App() {
     setSitlConfig,
     toggleSITLMode,
   } = useSwarmSimulation(100);
+  // The 100-drone swarm feeds only the engineering views, the drone detail and the labs. Elsewhere its
+  // ~20 Hz state pushes re-rendered the whole app for nothing, so it pauses there (the operator's own
+  // play/pause choice is kept and applies again on return).
+  const [swarmWanted, setSwarmWanted] = useState(true);
+  const swarmInUse = !isClient || !!selectedDroneId || showBenchmarkModal || showSecurityModal || showDatabaseModal || showSITLModal || showWebSerialModal || showRegulatoryModal;
+  useEffect(() => { setIsPlaying(swarmWanted && swarmInUse); }, [swarmWanted, swarmInUse, setIsPlaying]);
 
   const selectedDrone = drones.find(d => d.id === selectedDroneId) || null;
 
@@ -572,7 +589,7 @@ export default function App() {
 
         {/* How it works: the client-readable front for the engineering views */}
         {isPlatform && (
-          <PlatformView
+          <ErrorBoundary name="How it works"><PlatformView
             onOpenVertical={setActiveTab}
             onOpenEngineering={tab => setActiveTab(tab)}
             onOpenLab={lab => {
@@ -583,7 +600,7 @@ export default function App() {
               else if (lab === 'RADIO') setShowWebSerialModal(true);
               else setShowRegulatoryModal(true);
             }}
-          />
+          /></ErrorBoundary>
         )}
 
         {/* VERTICAL 1: Aerial light show operator dashboard */}
@@ -649,7 +666,7 @@ export default function App() {
                 topology={topology}
                 onSetTopology={setTopology}
                 isPlaying={isPlaying}
-                onTogglePlay={() => setIsPlaying(!isPlaying)}
+                onTogglePlay={() => setSwarmWanted(!isPlaying)}
                 simulationSpeed={simulationSpeed}
                 onSetSpeed={setSimulationSpeed}
                 towers={towers}
@@ -677,12 +694,12 @@ export default function App() {
 
         {/* VIEW 2: Live Tactical Drone Cockpit & PTT Operator GCS */}
         {activeTab === 'DRONE_OPERATOR' && (
-          <LiveDroneCockpitView />
+          <ErrorBoundary name="Drone cockpit"><LiveDroneCockpitView /></ErrorBoundary>
         )}
 
         {/* VIEW 3: Synchronized Aerial Light Show Studio */}
         {activeTab === 'LIGHT_SHOW' && (
-          <LightShowStudioView />
+          <ErrorBoundary name="Light show studio"><LightShowStudioView /></ErrorBoundary>
         )}
 
         {/* VIEW 3: Software Architecture Blueprint */}

@@ -19,8 +19,11 @@ plain `fetch` (`src/sync/sync.ts`); there is no server code of ours to run.
 
 1. Create a project at supabase.com (the free tier is enough to start).
 2. **Database → SQL editor**: paste and run
-   [`supabase/migrations/0001_drone_command.sql`](supabase/migrations/0001_drone_command.sql)
-   (or `supabase db push` with the CLI from this folder).
+   [`supabase/migrations/0001_drone_command.sql`](supabase/migrations/0001_drone_command.sql),
+   then [`0002_tighten_writes.sql`](supabase/migrations/0002_tighten_writes.sql)
+   (or `supabase db push` with the CLI from this folder). An existing project that
+   already ran 0001 needs 0002 too; consoles from before it upload with an upsert that
+   0002 refuses, so update the console at the same time.
 3. **Authentication → Providers**: keep Email on. Under **URL configuration**, add
    the address the console is served from (e.g. `https://allin1events.com/drone/`)
    to the redirect allow-list.
@@ -55,6 +58,8 @@ upload** (offline uploads retry when the connection returns).
 | --- | --- |
 | Each company sees only its own flights, health reports and parts log | row-level security on `org_id` from `dc_members` |
 | Clients read but never write | insert policies require PIC, OBSERVER or ADMIN |
+| Rows are stamped with the account that uploaded them | insert policies check `uploaded_by` / `logged_by` = `auth.uid()` |
+| An uploaded flight can only be closed, not rewritten | UPDATE granted on `dc_sessions (ended_at, note)` only |
 | Events extend the chain, in order, with the right hash | `dc_events_chain` trigger (pgcrypto SHA-256) |
 | Events are never edited or deleted | no UPDATE/DELETE grants, and a trigger that refuses it for everyone |
 | A flight can't be deleted while it has events | foreign key without cascade |

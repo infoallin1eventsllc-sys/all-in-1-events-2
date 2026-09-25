@@ -47,6 +47,26 @@ Wiring: flight controller **TELEM2** → Pi UART (TX→RX, RX→TX, GND), and in
 `SERIAL2_PROTOCOL = 2`, `SERIAL2_BAUD = 921`. PX4: `MAV_1_CONFIG = TELEM 2`,
 `SER_TEL2_BAUD = 921600`.
 
+**Flight controller UART.** The unit uses `/dev/serial0`, the GPIO 14/15 UART, not
+`/dev/ttyAMA0`: on a Pi 3, 4 and Zero 2 W, `ttyAMA0` (the full PL011 UART) is wired to
+the onboard Bluetooth, and `serial0` is the mini-UART, whose baud rate drifts with
+the CPU clock and drops bytes at 921600. Give the GPIO pins the PL011:
+
+```bash
+sudo raspi-config nonint do_serial_cons 1   # no login console on the UART (it would talk to the autopilot)
+sudo raspi-config nonint do_serial_hw 0     # UART hardware on
+printf 'enable_uart=1\ndtoverlay=disable-bt\n' | sudo tee -a /boot/firmware/config.txt
+sudo systemctl disable --now hciuart
+sudo reboot                                  # then: ls -l /dev/serial0  ->  ttyAMA0
+```
+
+`disable-bt` turns the onboard Bluetooth off. That is fine on the aircraft Pi, but the
+**Remote ID receiver needs BLE**: on a Pi that does both, either use
+`dtoverlay=miniuart-bt` (Bluetooth keeps working on the mini-UART with a fixed core
+clock, `core_freq=250`) or leave the UART alone and put the flight controller on a
+USB-UART adapter (`--serial /dev/ttyUSB0`). A Pi 5 has a separate UART for Bluetooth
+and needs none of this (`/dev/ttyAMA0` on GPIO 14/15 with `enable_uart=1`).
+
 **Secure connection (wss).** The dashboard is served over HTTPS, and browsers only
 let an HTTPS page open `wss://` sockets. Two ways to give the bridge a certificate:
 
@@ -56,7 +76,13 @@ let an HTTPS page open `wss://` sockets. Two ways to give the bridge a certifica
 - **Self-signed (closed field network):** generate a cert, then on each phone open
   `https://<pi-address>:8770/` once and accept it; the page says *Certificate accepted*.
 
-Always set `--token`: anyone who can reach the socket can command the aircraft.
+A token is required: anyone who can reach the socket can command the aircraft, so the
+bridge refuses to start without one (`--insecure` overrides, for a sealed bench only).
+The unit passes it as a systemd credential (`--token-file`), which keeps it out of
+`ps`; `A1_TOKEN=…` in the environment also works. With `--udp`, the bridge pins the
+first autopilot that sends to it and drops packets from anywhere else; list the
+expected sender with `--udp-peer 127.0.0.1:14555` to be strict. If the serial port
+fails (cable, USB adapter reset), the bridge exits with status 1 and systemd restarts it.
 
 **Over LTE / the internet, no VPN:** add `--relay wss://<relay>/aircraft/<id>?token=…`
 and the bridge also connects *out* to a small relay server you host; phones then
@@ -91,6 +117,10 @@ python3 bridge/fake_vehicle.py --fault prop3                # health screen: pro
   to be HTTPS too unless it's `localhost`. Either give the Pi a cert
   (`--cert --key`, e.g. via a Tailscale HTTPS cert or your own CA) or tunnel it
   with Tailscale / Cloudflare Tunnel — both also solve reachability over LTE.
+- **Who can watch**: the streamer listens on every interface. Start it with
+  `--token-file` (see `systemd/a1-video.service`) and put the token in the dashboard's
+  URL, `http://<pi-ip>:8080/?token=…`; `--allow-origin https://<dashboard host>` limits
+  which page may call it, and `--max-peers` (default 3) caps viewers.
 - Across the internet add a TURN relay: `--ice turn:turn.example.com --ice stun:stun.l.google.com:19302`.
 
 **No companion computer?** A USB HDMI capture stick ($20) into the laptop from the

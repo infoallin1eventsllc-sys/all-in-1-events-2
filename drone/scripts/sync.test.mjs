@@ -4,7 +4,7 @@
 // accepted by the database's chain check, that a re-sync only sends new events,
 // and that a view-only account is refused.
 import assert from 'assert';
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { PGlite } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import { loadModule } from './bundle.mjs';
@@ -22,7 +22,8 @@ await db.exec(`
   create schema auth; create table auth.users (id uuid primary key);
   create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
   create role authenticated nologin;`);
-await db.exec(readFileSync(new URL('../server/supabase/migrations/0001_drone_command.sql', import.meta.url), 'utf8'));
+const MIGRATIONS = new URL('../server/supabase/migrations/', import.meta.url);
+for (const f of readdirSync(MIGRATIONS).filter(f => f.endsWith('.sql')).sort()) await db.exec(readFileSync(new URL(f, MIGRATIONS), 'utf8'));
 const PILOT = '11111111-1111-1111-1111-111111111111', CLIENT = '22222222-2222-2222-2222-222222222222';
 await db.exec(`insert into auth.users values ('${PILOT}'), ('${CLIENT}');
   insert into public.dc_members values ('${PILOT}', 'a1events', 'PIC', 'Pilot A', now()), ('${CLIENT}', 'a1events', 'CLIENT', 'Venue C', now());`);
@@ -35,7 +36,7 @@ async function asUser(sub, fn) {
   try { return await fn(); } finally { await db.exec(`reset role; select set_config('request.jwt.claim.sub', '', false);`); }
 }
 const json = (b, status = 200) => new Response(b == null ? null : JSON.stringify(b), { status, headers: { 'content-type': 'application/json' } });
-sync.setFetch(async (url, init = {}) => {
+const pg = async (url, init = {}) => {
   const u = new URL(url); const method = init.method ?? 'GET';
   log.push(`${method} ${u.pathname.replace('/rest/v1/', '')}`);
   if (u.pathname === '/auth/v1/otp') return json({}, 200);
@@ -47,9 +48,16 @@ sync.setFetch(async (url, init = {}) => {
       if (method === 'GET' && table === 'dc_members') return json((await db.query('select org_id, role, display_name from public.dc_members where user_id = $1', [u.searchParams.get('user_id').slice(3)])).rows);
       if (method === 'GET' && table === 'dc_events') return json((await db.query('select seq from public.dc_events where session_id = $1 order by seq desc limit 1', [u.searchParams.get('session_id').slice(3)])).rows);
       if (method === 'POST' && table === 'dc_sessions') {
-        await db.query(`insert into public.dc_sessions (id, vertical, title, source, started_at, ended_at, aircraft, note) values ($1,$2,$3,$4,$5,$6,$7,$8)
-          on conflict (id) do update set ended_at = excluded.ended_at, note = excluded.note`, [body.id, body.vertical, body.title, body.source, body.started_at, body.ended_at, body.aircraft, body.note]);
+        // As PostgREST does it: merge-duplicates SETs every column sent, ignore-duplicates does nothing.
+        const cols = Object.keys(body), prefer = init.headers?.Prefer ?? '';
+        const onConflict = prefer.includes('merge-duplicates') ? `do update set ${cols.map(c => `${c} = excluded.${c}`).join(', ')}` : 'do nothing';
+        await db.query(`insert into public.dc_sessions (${cols}) values (${cols.map((_, i) => `$${i + 1}`)}) on conflict (id) ${onConflict}`, Object.values(body));
         return json(null, 201);
+      }
+      if (method === 'PATCH' && table === 'dc_sessions') {
+        const cols = Object.keys(body);
+        await db.query(`update public.dc_sessions set ${cols.map((c, i) => `${c} = $${i + 2}`)} where id = $1`, [u.searchParams.get('id').slice(3), ...Object.values(body)]);
+        return json(null, 204);
       }
       if (method === 'POST' && table === 'dc_events') {
         await db.transaction(async tx => { for (const r of body) await tx.query('insert into public.dc_events (session_id, seq, t, severity, kind, text, aircraft, operator, prev, hash) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)', [r.session_id, r.seq, r.t, r.severity, r.kind, r.text, r.aircraft, r.operator, r.prev, r.hash]); });
@@ -60,7 +68,8 @@ sync.setFetch(async (url, init = {}) => {
       return json({ message: 'not found' }, 404);
     });
   } catch (e) { return json({ message: e.message }, 403); }
-});
+};
+sync.setFetch(pg);
 
 sync.config.url = 'https://project.supabase.co'; sync.config.key = 'anon-key';
 assert.equal(sync.enabled(), true);
@@ -79,6 +88,8 @@ const h = await chain.stamp(ev.slice(0, 4)); await chain.stamp(ev.slice(4), h);
 assert.equal(await sync.pushSession(session, ev.slice(0, 4)), 4, 'first upload sends four events');
 assert.equal(await sync.pushSession(session, ev), 2, 're-sync sends only the two new ones');
 assert.equal(await sync.pushSession(session, ev), 0, 'nothing new, nothing sent');
+await sync.pushSession({ ...session, note: 'Closed after walk-round' }, ev);
+assert.equal((await db.query('select note from public.dc_sessions where id = $1', [session.id])).rows[0].note, 'Closed after walk-round', 're-sync updates the note (only ended_at/note are writable)');
 const head = (await db.query('select chain_head from public.dc_sessions where id = $1', [session.id])).rows[0].chain_head;
 assert.equal(head, ev[5].hash, 'server chain head matches the console');
 
@@ -87,6 +98,31 @@ await sync.pushHealth({ aircraft: 'SIM-1', source: 'LIVE', startedAt: t0, endedA
 await sync.pushService({ aircraft: 'SIM-1', t: t0, note: 'Prop 3 replaced', part: 'prop-3' });
 assert.equal((await db.query('select count(*)::int n from public.dc_health')).rows[0].n, 1);
 assert.equal((await db.query('select part from public.dc_service')).rows[0].part, 'prop-3');
+
+// A job queued while a flush is mid-upload is kept and sent, not overwritten by the flush's snapshot.
+{
+  let release; const gate = new Promise(r => { release = r; });
+  sync.setFetch(async (url, init) => { if (String(init?.body).includes('first')) await gate; return pg(url, init); });
+  sync.queue.add({ kind: 'service', record: { aircraft: 'SIM-1', t: t0 + 1, note: 'first' } });   // starts a flush, held at the gate
+  const p = sync.flush();
+  sync.queue.add({ kind: 'service', record: { aircraft: 'SIM-1', t: t0 + 2, note: 'second' } });  // queued mid-flush
+  release();
+  assert.deepEqual(await p, { sent: 2, left: 0 });
+  assert.equal(sync.queue.list().length, 0);
+  assert.deepEqual((await db.query(`select note from public.dc_service where note in ('first', 'second') order by t`)).rows.map(r => r.note), ['first', 'second']);
+  sync.setFetch(pg);
+}
+
+// Refreshing an expired token: a server error keeps the session (retry later), a refusal signs out.
+{
+  const saved = sync.auth(); const expire = () => localStorage.setItem('dc-sync-auth', JSON.stringify({ ...saved, expiresAt: 0 }));
+  const refreshing = status => async (url, init) => new URL(url).pathname === '/auth/v1/token' ? json({ message: 'x' }, status) : pg(url, init);
+  expire(); sync.setFetch(refreshing(503));
+  await assert.rejects(sync.member(), /Not signed in/); assert.ok(sync.auth(), '503 keeps the session');
+  sync.setFetch(refreshing(429)); await assert.rejects(sync.member(), /Not signed in/); assert.ok(sync.auth(), '429 keeps the session');
+  sync.setFetch(refreshing(401)); await assert.rejects(sync.member(), /Not signed in/); assert.equal(sync.auth(), null, '401 signs out');
+  localStorage.setItem('dc-sync-auth', JSON.stringify(saved)); sync.setFetch(pg);
+}
 
 // A record edited on the device after the fact is refused by the database.
 const forged = ev.map(e => ({ ...e }));

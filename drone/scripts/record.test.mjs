@@ -57,4 +57,78 @@ assert.equal((await c.verify(mk())).status, 'UNSIGNED');
 const a = mk(), b = mk(); const h1 = await c.stamp(a.slice(0, 2)); await c.stamp(a.slice(2), h1); await c.stamp(b);
 assert.deepEqual(a.map(e => e.hash), b.map(e => e.hash));
 
+// ---- The recorder against storage: a small in-memory IndexedDB that behaves like a browser's
+// where it matters here (requests succeed first, the transaction commits or aborts afterwards,
+// and a full disk shows up only as an abort).
+const idb = (() => {
+  const stores = new Map(), later = f => setTimeout(f, 0);
+  const schema = { sessions: ['id', { startedAt: 'startedAt' }], samples: [null, { sessionId: 'sessionId' }], events: [null, { sessionId: 'sessionId' }], rollups: ['sessionId', {}], maintenance: [null, {}], health: [null, {}] };
+  for (const [name, [keyPath, indexes]] of Object.entries(schema)) stores.set(name, { rows: new Map(), keyPath, indexes, seq: 0 });
+  const state = { failWrites: false };
+  const transaction = (_names, mode) => {
+    const t = { error: null }; let pending = 0, done = false; const ops = [];
+    const finish = () => later(() => {
+      if (done) return; done = true;
+      if (mode === 'readwrite' && state.failWrites && ops.length) { t.error = new DOMException('The quota has been exceeded.', 'QuotaExceededError'); t.onabort?.(); return; }
+      ops.forEach(f => f()); t.oncomplete?.();
+    });
+    const req = fn => { const r = {}; pending++; later(() => { r.result = fn(); r.onsuccess?.(); if (--pending === 0) finish(); }); return r; };
+    later(() => { if (pending === 0) finish(); });
+    t.objectStore = name => {
+      const s = stores.get(name);
+      const write = v => req(() => { const k = s.keyPath ? v[s.keyPath] : ++s.seq; ops.push(() => s.rows.set(k, s.keyPath ? v : { ...v, id: k })); return k; });
+      const where = (ix, val) => [...s.rows.entries()].filter(([, v]) => v[s.indexes[ix]] === val);
+      return {
+        put: write, add: write, get: k => req(() => s.rows.get(k)), getAll: () => req(() => [...s.rows.values()]),
+        delete: k => req(() => { ops.push(() => s.rows.delete(k)); }),
+        index: ix => ({
+          getAll: val => req(() => where(ix, val).map(([, v]) => v)),
+          openKeyCursor: range => {
+            const keys = where(ix, range.only).map(([k]) => k); let i = 0; const r = {}; pending++;
+            const step = () => later(() => { r.result = i < keys.length ? { primaryKey: keys[i], continue: () => { i++; step(); } } : null; const more = !!r.result; r.onsuccess?.(); if (!more && --pending === 0) finish(); });
+            step(); return r;
+          },
+        }),
+      };
+    };
+    return t;
+  };
+  const db = { transaction, close() {}, objectStoreNames: { contains: () => true } };
+  return { state, stores, open() { const r = {}; later(() => { r.result = db; r.onsuccess?.(); }); return r; } };
+})();
+globalThis.indexedDB = idb; globalThis.IDBKeyRange = { only: v => ({ only: v }) };
+const { recorder } = m;
+const within = (p, ms, what) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(`${what}: still waiting after ${ms} ms`)), ms))]);
+const fly = () => { for (let i = 0; i < 12; i++) recorder.sample({ t: Date.now() + i, aircraft: 'A', altM: 30, speedMps: 5, headingDeg: 0, batteryPct: 80 }); recorder.event('COMMAND', 'INFO', 'take off', 'A'); };
+
+// A normal flight is stored, closed and chained.
+const id1 = await recorder.start('SURVEILLANCE', 'Patrol', 'SERIAL');
+fly();
+await within(recorder.stop(), 2000, 'stop');
+const s1 = idb.stores.get('sessions').rows.get(id1);
+assert.ok(s1?.endedAt, 'session closed');
+const ev1 = [...idb.stores.get('events').rows.values()].filter(e => e.sessionId === id1);
+assert.equal(ev1.length, 3, 'started, command, stopped');
+assert.deepEqual(await c.verify(ev1), { status: 'VERIFIED', checked: 3 });
+assert.equal(s1.chainHead, ev1.at(-1).hash);
+
+// Storage full: writes abort. The recorder must not hang (it used to wait forever for an abort it never handled).
+const id2 = await recorder.start('SURVEILLANCE', 'Patrol', 'SERIAL');
+idb.state.failWrites = true;
+fly();
+await within(recorder.stop(), 2000, 'stop with a full disk');
+await within(recorder.start('SURVEILLANCE', 'Next', 'SERIAL'), 2000, 'start after a full disk');
+idb.state.failWrites = false;
+assert.notEqual(recorder.current()?.id, id2, 'a new session could start');
+await recorder.stop();
+
+// Quick tab switches: start/stop/stop/start issued back to back end with exactly the last session open.
+const closed = []; const offClosed = recorder.onClosed(sid => closed.push(sid));
+const pA = recorder.start('SURVEILLANCE', 'A', 'SERIAL'); const pS1 = recorder.stop(); const pS2 = recorder.stop(); const pB = recorder.start('SURVEY', 'B', 'SERIAL');
+const [idA, , , idB] = await within(Promise.all([pA, pS1, pS2, pB]), 3000, 'switching');
+assert.equal(recorder.current()?.id, idB, 'the last started session is the open one');
+assert.deepEqual(closed, [idA], 'the first session closed exactly once');
+await recorder.stop(); offClosed();
+assert.equal(recorder.current(), null);
+
 console.log('flight recorder: all tests passed');

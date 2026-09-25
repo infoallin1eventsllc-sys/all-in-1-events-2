@@ -80,9 +80,12 @@ let dbPromise: Promise<IDBDatabase> | null = null;
 
 function open(): Promise<IDBDatabase> {
   if (dbPromise) return dbPromise;
-  dbPromise = new Promise((resolve, reject) => {
+  const p: Promise<IDBDatabase> = new Promise((resolve, reject) => {
     if (typeof indexedDB === 'undefined') { reject(new Error('IndexedDB unavailable')); return; }
     const req = indexedDB.open(DB_NAME, DB_VERSION);
+    let gaveUp = false;
+    // A failed or blocked open must not be cached forever: the next call tries again.
+    const fail = (err: Error) => { gaveUp = true; if (dbPromise === p) dbPromise = null; reject(err); };
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains('sessions')) {
@@ -106,28 +109,61 @@ function open(): Promise<IDBDatabase> {
         db.createObjectStore('health', { keyPath: 'id', autoIncrement: true }).createIndex('aircraft', 'aircraft');
       }
     };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error ?? new Error('IndexedDB open failed'));
+    req.onsuccess = () => {
+      const db = req.result;
+      if (gaveUp) { db.close(); return; }                 // opened after we stopped waiting (was blocked)
+      // Another tab upgrading the schema waits for every open connection to close: let it, and reopen on next use.
+      db.onversionchange = () => { db.close(); if (dbPromise === p) dbPromise = null; };
+      db.onclose = () => { if (dbPromise === p) dbPromise = null; };   // closed by the browser (storage cleared)
+      resolve(db);
+    };
+    req.onerror = () => fail(req.error ?? new Error('IndexedDB open failed'));
+    // An older version is open in another tab and won't close: don't hang every write behind it.
+    req.onblocked = () => fail(new Error('IndexedDB upgrade blocked by another open tab'));
   });
-  return dbPromise;
+  dbPromise = p;
+  return p;
+}
+
+/**
+ * Settles when the transaction does: resolves on complete (the data is committed, not merely
+ * requested), rejects on error or abort. Quota errors arrive only as an abort, so without
+ * onabort a full disk left every caller waiting forever.
+ */
+function settled(t: IDBTransaction, what: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    t.oncomplete = () => resolve();
+    t.onerror = () => reject(t.error ?? new Error(`${what} failed`));
+    t.onabort = () => reject(t.error ?? new DOMException(`${what} aborted`, 'AbortError'));
+  });
 }
 
 function tx<T>(store: string, mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
-  return open().then(db => new Promise<T>((resolve, reject) => {
+  return open().then(async db => {
     const t = db.transaction(store, mode);
     const req = fn(t.objectStore(store));
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error ?? new Error(`${store} request failed`));
-  }));
+    await settled(t, `${store} ${mode}`);
+    return req.result;
+  });
 }
 
 function byIndex<T>(store: string, index: string, value: IDBValidKey): Promise<T[]> {
-  return open().then(db => new Promise<T[]>((resolve, reject) => {
+  return open().then(async db => {
     const t = db.transaction(store, 'readonly');
     const req = t.objectStore(store).index(index).getAll(value);
-    req.onsuccess = () => resolve(req.result as T[]);
-    req.onerror = () => reject(req.error ?? new Error(`${store} index read failed`));
-  }));
+    await settled(t, `${store} index read`);
+    return req.result as T[];
+  });
+}
+
+/** One read-write transaction over `stores`, filled by `fn`; resolves once committed. */
+function write(stores: string | string[], what: string, fn: (t: IDBTransaction) => void): Promise<void> {
+  return open().then(db => {
+    const t = db.transaction(stores, 'readwrite');
+    const done = settled(t, what);
+    fn(t);
+    return done;
+  });
 }
 
 export const recordDb = {
@@ -141,22 +177,12 @@ export const recordDb = {
   },
 
   /** Batched writes — the recorder buffers and flushes, so one transaction per flush. */
-  addSamples: (rows: FlightSample[]) => open().then(db => new Promise<void>((resolve, reject) => {
-    if (rows.length === 0) return resolve();
-    const t = db.transaction('samples', 'readwrite');
-    const st = t.objectStore('samples');
-    for (const r of rows) st.add(r);
-    t.oncomplete = () => resolve();
-    t.onerror = () => reject(t.error ?? new Error('sample write failed'));
-  })),
-  addEvents: (rows: FlightEvent[]) => open().then(db => new Promise<void>((resolve, reject) => {
-    if (rows.length === 0) return resolve();
-    const t = db.transaction('events', 'readwrite');
-    const st = t.objectStore('events');
-    for (const r of rows) st.add(r);
-    t.oncomplete = () => resolve();
-    t.onerror = () => reject(t.error ?? new Error('event write failed'));
-  })),
+  addSamples: async (rows: FlightSample[]) => {
+    if (rows.length) await write('samples', 'sample write', t => { const st = t.objectStore('samples'); for (const r of rows) st.add(r); });
+  },
+  addEvents: async (rows: FlightEvent[]) => {
+    if (rows.length) await write('events', 'event write', t => { const st = t.objectStore('events'); for (const r of rows) st.add(r); });
+  },
 
   samplesFor: (sessionId: string) => byIndex<FlightSample>('samples', 'sessionId', sessionId).then(r => r.sort((a, b) => a.t - b.t)),
   eventsFor: (sessionId: string) => byIndex<FlightEvent>('events', 'sessionId', sessionId).then(r => r.sort((a, b) => a.t - b.t)),
@@ -165,21 +191,15 @@ export const recordDb = {
    * Delete a session's record. Pruning keeps the rollup (the flight still happened
    * and still counts in Analytics); an operator deleting a record removes it too.
    */
-  deleteSession: async (id: string, keepRollup = false) => {
-    const db = await open();
-    await new Promise<void>((resolve, reject) => {
-      const t = db.transaction(['sessions', 'samples', 'events', 'rollups'], 'readwrite');
-      t.objectStore('sessions').delete(id);
-      if (!keepRollup) t.objectStore('rollups').delete(id);
-      for (const store of ['samples', 'events'] as const) {
-        const idx = t.objectStore(store).index('sessionId');
-        const cur = idx.openKeyCursor(IDBKeyRange.only(id));
-        cur.onsuccess = () => { const c = cur.result; if (c) { t.objectStore(store).delete(c.primaryKey); c.continue(); } };
-      }
-      t.oncomplete = () => resolve();
-      t.onerror = () => reject(t.error ?? new Error('delete failed'));
-    });
-  },
+  deleteSession: (id: string, keepRollup = false) => write(['sessions', 'samples', 'events', 'rollups'], 'delete', t => {
+    t.objectStore('sessions').delete(id);
+    if (!keepRollup) t.objectStore('rollups').delete(id);
+    for (const store of ['samples', 'events'] as const) {
+      const idx = t.objectStore(store).index('sessionId');
+      const cur = idx.openKeyCursor(IDBKeyRange.only(id));
+      cur.onsuccess = () => { const c = cur.result; if (c) { t.objectStore(store).delete(c.primaryKey); c.continue(); } };
+    }
+  }),
 
   /** Keep storage bounded: drop the oldest sessions beyond `keep`. */
   prune: async (keep = 50) => {
@@ -189,26 +209,18 @@ export const recordDb = {
   },
 
   // ---- Analytics ----
-  putRollups: (rows: SessionRollup[]) => open().then(db => new Promise<void>((resolve, reject) => {
-    if (rows.length === 0) return resolve();
-    const t = db.transaction('rollups', 'readwrite');
-    for (const r of rows) t.objectStore('rollups').put(r);
-    t.oncomplete = () => resolve();
-    t.onerror = () => reject(t.error ?? new Error('rollup write failed'));
-  })),
+  putRollups: async (rows: SessionRollup[]) => {
+    if (rows.length) await write('rollups', 'rollup write', t => { for (const r of rows) t.objectStore('rollups').put(r); });
+  },
   listRollups: () => tx<SessionRollup[]>('rollups', 'readonly', st => st.getAll()),
   /** Remove all demo content (rollups, service entries, health reports, sample flights), leaving real records alone. */
   clearSamples: async () => {
-    const db = await open();
     for (const s of (await recordDb.listSessions()).filter(x => x.sample)) await recordDb.deleteSession(s.id);
-    await new Promise<void>((resolve, reject) => {
-      const t = db.transaction(['rollups', 'maintenance', 'health'], 'readwrite');
+    await write(['rollups', 'maintenance', 'health'], 'clear', t => {
       for (const store of ['rollups', 'maintenance', 'health'] as const) {
         const cur = t.objectStore(store).openCursor();
         cur.onsuccess = () => { const c = cur.result; if (!c) return; if ((c.value as { sample?: boolean }).sample) c.delete(); c.continue(); };
       }
-      t.oncomplete = () => resolve();
-      t.onerror = () => reject(t.error ?? new Error('clear failed'));
     });
   },
   addService: (r: ServiceRecord) => tx<IDBValidKey>('maintenance', 'readwrite', st => st.add(r)),
