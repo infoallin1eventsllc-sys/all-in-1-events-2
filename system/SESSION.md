@@ -11,7 +11,7 @@ Compact record of what was built and the current state, so work can resume later
 ## Deliverables (all committed to the branch)
 1. **`marketing-system.html`** — portfolio page: the tech-stack architecture in Meridian brand. Uses Tailwind CDN.
    - **`system/marketing-system.artifact.html`** — self-contained build (Tailwind compiled to inline CSS). Published artifact: https://claude.ai/code/artifact/72505b31-cf3b-475a-a635-a9fd7cf53f66
-   - Linked from `index.html` nav + footer.
+   - Not linked from `index.html` (checked Sep 25); reachable at `/marketing-system.html`.
 2. **Working backend** on Supabase (see below).
 3. **`system/cli.mjs`** — operator CLI (status/lead/plan/run/loop/content/approve/messages/send/report). Needs Node 18+ and `system/.env` (SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY).
 4. **Dashboard** — Meridian-branded. Published snapshot artifact: https://claude.ai/code/artifact/31148180-2fe1-49f1-bc19-dfbe2d483031
@@ -135,7 +135,34 @@ Compact record of what was built and the current state, so work can resume later
   instead of a summary, because the report prompt matches the mock's content
   branch. Disappears with a real key; metrics in the same report are correct.
 
+## Diagnostic (Sep 25) — repo snapshot vs live
+- **The repo's `system/supabase/functions` is a stale snapshot.** Live has 19
+  functions and a much larger runner (29 KB vs 9 KB here) and intake (v39). Live
+  also has tables not in the migrations (rate_buckets, payments, owner_*,
+  planner_requests, system_alerts, brand_brain, departments), cron jobs beyond
+  the three documented ones, and `invoke_edge` sends `x-run-secret`.
+  **Never redeploy from this folder.** Port changes into the live source instead.
+- Hardened in the repo copy (reference for porting): runner reclaims tasks
+  stuck "running" >15 min and claims 3 per run; **auto mode never sends or
+  approves mock text, a reply cut off at max_tokens, or unparsed JSON**
+  (`isComplete` in `_shared/claude.ts`); web-form leads stay drafts unless
+  `settings.agent.auto_send_web_leads = true`; sends are claimed atomically
+  (send-once); content insert errors fail the task. Intake: size caps, email
+  check, honeypot, per-IP rate limit, never overwrites an existing contact,
+  follow-up dedupe per contact per day. Dashboard: strips XML-invalid chars,
+  constant-time passcode check, KPI counts via count queries. CLI: send/approve
+  guards, sends `x-webhook-secret`. `supabase/config.toml` added.
+- **Live runner still has the three send-path bugs**: `shouldSend` ignores
+  `mocked`/`stop_reason`; claim limit 10 with no stale-lock reclaim; sends not
+  idempotent. **Latent while `settings.agent.autonomy = 'draft'`** (checked: 0
+  tasks running, 0 mock messages sent). **Port the fixes before switching to
+  `auto`.**
+- Live check: security advisor shows only INFO "RLS enabled, no policy"
+  (intended deny-by-default). 6 failed tasks are benign (3 follow-ups for
+  deleted contacts, 3 superseded video jobs).
+
 ## Open next steps (not done)
+- **Before autonomy = auto:** port the runner send-path fixes above into the live runner.
 - Wire dashboard into the deployed website so real photos render + it's live.
 - Phase 2 channels: Meta/Google Business Profile/Google Ads/WordPress publishing (OAuth per platform).
 - Optional hardening: `RUN_SECRET` header on orchestrator/runner/report (currently callable by anyone with the public anon key; only burns idempotent work / would spend tokens once a real key is set).
