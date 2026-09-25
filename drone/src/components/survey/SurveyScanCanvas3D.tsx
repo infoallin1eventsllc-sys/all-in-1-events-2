@@ -564,7 +564,9 @@ export const SurveyScanCanvas3D: React.FC<Props> = (props) => {
     };
     const tick = (t: number) => {
       raf = requestAnimationFrame(tick);
-      const dt = Math.min(0.1, (t - lastT) / 1000); lastT = t;
+      // Never negative: the first frame's timestamp can be earlier than the performance.now() the loop
+      // started from, and a negative step ran the film clock backwards and held its cut-to-black fade up.
+      const dt = Math.max(0, Math.min(0.1, (t - lastT) / 1000)); lastT = t;
       const P = propsRef.current;
       const a = P.aircraft; const pl = P.plan;
       const groundY = heightAt(a.x, a.y);

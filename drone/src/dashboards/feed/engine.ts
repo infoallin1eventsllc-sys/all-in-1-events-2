@@ -229,7 +229,7 @@ class Engine {
 
   private tick = (now: number) => {
     if (!this.views.size) { this.raf = 0; return; }
-    const dt = Math.min(0.1, (now - this.last) / 1000); this.last = now; this.frame++;
+    const dt = Math.max(0, Math.min(0.1, (now - this.last) / 1000)); this.last = now; this.frame++;
     // Adapt: step quality down when frames run long, back up when there's headroom.
     this.slow = this.slow * 0.95 + dt * 0.05; this.settled++;
     if (this.slow > 1 / 32 && this.level < LEVELS.length - 1 && this.settled > 90) { this.level++; this.settled = 0; }

@@ -207,7 +207,7 @@ export const DroneHero: React.FC<{ className?: string; progress?: { current: num
     const frame = (now: number) => {
       raf = 0;
       if (!visible || document.hidden) return;
-      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
       const t = now / 1000;
       if (progress) target = progress.current;
       p += (target - p) * (1 - Math.exp(-dt * 2.6));

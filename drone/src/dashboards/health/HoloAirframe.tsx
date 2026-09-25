@@ -301,7 +301,7 @@ export const HoloAirframe: React.FC<Props> = ({ motors, frame, findings, flying 
       raf = 0;
       if (disposed) return;
       if (!visible || document.hidden) return;
-      const dt = Math.min(0.05, (now - last) / 1000); last = now; t += dt;
+      const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now; t += dt;
       applyState();
       const { flying } = data.current;
       if (!reduced && !dragging && now - idleAt > 2500) yaw += dt * 0.16;

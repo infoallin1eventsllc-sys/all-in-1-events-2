@@ -273,7 +273,7 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
       const st = scene.current; if (!st) return;
-      const dt = Math.min(0.1, (now - last) / 1000); last = now; frame++;
+      const dt = Math.max(0, Math.min(0.1, (now - last) / 1000)); last = now; frame++;
       const list = liveRef.current?.current ?? dronesRef.current; const n = Math.min(list.length, CAPACITY);
       const { selectedDroneId, showTrajectories, showGeofence, glow } = flagsRef.current;
 
