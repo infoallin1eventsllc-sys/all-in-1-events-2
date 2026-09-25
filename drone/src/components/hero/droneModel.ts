@@ -280,42 +280,72 @@ export function buildEmber(M: Record<string, THREE.Material>, blurTex: THREE.Tex
 }
 
 /**
- * A fleet of Ember airframes for the light show: the low-detail build baked into
- * one instanced mesh per material, so hundreds of aircraft draw in a handful of
- * calls. Props are their blur discs (they are always spinning in a show). The
- * belly LED bar, the front lamps and the tail light take each aircraft's show
- * colour through `glow` (set its instance colours); nav lights stay red and green.
+ * A fleet of Ember airframes for the light show, baked into one instanced mesh
+ * per material so hundreds of aircraft draw in a handful of calls.
+ *
+ * 'lite' is the far build: fewer curve and ring segments, no fins, screws or
+ * blades (at a distance a spinning prop is its blur disc). 'full' is the hero
+ * build, every part, for the aircraft near the camera; its blades, stripes,
+ * hubs and caps come back as `rotors`, instanced four per aircraft, so each
+ * prop can spin: place rotor k of aircraft i at aircraft matrix × translate(rotorAt[k])
+ * × rotateY(angle). The belly LED bar, the front lamps and the tail light take
+ * each aircraft's show colour through `glow` (set its instance colours); nav
+ * lights stay red and green.
  */
-export function emberFleet(capacity: number): { group: THREE.Group; parts: THREE.InstancedMesh[]; glow: THREE.InstancedMesh } {
-  LITE = true;
+export interface EmberFleet { group: THREE.Group; parts: THREE.InstancedMesh[]; glow: THREE.InstancedMesh; rotors: THREE.InstancedMesh[]; rotorAt: THREE.Vector3[] }
+export function emberFleet(capacity: number, detail: 'lite' | 'full' = 'lite'): EmberFleet {
+  LITE = detail === 'lite';
   const M = emberMaterials(), blurTex = radialTexture();
-  const { group: model } = buildEmber(M, blurTex);
+  const { group: model, props } = buildEmber(M, blurTex);
   LITE = false;
   model.updateMatrixWorld(true);
-  const blur = new THREE.MeshBasicMaterial({ map: blurTex, color: 0x9aa4b0, transparent: true, opacity: 0.14, depthWrite: false });
-  const glow = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 2.2, 2.2), toneMapped: false });
-  const buckets = new Map<THREE.Material, THREE.BufferGeometry[]>();
+  const blur = new THREE.MeshBasicMaterial({ map: blurTex, color: 0x9aa4b0, transparent: true, opacity: detail === 'full' ? 0.1 : 0.14, depthWrite: false });
+  const glow = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 2.2, 2.2), toneMapped: false });   // brighter than the paint ever gets, so the lamps alone bloom
+  const bake = (m: THREE.Mesh, frame: THREE.Matrix4) => {
+    const g = (m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone()).applyMatrix4(frame);
+    for (const name of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(name)) g.deleteAttribute(name);
+    if (!g.attributes.normal) g.computeVertexNormals();
+    if (!g.attributes.uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
+    return g;
+  };
+  const push = (b: Map<THREE.Material, THREE.BufferGeometry[]>, mat: THREE.Material, g: THREE.BufferGeometry) => (b.get(mat) ?? b.set(mat, []).get(mat)!).push(g);
+  const body = new Map<THREE.Material, THREE.BufferGeometry[]>(), rotor = new Map<THREE.Material, THREE.BufferGeometry[]>();
+  const inProp = (o: THREE.Object3D) => { for (let p = o.parent; p; p = p.parent) if (props.includes(p as THREE.Group)) return p as THREE.Group; return null; };
+  const toProp = new THREE.Matrix4(), rel = new THREE.Matrix4();
   model.traverse(o => {
     const m = o as THREE.Mesh;
     if (!m.isMesh) return;
     let mat = m.material as THREE.Material;
-    if (mat === M.blade || mat === M.stripe) return;
-    if ((mat as THREE.MeshBasicMaterial).map === blurTex) mat = blur;
+    const isBlur = (mat as THREE.MeshBasicMaterial).map === blurTex;
+    const prop = inProp(m);
+    if (prop && !isBlur) {
+      // A spinning part: baked in its prop's own frame, so the rotor instance supplies position and spin.
+      if (detail === 'lite') return;
+      rel.copy(toProp.copy(prop.matrixWorld).invert()).multiply(m.matrixWorld);
+      push(rotor, mat, bake(m, rel));
+      return;
+    }
+    if (detail === 'lite' && (mat === M.blade || mat === M.stripe)) return;
+    if (isBlur) mat = blur;
     else if (mat === M.glow) mat = glow;
-    const g = (m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone()).applyMatrix4(m.matrixWorld);
-    for (const name of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(name)) g.deleteAttribute(name);
-    if (!g.attributes.normal) g.computeVertexNormals();
-    if (!g.attributes.uv) g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
-    (buckets.get(mat) ?? buckets.set(mat, []).get(mat)!).push(g);
+    push(body, mat, bake(m, m.matrixWorld));
   });
-  const group = new THREE.Group(), parts: THREE.InstancedMesh[] = [];
-  let glowMesh: THREE.InstancedMesh | null = null;
-  for (const [mat, list] of buckets) {
-    const im = new THREE.InstancedMesh(mergeGeometries(list)!, mat, capacity);
+  const group = new THREE.Group(), parts: THREE.InstancedMesh[] = [], rotors: THREE.InstancedMesh[] = [];
+  const instanced = (list: THREE.BufferGeometry[], mat: THREE.Material, n: number) => {
+    const im = new THREE.InstancedMesh(mergeGeometries(list)!, mat, n);
+    list.forEach(g => g.dispose());
     im.count = 0; im.frustumCulled = false; im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    group.add(im); return im;
+  };
+  let glowMesh: THREE.InstancedMesh | null = null;
+  for (const [mat, list] of body) {
+    const im = instanced(list, mat, capacity);
     if (mat === blur) im.renderOrder = 2;
     if (mat === glow) { glowMesh = im; im.setColorAt(0, new THREE.Color()); }
-    group.add(im); parts.push(im);
+    parts.push(im);
   }
-  return { group, parts, glow: glowMesh! };
+  for (const [mat, list] of rotor) rotors.push(instanced(list, mat, capacity * 4));
+  // The unbaked build is no longer needed.
+  model.traverse(o => { (o as THREE.Mesh).geometry?.dispose(); });
+  return { group, parts, glow: glowMesh!, rotors, rotorAt: props.map(p => p.position.clone()) };
 }

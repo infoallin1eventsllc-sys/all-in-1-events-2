@@ -6,9 +6,11 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { Sparkles, RotateCcw } from 'lucide-react';
 import { LightShowDrone } from '../../types/lightShowTypes';
-import { emberFleet } from '../hero/droneModel';
+import { emberFleet, type EmberFleet } from '../hero/droneModel';
 
 /**
  * The show stage.
@@ -32,23 +34,30 @@ interface LightShowCanvas3DProps {
   formationName: string;
   /** Hero use (Overview page): no overlays, no picking, a chosen camera, a custom height. */
   bare?: boolean;
-  initialPreset?: 'AUDIENCE' | 'ISOMETRIC' | 'TOP_DOWN';
+  initialPreset?: Preset;
   heightClass?: string;
 }
 
-type Preset = 'AUDIENCE' | 'ISOMETRIC' | 'TOP_DOWN';
+type Preset = 'AUDIENCE' | 'ISOMETRIC' | 'TOP_DOWN' | 'CLOSE';
 
 const CAPACITY = 512;            // max aircraft the buffers hold
 const TRAIL = 16;                // trail samples per aircraft
 const SHOW_CENTRE = new THREE.Vector3(0, 52, 0);
 const AIRFRAME = 0.85;            // Ember airframe scale (about 1.6 m tip to tip, props included)
 const LED_DROP = 0.22 * AIRFRAME; // the show LED pod under the belly
+// Level of detail: the aircraft nearest the camera are drawn with the hero build (every part, spinning blades,
+// studio reflections); the rest with the light build, which at that distance looks the same.
+const NEAR_CAP = 20;              // hero-detail aircraft drawn at once (about 75k triangles each, like the hero's)
+const NEAR_DIST = 32;             // metres: beyond this an airframe is a few dozen pixels and the light build is enough
 
 const PRESETS: Record<Preset, { radius: number; theta: number; phi: number }> = {
   AUDIENCE: { radius: 122, theta: -Math.PI / 2, phi: Math.PI / 2.4 },
   ISOMETRIC: { radius: 120, theta: Math.PI / 4, phi: Math.PI / 3.1 },
   TOP_DOWN: { radius: 125, theta: 0, phi: 0.06 },
+  // Close-up: a few metres off one aircraft, slightly above, following it through the show.
+  CLOSE: { radius: 4.4, theta: -Math.PI / 2 + 0.7, phi: Math.PI / 2.3 },
 };
+const MIN_RADIUS: Record<Preset, number> = { AUDIENCE: 18, ISOMETRIC: 18, TOP_DOWN: 18, CLOSE: 2.6 };
 
 // ---- textures, drawn once -------------------------------------------------
 
@@ -115,7 +124,7 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
   // Everything the render loop touches lives in refs so React renders never rebuild the scene.
   const scene = useRef<{
     renderer: THREE.WebGLRenderer; composer: EffectComposer; bloom: UnrealBloomPass; camera: THREE.PerspectiveCamera;
-    cores: THREE.InstancedMesh; fleet: ReturnType<typeof emberFleet>; halos: THREE.Points; floorGlow: THREE.Points; trails: THREE.LineSegments; targets: THREE.LineSegments; fence: THREE.LineSegments;
+    cores: THREE.InstancedMesh; fleet: EmberFleet; near: EmberFleet; halos: THREE.Points; floorGlow: THREE.Points; trails: THREE.LineSegments; targets: THREE.LineSegments; fence: THREE.LineSegments;
     history: Float32Array; historyHead: number;
   } | null>(null);
   const dronesRef = useRef(drones); dronesRef.current = drones;
@@ -125,6 +134,10 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
   // Camera orbit: the target we ease towards, and where we are now.
   const orbitGoal = useRef({ ...PRESETS[initialPreset] });
   const orbitNow = useRef({ ...PRESETS[initialPreset] });
+  // What the camera looks at: the show centre, or (close-up) the aircraft it follows.
+  const presetRef = useRef<Preset>(initialPreset); presetRef.current = preset;
+  const followId = useRef<string | null>(null);
+  const lookAt = useRef(SHOW_CENTRE.clone());
   const dragging = useRef(false);
   const lastPointer = useRef({ x: 0, y: 0 });
   const lastInteraction = useRef(0);
@@ -184,12 +197,23 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
     fence.position.set(0, 55, 0); fence.visible = false; s.add(fence);
 
     // Aircraft cores
-    const cores = new THREE.InstancedMesh(new THREE.SphereGeometry(0.6, 10, 10), new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false }), CAPACITY);
+    // Cores are brighter than white (unclamped) so they still bloom when the close-up raises the bloom threshold above the paint.
+    const cores = new THREE.InstancedMesh(new THREE.SphereGeometry(0.6, 16, 12), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 2.4, 2.4), toneMapped: false }), CAPACITY);
     cores.count = 0; cores.instanceMatrix.setUsage(THREE.DynamicDrawUsage); s.add(cores);
-    // The aircraft themselves: an Ember airframe per drone, lit by a low moon so the white shells read against the sky.
-    const fleet = emberFleet(CAPACITY); s.add(fleet.group);
-    s.add(new THREE.HemisphereLight(0x8a9cc8, 0x0b0d14, 0.9));
-    const moon = new THREE.DirectionalLight(0xb8c6ff, 1.5); moon.position.set(-60, 140, -90); s.add(moon);
+    // The aircraft themselves: an Ember airframe per drone, the light build far away and the hero build up close.
+    const fleet = emberFleet(CAPACITY, 'lite'); s.add(fleet.group);
+    const near = emberFleet(NEAR_CAP, 'full'); s.add(near.group);
+    // Lit like the hero: a studio environment for the reflections in the paint, glass and metal (the sky and floor
+    // are unlit, so only the airframes see it), a cool moon as the key, a blue rim from behind the formation, and a
+    // faint fill from the audience side so the noses don't go black.
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const room = new RoomEnvironment();
+    s.environment = pmrem.fromScene(room, 0.04).texture; room.dispose(); pmrem.dispose();
+    s.environmentIntensity = 0.42;
+    s.add(new THREE.HemisphereLight(0x8a9cc8, 0x0b0d14, 0.7));
+    const moon = new THREE.DirectionalLight(0xc8d4ff, 1.5); moon.position.set(-60, 140, -90); s.add(moon);
+    const rim = new THREE.DirectionalLight(0x8fc0ff, 1.8); rim.position.set(30, 90, 160); s.add(rim);
+    const fill = new THREE.DirectionalLight(0xdbe6ff, 0.35); fill.position.set(20, 30, -140); s.add(fill);
 
     // LED halos — the thing bloom grabs.
     const halo = makeGlowSprite(0.18), soft = makeGlowSprite(0.05);
@@ -227,17 +251,22 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
     const bloom = new UnrealBloomPass(new THREE.Vector2(w, h), 0.9, 0.65, 0.22);
     composer.addPass(bloom);
     composer.addPass(new OutputPass());
+    // Edge anti-aliasing after tone mapping, as on the hero: clean arms and blades at any pixel ratio.
+    const smaa = new SMAAPass(); composer.addPass(smaa);
 
     // These buffers start empty, so their bounding volumes sit at the origin: never cull them, or zooming in on the
     // formation (the ground origin out of view) would switch every light off.
     for (const o of [cores, halos, floorGlow, trails, targets]) o.frustumCulled = false;
-    scene.current = { renderer, composer, bloom, camera, cores, fleet, halos, floorGlow, trails, targets, fence, history: new Float32Array(CAPACITY * TRAIL * 3), historyHead: 0 };
+    scene.current = { renderer, composer, bloom, camera, cores, fleet, near, halos, floorGlow, trails, targets, fence, history: new Float32Array(CAPACITY * TRAIL * 3), historyHead: 0 };
 
     // ---- render loop --------------------------------------------------------
     const dummy = new THREE.Object3D(); const col = new THREE.Color();
     const yaw = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);   // noses toward the audience
     const tilt = new THREE.Quaternion(), axis = new THREE.Vector3(), frame4 = new THREE.Matrix4(), at = new THREE.Vector3(), scl = new THREE.Vector3(AIRFRAME, AIRFRAME, AIRFRAME);
-    let raf = 0, last = performance.now(), frame = 0;
+    const spinM = new THREE.Matrix4(), rotorM = new THREE.Matrix4();
+    const dist2 = new Float32Array(CAPACITY), isNear = new Uint8Array(CAPACITY), cand: number[] = [];
+    const byDist = (a: number, b: number) => dist2[a] - dist2[b];
+    let raf = 0, last = performance.now(), frame = 0, spin = 0;
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
       const st = scene.current; if (!st) return;
@@ -245,16 +274,45 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
       const list = dronesRef.current; const n = Math.min(list.length, CAPACITY);
       const { selectedDroneId, showTrajectories, showGeofence, glow } = flagsRef.current;
 
-      // Camera: ease to the goal; idle orbit after 6 s without input.
-      const g = orbitGoal.current, o = orbitNow.current;
-      if (!dragging.current && now - lastInteraction.current > 6000) g.theta += 0.035 * dt;
-      o.radius += (g.radius - o.radius) * 0.08; o.theta += (g.theta - o.theta) * 0.1; o.phi += (g.phi - o.phi) * 0.08;
+      // Camera: ease to the goal; idle orbit after 6 s without input (a slow drift round the aircraft in close-up).
+      const g = orbitGoal.current, o = orbitNow.current, close = presetRef.current === 'CLOSE';
+      if (!dragging.current && now - lastInteraction.current > 6000) g.theta += (close ? 0.09 : 0.035) * dt;
+      const ease = 1 - Math.exp(-dt * 4.8);   // time-based, so the camera settles as fast on a slow machine as a fast one
+      o.radius += (g.radius - o.radius) * ease; o.theta += (g.theta - o.theta) * (1 - Math.exp(-dt * 6.3)); o.phi += (g.phi - o.phi) * ease;
+      // Close-up follows the selected aircraft, or one near the front of the formation if none is selected.
+      let focus: LightShowDrone | undefined;
+      if (close && n) {
+        const want = selectedDroneId ?? followId.current;
+        focus = want ? list.find(d => d.id === want) : undefined;
+        if (!focus) {
+          // The aircraft furthest out towards the camera, so no neighbour stands between it and the lens.
+          const cx = Math.cos(o.theta), cz = Math.sin(o.theta);
+          focus = list[0];
+          for (const d of list) if (d.position.x * cx + d.position.z * cz > focus.position.x * cx + focus.position.z * cz) focus = d;
+          followId.current = focus.id;
+        }
+      }
+      const la = lookAt.current;
+      if (focus) la.lerp(at.set(focus.position.x, focus.position.y, focus.position.z), 1 - Math.exp(-dt * 7.5)); else la.lerp(SHOW_CENTRE, ease);
       camera.position.set(
-        SHOW_CENTRE.x + o.radius * Math.sin(o.phi) * Math.cos(o.theta),
-        SHOW_CENTRE.y + o.radius * Math.cos(o.phi),
-        SHOW_CENTRE.z + o.radius * Math.sin(o.phi) * Math.sin(o.theta),
+        la.x + o.radius * Math.sin(o.phi) * Math.cos(o.theta),
+        Math.max(0.8, la.y + o.radius * Math.cos(o.phi)),
+        la.z + o.radius * Math.sin(o.phi) * Math.sin(o.theta),
       );
-      camera.lookAt(SHOW_CENTRE);
+      camera.lookAt(la);
+
+      // Which aircraft get the hero build: the nearest NEAR_CAP within NEAR_DIST of the camera.
+      cand.length = 0;
+      for (let i = 0; i < n; i++) {
+        const p = list[i].position, dx = p.x - camera.position.x, dy = p.y - camera.position.y, dz = p.z - camera.position.z;
+        dist2[i] = dx * dx + dy * dy + dz * dz; isNear[i] = 0;
+        if (dist2[i] < NEAR_DIST * NEAR_DIST) cand.push(i);
+      }
+      const cap = gov.level >= 2 ? 6 : gov.level === 1 ? 12 : NEAR_CAP;   // fewer on a device that is struggling
+      if (cand.length > cap) { cand.sort(byDist); cand.length = cap; }
+      for (const i of cand) isNear[i] = 1;
+      spin += dt * 62;
+      let nf = 0, nn = 0;
       beams.forEach((b, k) => { b.rotation.z = (k < 2 ? 0.35 : -0.35) + Math.sin(now / 1000 * 0.21 + k * 1.9) * 0.22; b.rotation.x = -0.25 + Math.sin(now / 1000 * 0.13 + k) * 0.18; });
 
       // Aircraft buffers
@@ -274,16 +332,32 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
         const vx = d.velocity?.x ?? 0, vz = d.velocity?.z ?? 0, vh = Math.hypot(vx, vz);
         if (vh > 0.05) tilt.setFromAxisAngle(axis.set(vz / vh, 0, -vx / vh), Math.min(0.3, vh * 0.035)); else tilt.identity();
         frame4.compose(at.set(p.x, p.y, p.z), tilt.multiply(yaw), scl);
-        for (const part of st.fleet.parts) part.setMatrixAt(i, frame4);
-        col.setRGB(lit ? r : 0.05, lit ? gch : 0.06, lit ? b : 0.08); st.fleet.glow.setColorAt(i, col);
+        col.setRGB(lit ? r : 0.05, lit ? gch : 0.06, lit ? b : 0.08);
+        if (isNear[i]) {
+          for (const part of st.near.parts) part.setMatrixAt(nn, frame4);
+          st.near.glow.setColorAt(nn, col);
+          // Props: each rotor on its motor, spinning, neighbours counter-rotating.
+          for (let k = 0; k < 4; k++) {
+            rotorM.multiplyMatrices(frame4, spinM.makeRotationY((spin + i * 1.7 + k) * (k % 2 ? -1 : 1)).setPosition(st.near.rotorAt[k]));
+            for (const rt of st.near.rotors) rt.setMatrixAt(nn * 4 + k, rotorM);
+          }
+          nn++;
+        } else {
+          for (const part of st.fleet.parts) part.setMatrixAt(nf, frame4);
+          st.fleet.glow.setColorAt(nf, col);
+          nf++;
+        }
         // The show LED: a small dome under the belly.
-        dummy.position.set(p.x, p.y - LED_DROP, p.z); const sc = sel ? 0.7 : 0.45; dummy.scale.set(sc, sc, sc); dummy.updateMatrix();
+        dummy.position.set(p.x, p.y - LED_DROP, p.z); const sc = sel ? 0.42 : 0.3; dummy.scale.set(sc, sc, sc); dummy.updateMatrix();
         st.cores.setMatrixAt(i, dummy.matrix);
         col.setRGB(lit ? r : 0.06, lit ? gch : 0.07, lit ? b : 0.09); st.cores.setColorAt(i, col);
         hp[i * 3] = p.x; hp[i * 3 + 1] = p.y - LED_DROP; hp[i * 3 + 2] = p.z;
-        hc[i * 3] = r * (sel ? 1.6 : 1); hc[i * 3 + 1] = gch * (sel ? 1.6 : 1); hc[i * 3 + 2] = b * (sel ? 1.6 : 1);
+        // The halo is how a light reads from the crowd; up close it would bury the airframe, so it fades in with distance
+        // and the LED itself (with bloom) carries the glow, as on the hero.
+        const hk = (sel ? 1.6 : 1) * Math.min(1, Math.max(0, (Math.sqrt(dist2[i]) - 7) / 30));
+        hc[i * 3] = r * hk; hc[i * 3 + 1] = gch * hk; hc[i * 3 + 2] = b * hk;
         // Floor glow fades with altitude — a light 100 m up barely touches the ground.
-        const k = Math.max(0, 1 - p.y / 90) * 0.9;
+        const k = Math.max(0, 1 - p.y / 90) * (close ? 0.3 : 0.9);
         fp[i * 3] = p.x; fp[i * 3 + 1] = 0.3; fp[i * 3 + 2] = p.z;
         fc[i * 3] = r * k; fc[i * 3 + 1] = gch * k; fc[i * 3 + 2] = b * k;
         // Trail history ring
@@ -300,8 +374,10 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
         }
       }
       st.cores.count = n; st.cores.instanceMatrix.needsUpdate = true; if (st.cores.instanceColor) st.cores.instanceColor.needsUpdate = true;
-      for (const part of st.fleet.parts) { part.count = n; part.instanceMatrix.needsUpdate = true; }
-      if (st.fleet.glow.instanceColor) st.fleet.glow.instanceColor.needsUpdate = true;
+      for (const part of st.fleet.parts) { part.count = nf; part.instanceMatrix.needsUpdate = true; }
+      for (const part of st.near.parts) { part.count = nn; part.instanceMatrix.needsUpdate = true; }
+      for (const rt of st.near.rotors) { rt.count = nn * 4; rt.instanceMatrix.needsUpdate = true; }
+      for (const gm of [st.fleet.glow, st.near.glow]) if (gm.instanceColor) gm.instanceColor.needsUpdate = true;
       st.halos.geometry.setDrawRange(0, n); st.halos.geometry.attributes.position.needsUpdate = true; st.halos.geometry.attributes.color.needsUpdate = true;
       st.floorGlow.geometry.setDrawRange(0, n); st.floorGlow.geometry.attributes.position.needsUpdate = true; st.floorGlow.geometry.attributes.color.needsUpdate = true;
       st.targets.geometry.setDrawRange(0, tgtCount * 2); st.targets.geometry.attributes.position.needsUpdate = true; st.targets.geometry.attributes.color.needsUpdate = true;
@@ -330,6 +406,11 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
         st.trails.geometry.attributes.position.needsUpdate = true; st.trails.geometry.attributes.color.needsUpdate = true;
       }
 
+      (st.trails.material as THREE.LineBasicMaterial).opacity = close ? 0.35 : 0.85;
+      // Bloom is tuned for lights seen from the crowd (a low threshold, so every LED blooms). Close in, the airframes
+      // fill the frame and their white paint would bloom too, so the threshold rises and only the lamps glow, as on the hero.
+      const zc = THREE.MathUtils.clamp((o.radius - 6) / 34, 0, 1);
+      st.bloom.threshold = 1.6 - 1.38 * zc; st.bloom.strength = 0.45 + 0.45 * zc; st.bloom.radius = 0.2 + 0.45 * zc;
       st.bloom.enabled = glow;
       if (glow && gov.level < 2) st.composer.render(); else st.renderer.render(s, camera);
       if (gov.tick(dt * 1000)) { renderer.setPixelRatio(gov.pixelRatio(2)); const cw = container.clientWidth, ch = container.clientHeight; if (cw && ch) { camera.aspect = cw / ch; camera.updateProjectionMatrix(); renderer.setSize(cw, ch); composer.setSize(cw, ch); bloom.setSize(cw, ch); } }
@@ -371,11 +452,16 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
   // Wheel zooms the stage, not the page (React's wheel handler is passive, so this is a native listener).
   useEffect(() => {
     const el = containerRef.current; if (!el || bare) return;
-    const wheel = (e: WheelEvent) => { e.preventDefault(); lastInteraction.current = performance.now(); orbitGoal.current.radius = Math.max(18, Math.min(320, orbitGoal.current.radius + e.deltaY * 0.15)); };
+    const wheel = (e: WheelEvent) => { e.preventDefault(); lastInteraction.current = performance.now(); const g = orbitGoal.current; g.radius = Math.max(MIN_RADIUS[presetRef.current], Math.min(320, g.radius * Math.exp(e.deltaY * 0.0012))); };   // proportional zoom: as fine at 5 m as at 100 m
     el.addEventListener('wheel', wheel, { passive: false });
     return () => el.removeEventListener('wheel', wheel);
   }, [bare]);
-  const applyPreset = (p: Preset) => { setPreset(p); orbitGoal.current = { ...PRESETS[p] }; lastInteraction.current = performance.now(); };
+  const applyPreset = (p: Preset) => {
+    setPreset(p); presetRef.current = p; lastInteraction.current = performance.now();
+    // Keep the current bearing in close-up so the camera swings in rather than jumping round the formation.
+    orbitGoal.current = p === 'CLOSE' ? { ...PRESETS.CLOSE, theta: orbitNow.current.theta } : { ...PRESETS[p] };
+    if (p === 'CLOSE') followId.current = null;
+  };
   const onClick = (e: React.MouseEvent) => {
     // Pick the nearest aircraft to the click in screen space; a miss clears the selection. A drag to orbit is not a click.
     if (moved.current > 4) return;
@@ -414,7 +500,7 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
       {/* View controls */}
       <div className="absolute top-3 right-3 flex items-center gap-1.5">
         <div role="group" aria-label="Camera" className="inline-flex items-center gap-0.5 rounded-lg bg-black/55 backdrop-blur p-0.5">
-          {([['AUDIENCE', 'Audience', 'From the crowd, facing the show'], ['ISOMETRIC', 'Isometric', 'Three-quarter view'], ['TOP_DOWN', 'Top-down', 'Plan view of the formation']] as [Preset, string, string][]).map(([id, label, title]) => (
+          {([['AUDIENCE', 'Audience', 'From the crowd, facing the show'], ['ISOMETRIC', 'Isometric', 'Three-quarter view'], ['TOP_DOWN', 'Top-down', 'Plan view of the formation'], ['CLOSE', 'Close-up', 'Follow one aircraft up close; click another to switch']] as [Preset, string, string][]).map(([id, label, title]) => (
             <button key={id} type="button" title={title} aria-pressed={preset === id} onClick={() => applyPreset(id)}
               className={`h-6 px-2 rounded-md text-[11px] font-medium transition-colors ${preset === id ? 'bg-white/15 text-white' : 'text-white/65 hover:text-white'}`}>
               {label}
@@ -431,7 +517,7 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
         </button>
       </div>
 
-      <div className="absolute bottom-3 left-3 text-[11px] text-white/45 pointer-events-none">Drag to orbit · scroll to zoom · click an aircraft to select it</div>
+      <div className="absolute bottom-3 left-3 text-[11px] text-white/45 pointer-events-none">{preset === 'CLOSE' ? 'Close-up · drag to orbit · click an aircraft to follow it' : 'Drag to orbit · scroll to zoom · click an aircraft to select it'}</div>
       </>}
     </div>
   );
