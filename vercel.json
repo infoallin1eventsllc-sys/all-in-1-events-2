@@ -54,12 +54,15 @@
   ],
   "rewrites": [
     {
-      "source": "/drone",
-      "destination": "/drone/index.html"
-    },
-    {
       "source": "/drone/(.*)",
       "destination": "/drone/index.html"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/drone",
+      "destination": "/drone/",
+      "permanent": true
     }
   ]
 }
