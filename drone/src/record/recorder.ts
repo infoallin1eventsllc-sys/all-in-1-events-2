@@ -1,6 +1,7 @@
 import { recordDb, type FlightEvent, type FlightSample, type FlightSession, type LinkSource, type Vertical } from './db';
 import { rollupSession } from '../analytics/rollup';
 import { stamp, GENESIS } from './chain';
+import { currentSnapshot } from '../compliance/store';
 
 /**
  * The flight recorder.
@@ -83,6 +84,9 @@ async function startNow(vertical: Vertical, title: string, source: LinkSource) {
     id: `${vertical.toLowerCase()}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
     vertical, title, source, startedAt: Date.now(), aircraft: [], sampleCount: 0, eventCount: 0,
   };
+  // Numbers only (certificate, registrations, waiver), as they stood at the start: the record must not change when the paperwork does.
+  const papers = currentSnapshot(vertical, operator.split(' · ')[0]);
+  if (papers) s.compliance = papers;
   session = s;
   try { await recordDb.putSession(s); } catch { if (session === s) session = null; return null; }
   if (timer) clearInterval(timer);

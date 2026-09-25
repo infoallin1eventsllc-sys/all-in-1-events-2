@@ -5,6 +5,7 @@ import {
 } from '../../survey/plan';
 import type { useSurveyMission } from '../../hooks/useSurveyMission';
 import type { useAircraftLink } from '../../link/useAircraftLink';
+import { useSurveyComplianceChecks } from '../../compliance/useCompliance';
 
 /**
  * Flying a survey on a real aircraft, in the order a crew does it:
@@ -43,6 +44,8 @@ export function useSurveyFlight(sim: Sim, link: Link, plan: SurveyPlan) {
   const count = mission.items.length + (ap === 'PX4' ? 0 : 1);
   const minutes = plan.durationS / 60;
   const needPct = Math.min(100, Math.round(25 + (minutes / USABLE_BATTERY_MIN) * 75));
+  // Part 107 paperwork for this pilot, aircraft and site (src/compliance/rules.ts surveyChecks).
+  const complianceChecks = useSurveyComplianceChecks(site.name, plan.params.altitudeM, link.primarySysId || undefined);
   const checks: SurveyCheck[] = [
     ...link.preflight.checks,
     { id: 'site', label: 'Survey site is your real boundary', ok: site.kind !== 'DEMO', detail: site.kind === 'DEMO' ? 'import or walk it (Site tab)' : site.kind === 'BENCH' ? 'demo shape · bench test' : site.name },
@@ -53,6 +56,7 @@ export function useSurveyFlight(sim: Sim, link: Link, plan: SurveyPlan) {
     plan.batteries > 1
       ? { id: 'batt-plan', label: `${plan.batteries} batteries: returns to swap, then resumes`, ok: t.batteryPct < 0 || t.batteryPct >= 90, detail: t.batteryPct >= 0 ? `${t.batteryPct}% now; start on a full pack` : 'no %', advisory: true }
       : { id: 'batt-plan', label: `Battery covers the ${minutes.toFixed(0)}-min flight`, ok: t.batteryPct < 0 || t.batteryPct >= needPct, detail: t.batteryPct >= 0 ? `${t.batteryPct}% of ${needPct}% needed` : 'no %', advisory: true },
+    ...complianceChecks,
   ];
   // ArduPilot's fence enable switches on every type in FENCE_TYPE (Copter default 7: max altitude 100 m and a 300 m
   // circle round home, besides this polygon). The link reads no parameters, so this is the crew's check, with the plan's numbers.
