@@ -149,7 +149,7 @@ export const SurveyDashboard: React.FC = () => {
   useEffect(() => { if (sim.boundaryEdit.mode !== 'OFF') setHero('MAP'); }, [sim.boundaryEdit.mode]); // editing happens on the full-size map
   // Boundary edits keep the origin, so the map stays mounted (and in its view) while the outline changes.
   const siteKey = `${sim.site.origin.lat},${sim.site.origin.lon},${sim.site.kind}`;
-  const exportPackage = () => downloadSurveyPackage(plan, sim.photosRef.current ?? [], sim.grid, sim.site, sim.camera, link.autopilot === 'PX4' ? 'PX4' : 'ARDUPILOT');
+  const exportPackage = () => downloadSurveyPackage(plan, sim.photosRef.current ?? [], sim.grid, sim.site, sim.camera, link.autopilot === 'PX4' ? 'PX4' : 'ARDUPILOT', flight.follow);
 
   // Flight record: one session per survey, 1 Hz, with the event log mirrored in.
   const linkSource = connected ? link.transport : 'SIMULATION';

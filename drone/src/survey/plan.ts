@@ -569,13 +569,14 @@ export function fenceItems(poly: Pt[], origin: GeoOrigin): SurveyMissionItem[] {
 }
 
 /** QGroundControl .plan (JSON), which QGC opens directly. */
-export function qgcPlan(plan: SurveyPlan, origin: GeoOrigin, home: Pt, opts: { boundary?: Pt[]; autopilot?: MissionAutopilot } = {}): object {
+export function qgcPlan(plan: SurveyPlan, origin: GeoOrigin, home: Pt, opts: { boundary?: Pt[]; autopilot?: MissionAutopilot; follow?: TerrainFollow | null } = {}): object {
   const h = toLatLon(origin, home);
   const fence = opts.boundary ? fencePolygon(plan, opts.boundary, home).map(p => { const ll = toLatLon(origin, p); return [+ll.lat.toFixed(7), +ll.lon.toFixed(7)]; }) : null;
-  const items = missionItems(plan, origin, { autopilot: opts.autopilot, home }).map((it, i) => ({
-    type: 'SimpleItem', autoContinue: true, command: it.command, doJumpId: i + 1, frame: it.frame === FRAME_MISSION ? FRAME_MISSION : FRAME_GLOBAL_RELATIVE_ALT,
+  // The same items the aircraft is sent, terrain following included; QGC's AltitudeMode 4 is the terrain frame.
+  const items = missionItems(plan, origin, { autopilot: opts.autopilot, home, follow: opts.follow }).map((it, i) => ({
+    type: 'SimpleItem', autoContinue: true, command: it.command, doJumpId: i + 1, frame: it.frame === FRAME_MISSION || it.frame === FRAME_GLOBAL_TERRAIN_ALT ? it.frame : FRAME_GLOBAL_RELATIVE_ALT,
     params: [...it.params.map(v => (Number.isNaN(v) ? null : v)), it.lat ? +it.lat.toFixed(7) : 0, it.lon ? +it.lon.toFixed(7) : 0, it.altRelM],
-    ...(it.frame === FRAME_MISSION ? {} : { Altitude: it.altRelM, AltitudeMode: 1, AMSLAltAboveTerrain: null }),
+    ...(it.frame === FRAME_MISSION ? {} : { Altitude: it.altRelM, AltitudeMode: it.frame === FRAME_GLOBAL_TERRAIN_ALT ? 4 : 1, AMSLAltAboveTerrain: null }),
   }));
   return {
     fileType: 'Plan', version: 1, groundStation: 'All in 1 Drone Command',
@@ -586,11 +587,11 @@ export function qgcPlan(plan: SurveyPlan, origin: GeoOrigin, home: Pt, opts: { b
 }
 
 /** Mission Planner / QGC "WPL 110" text. Row 0 is home. */
-export function wplText(plan: SurveyPlan, origin: GeoOrigin, home: Pt): string {
+export function wplText(plan: SurveyPlan, origin: GeoOrigin, home: Pt, opts: { autopilot?: MissionAutopilot; follow?: TerrainFollow | null } = {}): string {
   const h = toLatLon(origin, home);
   const f = (v: number) => (Number.isNaN(v) ? 0 : v);
   const rows = [`0\t1\t0\t16\t0\t0\t0\t0\t${h.lat.toFixed(7)}\t${h.lon.toFixed(7)}\t0\t1`];
-  missionItems(plan, origin, { home }).forEach((it, i) => {
+  missionItems(plan, origin, { home, autopilot: opts.autopilot, follow: opts.follow }).forEach((it, i) => {
     rows.push([i + 1, 0, it.frame, it.command, ...it.params.map(f), it.lat.toFixed(7), it.lon.toFixed(7), it.altRelM, 1].join('\t'));
   });
   return `QGC WPL 110\n${rows.join('\n')}\n`;

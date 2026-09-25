@@ -167,4 +167,18 @@ near(cf.maxRelM, 60 + 40, 1, 'an altitude fence has to allow the ridge');
   near(roi.altRelM, d.at({ x: 60, y: -70 }) - d.at(SITE.home), 0.06, 'ROI at the ground under the structure');
 }
 
+// The exported files carry the same terrain-following heights the aircraft is sent (planned), and
+// ArduPilot's own terrain frame survives into the QGC plan as frame 10 / AltitudeMode 4.
+{
+  const opts = { autopilot: 'ARDUPILOT', home, follow };
+  const sent = m.surveyMission(plan, origin, opts).items;
+  const q = m.qgcPlan(plan, origin, home, opts).mission.items;
+  assert.equal(q.length, sent.length, 'QGC plan has the uploaded mission, terrain splits included');
+  sent.forEach((it, i) => { if (it.frame !== m.FRAME_MISSION) near(q[i].Altitude, it.altRelM, 1e-9, `QGC item ${i} altitude`); });
+  const rows = m.wplText(plan, origin, home, opts).trim().split('\n').slice(2);
+  assert.equal(rows.length, sent.length, 'WPL has the uploaded mission');
+  const tq = m.qgcPlan(plan, origin, home, { ...opts, follow: { mode: 'AUTOPILOT', ground: ridge } }).mission.items.filter(x => x.frame === m.FRAME_GLOBAL_TERRAIN_ALT);
+  assert.ok(tq.length > 0 && tq.every(x => x.AltitudeMode === 4), 'terrain-frame items kept as frame 10, AltitudeMode 4');
+}
+
 console.log('terrain: all tests passed');

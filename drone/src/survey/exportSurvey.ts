@@ -1,5 +1,5 @@
 import { zipStore } from '../lightshow/exportShow';
-import { qgcPlan, wplText, toLatLon, GOOD_VIEWS, type SurveyPlan, type CoverageGrid, type Camera, type MissionAutopilot } from './plan';
+import { qgcPlan, wplText, toLatLon, GOOD_VIEWS, type SurveyPlan, type CoverageGrid, type Camera, type MissionAutopilot, type TerrainFollow } from './plan';
 import type { Photo } from '../hooks/useSurveyMission';
 import { boundaryKml, type SurveySite } from './boundary';
 
@@ -37,7 +37,7 @@ export function imageNumbers(photos: Photo[]): number[] {
   });
 }
 
-export function buildSurveyFiles(plan: SurveyPlan, photos: Photo[], grid: CoverageGrid, site: SurveySite, camera: Camera, autopilot: MissionAutopilot = 'ARDUPILOT') {
+export function buildSurveyFiles(plan: SurveyPlan, photos: Photo[], grid: CoverageGrid, site: SurveySite, camera: Camera, autopilot: MissionAutopilot = 'ARDUPILOT', follow: TerrainFollow | null = null) {
   const origin = site.origin;
   const enc = new TextEncoder();
   const geotags = ['image,latitude,longitude,altitude_m,yaw_deg,pitch_deg,roll_deg,timestamp_utc,accepted,reject_reason,position_source'];
@@ -83,8 +83,8 @@ export function buildSurveyFiles(plan: SurveyPlan, photos: Photo[], grid: Covera
     '',
   ].join('\n');
   return [
-    { name: 'mission.plan', data: enc.encode(JSON.stringify(qgcPlan(plan, origin, site.home, { boundary: site.boundary, autopilot }), null, 2)) },
-    { name: 'mission.waypoints', data: enc.encode(wplText(plan, origin, site.home)) },
+    { name: 'mission.plan', data: enc.encode(JSON.stringify(qgcPlan(plan, origin, site.home, { boundary: site.boundary, autopilot, follow }), null, 2)) },
+    { name: 'mission.waypoints', data: enc.encode(wplText(plan, origin, site.home, { autopilot, follow })) },
     { name: 'site.kml', data: enc.encode(boundaryKml(site, { name: 'Flight lines', lines: plan.lines.map(l => [l.a, l.b]) })) },
     { name: 'geotags.csv', data: enc.encode(geotags.join('\n') + '\n') },
     { name: 'geo.txt', data: enc.encode(geo.join('\n') + '\n') },
@@ -94,8 +94,8 @@ export function buildSurveyFiles(plan: SurveyPlan, photos: Photo[], grid: Covera
   ];
 }
 
-export function downloadSurveyPackage(plan: SurveyPlan, photos: Photo[], grid: CoverageGrid, site: SurveySite, camera: Camera, autopilot?: MissionAutopilot) {
-  const files = buildSurveyFiles(plan, photos, grid, site, camera, autopilot);
+export function downloadSurveyPackage(plan: SurveyPlan, photos: Photo[], grid: CoverageGrid, site: SurveySite, camera: Camera, autopilot?: MissionAutopilot, follow: TerrainFollow | null = null) {
+  const files = buildSurveyFiles(plan, photos, grid, site, camera, autopilot, follow);
   const blob = zipStore(files);
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
