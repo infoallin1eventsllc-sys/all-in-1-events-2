@@ -506,6 +506,60 @@ footer { text-align: center; }
 .map-sub { font: 500 9px var(--font); fill: var(--map-label); opacity: 0.8; pointer-events: none; }
 .map-sub.alert { fill: var(--bad); opacity: 1; font-weight: 700; }
 
+/* ---------- touch: zoom, pan, device pins, full-screen explorer ---------- */
+.map { position: relative; }
+.map-svg { touch-action: pan-y; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.map.zoomed .map-svg, .explorer-map .map-svg { touch-action: none; }
+.map.zoomed .map-svg { cursor: grab; overflow: hidden; }
+.explorer-map { overflow: hidden; }
+.explorer-map .map-svg { overflow: hidden; max-height: none; }
+.map.panning .map-svg { cursor: grabbing; }
+.map-tag { transform-box: fill-box; transform-origin: center; transform: scale(var(--ks, 1)); }
+.map-pins { pointer-events: none; }
+.map-pin { opacity: 0; transition: opacity 0.25s; cursor: pointer; }
+.map.detail .map-pin { opacity: 1; pointer-events: auto; }
+.map-pin-body { transform: scale(calc(var(--ks, 1) * 1.35)); }
+.map-pin-dot { fill: var(--m-cap); stroke: var(--m-line); stroke-width: 1; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3)); }
+.map-pin-stem { stroke: var(--m-line); stroke-width: 1.2; }
+.map-pin-icon { fill: var(--map-label); }
+.map-pin.on .map-pin-dot { fill: var(--map-light); stroke: color-mix(in srgb, var(--map-light) 70%, #000); filter: drop-shadow(0 0 5px var(--map-light)); }
+.map-pin.on .map-pin-icon { fill: #2a1a00; }
+.map-pin.alert .map-pin-dot { fill: var(--bad); stroke: color-mix(in srgb, var(--bad) 70%, #000); }
+.map-pin.alert .map-pin-icon { fill: #fff; }
+.map.detail .map-sub { opacity: 0.9; }
+@media (prefers-reduced-motion: reduce) { .map-pin { transition: none; } }
+.map-zoom {
+  position: absolute; right: 8px; bottom: 8px; z-index: 2; display: flex; align-items: center; gap: 4px; padding: 4px;
+  border-radius: 999px; background: color-mix(in srgb, var(--glass, #fff) 88%, transparent); border: 1px solid var(--line);
+  box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.35); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); color: var(--ink);
+}
+.map-zoom-btn { width: 40px; height: 40px; min-height: 40px; padding: 0; border-radius: 50%; display: grid; place-items: center; font-size: 1.25rem; font-weight: 600; line-height: 1; background: transparent; border: 0; color: inherit; }
+.map-zoom-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.map-zoom-btn:disabled { opacity: 0.4; cursor: default; }
+.map-zoom-btn svg { width: 18px; height: 18px; fill: currentColor; }
+.map-zoom-level { min-width: 3.4em; text-align: center; font-size: 0.8rem; font-variant-numeric: tabular-nums; color: var(--muted); }
+.stage .map-zoom { background: rgba(20, 16, 12, 0.35); border-color: rgba(255, 255, 255, 0.25); color: var(--stage-ink, #fff); }
+.stage .map-zoom-level { display: none; }
+.stage .map-zoom, .alt-map .map-zoom { gap: 2px; padding: 3px; }
+.stage .map-zoom-btn, .alt-map .map-zoom-btn { width: 34px; height: 34px; min-height: 34px; font-size: 1.1rem; }
+
+.explorer { width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: var(--bg); color: var(--ink); }
+.explorer::backdrop { background: rgba(0, 0, 0, 0.5); }
+.explorer[open] { display: grid; grid-template-rows: auto 1fr; }
+.explorer-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 16px 20px 8px; }
+.explorer-head h2 { font-size: 1.4rem; }
+.explorer-body { position: relative; display: grid; grid-template-columns: 1fr; min-height: 0; }
+.explorer.has-room .explorer-body { grid-template-columns: 1fr minmax(300px, 380px); }
+.explorer-map { height: 100%; min-height: 0; padding: 8px 12px 12px; }
+.explorer-map .map-zoom { right: 20px; bottom: 20px; }
+.explorer-room { overflow: auto; padding: 8px 16px 20px; border-left: 1px solid var(--line); background: var(--glass-2, transparent); }
+.explorer-room-head { display: flex; justify-content: flex-start; margin-bottom: 10px; }
+.explorer-room .room-card { box-shadow: none; }
+@media (max-width: 760px) {
+  .explorer.has-room .explorer-body { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+  .explorer-room { border-left: 0; border-top: 1px solid var(--line); max-height: 48dvh; }
+}
+
 /* Vivid light: the same model, cooler and brighter, with a pop of color. */
 :root[data-look="vivid"] {
   --m-wall: #ffffff; --m-cap: #ffffff; --m-wood: #dcb58c; --m-wood-dark: #5a4636; --m-tile: #eef1f5; --m-concrete: #d6dae0;

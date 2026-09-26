@@ -144,6 +144,19 @@
       <p id="voice-hint" class="voice-hint" hidden></p>
     </div>
   </div>
+  <dialog id="explorer" class="explorer" aria-labelledby="explorer-title">
+    <div class="explorer-head">
+      <div>
+        <h2 id="explorer-title">The house</h2>
+        <p class="muted small">Pinch or use + and &minus; to zoom, drag to look around, and tap a room for its controls.</p>
+      </div>
+      <button type="button" id="explorer-close" class="ghost">Close</button>
+    </div>
+    <div class="explorer-body">
+      <div id="explorer-map" class="map explorer-map"></div>
+      <aside id="explorer-room" class="explorer-room" aria-label="Room controls" hidden></aside>
+    </div>
+  </dialog>
   <dialog id="library" class="library" aria-labelledby="library-title">
     <div class="library-head">
       <div>

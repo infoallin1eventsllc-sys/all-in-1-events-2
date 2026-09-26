@@ -136,6 +136,58 @@ async function exercise(page, { garageTravelMs, home }) {
   await check("Tapping a room on the map opens it", async () => (await page.textContent("#room-title")) === "Kitchen");
   await page.locator('.map-room[data-room="kitchen"]').click();
   await check("Tapping it again goes back to the whole home", async () => (await page.textContent("#room-title")) === "Whole home");
+
+  // Touch: zoom, look around, pinch, device pins, and the full-screen explorer.
+  const mapView = (sel = "#map") => page.evaluate((sel) => {
+    const svg = document.querySelector(`${sel} svg.map-svg`);
+    const [, , w] = svg.getAttribute("viewBox").split(" ").map(Number);
+    const [, , bw] = svg.dataset.base.split(" ").map(Number);
+    return { zoom: bw / w, box: svg.getAttribute("viewBox") };
+  }, sel);
+  await page.locator("#map .map-zoom-btn.zin").click();
+  await page.locator("#map .map-zoom-btn.zin").click();
+  await check("Home map: + zooms in", async () => (await mapView()).zoom > 2);
+  await check("Home map: up close, each room shows its devices", async () =>
+    (await page.locator("#map.detail").count()) === 1 && (await page.locator('#map .map-pin[data-pin="light.kitchen"]').count()) === 1);
+  const mb = await page.locator("#map svg.map-svg").boundingBox();
+  const viewBefore = (await mapView()).box;
+  await page.mouse.move(mb.x + mb.width / 2, mb.y + mb.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(mb.x + mb.width / 2 + 90, mb.y + mb.height / 2 + 30, { steps: 8 });
+  await page.mouse.up();
+  await check("Home map: dragging looks around", async () => (await mapView()).box !== viewBefore);
+  await check("Home map: a drag doesn't open a room", async () => (await page.textContent("#room-title")) === "Whole home");
+  await page.locator("#map .map-zoom-btn.fit").click();
+  await check("Home map: Fit shows the whole house again", async () => (await mapView()).zoom < 1.01, 3000);
+  await page.evaluate(() => {
+    const svg = document.querySelector("#map svg.map-svg"), r = svg.getBoundingClientRect();
+    const cx = r.x + r.width / 2, cy = r.y + r.height / 2, t = svg.querySelector(".map-floor");
+    const opts = (id, x) => ({ pointerId: id, clientX: x, clientY: cy, bubbles: true, pointerType: "touch", isPrimary: id === 1 });
+    t.dispatchEvent(new PointerEvent("pointerdown", opts(1, cx - 20)));
+    t.dispatchEvent(new PointerEvent("pointerdown", opts(2, cx + 20)));
+    for (let k = 1; k <= 8; k++) window.dispatchEvent(new PointerEvent("pointermove", opts(2, cx + 20 + k * 12)));
+    window.dispatchEvent(new PointerEvent("pointerup", opts(2, cx + 116)));
+    window.dispatchEvent(new PointerEvent("pointerup", opts(1, cx - 20)));
+  });
+  await check("Home map: a two-finger pinch zooms", async () => (await mapView()).zoom > 2);
+  await page.locator("#map .map-zoom-btn.fit").click();
+
+  await page.locator("#map .map-zoom-btn.expand").click();
+  await check("Full screen: the house opens in the explorer", async () => page.evaluate(() => document.querySelector("#explorer").open));
+  await audit(page, "House explorer");
+  await page.locator('#explorer-map .map-room[data-room="kitchen"]').dispatchEvent("click");
+  await check("Full screen: tapping a room flies into it and opens its controls", async () =>
+    (await mapView("#explorer-map")).zoom > 1.5 && (await page.locator("#explorer-room .room-card h2, #explorer-room .room-card .kicker, #explorer-room .room-card").first().textContent()).includes("Kitchen"), 3000);
+  const explorerKitchenOn = async () => (await page.locator(`#explorer-room [data-device="light.kitchen"]`).textContent()).includes("On");
+  const explorerWasOn = await explorerKitchenOn();
+  await page.locator('#explorer-room [data-device="light.kitchen"]').click();
+  await check("Full screen: the room's controls work", async () => (await explorerKitchenOn()) !== explorerWasOn);
+  await page.locator('#explorer-room [data-device="light.kitchen"]').click();
+  await audit(page, "House explorer with a room open");
+  await page.locator("#explorer-room .explorer-back").click();
+  await check("Full screen: Whole house flies back out", async () => (await page.locator("#explorer-room").isHidden()) && (await mapView("#explorer-map")).zoom < 1.05, 3000);
+  await page.keyboard.press("Escape");
+  await check("Full screen: Escape closes it", async () => !(await page.evaluate(() => document.querySelector("#explorer").open)));
   await check("Energy tile says the numbers are estimated", async () => /Estimated/.test(await tileOf("energy").textContent()));
   const kwNow = async () => Number((await tileOf("energy").locator(".energy-num").first().textContent()).trim());
   const kw0 = await kwNow();

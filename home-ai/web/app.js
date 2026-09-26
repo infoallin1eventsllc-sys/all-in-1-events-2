@@ -6,6 +6,7 @@
 // house, so the app code is identical in both.
 import { createVoice } from "./voice.js";
 import { renderMap } from "./map.js";
+import { enableMapZoom } from "./mapzoom.js";
 import { renderEnergyChart } from "./energy-chart.js";
 
 const $ = (sel) => document.querySelector(sel);
@@ -274,7 +275,9 @@ function renderStage() {
     devicesIn: (id) => allDevices().filter((d) => d.room === id),
     selected: room,
     onSelect: (id) => { room = room === id ? "all" : id; render(); },
+    pinInfo,
   });
+  enableMapZoom($("#map"), { onExpand: () => openExplorer() });
 
   const rooms = state.rooms.filter((r) => r.devices.length);
   $("#rooms-nav").replaceChildren(
@@ -902,12 +905,76 @@ function feelBlock() {
   return block("How does it feel?", "feel-card", el("div", { class: "feel" }, ...feelButtons()));
 }
 
+// Kept across redraws so a pinch or drag in progress, and the zoom, survive
+// the live house updating.
+const altMapBox = el("div", { class: "map alt-map" });
 function mapBlock() {
-  const box = el("div", { class: "map alt-map" });
-  renderMap(box, { rooms: state.rooms, devicesIn: (id) => allDevices().filter((d) => d.room === id), selected: room, onSelect: (id) => { room = room === id ? "all" : id; render(); } });
+  const box = altMapBox;
+  renderMap(box, { rooms: state.rooms, devicesIn: (id) => allDevices().filter((d) => d.room === id), selected: room, onSelect: (id) => { room = room === id ? "all" : id; render(); }, pinInfo });
+  enableMapZoom(box, { onExpand: () => openExplorer() });
   return block(room === "all" ? "The house" : `The house · ${roomName(room)}`, "map-card", box,
     room !== "all" ? el("button", { class: "ghost", onclick: () => { room = "all"; render(); } }, "Show every room") : null);
 }
+
+// A device's pin on the zoomed-in house model.
+const PIN_ICON = { light: "light", fan: "fan", thermostat: "climate", lock: "lock", garage: "garage", water_valve: "water", water_heater: "heater", leak: "water", contact: "door" };
+function pinInfo(d) {
+  const icon = ICON[PIN_ICON[d.type]];
+  if (!icon) return null;
+  const s = d.state;
+  const alert = (d.type === "leak" && s.wet) || (d.type === "lock" && !s.locked) || (d.type === "garage" && s.door !== "closed") || (d.type === "contact" && s.open) || (d.type === "water_valve" && !s.open);
+  const on = !alert && ((d.type === "light" && s.on) || (d.type === "fan" && s.on) || (d.type === "thermostat" && s.hvac && s.hvac !== "idle" && s.hvac !== "off"));
+  return { icon, state: alert ? "alert" : on ? "on" : "", text: `${d.name}: ${describe(d)}` };
+}
+
+// ---------- full-screen house explorer ----------
+// The model filling the screen: pinch, drag and the wheel zoom and look
+// around; tapping a room flies the camera into it and opens its controls.
+let explorerRoom = null;
+function openExplorer() {
+  explorerRoom = null;
+  const dlg = $("#explorer");
+  if (!dlg.open) dlg.showModal();
+  renderExplorer();
+  $("#explorer-map").__zoom?.reset();
+}
+function renderExplorer() {
+  const dlg = $("#explorer");
+  if (!dlg.open || !state) return;
+  const box = $("#explorer-map");
+  renderMap(box, {
+    rooms: state.rooms,
+    devicesIn: (id) => allDevices().filter((d) => d.room === id),
+    selected: explorerRoom,
+    onSelect: (id) => selectExplorerRoom(explorerRoom === id ? null : id),
+    pinInfo,
+  });
+  const z = enableMapZoom(box, { wheel: true });
+  const r = explorerRoom && state.rooms.find((x) => x.id === explorerRoom);
+  const aside = $("#explorer-room");
+  aside.hidden = !r;
+  $("#explorer").classList.toggle("has-room", Boolean(r));
+  if (r) {
+    const card = roomCard(r);
+    aside.replaceChildren(
+      el("div", { class: "explorer-room-head" },
+        el("button", { type: "button", class: "ghost explorer-back", onclick: () => selectExplorerRoom(null) }, "← Whole house")),
+      card);
+  }
+  return z;
+}
+function selectExplorerRoom(id) {
+  explorerRoom = id;
+  const z = renderExplorer();
+  if (!z) return;
+  if (id) z.focusRoom(id); else z.reset();
+}
+$("#explorer-close").addEventListener("click", () => $("#explorer").close());
+$("#explorer").addEventListener("close", () => {
+  explorerRoom = null;
+  $("#explorer").classList.remove("has-room");
+  $("#explorer-map > svg.map-svg")?.remove();
+});
 
 function bigButton(label, sub, onclick, cls = "") {
   return el("button", { class: `big-btn ${cls}`, onclick }, el("span", { class: "big-label" }, label), sub ? el("span", { class: "big-sub" }, sub) : null);
@@ -1490,6 +1557,7 @@ function render() {
     renderScenes();
     renderHome();
   }
+  renderExplorer();
   renderFeed();
   $("#t-sim").hidden = state.adapter !== "simulator";
   $("#footer").textContent = demo

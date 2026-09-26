@@ -213,9 +213,9 @@ function shared(a, b, axis) {
   return null;
 }
 
-export function renderMap(container, { rooms, devicesIn, selected, onSelect }) {
+export function renderMap(container, { rooms, devicesIn, selected, onSelect, pinInfo }) {
   const planned = rooms.filter((r) => r.plan);
-  if (!planned.length) { container.replaceChildren(); return; }
+  if (!planned.length) { container.querySelector(":scope > svg.map-svg")?.remove(); return; }
 
   // Bounds of the model, for the viewBox.
   const corners = planned.flatMap(({ plan: [x, y, w, d] }) => [iso(x, y, WALL), iso(x + w, y, WALL), iso(x, y + d, 0), iso(x + w, y + d, 0), iso(x, y + d, WALL), iso(x + w, y, 0)]);
@@ -223,7 +223,7 @@ export function renderMap(container, { rooms, devicesIn, selected, onSelect }) {
   const pad = 22;
   const vb = [Math.min(...xs) - pad, Math.min(...ys) - pad, Math.max(...xs) - Math.min(...xs) + pad * 2, Math.max(...ys) - Math.min(...ys) + pad * 2];
 
-  const svg = node("svg", { viewBox: vb.map((n) => n.toFixed(1)).join(" "), class: "map-svg", role: "group", "aria-label": "Home map. Select a room to open it." });
+  const svg = node("svg", { viewBox: vb.map((n) => n.toFixed(1)).join(" "), "data-base": vb.map((n) => n.toFixed(1)).join(" "), class: "map-svg", role: "group", "aria-label": "Home map. Select a room to open it. Pinch or use the zoom buttons to look closer." });
   const defs = node("defs");
   defs.append(node("radialGradient", { id: "map-glow", cx: "50%", cy: "50%", r: "60%" },
     node("stop", { offset: "0%", "stop-color": "var(--map-light)", "stop-opacity": "0.95" }),
@@ -246,6 +246,7 @@ export function renderMap(container, { rooms, devicesIn, selected, onSelect }) {
   // Back to front so nearer walls overlap farther rooms.
   const order = [...planned].sort((a, b) => (a.plan[0] + a.plan[1]) - (b.plan[0] + b.plan[1]));
   const labels = [];
+  const pins = [];
   for (const r of order) {
     const [x, y, w, d] = r.plan;
     const kind = kindOf(r);
@@ -310,7 +311,32 @@ export function renderMap(container, { rooms, devicesIn, selected, onSelect }) {
     g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(r.id); } });
     svg.append(g);
     labels.push({ r, st, at: iso(x + w / 2, y + d * 0.62, 0) });
+    if (pinInfo) pins.push({ r, devices, x, y, w, d });
   }
+
+  // Up close, each room shows its devices as pins: lit lights glow, anything
+  // open, unlocked or wet is red. Tapping one opens its room.
+  const pinLayer = node("g", { class: "map-pins", "aria-hidden": "true" });
+  for (const { r, devices, x, y, w, d } of pins) {
+    const shown = devices.map((dev) => ({ dev, info: pinInfo(dev) })).filter((p) => p.info);
+    const perRow = Math.max(1, Math.min(shown.length, Math.floor((w - 0.6) / 1.35)));
+    shown.forEach(({ dev, info }, i) => {
+      const row = Math.floor(i / perRow), col = i % perRow, inRow = Math.min(perRow, shown.length - row * perRow);
+      const px = x + w / 2 + (col - (inRow - 1) / 2) * 1.35, py = y + Math.min(d * 0.3, 1.9) + row * 1.25;
+      const [sx, sy] = iso(px, py, 1.05);
+      const pin = node("g", { class: `map-pin${info.state ? ` ${info.state}` : ""}`, transform: `translate(${sx.toFixed(1)} ${sy.toFixed(1)})`, "data-pin": dev.id });
+      const inner = node("g", { class: "map-pin-body" });
+      inner.append(
+        node("line", { class: "map-pin-stem", x1: 0, y1: 7, x2: 0, y2: 15 }),
+        node("circle", { class: "map-pin-dot", r: 8 }),
+        node("path", { class: "map-pin-icon", d: info.icon, transform: "translate(-5.5 -5.5) scale(0.46)" }),
+        node("title", {}, document.createTextNode(info.text)));
+      pin.append(inner);
+      pin.addEventListener("click", () => onSelect(r.id));
+      pinLayer.append(pin);
+    });
+  }
+  svg.append(pinLayer);
 
   // Labels float above the rooms as one-line chips, drawn last so walls and
   // furniture never cover them, and nudged apart where rooms are close.
@@ -323,13 +349,16 @@ export function renderMap(container, { rooms, devicesIn, selected, onSelect }) {
     for (let k = 0; k < 12 && hit(ly); k++) ly += 5;
     placed.push({ x: lx, y: ly, w: width });
     const left = lx - width / 2;
-    svg.append(node("rect", { class: `map-chip${st.alert ? " alert" : ""}${selected === r.id ? " selected" : ""}`, x: left.toFixed(1), y: (ly - 9).toFixed(1), width: width.toFixed(1), height: 18, rx: 9, "aria-hidden": "true" }));
+    const tag = node("g", { class: "map-tag", "aria-hidden": "true" });
+    tag.append(node("rect", { class: `map-chip${st.alert ? " alert" : ""}${selected === r.id ? " selected" : ""}`, x: left.toFixed(1), y: (ly - 9).toFixed(1), width: width.toFixed(1), height: 18, rx: 9, "aria-hidden": "true" }));
     const t = node("text", { class: "map-label", x: (left + 9).toFixed(1), y: (ly + 3.6).toFixed(1), "aria-hidden": "true" });
     t.append(name);
     if (st.text) t.append(node("tspan", { class: `map-sub${st.alert ? " alert" : ""}`, dx: "7" }, document.createTextNode(st.text)));
-    svg.append(t);
+    tag.append(t);
+    svg.append(tag);
   }
-  container.replaceChildren(svg);
+  const old = container.querySelector(":scope > svg.map-svg");
+  if (old) old.replaceWith(svg); else container.prepend(svg);
   // Now that the text is on the page, fit each chip to it.
   for (const t of svg.querySelectorAll(".map-label")) {
     const len = t.getComputedTextLength?.();
