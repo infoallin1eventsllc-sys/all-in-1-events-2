@@ -12,7 +12,7 @@ Both are private until shared from each page's Share menu.
 ## Verified working
 `npm run check` runs everything below. Last result: all passing, twice in a row.
 
-- **104 automated tests** (`npm test`)
+- **115 automated tests** (`npm test`)
   - Safety rules: confirmations, hard limits, the leak interlock, garage anti-bounce, owner vs. AI vs. automation permissions
   - Automations: motion lights on and off, leak shutoff, arriving / approaching / leaving, garage reminders, freeze protection, quiet hours
   - Every chat phrase the panel and docs suggest, plus questions, scenes and the "which room?" fallback
@@ -22,9 +22,13 @@ Both are private until shared from each page's Share menu.
   - **Energy:** the estimate follows lights, fans, heating and the water heater; today's kWh adds up and resets at midnight; hourly averages and peak; a real meter replaces the estimate
   - Every HTTP route including the profile, feedback, suggestion, forget, reflect and energy routes
   - Home Assistant bridge, ntfy/Pushover payloads, scheduled briefings, and the real server surviving a restart
+  - **Weather:** Open-Meteo and Home Assistant forecasts (stand-in servers with the real response shapes), keeping the last reading on errors, "not connected" everywhere without a source, weather questions vs. "I'm cold", and the forecast in briefings
+  - **Voice:** ElevenLabs requests (key, voice, model, words not symbols), cached repeats, fallback and pause after errors, and `/api/speech` returning audio without exposing the key
 - **Browser checks** (`npm run e2e`) in both the home-server panel and the demo build: every tile control (switches, brightness slider, fan speeds, climate dial and modes, water heater, valve, garage, locks, Lock up), room tabs, status fixes, Confirm and Cancel, chat, **voice** (a spoken command runs, Haven answers aloud, the speaker button mutes it, the leak alert is read aloud), all five scenes, the feeling buttons, **About you** (learned items, forget one, review my day, a habit suggestion accepted into a routine, forget everything), Brief me now, every simulator button, both styles, the **home map** (every room drawn, tap to open and back, lit rooms glow, the leak room turns red), **energy** (labeled estimated, live power rises when a fan runs, the chart tooltip and table view), and no sideways scrolling at wall-panel or phone width.
-- **Screen library** in the browser run: the library lists six screens; each screen renders its parts and a real control works on it (Command Center light switch, Family Hub briefing, Nightstand Goodnight, Rooms light tap, Entry turn off); the panel room makes "turn on the lights" mean that room; no sideways scrolling on any screen at 390px.
-- **Accessibility:** automated WCAG 2.2 AA audits (axe-core) inside the browser run: sign-in, whole home in both styles, a room, a leak alert, the Updates and About you tabs, phone width, and each library screen (Command Center, Family Hub, Nightstand, Rooms, Entry). 0 violations.
+- **Browser run totals:** 147 checks on the home-server panel and 142 on the demo, all passing (September 26, after the Wallpaper screen).
+- **Wallpaper screen** in the browser run: weather card (sample in the demo, "not connected" on a house without a source), the photo following the time of day, a light's icon switch, the pill dimmer, climate +, uploading your own photo and going back, and the panel playing Haven's ElevenLabs voice when the server has a key (stand-in ElevenLabs).
+- **Screen library** in the browser run: the library lists seven screens; each screen renders its parts and a real control works on it (Command Center light switch, Family Hub briefing, Nightstand Goodnight, Rooms light tap, Entry turn off); the panel room makes "turn on the lights" mean that room; no sideways scrolling on any screen at 390px.
+- **Accessibility:** automated WCAG 2.2 AA audits (axe-core) inside the browser run: sign-in, whole home in both styles, a room, a leak alert, the Updates and About you tabs, phone width, and each library screen (Command Center, Family Hub, Nightstand, Rooms, Entry, Wallpaper). 0 violations. (The audit caught dark chat and suggestion text on the Wallpaper screen's dark glass; fixed.)
 
 ## Added September 26 (evening)
 - **Wallpaper screen** (7th in the library), modeled on the photo-backed dashboard reference: the home's photo behind frosted tiles, a weather card, indoor temperature and humidity, electricity with a live line, climate, fans, water heater, every light with an icon switch and pill dimmer, doors & water, scenes, updates. The photo follows the time of day; a homeowner can use their own photo (kept on that panel).
