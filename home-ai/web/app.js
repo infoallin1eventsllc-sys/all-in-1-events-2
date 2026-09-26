@@ -787,6 +787,7 @@ $("#library-close").addEventListener("click", () => $("#library").close ? $("#li
 $("#panel-room").addEventListener("change", (e) => {
   panelRoom = e.target.value;
   safeSet("haven.panelRoom", panelRoom);
+  if (state) render(); // the Nightstand's photo and "Lights off" follow the room right away
   showHint(panelRoom ? `This panel is in the ${roomName(panelRoom).toLowerCase()}. "Turn off the lights" here means that room.` : "This panel covers the whole home.");
 });
 document.addEventListener("click", (e) => { if (e.target.closest?.(".screens-open")) openLibrary(); });
