@@ -1,35 +1,88 @@
+/* Haven app styles.
+ *
+ * Two looks share one structure:
+ *   Grounded   (default)  cream, walnut and soft gray. Walnut is the action
+ *                         color; lamp amber appears only where a light is on.
+ *   Futuristic            deep charcoal with cyan and violet light. A single
+ *                         dark world by design.
+ *
+ * Semantic colors (ok / warn / bad) carry state and are never decoration.
+ */
+
 :root {
-  --bg: #f4f1ea;
-  --surface: #ffffff;
-  --surface-2: #ece7dc;
-  --text: #1b2430;
-  --muted: #5d6673;
-  --line: #ddd6c8;
-  --accent: #b7791f;
-  --accent-text: #ffffff;
-  --on: #f2b84b;
-  --ok: #2f7d4f;
-  --warn: #b7791f;
-  --bad: #c0392b;
-  --radius: 16px;
+  --bg: #f1ede6;
+  --surface: #fbf9f5;
+  --surface-2: #eae4da;
+  --text: #2a241e;
+  --muted: #6e6459;
+  --line: #ddd4c7;
+  --accent: #6b4a2f;
+  --accent-text: #fbf9f5;
+  --on: #e0a43a;
+  --ok: #3f7a52;
+  --warn: #a8641e;
+  --bad: #b3362b;
+  --focus: #6b4a2f;
+  --radius: 14px;
+  --font: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font);
 }
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0f1720;
-    --surface: #17212c;
-    --surface-2: #1f2b38;
-    --text: #eef1f4;
-    --muted: #97a3b0;
-    --line: #2a3745;
-    --accent: #f2b84b;
-    --accent-text: #1b1305;
-    --on: #f2b84b;
-    --ok: #5cc98a;
-    --warn: #f2b84b;
-    --bad: #ff6b5b;
+  :root:not([data-theme="light"]) {
+    --bg: #17130f;
+    --surface: #211b16;
+    --surface-2: #2b241d;
+    --text: #f1ebe2;
+    --muted: #a89c8e;
+    --line: #3a3129;
+    --accent: #c9a27a;
+    --accent-text: #1a140f;
+    --on: #f0b64e;
+    --ok: #7cc593;
+    --warn: #e3a45a;
+    --bad: #f07a6b;
+    --focus: #c9a27a;
+    color-scheme: dark;
   }
 }
+:root[data-theme="dark"] {
+  --bg: #17130f;
+  --surface: #211b16;
+  --surface-2: #2b241d;
+  --text: #f1ebe2;
+  --muted: #a89c8e;
+  --line: #3a3129;
+  --accent: #c9a27a;
+  --accent-text: #1a140f;
+  --on: #f0b64e;
+  --ok: #7cc593;
+  --warn: #e3a45a;
+  --bad: #f07a6b;
+  --focus: #c9a27a;
+  color-scheme: dark;
+}
 
+/* Futuristic: one dark world whatever the system theme. */
+:root[data-look="futuristic"] {
+  --bg: #06070c;
+  --surface: rgba(16, 20, 33, 0.84);
+  --surface-2: rgba(64, 224, 255, 0.06);
+  --text: #e6f4ff;
+  --muted: #8c95b6;
+  --line: rgba(64, 224, 255, 0.2);
+  --accent: #40e0ff;
+  --accent-text: #03121a;
+  --on: #40e0ff;
+  --ok: #3df5b0;
+  --warn: #b592ff;
+  --bad: #ff4d8d;
+  --focus: #40e0ff;
+  --radius: 10px;
+  --font-display: "Chakra Petch", "Hanken Grotesk", -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+
+/* ---------- base ---------- */
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
@@ -37,155 +90,172 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 16px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
-  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  font: 16px/1.5 var(--font);
+  padding-inline: 16px;
 }
-main { max-width: 960px; margin: 0 auto; padding: 16px; }
-h1 { font-size: 1.6rem; margin: 0; letter-spacing: -0.01em; }
-h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 24px 0 10px; }
-section h2:first-child { margin-top: 0; }
+main { max-width: 980px; margin: 0 auto; padding-block: 20px 32px; display: grid; gap: 22px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+h1 { font-size: 1.55rem; font-weight: 650; letter-spacing: -0.015em; line-height: 1.2; }
+h2 { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+h3 { font-size: 1rem; font-weight: 600; }
+p { margin: 0; }
 .muted { color: var(--muted); }
 .small { font-size: 0.85rem; }
-.row-between { display: flex; align-items: center; justify-content: space-between; margin-top: 24px; }
-.row-between h2 { margin: 0; }
+section { display: grid; gap: 10px; }
+.row-between { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
 
 button {
-  font: inherit; border: 1px solid var(--line); background: var(--surface); color: var(--text);
-  border-radius: 12px; padding: 10px 14px; cursor: pointer; min-height: 44px;
+  font: inherit; font-size: 0.95rem; border: 1px solid var(--line); background: var(--surface); color: var(--text);
+  border-radius: 10px; padding: 8px 14px; cursor: pointer; min-height: 44px;
+  transition: background 0.15s, border-color 0.15s, transform 0.08s;
 }
+button:hover { border-color: var(--muted); }
 button:active { transform: scale(0.98); }
 button.primary { background: var(--accent); color: var(--accent-text); border-color: transparent; font-weight: 600; }
 button.ghost { background: transparent; }
 button.danger { background: var(--bad); color: #fff; border-color: transparent; font-weight: 600; }
 input {
-  font: inherit; width: 100%; padding: 12px 14px; border-radius: 12px;
-  border: 1px solid var(--line); background: var(--surface-2); color: var(--text); min-height: 44px;
+  font: inherit; width: 100%; padding: 11px 14px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--text); min-height: 46px;
 }
-:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+input::placeholder { color: var(--muted); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
-.login { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+/* ---------- login ---------- */
+.login { min-height: 100vh; display: grid; place-items: center; }
 .login form { width: min(420px, 100%); display: grid; gap: 12px; }
-.error { color: var(--bad); min-height: 1.2em; margin: 0; }
+.error { color: var(--bad); min-height: 1.2em; }
 
-.top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
-.top p { margin: 2px 0 0; }
-.conn { color: var(--muted); font-size: 0.9rem; }
-.conn.live { color: var(--ok); }
+/* ---------- header ---------- */
+.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.top p { margin-top: 2px; }
+.top-right { display: flex; align-items: center; gap: 10px; }
+.conn { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; }
+.conn.live { background: var(--ok); }
+.look-switch { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--surface); }
+.look-switch button { min-height: 34px; padding: 4px 12px; border: 0; border-radius: 999px; background: transparent; font-size: 0.85rem; color: var(--muted); }
+.look-switch button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); font-weight: 600; }
+@media (max-width: 560px) {
+  .top-right { width: 100%; justify-content: space-between; }
+}
 
-.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
-.chip { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; }
-.chip .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
-.chip .value { font-size: 1.15rem; font-weight: 600; margin-top: 2px; }
+/* ---------- status line: the summary before the detail ---------- */
+.status { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; }
+.status-mark {
+  width: 14px; height: 14px; border-radius: 50%; margin-inline: 4px;
+  --mark: var(--ok);
+  background: var(--mark);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--mark) 20%, transparent);
+}
+.status[data-state="attention"] .status-mark,
+.status[data-state="confirm"] .status-mark { --mark: var(--warn); }
+.status[data-state="alert"] .status-mark { --mark: var(--bad); }
+.status-text { display: grid; gap: 8px; min-width: 0; }
+.status-headline { font-family: var(--font-display); font-size: 1.15rem; font-weight: 650; }
+.issues { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 0; }
+.issues:empty { display: none; }
+.issue { display: inline-flex; align-items: center; gap: 8px; padding: 4px 4px 4px 12px; border-radius: 999px; background: var(--surface-2); font-size: 0.9rem; min-height: 40px; }
+.issue.bad { color: var(--bad); font-weight: 600; }
+.issue:not(:has(button)) { padding-right: 12px; }
+.issue button { min-height: 32px; padding: 2px 12px; border-radius: 999px; font-size: 0.85rem; }
+
+/* ---------- confirmations ---------- */
+#pending { display: grid; gap: 10px; }
+#pending:empty { display: none; }
+.pending-card {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+  border: 2px solid var(--warn); background: var(--surface); border-radius: var(--radius); padding: 14px 16px;
+}
+.pending-card strong { flex: 1 1 220px; }
+.pending-actions { display: flex; gap: 8px; }
+
+/* ---------- at a glance ---------- */
+.summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+@media (max-width: 640px) { .summary { grid-template-columns: repeat(2, 1fr); } }
+.chip { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 2px; align-content: start; }
+.chip .label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.chip .value { font-family: var(--font-display); font-size: 1.2rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.chip .sub { font-size: 0.8rem; color: var(--muted); }
 .chip.ok .value { color: var(--ok); }
 .chip.warn .value { color: var(--warn); }
 .chip.bad { border-color: var(--bad); }
 .chip.bad .value { color: var(--bad); }
 
-.pending-card { border: 2px solid var(--warn); background: var(--surface); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
-.pending-card strong { flex: 1 1 200px; }
-
+/* ---------- ask haven ---------- */
 .ask form { display: flex; gap: 8px; }
-.ask input { flex: 1; }
-.chat-log { display: grid; gap: 8px; margin-top: 12px; max-height: 280px; overflow-y: auto; }
+.ask input { flex: 1; min-width: 0; }
+.chat-log { display: grid; gap: 8px; margin-top: 12px; max-height: 300px; overflow-y: auto; }
 .chat-log:empty { display: none; }
-.msg { padding: 10px 12px; border-radius: 12px; max-width: 85%; }
+.msg { padding: 9px 12px; border-radius: 12px; max-width: 85%; }
 .msg.you { justify-self: end; background: var(--accent); color: var(--accent-text); }
 .msg.haven { background: var(--surface-2); }
 
-.scenes { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.scenes { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
 .scenes button { white-space: nowrap; }
 
-.rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
-.room h3 { margin: 0 0 10px; font-size: 1rem; }
-.devices { display: grid; gap: 8px; }
-.device { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 12px; background: var(--surface-2); min-height: 48px; }
-.device .name { font-weight: 500; }
-.device .state { font-size: 0.85rem; color: var(--muted); }
+/* ---------- rooms ---------- */
+.rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; align-items: start; }
+.room { display: grid; gap: 10px; }
+.devices { display: grid; gap: 6px; }
+.device { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); min-height: 52px; }
+.device .name { font-weight: 550; }
+.device .state { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .device.on .state { color: var(--text); }
-.device.on { box-shadow: inset 3px 0 0 var(--on); }
+.device.on .name::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--on); margin-right: 8px; vertical-align: 1px; box-shadow: 0 0 8px var(--on); }
 .device.alert { box-shadow: inset 3px 0 0 var(--bad); }
 .device.alert .state { color: var(--bad); font-weight: 600; }
 .device .controls { display: flex; gap: 6px; flex-shrink: 0; }
-.device .controls button { min-height: 36px; padding: 6px 10px; }
+.device .controls button { min-height: 36px; min-width: 40px; padding: 4px 10px; }
+.sensors { font-size: 0.85rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 14px; padding-inline: 2px; }
+.sensors .alert { color: var(--bad); font-weight: 600; }
 
+/* ---------- updates ---------- */
 .feed { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
-.feed li { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.feed li { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 2px; }
 .feed li.urgent { border-color: var(--bad); }
 .feed .when { font-size: 0.75rem; color: var(--muted); }
 .feed .title { font-weight: 600; }
-.feed .body { margin-top: 2px; }
 
-.sim { margin-top: 24px; }
-.sim-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; margin-top: 10px; }
+.sim-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+footer { text-align: center; }
 
-footer { margin: 24px 0 8px; text-align: center; }
-
-/* ---------- Look switch: "Grounded" (default above) vs "Futuristic" ---------- */
-.look-switch { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--surface); }
-.look-switch button { min-height: 32px; padding: 4px 12px; border: 0; border-radius: 999px; background: transparent; font-size: 0.85rem; color: var(--muted); }
-.look-switch button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); font-weight: 600; }
-.top-right { display: flex; align-items: center; gap: 10px; }
-
-:root[data-look="futuristic"] {
-  --bg: #06070c;
-  --surface: rgba(18, 22, 36, 0.78);
-  --surface-2: rgba(34, 228, 255, 0.06);
-  --text: #e8f7ff;
-  --muted: #8a93b8;
-  --line: rgba(34, 228, 255, 0.22);
-  --accent: #22e4ff;
-  --accent-text: #041016;
-  --on: #22e4ff;
-  --ok: #3dffb0;
-  --warn: #b98cff;
-  --bad: #ff4d8d;
-  --radius: 14px;
-  color-scheme: dark;
-}
+/* ---------- Futuristic treatment ---------- */
 :root[data-look="futuristic"] body {
   background:
-    radial-gradient(900px 500px at 85% -10%, rgba(155, 92, 255, 0.22), transparent 60%),
-    radial-gradient(800px 500px at -10% 30%, rgba(34, 228, 255, 0.14), transparent 60%),
-    linear-gradient(rgba(34, 228, 255, 0.045) 1px, transparent 1px) 0 0 / 32px 32px,
-    linear-gradient(90deg, rgba(34, 228, 255, 0.045) 1px, transparent 1px) 0 0 / 32px 32px,
+    radial-gradient(900px 520px at 85% -10%, rgba(155, 92, 255, 0.2), transparent 60%),
+    radial-gradient(800px 500px at -10% 30%, rgba(64, 224, 255, 0.12), transparent 60%),
+    linear-gradient(rgba(64, 224, 255, 0.04) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(90deg, rgba(64, 224, 255, 0.04) 1px, transparent 1px) 0 0 / 32px 32px,
     var(--bg);
   background-attachment: fixed;
-  font-family: "SF Pro Display", -apple-system, "Segoe UI", Roboto, sans-serif;
 }
-:root[data-look="futuristic"] h1 {
-  background: linear-gradient(90deg, #22e4ff, #b98cff);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-}
-:root[data-look="futuristic"] h2 { color: var(--accent); letter-spacing: 0.18em; }
+:root[data-look="futuristic"] h1 { letter-spacing: 0.01em; }
+:root[data-look="futuristic"] h2 { color: var(--accent); letter-spacing: 0.2em; }
 :root[data-look="futuristic"] .card,
 :root[data-look="futuristic"] .chip,
 :root[data-look="futuristic"] .feed li {
   backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  box-shadow: 0 0 0 1px rgba(34, 228, 255, 0.08), 0 8px 30px rgba(0, 0, 0, 0.45);
 }
-:root[data-look="futuristic"] .chip .value { text-shadow: 0 0 12px currentColor; }
-:root[data-look="futuristic"] .chip.bad { box-shadow: 0 0 24px rgba(255, 77, 141, 0.45); }
-:root[data-look="futuristic"] button.primary { box-shadow: 0 0 18px rgba(34, 228, 255, 0.55); }
-:root[data-look="futuristic"] .device.on { box-shadow: inset 3px 0 0 var(--on), 0 0 16px rgba(34, 228, 255, 0.25); }
-:root[data-look="futuristic"] .device.alert { box-shadow: inset 3px 0 0 var(--bad), 0 0 16px rgba(255, 77, 141, 0.3); }
-:root[data-look="futuristic"] .msg.haven { border: 1px solid var(--line); }
-:root[data-look="futuristic"] .pending-card { box-shadow: 0 0 26px rgba(185, 140, 255, 0.45); }
-:root[data-look="futuristic"] .conn.live { text-shadow: 0 0 10px var(--ok); }
-:root[data-look="futuristic"] .orb { display: block; }
+/* Glow only where it carries state. */
+:root[data-look="futuristic"] .chip .value { text-shadow: 0 0 14px color-mix(in srgb, currentColor 45%, transparent); }
+:root[data-look="futuristic"] .chip.bad { box-shadow: 0 0 24px rgba(255, 77, 141, 0.4); }
+:root[data-look="futuristic"] button.primary { box-shadow: 0 0 18px rgba(64, 224, 255, 0.45); }
+:root[data-look="futuristic"] .pending-card { box-shadow: 0 0 26px rgba(181, 146, 255, 0.4); }
+:root[data-look="futuristic"] .device.alert { box-shadow: inset 3px 0 0 var(--bad), 0 0 16px rgba(255, 77, 141, 0.25); }
 
-/* The assistant orb (shown in the Futuristic look) */
-.orb {
-  display: none; width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
-  background: radial-gradient(circle at 35% 30%, #ffffff 0%, #7ff3ff 18%, #22e4ff 40%, #6b3cff 75%, #1a0b3d 100%);
-  box-shadow: 0 0 22px rgba(34, 228, 255, 0.7), 0 0 60px rgba(155, 92, 255, 0.45);
-  animation: orb 4s ease-in-out infinite;
+/* The status mark becomes Haven's orb. Its color is the house's state,
+   and it moves only while Haven is working on a reply. */
+:root[data-look="futuristic"] .status-mark {
+  width: 46px; height: 46px; margin-inline: 0;
+  --mark: var(--accent);
+  background: radial-gradient(circle at 35% 30%, #ffffff 0%, color-mix(in srgb, var(--mark) 55%, #fff) 20%, var(--mark) 48%, color-mix(in srgb, var(--mark) 35%, #06070c) 100%);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--mark) 65%, transparent), 0 0 60px color-mix(in srgb, var(--mark) 30%, transparent);
+  transition: background 0.4s, box-shadow 0.4s;
 }
-.orb.thinking { animation-duration: 0.9s; }
-@keyframes orb { 0%, 100% { transform: scale(1); filter: hue-rotate(0deg); } 50% { transform: scale(1.08); filter: hue-rotate(25deg); } }
-@media (prefers-reduced-motion: reduce) { .orb { animation: none; } }
-.brand { display: flex; align-items: center; gap: 12px; }
-@media (max-width: 560px) {
-  .top { flex-wrap: wrap; gap: 12px; }
-  .top-right { width: 100%; justify-content: space-between; }
-}
+:root[data-look="futuristic"] .status[data-state="attention"] .status-mark,
+:root[data-look="futuristic"] .status[data-state="confirm"] .status-mark { --mark: var(--warn); }
+:root[data-look="futuristic"] .status[data-state="alert"] .status-mark { --mark: var(--bad); }
+.status.thinking .status-mark { animation: think 0.9s ease-in-out infinite; }
+@keyframes think { 50% { transform: scale(1.12); opacity: 0.8; } }
+@media (prefers-reduced-motion: reduce) { .status.thinking .status-mark { animation: none; } }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0f1720">
+  <meta name="theme-color" content="#17130f">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Haven">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -11,15 +11,19 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="styles.css">
   <script src="look.js"></script>
 </head>
 <body>
+  <!--haven:body-->
   <div id="login" class="login" hidden>
     <form id="login-form" class="card">
       <h1>Haven</h1>
-      <p>Enter the owner token printed when the home server first started.</p>
-      <input id="token-input" type="password" autocomplete="current-password" placeholder="Owner token" required>
+      <p class="muted">Enter the owner token printed when the home server first started.</p>
+      <input id="token-input" type="password" autocomplete="current-password" placeholder="Owner token" aria-label="Owner token" required>
       <button type="submit" class="primary">Connect</button>
       <p id="login-error" class="error" role="alert"></p>
     </form>
@@ -27,29 +31,34 @@
 
   <main id="app" hidden>
     <header class="top">
-      <div class="brand">
-        <span id="orb" class="orb" aria-hidden="true"></span>
-        <div>
-          <h1 id="home-name">Haven</h1>
-          <p id="subtitle" class="muted"></p>
-        </div>
+      <div>
+        <h1 id="home-name">Haven</h1>
+        <p id="subtitle" class="muted"></p>
       </div>
       <div class="top-right">
         <div class="look-switch" role="group" aria-label="App style">
           <button type="button" data-look="grounded">Grounded</button>
           <button type="button" data-look="futuristic">Futuristic</button>
         </div>
-        <span id="conn" class="conn" title="Live connection">●</span>
+        <span id="conn" class="conn" role="img" aria-label="Live connection"></span>
       </div>
     </header>
 
-    <section id="pending" aria-live="assertive"></section>
+    <section id="status" class="card status" data-state="ok" aria-live="polite">
+      <span class="status-mark" aria-hidden="true"></span>
+      <div class="status-text">
+        <p id="status-headline" class="status-headline">All secure</p>
+        <ul id="issues" class="issues"></ul>
+      </div>
+    </section>
+
+    <div id="pending" aria-live="assertive"></div>
 
     <section class="summary" id="summary" aria-label="House at a glance"></section>
 
     <section class="card ask">
       <form id="chat-form">
-        <input id="chat-input" autocomplete="off" placeholder="Ask Haven… “turn off the kitchen lights”" aria-label="Ask Haven">
+        <input id="chat-input" autocomplete="off" placeholder="Ask Haven anything" aria-label="Ask Haven">
         <button class="primary" type="submit">Send</button>
       </form>
       <div id="chat-log" class="chat-log" aria-live="polite"></div>
@@ -73,14 +82,15 @@
       <ol id="feed" class="feed"></ol>
     </section>
 
-    <section id="sim" class="card sim" hidden>
+    <section id="sim" class="card" hidden>
       <h2>Simulator</h2>
-      <p class="muted">No hardware connected. Trigger sensors to see Haven react.</p>
+      <p class="muted small" id="sim-note">No hardware is connected. Trigger a sensor and watch Haven respond.</p>
       <div class="sim-grid" id="sim-buttons"></div>
     </section>
 
     <footer class="muted small" id="footer"></footer>
   </main>
+  <!--/haven:body-->
   <script src="app.js" type="module"></script>
 </body>
 </html>

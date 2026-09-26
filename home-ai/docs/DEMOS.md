@@ -11,7 +11,18 @@ Two looks for presenting Haven to a client. They pick a direction, then we build
 
 > **These images are concept art.** They show holograms, levitating furniture, drones and robot helpers that don't exist in Haven or in any home you can buy today. Label them "concept" in any deck so the client doesn't expect them in the house. What Haven actually delivers is listed in [ANALYSIS.md](ANALYSIS.md).
 
-## Showing the live app in each style
+## Shareable demo links
+
+Both apps run entirely in the browser with a simulated house: no server, no login.
+
+- **Demo A, Futuristic:** https://claude.ai/artifact/NHSYrvBSADDcedguH3CBSm
+- **Demo B, Grounded:** https://claude.ai/artifact/J46Rus2S3KzY9CpbpYKyCk
+
+They're private until you share them from each page's Share menu. To rebuild them after changing the app, run `npm run build:demo` (it writes `dist/demo/`).
+
+The demos use Haven's built-in command parser. The full Claude agent needs an API key on the home server, which must never go into a public page.
+
+## Showing the app from the home server
 
 Start Haven (`npm start`), then open either link on a phone or tablet:
 

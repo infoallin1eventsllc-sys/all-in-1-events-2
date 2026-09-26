@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "test": "node --test --test-force-exit test/*.test.js"
+    "test": "node --test --test-force-exit test/*.test.js",
+    "build:demo": "node scripts/build-demo.mjs"
   },
   "engines": {
     "node": ">=20"
@@ -15,5 +16,8 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.25.12"
+  }
 }
