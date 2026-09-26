@@ -32,6 +32,9 @@ Both are private until shared from each page's Share menu.
 - **Screen library** in the browser run: the library lists seven screens; each screen renders its parts and a real control works on it (Command Center light switch, Family Hub briefing, Nightstand Goodnight, Rooms light tap, Entry turn off); the panel room makes "turn on the lights" mean that room; no sideways scrolling on any screen at 390px.
 - **Accessibility:** automated WCAG 2.2 AA audits (axe-core) inside the browser run: sign-in, whole home in both styles, a room, a leak alert, the Updates and About you tabs, phone width, and each library screen (Command Center, Family Hub, Nightstand, Rooms, Entry, Wallpaper, Studio). 0 violations. (The audit caught dark chat and suggestion text on the Wallpaper screen's dark glass; fixed.)
 
+## Added September 26 (late): a new Studio orb
+The Studio's "Tap to talk" orb is now a glass sphere with three pools of colored light inside, a window-shaped highlight, a rim of light, a thin glowing edge ring and a soft reflection below, with a microphone mark so it reads as a button. It's still when idle; the light drifts and the edge ring turns only while Haven is listening, thinking or speaking, and both swell with the real voice level. Each finish has its own colors (Grounded: amber, coral and teal). An alert or a confirmation tints it amber or red.
+
 ## Added September 26 (late): Nightstand photos
 Each bedroom's Nightstand can show its owner's own photo behind the clock (Add your photo on the Nightstand itself). It's kept per room on that panel, so a child's nightstand shows their picture and the primary bedroom shows the parents', and no other room's panel shows it. A night shade keeps the time and buttons readable; Remove photo takes it off.
 

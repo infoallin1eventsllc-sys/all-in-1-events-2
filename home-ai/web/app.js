@@ -1015,7 +1015,11 @@ function agentRow() {
 
 function studioOrb() {
   const orb = el("button", { class: "st-orb", "data-voice": voiceState, "data-house": houseState(), "aria-label": "Talk to Haven", onclick: talk },
-    el("span", { class: "st-ring", "aria-hidden": "true" }), el("span", { class: "st-core", "aria-hidden": "true" }));
+    el("span", { class: "st-halo", "aria-hidden": "true" }),
+    el("span", { class: "st-sphere", "aria-hidden": "true" },
+      el("span", { class: "st-light" }, el("i", { class: "b1" }), el("i", { class: "b2" }), el("i", { class: "b3" })),
+      el("span", { class: "st-glass" }),
+      (() => { const m = svg("M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2Z"); m.classList.add("st-mic"); return m; })()));
   return el("section", { class: "xcard st-card st-orb-card", "aria-label": "Haven" },
     el("p", { class: "st-state" }, VOICE_LABEL[voiceState]),
     orb,
