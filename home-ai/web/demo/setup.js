@@ -28,9 +28,16 @@ window.HavenDemo = {
     const route = routes.find(([m, re]) => m === method && re.test(url.pathname));
     if (!route) return { error: "not found" };
     const [, re, , handler] = route;
-    return handler(url, body || {}, url.pathname.match(re));
+    // Copy in and out, exactly like a network round trip, so the app can
+    // never touch the house's own objects and bypass the safety controller.
+    const result = await handler(url, copy(body || {}), url.pathname.match(re));
+    return copy(result);
   },
   subscribe(fn) {
-    ready.then(({ home }) => home.bus.on("event", fn));
+    ready.then(({ home }) => home.bus.on("event", (e) => fn(copy(e))));
   },
 };
+
+function copy(value) {
+  return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
+}

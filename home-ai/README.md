@@ -7,6 +7,7 @@ Haven runs a new home: lights, ceiling fans, heating and air conditioning, the w
 - **iPhone, Apple Watch and car setup**: [docs/APPLE-SETUP.md](docs/APPLE-SETUP.md)
 - **Client demos** in two styles, Futuristic and Grounded, with shareable links, concept images and prompts: [docs/DEMOS.md](docs/DEMOS.md)
 - **Design system** for both looks: [docs/DESIGN.md](docs/DESIGN.md)
+- **Current status**, what's verified and what's next: [docs/STATUS.md](docs/STATUS.md)
 
 ## Try it now (no hardware needed)
 
@@ -21,6 +22,12 @@ npm start
 Open `http://localhost:8787` and enter the owner token printed in the terminal. The **Simulator** panel at the bottom lets you trigger motion, a leak, a cold snap, arriving and leaving, and watch the house react.
 
 Try typing: `turn on the kitchen lights`, `set the thermostat to 70`, `open the garage` (it waits for you to confirm), `goodnight`, `status`.
+
+## Check that everything works
+
+```bash
+npm run check   # all tests, the demo build, and a browser run through every control
+```
 
 ## Turn on the full AI
 

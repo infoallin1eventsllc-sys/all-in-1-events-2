@@ -55,7 +55,7 @@ export function parse(t, home) {
     const d = /garage/.test(t) && !/entry/.test(t) ? reg.get("garage.door") : reg.get("lock.front");
     return { reply: `The ${d.name.toLowerCase()} is ${describeState(d)}.` };
   }
-  if (/\b(temp|temperature)\b.*\?|\bhow (warm|cold|hot)\b/.test(t)) {
+  if (/\b(temp|temperature)\b.*\?|\bhow (warm|cold|hot)\b|^(what'?s|what is|how'?s) (the |it )?(temp|temperature|inside)/.test(t)) {
     const th = reg.byType("thermostat")[0];
     return { reply: `It's ${th.state.current}°F inside. The thermostat is ${describeState(th)}.` };
   }
@@ -78,7 +78,7 @@ export function parse(t, home) {
 
   // Water
   if (/\b(shut off|turn off|stop)\b.*\bwater\b(?! heater)/.test(t)) return step("valve.main_water", { open: false });
-  if (/\b(turn on|restore)\b.*\bwater\b(?! heater)/.test(t)) return step("valve.main_water", { open: true });
+  if (/\b(turn on|restore)\b.*\bwater\b(?! heater)|\bturn the (main )?water (back )?on\b/.test(t)) return step("valve.main_water", { open: true });
   if (/\bwater heater\b/.test(t)) {
     const n = number(t);
     if (/vacation/.test(t)) return step("water_heater.main", { mode: "vacation" });
@@ -92,6 +92,11 @@ export function parse(t, home) {
   if (/\b(thermostat|temp|temperature|heat|ac|a\/c|air)\b/.test(t) || /\b(warmer|cooler|colder)\b/.test(t)) {
     const n = number(t);
     if (/\b(turn off|off)\b/.test(t) && !n) return step(th.id, { mode: "off" });
+    if (/\b(turn on|start)\b/.test(t) && !n) {
+      if (/\bheat\b/.test(t)) return step(th.id, { mode: "heat" });
+      if (/\b(ac|a\/c|air|cool)\b/.test(t)) return step(th.id, { mode: "cool" });
+      return step(th.id, { mode: "auto" });
+    }
     if (/\bwarmer\b/.test(t)) return step(th.id, { target: th.state.target + 2 });
     if (/\b(cooler|colder)\b/.test(t)) return step(th.id, { target: th.state.target - 2 });
     if (n) {
@@ -106,14 +111,22 @@ export function parse(t, home) {
     const on = /\b(off|kill)\b/.test(t) ? false : /\b(on|dim|brighten)\b|\bto \d+/.test(t) ? true : null;
     if (on === null) return null;
     const everywhere = /\b(all|every|everywhere|whole house)\b/.test(t);
-    const room = everywhere ? null : findRoom(t, home);
     let devices = reg.byType(kind);
-    if (room) devices = devices.filter((d) => d.room === room);
+    // A device named outright ("porch lights", "bedroom fan") wins over a room.
+    const named = everywhere ? [] : devices.filter((d) => t.includes(d.name.toLowerCase().replace(/ (lights?|fan)$/, "")));
+    const room = everywhere || named.length ? null : findRoom(t, home);
+    if (named.length) devices = named;
+    else if (room) devices = devices.filter((d) => d.room === room);
     else if (!everywhere) {
-      // No room named: use where motion was seen most recently.
-      const recent = reg.byType("motion").filter((m) => m.state.lastMotion).sort((a, b) => b.state.lastMotion.localeCompare(a.state.lastMotion))[0];
-      if (recent) devices = devices.filter((d) => d.room === recent.room);
-      if (!devices.length) return { reply: `Which room? I have ${kind}s in ${[...new Set(reg.byType(kind).map((d) => d.room))].join(", ")}.` };
+      // No room named: use where motion was seen in the last 15 minutes.
+      const cutoff = new Date(Date.now() - 15 * 60_000).toISOString();
+      const recent = reg.byType("motion").filter((m) => m.state.lastMotion && m.state.lastMotion > cutoff)
+        .sort((a, b) => b.state.lastMotion.localeCompare(a.state.lastMotion))[0];
+      devices = recent ? devices.filter((d) => d.room === recent.room) : [];
+      if (!devices.length) {
+        const rooms = [...new Set(reg.byType(kind).map((d) => home.config.rooms.find((r) => r.id === d.room)?.name || d.room))];
+        return { reply: `Which room? I have ${kind}s in: ${rooms.join(", ")}.` };
+      }
     }
     const n = number(t);
     const command = { on, ...(on && n !== null && kind === "light" ? { brightness: Math.min(100, n) } : {}), ...(on && n !== null && kind === "fan" ? { speed: Math.min(3, n) } : {}) };

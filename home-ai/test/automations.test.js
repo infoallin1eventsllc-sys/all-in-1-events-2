@@ -96,3 +96,14 @@ test("non-urgent alerts are held during quiet hours, urgent ones are not", async
   assert.equal(urgent.held, undefined);
   assert.equal(home.notifier.takeHeld().length, 1);
 });
+
+test("a cold snap triggers freeze protection right away", async () => {
+  const home = await testHome();
+  const alerts = [];
+  home.bus.on("notification", (n) => alerts.push(n));
+  await home.controller.execute({ device: "climate.main", command: { mode: "off" }, origin: "owner" });
+  home.adapter.sensor("climate.main", { current: 48 });
+  await settle(60);
+  assert.equal(home.registry.get("climate.main").state.mode, "heat");
+  assert.equal(alerts.at(-1).priority, "urgent");
+});

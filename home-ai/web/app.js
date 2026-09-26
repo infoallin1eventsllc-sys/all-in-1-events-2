@@ -70,6 +70,8 @@ setLook(document.documentElement.getAttribute("data-look") || "grounded");
 // ---------- state helpers ----------
 const allDevices = () => state.rooms.flatMap((r) => r.devices);
 const byType = (t) => allDevices().filter((d) => d.type === t);
+const NEXT_MODE = { auto: "heat", heat: "cool", cool: "off", off: "auto", fan_only: "auto" };
+const MODE_LABEL = { auto: "Auto", heat: "Heat", cool: "Cool", off: "Off", fan_only: "Fan" };
 const CONTROL_TYPES = new Set(["light", "fan", "thermostat", "water_heater", "water_valve", "garage", "lock"]);
 
 function describe(d) {
@@ -100,6 +102,14 @@ function isAlert(d) {
 }
 
 const send = (id, command) => api(`/api/devices/${encodeURIComponent(id)}`, { command }).then(showResult);
+
+// Step a setpoint. The new value shows at once so quick repeated taps add
+// up; if the house refuses it, the next refresh puts back the real value.
+function stepTarget(d, delta) {
+  d.state.target += delta;
+  renderRooms();
+  return send(d.id, { target: d.state.target });
+}
 
 // What needs the homeowner's attention, most serious first, each with the fix.
 function issues() {
@@ -172,11 +182,14 @@ function controls(d) {
       return [b(s.on ? "Turn off" : "Turn on", () => send(d.id, { on: !s.on }))];
     case "thermostat":
       return [
-        b("−", () => send(d.id, { target: s.target - 1 }), "", "Cooler by 1°F"),
-        b("+", () => send(d.id, { target: s.target + 1 }), "", "Warmer by 1°F"),
+        b("−", () => stepTarget(d, -1), "", "Cooler by 1°F"),
+        b("+", () => stepTarget(d, 1), "", "Warmer by 1°F"),
+        b(MODE_LABEL[s.mode] || s.mode, () => send(d.id, { mode: NEXT_MODE[s.mode] || "auto" }), "", `Mode: ${s.mode}. Tap to change.`),
       ];
     case "water_heater":
-      return [b("−", () => send(d.id, { target: s.target - 5 }), "", "Lower 5°F"), b("+", () => send(d.id, { target: s.target + 5 }), "", "Raise 5°F")];
+      return s.on
+        ? [b("−", () => stepTarget(d, -5), "", "Lower 5°F"), b("+", () => stepTarget(d, 5), "", "Raise 5°F"), b("Off", () => send(d.id, { on: false }), "", "Turn off water heater")]
+        : [b("Turn on", () => send(d.id, { on: true }))];
     case "water_valve":
       return [s.open ? b("Shut off", () => send(d.id, { open: false }), "danger") : b("Turn on", () => send(d.id, { open: true }))];
     case "garage":
@@ -270,10 +283,8 @@ $("#chat-form").addEventListener("submit", async (e) => {
   refresh();
 });
 
-$("#brief-now").addEventListener("click", async () => {
-  const r = await api("/api/briefing", {});
-  say("haven", `${r.title}: ${r.body}`);
-});
+// The briefing arrives as a live event, which adds it to the chat.
+$("#brief-now").addEventListener("click", () => api("/api/briefing", {}));
 
 // ---------- simulator ----------
 function simButtons() {

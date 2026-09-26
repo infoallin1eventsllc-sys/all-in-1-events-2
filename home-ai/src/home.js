@@ -48,6 +48,7 @@ export async function createHome({ config = loadConfig(), env = process.env, dat
     bus.publish("system", { message: `Haven started (${adapter.name} adapter, ${home.agent.kind} agent).` });
   };
   home.stop = () => {
+    store.flush();
     adapter.stop();
     home.automations.stop();
     home.briefings.stop();

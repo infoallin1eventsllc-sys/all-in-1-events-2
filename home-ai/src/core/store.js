@@ -29,12 +29,19 @@ export class Store {
   saveState(state) {
     if (this.memoryOnly) return;
     clearTimeout(this.saveTimer);
+    this.pendingState = state;
     // Debounce: sensors can fire many times a second.
-    this.saveTimer = setTimeout(() => {
-      const tmp = this.statePath + ".tmp";
-      fs.writeFileSync(tmp, JSON.stringify(state, null, 2));
-      fs.renameSync(tmp, this.statePath);
-    }, 250);
+    this.saveTimer = setTimeout(() => this.flush(), 250);
+  }
+
+  // Write any pending state now (on shutdown, so a restart loses nothing).
+  flush() {
+    clearTimeout(this.saveTimer);
+    if (this.memoryOnly || !this.pendingState) return;
+    const tmp = this.statePath + ".tmp";
+    fs.writeFileSync(tmp, JSON.stringify(this.pendingState, null, 2));
+    fs.renameSync(tmp, this.statePath);
+    this.pendingState = null;
   }
 
   append(event) {

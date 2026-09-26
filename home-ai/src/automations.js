@@ -65,6 +65,7 @@ export class Automations {
     if (device.type === "motion" && c.motion?.to === true) await this.onMotion(device);
     if (device.type === "leak" && c.wet) await this.onLeak(device, c.wet.to);
     if (device.type === "garage" && c.door) this.onGarage(c.door.to);
+    if (device.type === "thermostat" && c.current && c.current.to < this.s.freezeAlertF) await this.freezeCheck();
   }
 
   // A person changed a light by hand: stop managing it so we don't fight them.
@@ -257,6 +258,9 @@ export class Presence {
   update(personId, kind, { trusted = true } = {}) {
     const p = this.people.get(personId);
     if (!p) return { status: "error", message: `Unknown person "${personId}".` };
+    if (!["approaching", "arrived", "left"].includes(kind)) {
+      return { status: "error", message: `"kind" must be approaching, arrived or left.` };
+    }
     const wasEmpty = this.nobodyHome();
     if (kind === "arrived") p.home = true;
     if (kind === "left") p.home = false;

@@ -2,6 +2,8 @@
 // browser-only demo build. Each route: [method, path regex, needs owner
 // token, handler(url, body, match)].
 
+import { SENSOR_TYPES } from "./core/registry.js";
+
 export function createRoutes(home) {
   return [
     ["GET", /^\/api\/health$/, false, () => ({ ok: true })],
@@ -46,6 +48,11 @@ export function createRoutes(home) {
       if (home.adapter.name !== "simulator") return { status: 400, error: "Simulator is off." };
       const d = home.registry.get(body.device);
       if (!d) return { status: 404, error: "No such device" };
+      // Only sensor readings can be faked; switches, locks and doors still
+      // have to go through the safety controller.
+      const sensorOnly = SENSOR_TYPES.has(d.type) ||
+        (d.type === "thermostat" && Object.keys(body.state || {}).every((k) => k === "current" || k === "humidity"));
+      if (!sensorOnly) return { status: 400, error: `${d.name} isn't a sensor. Control it through the app instead.` };
       home.adapter.sensor(body.device, body.state || {});
       return { status: "done" };
     }],

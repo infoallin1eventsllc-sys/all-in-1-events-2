@@ -7,7 +7,7 @@ import { createServer } from "./http.js";
 
 loadDotEnv(fileURLToPath(new URL("../.env", import.meta.url)));
 const env = process.env;
-const dataDir = fileURLToPath(new URL("../data/", import.meta.url));
+const dataDir = env.HAVEN_DATA_DIR || fileURLToPath(new URL("../data/", import.meta.url));
 
 const home = await createHome({ env, dataDir });
 

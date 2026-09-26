@@ -1,0 +1,26 @@
+# Haven (home-ai/)
+
+An AI agent for a new home: Node 20+, ES modules, one runtime dependency (`@anthropic-ai/sdk`). Start with `docs/STATUS.md` for where things stand.
+
+## Commands
+- `npm start`: home server on :8787 (simulator unless `HAVEN_ADAPTER=homeassistant`)
+- `npm test`: unit, API, integration and restart tests (node:test)
+- `npm run build:demo`: browser-only demos in `dist/demo/` (gitignored)
+- `npm run e2e`: browser checks of every control (needs Chromium; uses /opt/pw-browsers/chromium if present, or `CHROMIUM_PATH`)
+- `npm run check`: all of the above. Run it before every commit.
+
+## Rules that matter
+- Nothing touches hardware except `src/core/controller.js`, which runs `src/safety.js`. The AI's tools never take a "confirmed" flag.
+- `/api/sim/sensor` may only change sensor readings, never controllable devices.
+- The demo (`web/demo/setup.js`) must copy data in and out of the in-page house, like a network. Sharing objects let the UI bypass safety once.
+- Routes live in `src/api.js`, shared by the server and the demo.
+- The demo never loads the Claude agent (no API keys in public pages).
+
+## Published demos
+Republish after `npm run build:demo` by passing the Artifact URL:
+- Futuristic: https://claude.ai/artifact/NHSYrvBSADDcedguH3CBSm (`dist/demo/haven-futuristic.html`)
+- Grounded: https://claude.ai/artifact/J46Rus2S3KzY9CpbpYKyCk (`dist/demo/haven-grounded.html`)
+
+## Environment gotchas (cloud sessions)
+- Google Fonts and the Higgsfield image host (`d8j0ntlcm91z4.cloudfront.net`) are blocked by the network policy.
+- Mobbin needs a paid plan. The free Higgsfield plan allows only the Z Image model (0.6 credits left).
