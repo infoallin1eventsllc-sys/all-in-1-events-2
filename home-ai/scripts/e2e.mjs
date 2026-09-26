@@ -431,6 +431,25 @@ async function exercise(page, { garageTravelMs, home }) {
     (await page.locator(`${ALT("lock.front")} .rd-state`).textContent()) === "Locked" && (await page.locator(`${ALT("light.kitchen")} .rd-state`).textContent()) === "Off", garageTravelMs + 4000);
   await useScreen("nightstand");
   await audit(page, "Nightstand");
+  // Each bedroom's nightstand can show its own photo.
+  const nightPng = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAABAAAAAJCAIAAAC0SDtlAAAAF0lEQVR4nGPUiFrAQApgIkn1qAZaaQAAAi4BNDuufHgAAAAASUVORK5CYII=", "base64");
+  const hasNightPhoto = () => page.evaluate(() => document.querySelector("#app").classList.contains("has-night-photo"));
+  await page.locator("#night-file").setInputFiles({ name: "me.png", mimeType: "image/png", buffer: nightPng });
+  await check("Nightstand: your own photo shows behind the clock", async () =>
+    (await hasNightPhoto()) && /^url\("data:image\/jpeg/.test(await page.evaluate(() => document.querySelector("#app").style.getPropertyValue("--night-photo"))) &&
+    (await page.locator("#alt .night-photo-add").textContent()) === "Change photo");
+  await check("Nightstand: the photo is kept for this bedroom", async () => Boolean(await page.evaluate(() => localStorage.getItem("haven.nightstand.primary"))));
+  await audit(page, "Nightstand with a photo");
+  await openLibrary();
+  await page.selectOption("#panel-room", "kitchen");
+  await page.locator("#library-close").click();
+  await check("Nightstand: another room's nightstand doesn't show it", async () => !(await hasNightPhoto()));
+  await openLibrary();
+  await page.selectOption("#panel-room", "");
+  await page.locator("#library-close").click();
+  await check("Nightstand: back in the bedroom, the photo is there", async () => hasNightPhoto());
+  await page.locator("#alt .night-photo-remove").click();
+  await check("Nightstand: Remove photo takes it off", async () => !(await hasNightPhoto()) && !(await page.evaluate(() => localStorage.getItem("haven.nightstand.primary"))));
 
   await useScreen("rooms");
   await check("Rooms shows a card per room", async () => (await page.locator("#alt .room-card").count()) === 7);

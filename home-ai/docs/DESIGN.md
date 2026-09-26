@@ -42,6 +42,7 @@ Weather is built in (src/weather.js): Home Assistant's weather entity, or Open-M
 ### Wallpaper screen
 Modeled on photo-backed Home Assistant dashboards. It sets its own dark tokens in both finishes (Futuristic swaps the accent to cyan), because it always sits on a photo.
 - **Photo:** `web/wallpapers/{morning,day,evening,night}.webp`, chosen by the house's time of day, on a fixed layer behind the page (`background-attachment: fixed` doesn't work on iPhone/iPad). A darker overlay at dusk and a lighter one by day keep the section titles readable without turning day into night.
+- **Nightstand photo:** each bedroom's Nightstand has Add your photo / Change photo / Remove photo under the buttons. The photo is resized to 1600 px, saved on that panel for that room only, and shown behind the clock under a night shade (darker at the top and bottom) so the time and buttons stay readable in the dark.
 - **Own photo:** Screens → Wallpaper photo → Use my own photo. It's resized to 1920 px, saved as JPEG on that panel only (localStorage), and "Use Haven's photos" removes it.
 - **Tiles:** dark frosted glass (76% opaque, so text stays readable over any photo) with a round icon in each kind's color: amber lights, green fans, orange heat, blue cooling, violet garage, green/red locks, blue water, yellow electricity. A light's round icon is its on/off switch; the thick pill is its dimmer.
 - **Weather card:** clock and date, current conditions, four days with low-to-high range bars, the next six hours with rain chance, and where the forecast came from.

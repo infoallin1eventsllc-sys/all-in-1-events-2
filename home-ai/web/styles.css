@@ -691,6 +691,21 @@ footer { text-align: center; }
 .panel[data-screen="nightstand"] .ask-card .kicker { color: rgba(217, 219, 232, 0.78); }
 .panel[data-screen="nightstand"] .big-btn.primary .big-sub { color: #c9ccef; opacity: 1; }
 .night-head .screens-open { position: absolute; right: 20px; top: 20px; }
+/* A personal photo behind the Nightstand, dimmed for the dark. */
+html .panel.alt-mode[data-screen="nightstand"].has-night-photo { isolation: isolate; }
+.panel.alt-mode[data-screen="nightstand"].has-night-photo::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(7, 8, 15, 0.62), rgba(7, 8, 15, 0.38) 38%, rgba(7, 8, 15, 0.55) 62%, rgba(7, 8, 15, 0.9)),
+    var(--night-photo) center / cover no-repeat;
+  filter: saturate(0.85);
+}
+.has-night-photo .night-head .alt-clock, .has-night-photo .night-head .eyebrow, .has-night-photo .night-head p { text-shadow: 0 2px 16px rgba(0, 0, 0, 0.7); }
+.has-night-photo .night-head .alt-status { background: rgba(7, 8, 15, 0.55); border-radius: 999px; padding: 4px 12px; }
+.night-photo { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; margin-top: 4px; }
+.panel[data-screen="nightstand"] .night-photo .ghost { background: rgba(21, 24, 39, 0.85); color: #d9dbe8; border-color: rgba(217, 219, 232, 0.2); }
+.night-photo-note { font-size: 0.85rem; color: rgba(217, 219, 232, 0.8); }
+.has-night-photo .night-photo-note { background: rgba(7, 8, 15, 0.55); border-radius: 999px; padding: 3px 10px; }
 .night-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
 .panel[data-screen="nightstand"] .big-btn { background: #151827; color: #d9dbe8; border-color: rgba(217, 219, 232, 0.14); }
 .panel[data-screen="nightstand"] .big-btn .big-sub { color: rgba(217, 219, 232, 0.72); }

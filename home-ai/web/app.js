@@ -723,7 +723,7 @@ const SCREENS = [
   { id: "studio", name: "Studio", best: "Living room or kitchen, where people talk to Haven", about: "Haven at the center: a large orb that listens, thinks and speaks (tap it to talk), with the time, weather, lighting, climate, electricity and doors around it." },
   { id: "command-center", name: "Command Center", best: "Office or a large wall display", about: "Everything at once: climate, energy, every light, every door, room conditions and updates." },
   { id: "family-hub", name: "Family Hub", best: "Kitchen", about: "A big clock, today's briefing, scenes and quick comfort buttons the whole family can use." },
-  { id: "nightstand", name: "Nightstand", best: "Bedroom", about: "Dim and quiet: the time, Haven's orb and four big bedtime buttons. Talk to it in the dark." },
+  { id: "nightstand", name: "Nightstand", best: "Bedroom", about: "Dim and quiet: the time and big bedtime buttons. Talk to it in the dark. Whoever sleeps there can add their own photo behind the clock." },
   { id: "rooms", name: "Rooms", best: "Large or busy households", about: "Every room as a card with its lights, fans and conditions, one tap each." },
   { id: "entry", name: "Entry", best: "Mudroom or garage door", about: "Leaving or arriving: lock up, the garage, what's still on, and one-tap Away or Welcome home." },
 ];
@@ -1280,24 +1280,33 @@ function applyWallpaperPhoto() {
   else $("#app").style.removeProperty("--wp-photo");
   $("#wp-reset").hidden = !custom;
 }
+// A photo from the homeowner's device, scaled down and saved as a JPEG so it
+// fits in the panel's storage.
+async function readPhoto(file, maxW, maxH) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    await new Promise((ok, fail) => { img.onload = ok; img.onerror = fail; img.src = url; });
+    const scale = Math.min(1, maxW / img.naturalWidth, maxH / img.naturalHeight);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.naturalWidth * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.82);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+const keep = (key, value) => { try { value ? localStorage.setItem(key, value) : localStorage.removeItem(key); return true; } catch { return false; } };
+
 let wallpaperPhoto = null;
 $("#wp-file").addEventListener("change", async (e) => {
   const file = e.target.files?.[0];
   e.target.value = "";
   if (!file || !file.type.startsWith("image/")) return;
   try {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    await new Promise((ok, fail) => { img.onload = ok; img.onerror = fail; img.src = url; });
-    const scale = Math.min(1, 1920 / img.naturalWidth, 1200 / img.naturalHeight);
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(img.naturalWidth * scale);
-    canvas.height = Math.round(img.naturalHeight * scale);
-    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-    URL.revokeObjectURL(url);
-    wallpaperPhoto = canvas.toDataURL("image/jpeg", 0.82);
-    let kept = true;
-    try { localStorage.setItem("haven.wallpaper", wallpaperPhoto); } catch { kept = false; }
+    wallpaperPhoto = await readPhoto(file, 1920, 1200);
+    const kept = keep("haven.wallpaper", wallpaperPhoto);
     applyWallpaperPhoto();
     showHint(kept ? "Your photo is now the wallpaper on this panel." : "Your photo is on screen, but it's too large to keep after a restart.");
   } catch {
@@ -1306,10 +1315,45 @@ $("#wp-file").addEventListener("change", async (e) => {
 });
 $("#wp-reset").addEventListener("click", () => {
   wallpaperPhoto = null;
-  try { localStorage.removeItem("haven.wallpaper"); } catch { /* storage unavailable */ }
+  keep("haven.wallpaper", null);
   applyWallpaperPhoto();
   showHint("Back to Haven's photos, which follow the time of day.");
 });
+
+// The Nightstand's photo: each bedroom's own, chosen by whoever sleeps there
+// and kept on that nightstand only (one per room, so a shared panel in the
+// hallway never shows someone's bedroom photo).
+const nightPhotos = new Map(); // room -> photo, for when storage is full or blocked
+const nightRoom = () => panelRoom || "primary";
+const nightPhoto = (r = nightRoom()) => nightPhotos.get(r) || safeGet(`haven.nightstand.${r}`);
+function applyNightPhoto() {
+  const photo = screen === "nightstand" ? nightPhoto() : null;
+  $("#app").classList.toggle("has-night-photo", Boolean(photo));
+  if (photo) $("#app").style.setProperty("--night-photo", `url("${photo}")`);
+  else $("#app").style.removeProperty("--night-photo");
+}
+$("#night-file").addEventListener("change", async (e) => {
+  const file = e.target.files?.[0];
+  e.target.value = "";
+  if (!file || !file.type.startsWith("image/")) return;
+  const r = nightRoom();
+  try {
+    const photo = await readPhoto(file, 1600, 1600);
+    nightPhotos.set(r, photo);
+    const kept = keep(`haven.nightstand.${r}`, photo);
+    render();
+    showHint(kept ? `Your photo is on the ${roomName(r)} nightstand.` : "Your photo is on screen, but it's too large to keep after a restart.");
+  } catch {
+    showHint("That photo couldn't be opened. Try a JPEG or PNG.");
+  }
+});
+function removeNightPhoto() {
+  const r = nightRoom();
+  nightPhotos.delete(r);
+  keep(`haven.nightstand.${r}`, null);
+  render();
+  showHint("Photo removed from this nightstand.");
+}
 
 function renderAlt() {
   const alt = $("#alt");
@@ -1338,7 +1382,11 @@ function renderAlt() {
           bigButton("Lights off", lit.length ? `${roomName(here)}: ${lit.length} on` : `${roomName(here)} is dark`, () => Promise.all(lit.map((l) => api(`/api/devices/${l.id}`, { command: { on: false } }))).then(() => showResult({ message: `${roomName(here)} lights off.` }))),
           bigButton("Warmer", `Now ${targetOf(th)}°F`, () => api("/api/feedback", { feeling: "too_cold", room: here }).then((r) => { reply(r.message); refresh(); })),
           bigButton("Cooler", `Now ${targetOf(th)}°F`, () => api("/api/feedback", { feeling: "too_warm", room: here }).then((r) => { reply(r.message); refresh(); })),
-          bigButton("Good morning", "Lights up, 71°F", () => api("/api/scenes/morning", {}).then(showResult)))));
+          bigButton("Good morning", "Lights up, 71°F", () => api("/api/scenes/morning", {}).then(showResult))),
+        el("div", { class: "night-photo" },
+          el("button", { class: "ghost night-photo-add", onclick: () => $("#night-file").click() }, nightPhoto() ? "Change photo" : "Add your photo"),
+          nightPhoto() ? el("button", { class: "ghost night-photo-remove", onclick: removeNightPhoto }, "Remove photo") : null,
+          el("span", { class: "night-photo-note" }, `Stays on this ${roomName(here)} nightstand.`))));
   } else if (screen === "rooms") {
     nodes.push(altHeader(), asksBlock(),
       el("div", { class: "grid-rooms" }, ...state.rooms.filter((r) => r.devices.length).map(roomCard)));
@@ -1426,6 +1474,7 @@ function render() {
   $("#app").classList.toggle("alt-mode", alt);
   $("#app").dataset.screen = screen;
   $("#alt").hidden = !alt;
+  applyNightPhoto();
   if (alt) {
     $("#app").dataset.daypart = state.daypart || "evening";
     $("#orb").dataset.house = houseState();
