@@ -13,6 +13,7 @@ import { Automations, Presence } from "./automations.js";
 import { Briefings } from "./briefings.js";
 import { Learner } from "./learning.js";
 import { Reflection } from "./reflection.js";
+import { Energy } from "./energy.js";
 import { createAgent } from "./agent/index.js";
 
 export function loadConfig(path = new URL("../config/home.json", import.meta.url)) {
@@ -39,6 +40,7 @@ export async function createHome({ config = loadConfig(), env = process.env, dat
       return `${weekday} ${friendlyTime(config.home.timezone)}`;
     },
   };
+  home.energy = new Energy(home);
   home.learner = new Learner(home);
   home.automations = new Automations(home);
   home.agent = await createAgent(home, env);
@@ -47,6 +49,7 @@ export async function createHome({ config = loadConfig(), env = process.env, dat
 
   home.start = async () => {
     await adapter.start();
+    home.energy.start();
     home.automations.start();
     home.learner.start();
     home.briefings.start();
@@ -55,6 +58,7 @@ export async function createHome({ config = loadConfig(), env = process.env, dat
   };
   home.stop = () => {
     store.flush();
+    home.energy.stop();
     adapter.stop();
     home.automations.stop();
     home.learner.stop();

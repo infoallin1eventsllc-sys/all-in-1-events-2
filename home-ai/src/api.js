@@ -35,6 +35,8 @@ export function createRoutes(home) {
       home.presence.update(body.person || "owner", body.kind, { trusted: true })],
     ["POST", /^\/api\/briefing$/, true, () => home.briefings.send()],
 
+    ["GET", /^\/api\/energy$/, true, () => home.energy.report()],
+
     // What Haven has learned about the homeowner.
     ["GET", /^\/api\/profile$/, true, () => home.learner.view()],
     ["POST", /^\/api\/feedback$/, true, (url, body) => home.learner.feedback(body.feeling, { room: body.room, origin: "owner" })],

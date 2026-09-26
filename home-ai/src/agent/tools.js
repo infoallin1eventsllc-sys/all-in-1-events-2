@@ -146,6 +146,7 @@ export function homeState(home, room) {
   return [
     ...lines,
     `People: ${people}`,
+    home.energy ? `Power now: ${home.energy.nowKw()} kW, ${home.energy.report().todayKwh} kWh so far today (${home.energy.source() === "meter" ? "measured" : "estimated from device states"})` : "",
     `What you know about the homeowner:\n${home.learner ? home.learner.summary() : "Nothing learned yet."}`,
     `Suggestions waiting for their answer: ${home.learner?.pendingSuggestions().map((x) => x.text).join(" | ") || "none"}`,
     `Waiting for homeowner confirmation: ${pending.length ? pending.join("; ") : "nothing"}`,

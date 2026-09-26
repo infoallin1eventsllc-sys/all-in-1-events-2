@@ -61,7 +61,7 @@ export class HomeAssistantAdapter {
   }
 }
 
-const SENSORS = { motion: 1, leak: 1, contact: 1, illuminance: 1, temperature: 1 };
+const SENSORS = { motion: 1, leak: 1, contact: 1, illuminance: 1, temperature: 1, power: 1 };
 
 // Haven command -> list of [domain, service, data].
 export function toServiceCalls(type, c) {
@@ -121,6 +121,7 @@ export function fromHaState(type, s) {
     case "contact": return { open: on };
     case "illuminance": return { lux: Number(s.state) };
     case "temperature": return { value: Number(s.state) };
+    case "power": return { watts: Number(s.state) * (a.unit_of_measurement === "kW" ? 1000 : 1) };
     default: return null;
   }
 }

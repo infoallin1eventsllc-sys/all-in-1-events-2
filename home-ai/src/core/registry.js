@@ -15,6 +15,7 @@ export const DEFAULT_STATE = {
   contact: { open: false },
   illuminance: { lux: 500 },
   temperature: { value: 70 },
+  power: { watts: 0 },
 };
 
 // Which commands each type accepts. Used to validate input from the app,
@@ -29,7 +30,7 @@ export const COMMANDS = {
   lock: { locked: "boolean" },
 };
 
-export const SENSOR_TYPES = new Set(["motion", "leak", "contact", "illuminance", "temperature"]);
+export const SENSOR_TYPES = new Set(["motion", "leak", "contact", "illuminance", "temperature", "power"]);
 
 export class Registry {
   constructor(config, bus, store) {
@@ -96,6 +97,7 @@ export class Registry {
       rooms: this.config.rooms.map((r) => ({
         id: r.id,
         name: r.name,
+        plan: r.plan || null,
         devices: this.byRoom(r.id).map(({ id, name, type, state, updated }) => ({ id, name, type, state, updated })),
       })),
     };

@@ -53,6 +53,7 @@ ${css}
   var look = "${look}";
   try { look = localStorage.getItem("haven.look") || look; } catch (e) {}
   document.documentElement.setAttribute("data-look", look);
+  if (!document.documentElement.lang) document.documentElement.lang = "en";
 })();
 </script>
 ${body}

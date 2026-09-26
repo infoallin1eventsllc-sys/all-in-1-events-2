@@ -86,6 +86,7 @@ export class Briefings {
         refused,
       },
       heldDuringQuietHours: held.map((h) => `${h.title}: ${h.body}`),
+      energy: this.home.energy ? `${this.home.energy.report().todayKwh} kWh so far today, ${this.home.energy.nowKw()} kW now (${this.home.energy.source() === "meter" ? "measured" : "estimated"})` : null,
       newSuggestions: this.home.learner ? this.home.learner.pendingSuggestions().map((x) => x.text) : [],
       waitingForConfirmation: pending,
     };

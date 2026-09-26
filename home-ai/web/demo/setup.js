@@ -13,6 +13,13 @@ const ready = (async () => {
   home.registry.report("sensor.outdoor_lux", { lux: 12 }, "sensor");
   home.registry.report("climate.main", { current: 71.5 }, "sensor");
   await home.start();
+  // A simulated day so far, so the energy chart has a shape (the panel
+  // labels this house as simulated). Base load, a morning bump, a quiet
+  // midday, an evening peak for cooking and cooling.
+  home.energy.seedSimulatedDay((h) => {
+    const bump = (c, w, a) => a * Math.exp(-((h - c) ** 2) / (2 * w * w));
+    return 0.55 + bump(7.2, 0.9, 1.6) + bump(12.5, 1.2, 0.35) + bump(18.8, 1.4, 2.6) + 0.12 * Math.sin(h * 2.3);
+  });
   await home.notifier.send({
     priority: "info",
     title: "Welcome to the Haven demo",

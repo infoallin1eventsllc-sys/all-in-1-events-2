@@ -1,6 +1,6 @@
 # Haven: Where Things Stand
 
-_Last updated: September 26, 2026 (wall panel, voice and learning added). Branch `claude/inspiring-fermi-jpi3vh` in `infoallin1eventsllc-sys/all-in-1-events-2`, folder `home-ai/`._
+_Last updated: September 26, 2026 (home map, energy, accessibility audits and the enterprise plan added). Branch `claude/inspiring-fermi-jpi3vh` in `infoallin1eventsllc-sys/all-in-1-events-2`, folder `home-ai/`._
 
 ## Links
 - Demo A, Futuristic: https://claude.ai/artifact/NHSYrvBSADDcedguH3CBSm
@@ -11,16 +11,18 @@ Both are private until shared from each page's Share menu.
 ## Verified working
 `npm run check` runs everything below. Last result: all passing, twice in a row.
 
-- **98 automated tests** (`npm test`)
+- **103 automated tests** (`npm test`)
   - Safety rules: confirmations, hard limits, the leak interlock, garage anti-bounce, owner vs. AI vs. automation permissions
   - Automations: motion lights on and off, leak shutoff, arriving / approaching / leaving, garage reminders, freeze protection, quiet hours
   - Every chat phrase the panel and docs suggest, plus questions, scenes and the "which room?" fallback
   - **Learning:** "I'm cold/stuffy/too bright/just right" acting and being remembered per time of day; learned brightness used by motion lights and learned temperature on arrival; a habit on 3 days becoming a suggestion (never an action); dismissed suggestions never repeating; two undone motion lights becoming "stop doing that" and accepting it working; learned routines unable to open, unlock or restore water; likes, dislikes and notes remembered, listed and forgotten; conversations logged for reflection
   - **Reflection agent:** offline pattern notes, and the Claude version requesting JSON-schema output with its findings merged safely (mocked API)
   - **Conversation agent tools:** record_feedback and remember through Claude (mocked API)
-  - Every HTTP route including the profile, feedback, suggestion, forget and reflect routes
+  - **Energy:** the estimate follows lights, fans, heating and the water heater; today's kWh adds up and resets at midnight; hourly averages and peak; a real meter replaces the estimate
+  - Every HTTP route including the profile, feedback, suggestion, forget, reflect and energy routes
   - Home Assistant bridge, ntfy/Pushover payloads, scheduled briefings, and the real server surviving a restart
-- **Browser checks** (`npm run e2e`) in both the home-server panel and the demo build: every tile control (switches, brightness slider, fan speeds, climate dial and modes, water heater, valve, garage, locks, Lock up), room tabs, status fixes, Confirm and Cancel, chat, **voice** (a spoken command runs, Haven answers aloud, the speaker button mutes it, the leak alert is read aloud), all five scenes, the feeling buttons, **About you** (learned items, forget one, review my day, a habit suggestion accepted into a routine, forget everything), Brief me now, every simulator button, both styles, and no sideways scrolling at wall-panel or phone width.
+- **Browser checks** (`npm run e2e`) in both the home-server panel and the demo build: every tile control (switches, brightness slider, fan speeds, climate dial and modes, water heater, valve, garage, locks, Lock up), room tabs, status fixes, Confirm and Cancel, chat, **voice** (a spoken command runs, Haven answers aloud, the speaker button mutes it, the leak alert is read aloud), all five scenes, the feeling buttons, **About you** (learned items, forget one, review my day, a habit suggestion accepted into a routine, forget everything), Brief me now, every simulator button, both styles, the **home map** (every room drawn, tap to open and back, lit rooms glow, the leak room turns red), **energy** (labeled estimated, live power rises when a fan runs, the chart tooltip and table view), and no sideways scrolling at wall-panel or phone width.
+- **Accessibility:** automated WCAG 2.2 AA audits (axe-core) inside the browser run: sign-in, whole home in both styles, a room, a leak alert, the Updates and About you tabs, and phone width. 0 violations.
 
 ## Fixed in the debug pass
 1. **Demo safety bypass:** the demo shared live device objects with the screen, so the new +/− buttons could push the water heater to 130°F past its 125°F limit. The demo now copies data both ways, like a real network.
@@ -45,6 +47,8 @@ Both are private until shared from each page's Share menu.
 - **Concept images** (docs/DEMOS.md) haven't been looked at by me; the image host is blocked here.
 
 ## Next steps
+The full enterprise roadmap is in [ENTERPRISE-PLAN.md](ENTERPRISE-PLAN.md). The immediate steps:
+
 1. Live Claude test with an API key: chat, "Review my day", and a briefing.
 2. Try voice on a real tablet or phone over HTTPS.
 3. Choose the demo direction with the client (A or B), then a full room set in that style.

@@ -41,13 +41,14 @@
     "garageMinSecondsBetweenMoves": 10
   },
 
+  "_plan": "Each room's plan is [x, y, width, depth] on the floor plan in 2-foot grid units, used to draw the home map.",
   "rooms": [
-    { "id": "kitchen",   "name": "Kitchen" },
-    { "id": "living",    "name": "Living Room" },
-    { "id": "primary",   "name": "Primary Bedroom" },
-    { "id": "hallway",   "name": "Hallway" },
-    { "id": "garage",    "name": "Garage" },
-    { "id": "utility",   "name": "Utility Room" },
+    { "id": "kitchen",   "name": "Kitchen", "plan": [6, 0, 7, 6] },
+    { "id": "living",    "name": "Living Room", "plan": [13, 0, 7, 9] },
+    { "id": "primary",   "name": "Primary Bedroom", "plan": [6, 9, 14, 5] },
+    { "id": "hallway",   "name": "Hallway", "plan": [6, 6, 7, 3] },
+    { "id": "garage",    "name": "Garage", "plan": [0, 0, 6, 7] },
+    { "id": "utility",   "name": "Utility Room", "plan": [0, 7, 6, 4] },
     { "id": "exterior",  "name": "Outside" }
   ],
 

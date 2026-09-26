@@ -19,6 +19,16 @@ import { createHome } from "../src/home.js";
 import { createServer } from "../src/http.js";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+const AXE = fs.readFileSync(path.join(root, "node_modules/axe-core/axe.min.js"), "utf8");
+const WCAG = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
+
+// Automated WCAG 2.2 AA audit of what's on screen right now.
+async function audit(page, label) {
+  if (!(await page.evaluate(() => typeof window.axe !== "undefined"))) await page.addScriptTag({ content: AXE });
+  const r = await page.evaluate((tags) => window.axe.run(document, { runOnly: { type: "tag", values: tags } }), WCAG);
+  const detail = r.violations.map((v) => `${v.id}: ${v.nodes.slice(0, 2).map((n) => n.target.join(" ")).join(", ")}`).join("; ");
+  report(r.violations.length === 0, `Accessibility (WCAG 2.2 AA): ${label}`, detail);
+}
 const targets = process.argv.slice(2).filter((a) => a === "server" || a === "demo");
 const run = targets.length ? targets : ["server", "demo"];
 const executablePath = process.env.CHROMIUM_PATH || (fs.existsSync("/opt/pw-browsers/chromium") ? "/opt/pw-browsers/chromium" : undefined);
@@ -99,6 +109,39 @@ async function exercise(page, { garageTravelMs, home }) {
   await check("Status starts at 'All secure'", async () => (await headline()) === "All secure");
   await check("Greeting states the indoor temperature", async () => /It's [\d.]+°F inside/.test(await page.textContent("#greeting")));
   await check("Clock shows the time", async () => /\d:\d\d/.test(await page.textContent("#clock")));
+  await audit(page, "whole home, Grounded");
+  await page.click('.look-switch button[data-look="futuristic"]');
+  await page.waitForTimeout(500); // let the color transitions finish before measuring contrast
+  await audit(page, "whole home, Futuristic");
+  await page.click('.look-switch button[data-look="grounded"]');
+
+  // ----- home map and energy -----
+  await check("Home map draws every room", async () => (await page.locator(".map-room").count()) === 6);
+  await page.locator('.map-room[data-room="kitchen"]').click();
+  await check("Tapping a room on the map opens it", async () => (await page.textContent("#room-title")) === "Kitchen");
+  await page.locator('.map-room[data-room="kitchen"]').click();
+  await check("Tapping it again goes back to the whole home", async () => (await page.textContent("#room-title")) === "Whole home");
+  await check("Energy tile says the numbers are estimated", async () => /Estimated/.test(await tileOf("energy").textContent()));
+  const kwNow = async () => Number((await tileOf("energy").locator(".energy-num").first().textContent()).trim());
+  const kw0 = await kwNow();
+  await openRoom("Living Room");
+  await flip("fan.living");
+  await press("fan.living", "Speed 3");
+  await openRoom("Whole home");
+  await check("Live power rises when the fan runs", async () => (await kwNow()) > kw0);
+  await openRoom("Living Room");
+  await flip("fan.living");
+  await openRoom("Whole home");
+  if (await tileOf("energy").locator(".chart-hit").count()) {
+    await check("Hovering the chart shows the time and kW", async () => {
+      await tileOf("energy").locator(".chart-hit").evaluate((el) => el.scrollIntoView({ block: "center" }));
+      const box = await tileOf("energy").locator(".chart-hit").boundingBox();
+      await page.mouse.move(box.x + 10, box.y + box.height / 2);
+      await page.mouse.move(box.x + 14, box.y + box.height / 2);
+      return /\d:\d\d [AP]M · [\d.]+ kW/.test(await tileOf("energy").locator(".chart-tip").textContent());
+    });
+    report((await tileOf("energy").locator("table caption").count()) === 1, "Chart has a table view for screen readers");
+  }
 
   // ----- rooms: lights and fans -----
   await openRoom("Kitchen");
@@ -110,6 +153,9 @@ async function exercise(page, { garageTravelMs, home }) {
   await check("Light is on", async () => (await stateOf("light.kitchen")).startsWith("On"));
   await tileOf("light.kitchen").locator('input[type="range"]').evaluate((el) => { el.value = "40"; el.dispatchEvent(new Event("change", { bubbles: true })); });
   await check("Brightness slider sets 40%", async () => (await stateOf("light.kitchen")) === "On · 40%");
+
+  await check("Home map glows where the light is on", async () => (await page.locator('.map-room[data-room="kitchen"].lit').count()) === 1);
+  await audit(page, "a room view");
 
   await openRoom("Living Room");
   await flip("fan.living");
@@ -241,6 +287,7 @@ async function exercise(page, { garageTravelMs, home }) {
     await openTab("About you");
     await check("Accepting it adds a daily routine", async () => (await page.locator("#profile li", { hasText: "every day at 9:30 PM" }).count()) === 1);
   }
+  await audit(page, "About you tab");
   await page.click("#forget-all");
   await check("Forget everything asks for a second tap", async () => /Tap again/.test(await page.textContent("#forget-all")));
   await page.click("#forget-all");
@@ -253,6 +300,7 @@ async function exercise(page, { garageTravelMs, home }) {
   await check("Brief me now posts a briefing", async () => (await page.locator(".msg.haven", { hasText: "House update" }).count()) === 1);
   await page.waitForTimeout(500);
   report((await page.locator(".msg.haven", { hasText: "House update" }).count()) === 1, "Brief me now does not post twice");
+  await audit(page, "Updates tab");
   await openTab("Home");
 
   // ----- simulator and automations -----
@@ -272,6 +320,8 @@ async function exercise(page, { garageTravelMs, home }) {
   await check("Leak turns off the water heater", async () => (await stateOf("water_heater.main")) === "Off");
   await check("Leak makes the status urgent", async () => (await headline()) === "Needs your attention now");
   await check("Leak alert is read out loud", async () => /Water leak detected/.test(await spoken()));
+  await check("Home map marks the utility room red", async () => (await page.locator('.map-room[data-room="utility"].alert').count()) === 1);
+  await audit(page, "during a leak alert");
   await check("Leak posts an urgent update", async () => (await page.locator("#feed li.urgent", { hasText: "Water leak detected" }).count()) >= 1);
   await press("valve.main_water", "Turn on");
   await check("Water can't be turned back on while the sensor is wet", async () => (await page.locator(".msg.haven", { hasText: /leak/i }).count()) >= 1 && (await stateOf("valve.main_water")).startsWith("Main water off"));
@@ -307,12 +357,13 @@ async function exercise(page, { garageTravelMs, home }) {
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
     report(!overflow, `No sideways scrolling at ${w}px`);
   }
+  await audit(page, "phone width");
 }
 
 async function runTarget(browser, target) {
   console.log(`\n${target === "server" ? "Panel on the home server" : "Browser-only demo"}`);
   const errors = [];
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, bypassCSP: true });
   await page.addInitScript(FAKE_VOICE);
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
@@ -323,10 +374,12 @@ async function runTarget(browser, target) {
   if (target === "server") {
     home = await createHome({ env: {}, dataDir: null, simSpeed: 10 });
     await home.start();
+    home.energy.seedSimulatedDay((h) => 0.6 + (h > 17 ? 1.8 : 0)); // give the chart a shape to hover
     const server = createServer(home, { token: "e2e-token" });
     await new Promise((r) => server.listen(0, "127.0.0.1", r));
     cleanup = () => { home.stop(); server.closeAllConnections?.(); server.close(); };
     await page.goto(`http://127.0.0.1:${server.address().port}/`);
+    await audit(page, "sign-in screen");
     await page.fill("#token-input", "wrong");
     await page.click("#login-form button");
     await check("Wrong token shows an error", async () => (await page.textContent("#login-error")).includes("didn't work"));

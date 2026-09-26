@@ -237,6 +237,9 @@ Versus $20,000–100,000+ for a pro-installed Crestron/Control4/Savant system.
 
 ## 13. Roadmap
 
+> The enterprise version of this roadmap (security, privacy, AI governance, fleet management, certifications) is in [ENTERPRISE-PLAN.md](ENTERPRISE-PLAN.md).
+
+
 1. **Now (this repo):** safety controller, automations, AI agent, briefings, web app, Shortcuts, simulator, Home Assistant bridge, tests.
 2. **Next:** connect a real Home Assistant hub; set up Tailscale, ntfy/Pushover and the Shortcuts; live in it for two weeks and tune the thresholds.
 3. **Then:** native iOS/watchOS app with Confirm buttons on the watch; low-battery and offline-device checks in briefings; energy reporting from a whole-home energy monitor; weather forecast in briefings.

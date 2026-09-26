@@ -8,6 +8,7 @@ Haven runs a new home: lights, ceiling fans, heating and air conditioning, the w
 - **Client demos** in two styles, Futuristic and Grounded, with shareable links, concept images and prompts: [docs/DEMOS.md](docs/DEMOS.md)
 - **Design system** for the wall panel in both looks: [docs/DESIGN.md](docs/DESIGN.md)
 - **Agent stack**: how Haven talks, listens, learns and stays safe: [docs/AGENTS.md](docs/AGENTS.md)
+- **Enterprise readiness plan**: security, privacy, AI governance, fleet management, certifications and a phased roadmap: [docs/ENTERPRISE-PLAN.md](docs/ENTERPRISE-PLAN.md)
 - **Current status**, what's verified and what's next: [docs/STATUS.md](docs/STATUS.md)
 
 ## Try it now (no hardware needed)
@@ -27,7 +28,7 @@ Try typing or tapping the mic: `turn on the kitchen lights`, `I'm cold`, `the ki
 ## Check that everything works
 
 ```bash
-npm run check   # all tests, the demo build, and a browser run through every control
+npm run check   # all tests, the demo build, a browser run through every control, and WCAG 2.2 AA audits
 ```
 
 ## Turn on the full AI
@@ -53,6 +54,7 @@ src/
   automations.js       motion, leak, arrival/away, garage, freeze, energy rules
   briefings.js         morning / midday / evening / night updates
   learning.js          the homeowner profile: comfort, habits, suggestions, routines
+  energy.js            live power, today's kWh and history (estimated, or from a meter)
   reflection.js        runs the daily reflection agent
   notify.js            app feed, ntfy, Pushover, quiet hours
   core/                event bus, device registry, controller, storage, time
@@ -61,7 +63,7 @@ src/
 prompts/agent-system.md  the conversation agent's system prompt
 prompts/reflection.md    the reflection agent's system prompt
 config/home.json         rooms, devices, scenes, limits, schedule
-web/                     the wall panel / phone app (voice in web/voice.js)
+web/                     the wall panel / phone app (voice.js, map.js home model, energy-chart.js)
 test/                    safety, automation and agent tests (npm test)
 ```
 
@@ -82,6 +84,7 @@ All routes need `Authorization: Bearer <owner token>` except `/api/health`.
 | POST | `/api/confirm/:id` | `{approve}` | Confirm or cancel a pending action |
 | POST | `/api/presence` | `{person, kind}` | approaching / arrived / left |
 | POST | `/api/briefing` | | Send a briefing now |
+| GET | `/api/energy` | | Power now, kWh today, the day's 5-minute history, top consumers |
 | GET | `/api/profile` | | What Haven has learned, and pending suggestions |
 | POST | `/api/feedback` | `{feeling, room?}` | too_cold, too_warm, too_bright, too_dark, just_right |
 | POST | `/api/suggestions/:id` | `{accept}` | Answer a suggestion |

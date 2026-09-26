@@ -1,6 +1,6 @@
 # Haven (home-ai/)
 
-An AI agent for a new home: Node 20+, ES modules, one runtime dependency (`@anthropic-ai/sdk`). Start with `docs/STATUS.md` for where things stand and `docs/AGENTS.md` for how the parts fit (conversation agent, reflection agent, learner, automations, safety controller, briefings).
+An AI agent for a new home: Node 20+, ES modules, one runtime dependency (`@anthropic-ai/sdk`). Start with `docs/STATUS.md` for where things stand, `docs/ENTERPRISE-PLAN.md` for where it's going, and `docs/AGENTS.md` for how the parts fit (conversation agent, reflection agent, learner, automations, safety controller, briefings).
 
 ## Commands
 - `npm start`: home server on :8787 (simulator unless `HAVEN_ADAPTER=homeassistant`)
@@ -18,6 +18,10 @@ An AI agent for a new home: Node 20+, ES modules, one runtime dependency (`@anth
 - Nothing learned acts without the homeowner's yes: habits and reflection findings become suggestions; accepted routines run with origin "automation" so safety still applies. Only direct comfort feedback ("I'm cold") changes a device immediately.
 - Panel devices come from `state.rooms[].devices` and carry no `room`; `allDevices()` in `web/app.js` adds it. Tiles have `data-device` for tests.
 - Voice is push-to-talk (`web/voice.js`) and needs a secure page; e2e replaces speech APIs with stand-ins.
+- Energy is labeled "estimated" unless a `power` device (a real meter) exists. Never show an estimate as measured. Only the demo seeds a simulated day.
+- Setpoint +/- keeps pending values in `pendingTarget`, never mutating `state` (a refresh between taps once made taps step from stale values).
+- e2e runs axe-core WCAG 2.2 AA audits; keep them at 0 violations. Chart colors were validated with the dataviz validator; re-run it if you change `--series`.
+- A full `npm run e2e` (both targets) takes over 10 minutes: run it in the background, or run `server` and `demo` separately.
 
 ## Published demos
 Republish after `npm run build:demo` by passing the Artifact URL:

@@ -5,6 +5,8 @@
 // window.HavenDemo provides the same API in the page, backed by a simulated
 // house, so the app code is identical in both.
 import { createVoice } from "./voice.js";
+import { renderMap } from "./map.js";
+import { renderEnergyChart } from "./energy-chart.js";
 
 const $ = (sel) => document.querySelector(sel);
 const demo = window.HavenDemo || null;
@@ -12,6 +14,7 @@ let token = demo ? "demo" : safeGet("haven.token");
 let state = null;
 let feed = [];
 let profile = { items: [], suggestions: [] };
+let energy = null;
 let room = "all";
 let tab = "home";
 let speakAloud = safeGet("haven.speak") !== "off";
@@ -51,6 +54,7 @@ const ICON = {
   garage: "M12 3 2 8v13h3v-9h14v9h3V8L12 3Zm-5 11v2h10v-2H7Zm0 4v2h10v-2H7Z",
   lock: "M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 0 1 6 0v3H9Z",
   shield: "M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3Zm-1.2 14.2-3.5-3.5 1.4-1.4 2.1 2.1 4.9-4.9 1.4 1.4-6.3 6.3Z",
+  bolt: "M13 2 4 14h6l-1 8 9-12h-6l1-8Z",
 };
 
 async function api(path, body) {
@@ -146,11 +150,18 @@ function isAlert(d) {
 const send = (id, command) => api(`/api/devices/${encodeURIComponent(id)}`, { command }).then(showResult);
 
 // Step a setpoint. The new value shows at once so quick repeated taps add
-// up; if the house refuses it, the next refresh puts back the real value.
+// up. Pending values live apart from the house data (which is only ever
+// replaced by what the house reports), so a refresh arriving between taps
+// can't make a tap step from an old number.
+const pendingTarget = new Map();
+const targetOf = (d) => pendingTarget.get(d.id) ?? d.state.target;
 function stepTarget(d, delta) {
-  d.state.target += delta;
+  const next = targetOf(d) + delta;
+  pendingTarget.set(d.id, next);
   renderHome();
-  return send(d.id, { target: d.state.target });
+  return send(d.id, { target: next }).finally(() => {
+    if (pendingTarget.get(d.id) === next) { pendingTarget.delete(d.id); renderHome(); }
+  });
 }
 
 // What needs the homeowner's attention, most serious first, each with the fix.
@@ -202,6 +213,13 @@ function renderStage() {
     : state.pending.length ? "Waiting for your OK" : "All secure";
   $("#issues").replaceChildren(...list.map((i) =>
     el("li", { class: `issue ${i.level}` }, i.text, i.action && el("button", { onclick: i.action[1] }, i.action[0]))));
+
+  renderMap($("#map"), {
+    rooms: state.rooms,
+    devicesIn: (id) => allDevices().filter((d) => d.room === id),
+    selected: room,
+    onSelect: (id) => { room = room === id ? "all" : id; render(); },
+  });
 
   const rooms = state.rooms.filter((r) => r.devices.length);
   $("#rooms-nav").replaceChildren(
@@ -287,7 +305,7 @@ function deviceTile(d) {
         head: [toggle("Water heater power", s.on, () => send(d.id, { on: !s.on }))],
         body: s.on ? [el("div", { class: "stepper" },
           el("button", { "aria-label": "Lower 5°F", onclick: () => stepTarget(d, -5) }, "−"),
-          el("span", { class: "target" }, `${s.target}°F`),
+          el("span", { class: "target" }, `${targetOf(d)}°F`),
           el("button", { "aria-label": "Raise 5°F", onclick: () => stepTarget(d, 5) }, "+"))] : [] });
     case "water_valve":
       return tile(d, { icon: ICON.water, name: d.name, stateText: describe(d), alert: !s.open,
@@ -324,7 +342,7 @@ function climateTile(d) {
       el("div", { class: "climate-controls" },
         el("div", { class: "stepper" },
           el("button", { "aria-label": "Cooler by 1°F", onclick: () => stepTarget(d, -1) }, "−"),
-          el("span", { class: "target" }, `${s.target}°F`),
+          el("span", { class: "target" }, `${targetOf(d)}°F`),
           el("button", { "aria-label": "Warmer by 1°F", onclick: () => stepTarget(d, 1) }, "+")),
         el("div", { class: "seg", role: "group", "aria-label": "Mode" },
           ...MODES.map(([m, label]) => el("button", { "aria-pressed": String(s.mode === m), onclick: () => send(d.id, { mode: m }) }, label)))))],
@@ -342,6 +360,7 @@ function wholeHomeTiles() {
   const secure = garage.state.door === "closed" && !unlocked.length;
   return [
     climateTile(byType("thermostat")[0]),
+    energyTile(),
     tile(null, { id: "lights", icon: ICON.light, name: "Lights", on: lit.length > 0,
       stateText: lit.length ? `${lit.length} on · ${lit.map((l) => l.name.replace(/ Lights?$/, "")).join(", ")}` : "All off",
       body: lit.length ? [el("div", { class: "tile-actions" }, el("button", { onclick: () => Promise.all(lit.map((l) => api(`/api/devices/${l.id}`, { command: { on: false } }))).then(() => showResult({ message: "All lights off." })) }, "All off"))] : [] }),
@@ -355,6 +374,27 @@ function wholeHomeTiles() {
         : el("button", { class: "primary", onclick: () => send(valve.id, { open: true }) }, "Turn on"))] }),
     deviceTile(byType("water_heater")[0]),
   ];
+}
+
+function energyTile() {
+  const t = el("div", { class: "tile wide energy", "data-device": "energy" });
+  if (!energy) { t.append(el("div", { class: "tile-name" }, "Energy"), el("p", { class: "muted small" }, "Loading…")); return t; }
+  const estimated = energy.source === "estimate";
+  const top = energy.breakdown.filter((p) => !p.name.startsWith("Always-on"))[0];
+  const chart = el("div", { class: "chart-slot" }); // drawn once it has a width (renderHome)
+  t.append(
+    el("div", { class: "tile-head" },
+      el("div", { class: "tile-title" },
+        el("span", { class: "tile-icon" }, svg(ICON.bolt)),
+        el("div", {}, el("div", { class: "tile-name" }, "Electricity today"),
+          el("div", { class: "tile-state" }, estimated ? "Estimated from what each device is doing" : "Measured by your energy monitor"))),
+      el("div", { class: "energy-stats" },
+        el("div", {}, el("span", { class: "energy-num" }, `${energy.nowKw}`), el("span", { class: "energy-unit" }, " kW now")),
+        el("div", {}, el("span", { class: "energy-num" }, `${energy.todayKwh}`), el("span", { class: "energy-unit" }, " kWh today")))),
+    chart,
+    el("p", { class: "energy-foot" }, top ? `Using the most right now: ${top.name.toLowerCase()} (${top.kw} kW).` : "Only the always-on load is running right now."),
+  );
+  return t;
 }
 
 async function lockUp() {
@@ -371,6 +411,8 @@ function renderHome() {
     $("#devices-title").textContent = "Around the house";
     $("#tiles").replaceChildren(...wholeHomeTiles());
     $("#sensors").replaceChildren();
+    const slot = $("#tiles .chart-slot");
+    if (slot && energy) renderEnergyChart(slot, energy, slot.clientWidth || 600);
     return;
   }
   const devices = allDevices().filter((d) => d.room === room);
@@ -584,7 +626,7 @@ let refreshTimer;
 function refresh() {
   clearTimeout(refreshTimer);
   refreshTimer = setTimeout(async () => {
-    state = await api("/api/state");
+    [state, energy] = await Promise.all([api("/api/state"), api("/api/energy")]);
     render();
     if (tab === "you") loadProfile();
   }, 120);
@@ -616,7 +658,7 @@ function connect() {
 async function start() {
   if (!token) return showLogin();
   try {
-    [state, feed] = await Promise.all([api("/api/state"), api("/api/events?limit=150")]);
+    [state, feed, energy] = await Promise.all([api("/api/state"), api("/api/events?limit=150"), api("/api/energy")]);
   } catch {
     return;
   }
@@ -627,7 +669,7 @@ async function start() {
   connect();
   started = true;
   setInterval(tickClock, 15_000);
-  setInterval(() => { renderFeed(); if (room !== "all") renderHome(); }, 60_000);
+  setInterval(() => { renderFeed(); refresh(); }, 60_000);
 }
 
 start();
