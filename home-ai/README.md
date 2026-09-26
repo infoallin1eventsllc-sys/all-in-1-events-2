@@ -33,6 +33,7 @@ Eight screens for different spots in the home, all on the same live house: Signa
 
 ```bash
 npm run check   # all tests, the demo build, a browser run through every control, and WCAG 2.2 AA audits
+npm run live-check   # the real Claude agent against the simulated house (needs ANTHROPIC_API_KEY)
 ```
 
 ## Turn on the full AI

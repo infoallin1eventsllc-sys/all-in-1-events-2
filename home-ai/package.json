@@ -11,7 +11,8 @@
     "build:demo": "node scripts/build-demo.mjs",
     "e2e": "node scripts/e2e.mjs",
     "check": "npm test && npm run build:demo && npm run e2e",
-    "build:catalog": "node scripts/build-catalog.mjs"
+    "build:catalog": "node scripts/build-catalog.mjs",
+    "live-check": "node scripts/live-check.mjs"
   },
   "engines": {
     "node": ">=20"

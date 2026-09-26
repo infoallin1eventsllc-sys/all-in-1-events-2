@@ -60,7 +60,7 @@ Haven is being pitched to homebuilders as a standard feature in new construction
 11. **A quick restart could lose the last change.** State is now saved on shutdown.
 
 ## Not yet verified
-- **The live Claude AI** (conversation, briefings and the nightly reflection). No API key here, so all three are tested only against a mocked API. First thing to try: put `ANTHROPIC_API_KEY` in `.env`, run `npm start`, and chat.
+- **The live Claude AI** (conversation, briefings and the nightly reflection). No API key here, so all three are tested only against a mocked API. First thing to try: put `ANTHROPIC_API_KEY` in `.env` (or the cloud environment's settings) and run `npm run live-check`: seven checks against the simulated house, each failing if Claude didn't actually do it. The API is reachable from the cloud container (checked September 26), so this can run there too.
 - **Live weather and the live ElevenLabs voice.** Open-Meteo and the ElevenLabs API are blocked from this cloud container, so both are tested against stand-ins with the real response shapes. First thing to try: set the home's latitude/longitude and `ELEVENLABS_API_KEY`, run `npm start`, and ask "what's the weather?".
 - **Real microphones and speakers.** Voice is tested with stand-ins for the browser's speech features. Try it on the actual panel device over HTTPS (docs/APPLE-SETUP.md, section 1b). Voice input doesn't work inside the published demo links (the viewer blocks microphones); speech output should.
 - **Real hardware.** Tested against a fake Home Assistant, not a real one.

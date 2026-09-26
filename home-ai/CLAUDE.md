@@ -9,6 +9,7 @@ An AI agent for a new home: Node 20+, ES modules, one runtime dependency (`@anth
 - `npm run e2e`: browser checks of every control (needs Chromium; uses /opt/pw-browsers/chromium if present, or `CHROMIUM_PATH`)
 - `npm run check`: all of the above. Run it before every commit.
 - `npm run build:catalog`: client catalog of every screen in both finishes (after build:demo)
+- `npm run live-check`: the real Claude agent against the simulated house (chat, a device, the garage confirmation, "I'm cold", a briefing, a reflection). Needs `ANTHROPIC_API_KEY`; spends a few cents; fails if any step falls back to offline mode.
 
 ## Rules that matter
 - Nothing touches hardware except `src/core/controller.js`, which runs `src/safety.js`. The AI's tools never take a "confirmed" flag.
