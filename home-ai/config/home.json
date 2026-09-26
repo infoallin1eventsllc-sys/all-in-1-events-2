@@ -1,0 +1,133 @@
+{
+  "home": {
+    "name": "The Williams Residence",
+    "timezone": "America/New_York",
+    "owners": [
+      { "id": "owner", "name": "Homeowner" }
+    ]
+  },
+
+  "settings": {
+    "units": "F",
+    "motionLightsOffAfterMinutes": 5,
+    "darkLuxThreshold": 40,
+    "nightStart": "20:00",
+    "nightEnd": "06:30",
+    "quietHoursStart": "22:30",
+    "quietHoursEnd": "06:30",
+    "garageOpenAlertMinutes": 10,
+    "autoCloseGarageWhenAway": true,
+    "autoOpenGarageOnArrival": false,
+    "awaySetbackHeatF": 64,
+    "awaySetbackCoolF": 80,
+    "nightTempF": 68,
+    "freezeAlertF": 50,
+    "briefings": [
+      { "id": "morning", "time": "07:00", "label": "Good morning" },
+      { "id": "midday",  "time": "12:30", "label": "Midday check-in" },
+      { "id": "evening", "time": "18:00", "label": "Evening update" },
+      { "id": "night",   "time": "22:00", "label": "Night lock-up check" }
+    ]
+  },
+
+  "limits": {
+    "thermostatMinF": 55,
+    "thermostatMaxF": 85,
+    "waterHeaterMinF": 110,
+    "waterHeaterMaxF": 125,
+    "garageMinSecondsBetweenMoves": 10
+  },
+
+  "rooms": [
+    { "id": "kitchen",   "name": "Kitchen" },
+    { "id": "living",    "name": "Living Room" },
+    { "id": "primary",   "name": "Primary Bedroom" },
+    { "id": "hallway",   "name": "Hallway" },
+    { "id": "garage",    "name": "Garage" },
+    { "id": "utility",   "name": "Utility Room" },
+    { "id": "exterior",  "name": "Outside" }
+  ],
+
+  "devices": [
+    { "id": "light.kitchen",       "name": "Kitchen Lights",       "type": "light", "room": "kitchen",  "ha_entity": "light.kitchen" },
+    { "id": "light.living",        "name": "Living Room Lights",   "type": "light", "room": "living",   "ha_entity": "light.living_room" },
+    { "id": "light.primary",       "name": "Bedroom Lights",       "type": "light", "room": "primary",  "ha_entity": "light.primary_bedroom" },
+    { "id": "light.hallway",       "name": "Hallway Lights",       "type": "light", "room": "hallway",  "ha_entity": "light.hallway" },
+    { "id": "light.garage",        "name": "Garage Lights",        "type": "light", "room": "garage",   "ha_entity": "light.garage" },
+    { "id": "light.porch",         "name": "Porch Lights",         "type": "light", "room": "exterior", "ha_entity": "light.porch", "exterior": true },
+    { "id": "light.driveway",      "name": "Driveway Lights",      "type": "light", "room": "exterior", "ha_entity": "light.driveway", "exterior": true },
+
+    { "id": "fan.living",          "name": "Living Room Fan",      "type": "fan",   "room": "living",   "ha_entity": "fan.living_room" },
+    { "id": "fan.primary",         "name": "Bedroom Fan",          "type": "fan",   "room": "primary",  "ha_entity": "fan.primary_bedroom" },
+
+    { "id": "climate.main",        "name": "Main Thermostat",      "type": "thermostat",   "room": "hallway", "ha_entity": "climate.main" },
+    { "id": "water_heater.main",   "name": "Water Heater",         "type": "water_heater", "room": "utility", "ha_entity": "water_heater.main" },
+    { "id": "valve.main_water",    "name": "Main Water Shutoff",   "type": "water_valve",  "room": "utility", "ha_entity": "valve.main_water" },
+
+    { "id": "garage.door",         "name": "Garage Door",          "type": "garage", "room": "garage",   "ha_entity": "cover.garage_door" },
+    { "id": "lock.front",          "name": "Front Door Lock",      "type": "lock",   "room": "exterior", "ha_entity": "lock.front_door" },
+    { "id": "lock.garage_entry",   "name": "Garage Entry Lock",    "type": "lock",   "room": "garage",   "ha_entity": "lock.garage_entry" },
+
+    { "id": "motion.kitchen",      "name": "Kitchen Motion",       "type": "motion", "room": "kitchen",  "ha_entity": "binary_sensor.kitchen_motion" },
+    { "id": "motion.hallway",      "name": "Hallway Motion",       "type": "motion", "room": "hallway",  "ha_entity": "binary_sensor.hallway_motion" },
+    { "id": "motion.garage",       "name": "Garage Motion",        "type": "motion", "room": "garage",   "ha_entity": "binary_sensor.garage_motion" },
+    { "id": "motion.driveway",     "name": "Driveway Motion",      "type": "motion", "room": "exterior", "ha_entity": "binary_sensor.driveway_motion", "lights": ["light.driveway", "light.porch"] },
+
+    { "id": "leak.water_heater",   "name": "Water Heater Leak Sensor", "type": "leak", "room": "utility", "ha_entity": "binary_sensor.water_heater_leak" },
+    { "id": "leak.kitchen_sink",   "name": "Kitchen Sink Leak Sensor", "type": "leak", "room": "kitchen", "ha_entity": "binary_sensor.kitchen_sink_leak" },
+
+    { "id": "contact.back_door",   "name": "Back Door",            "type": "contact", "room": "living", "ha_entity": "binary_sensor.back_door" },
+
+    { "id": "sensor.outdoor_lux",  "name": "Outdoor Light Level",  "type": "illuminance", "room": "exterior", "ha_entity": "sensor.outdoor_illuminance" },
+    { "id": "sensor.outdoor_temp", "name": "Outdoor Temperature",  "type": "temperature", "room": "exterior", "ha_entity": "sensor.outdoor_temperature" }
+  ],
+
+  "scenes": {
+    "morning": {
+      "label": "Good morning",
+      "actions": [
+        { "device": "light.kitchen", "command": { "on": true, "brightness": 80 } },
+        { "device": "light.hallway", "command": { "on": true, "brightness": 60 } },
+        { "device": "climate.main",  "command": { "mode": "auto", "target": 71 } },
+        { "device": "light.porch",   "command": { "on": false } },
+        { "device": "light.driveway","command": { "on": false } }
+      ]
+    },
+    "away": {
+      "label": "Away",
+      "actions": [
+        { "device": "*light",        "command": { "on": false } },
+        { "device": "*fan",          "command": { "on": false } },
+        { "device": "garage.door",   "command": { "door": "closed" } },
+        { "device": "*lock",         "command": { "locked": true } },
+        { "device": "climate.main",  "command": { "setback": true } }
+      ]
+    },
+    "home": {
+      "label": "Welcome home",
+      "actions": [
+        { "device": "light.kitchen", "command": { "on": true, "brightness": 90 } },
+        { "device": "light.living",  "command": { "on": true, "brightness": 70 } },
+        { "device": "climate.main",  "command": { "mode": "auto", "target": 71 } }
+      ]
+    },
+    "goodnight": {
+      "label": "Goodnight",
+      "actions": [
+        { "device": "*light",        "command": { "on": false } },
+        { "device": "fan.primary",   "command": { "on": true, "speed": 2 } },
+        { "device": "garage.door",   "command": { "door": "closed" } },
+        { "device": "*lock",         "command": { "locked": true } },
+        { "device": "climate.main",  "command": { "mode": "auto", "target": 68 } }
+      ]
+    },
+    "movie": {
+      "label": "Movie night",
+      "actions": [
+        { "device": "light.living",  "command": { "on": true, "brightness": 15 } },
+        { "device": "light.kitchen", "command": { "on": false } },
+        { "device": "fan.living",    "command": { "on": true, "speed": 1 } }
+      ]
+    }
+  }
+}

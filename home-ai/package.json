@@ -1,0 +1,19 @@
+{
+  "name": "haven-home-agent",
+  "version": "0.1.0",
+  "description": "Haven: an all-in-one AI agent for a new home. Controls lights, climate, water, garage and locks, and keeps the homeowner updated on phone, tablet and Apple Watch.",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test --test-force-exit test/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0"
+  },
+  "license": "MIT"
+}
