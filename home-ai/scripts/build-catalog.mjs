@@ -127,6 +127,21 @@ th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--li
 th { font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
 .note p { margin: 0; color: var(--muted); max-width: 72ch; }
 footer { color: var(--muted); font-size: 0.85rem; }
+/* Scroll reveal: cards rise into place as they come into view. Only when
+   scripts run (html.reveal) and the viewer hasn't asked for less motion;
+   otherwise everything is simply visible. */
+@media (prefers-reduced-motion: no-preference) {
+  html.reveal .screen, html.reveal section.plan, html.reveal section.note { opacity: 0; transform: translateY(28px); transition: opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1); }
+  html.reveal .screen .shot { transform: scale(0.97); transition: transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.08s; }
+  html.reveal .screen .about > * { opacity: 0; transform: translateY(10px); transition: opacity 0.5s ease, transform 0.5s ease; }
+  html.reveal .is-in { opacity: 1 !important; transform: none !important; }
+  html.reveal .is-in .shot { transform: none; }
+  html.reveal .is-in .about > * { opacity: 1; transform: none; }
+  html.reveal .is-in .about > :nth-child(2) { transition-delay: 0.08s; }
+  html.reveal .is-in .about > :nth-child(3) { transition-delay: 0.16s; }
+  html.reveal .is-in .about > :nth-child(4) { transition-delay: 0.24s; }
+  html.reveal .is-in .about > :nth-child(5) { transition-delay: 0.32s; }
+}
 </style>
 <div class="wrap">
   <header class="top">
@@ -167,6 +182,22 @@ footer { color: var(--muted); font-size: 0.85rem; }
   <footer>Screens shown with simulated devices. Each installed panel can be set to its own screen and room from Screens on the panel.</footer>
 </div>
 <script>
+(function () {
+  if (!("IntersectionObserver" in window) || !window.matchMedia("(prefers-reduced-motion: no-preference)").matches) return;
+  var targets = document.querySelectorAll(".screen, section.plan, section.note");
+  document.documentElement.classList.add("reveal");
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) { if (e.isIntersecting || e.boundingClientRect.top < 0) { e.target.classList.add("is-in"); io.unobserve(e.target); } });
+  }, { rootMargin: "0px 0px -8% 0px", threshold: 0.12 });
+  // Anything scrolled past (End key, a link) or printed shows too; nothing stays hidden above you.
+  function showPassed() { document.querySelectorAll(".screen:not(.is-in), section.plan:not(.is-in), section.note:not(.is-in)").forEach(function (el) { if (el.getBoundingClientRect().top < innerHeight * 0.92) el.classList.add("is-in"); }); }
+  addEventListener("scroll", function () { clearTimeout(showPassed.t); showPassed.t = setTimeout(showPassed, 120); }, { passive: true });
+  addEventListener("beforeprint", function () { document.documentElement.classList.remove("reveal"); });
+  targets.forEach(function (t) { io.observe(t); });
+  // Anything already on screen, or jumped to by a link, shows at once.
+  addEventListener("hashchange", function () { var t = document.querySelector(location.hash); if (t) t.classList.add("is-in"); });
+  if (location.hash) { var t0 = document.querySelector(location.hash); if (t0) t0.classList.add("is-in"); }
+})();
 (function () {
   var body = document.body;
   function set(f) {
