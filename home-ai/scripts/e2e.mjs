@@ -17,6 +17,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "playwright";
 import { createHome } from "../src/home.js";
 import { createServer } from "../src/http.js";
+import { Speech } from "../src/speech.js";
+import http from "node:http";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const AXE = fs.readFileSync(path.join(root, "node_modules/axe-core/axe.min.js"), "utf8");
@@ -68,6 +70,13 @@ const FAKE_VOICE = () => {
     },
   });
   window.SpeechSynthesisUtterance = function (text) { this.text = text; };
+  // Stand-in speaker for Haven's ElevenLabs clips.
+  window.__played = [];
+  window.Audio = class {
+    constructor(src) { this.src = src; }
+    pause() {}
+    play() { window.__played.push(this.src); setTimeout(() => { this.onplaying?.(); this.onended?.(); }, 10); return Promise.resolve(); }
+  };
   window.SpeechRecognition = class {
     start() {
       setTimeout(() => {
@@ -251,6 +260,24 @@ async function exercise(page, { garageTravelMs, home }) {
   await page.click("#speak");
   report((await page.getAttribute("#speak", "aria-pressed")) === "true", "Voice: speaker button turns speech back on");
 
+  // With an ElevenLabs key on the home server, the panel plays Haven's
+  // natural voice (a stand-in ElevenLabs here) instead of the browser's.
+  if (home) {
+    const fake = http.createServer((req, res) => { req.resume(); req.on("end", () => { res.writeHead(200, { "Content-Type": "audio/mpeg" }); res.end(Buffer.from("ID3-fake")); }); });
+    await new Promise((r) => fake.listen(0, "127.0.0.1", r));
+    const before = home.speech;
+    home.speech = new Speech({ env: { ELEVENLABS_API_KEY: "e2e" }, apiUrl: `http://127.0.0.1:${fake.address().port}/v1/text-to-speech` });
+    await page.evaluate(() => { window.__spoken = []; window.__played = []; });
+    await chat("status"); // refreshes state (voice: elevenlabs) ...
+    await page.evaluate(() => { window.__played = []; window.__spoken = []; });
+    await chat("status"); // ... so this reply is spoken with it
+    await check("Voice: with an ElevenLabs key, Haven speaks with its natural voice", async () =>
+      (await page.evaluate(() => window.__played.length)) === 1 && (await spoken()) === "");
+    home.speech = before;
+    fake.close();
+    await chat("status");
+  }
+
   // ----- scenes -----
   for (const [label, roomName, verify] of [
     ["Good morning", "Kitchen", async () => (await stateOf("light.kitchen")).startsWith("On · 80%")],
@@ -359,7 +386,7 @@ async function exercise(page, { garageTravelMs, home }) {
     await check(`Library: switches to ${id}`, async () => (await page.getAttribute("#app", "data-screen")) === id);
   };
   await openLibrary();
-  await check("Library lists six screens", async () => (await page.locator(".library-card").count()) === 6);
+  await check("Library lists seven screens", async () => (await page.locator(".library-card").count()) === 7);
   await page.selectOption("#panel-room", "primary");
   await page.locator("#library-close").click();
   await chat("turn on the lights");
@@ -406,7 +433,37 @@ async function exercise(page, { garageTravelMs, home }) {
   await page.locator("#alt .stillon-card li", { hasText: "Kitchen Lights" }).getByRole("button", { name: "Turn off" }).click();
   await check("Entry: Turn off works", async () => (await page.locator("#alt .stillon-card li", { hasText: "Kitchen Lights" }).count()) === 0);
   await audit(page, "Entry");
-  for (const id of ["command-center", "family-hub", "nightstand", "rooms", "entry"]) {
+
+  await useScreen("wallpaper");
+  const WP = (id) => page.locator(`#alt .wp-tile[data-device="${id}"]`);
+  await check("Wallpaper shows weather, climate, lights, doors, scenes and updates", async () =>
+    (await page.locator('#alt [data-card="weather"]').count()) === 1 && (await page.locator('#alt [data-card="power"]').count()) === 1 &&
+    (await page.locator("#alt .wp-tile .pill-range").count()) === 7 && (await page.locator("#alt .wp-scenes .scene").count()) === 5 &&
+    (await page.locator("#alt .wp-sec").count()) === 6);
+  if (home) await check("Wallpaper: says the forecast isn't connected on a house without one", async () => /isn't connected/.test(await page.locator('#alt [data-card="weather"]').textContent()));
+  else await check("Wallpaper: demo shows labeled sample weather with 4 days and 6 hours", async () =>
+    (await page.locator("#alt .wx-days li").count()) === 4 && (await page.locator("#alt .wx-hours li").count()) === 6 && /Sample weather/.test(await page.locator('#alt [data-card="weather"]').textContent()));
+  await check("Wallpaper: the photo follows the time of day", async () => /url\(/.test(await page.evaluate(() => getComputedStyle(document.querySelector("#app"), "::before").backgroundImage)));
+  const kitchenOn = (await WP("light.kitchen").getAttribute("class")).includes(" on");
+  await WP("light.kitchen").getByRole("switch").click();
+  await check("Wallpaper: a light's icon switches it", async () => (await WP("light.kitchen").getAttribute("class")).includes(" on") !== kitchenOn);
+  await WP("light.living").locator("input.pill-range").fill("40");
+  await check("Wallpaper: the pill slider sets brightness", async () => (await WP("light.living").locator(".wp-state").textContent()) === "40%");
+  const wpTarget = async () => Number((await WP("climate.main").locator(".target").textContent()).replace(/\D/g, ""));
+  const beforeTarget = await wpTarget();
+  await WP("climate.main").getByRole("button", { name: "Warmer by 1°F" }).click();
+  await check("Wallpaper: climate + raises the setpoint", async () => (await wpTarget()) === beforeTarget + 1);
+  await audit(page, "Wallpaper");
+  // A photo of the homeowner's own, kept on this panel.
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAABAAAAAJCAIAAAC0SDtlAAAAF0lEQVR4nGPUiFrAQApgIkn1qAZaaQAAAi4BNDuufHgAAAAASUVORK5CYII=", "base64");
+  await openLibrary();
+  await page.locator("#wp-file").setInputFiles({ name: "our-house.png", mimeType: "image/png", buffer: png });
+  await check("Wallpaper: your own photo replaces Haven's", async () => /^url\("data:image\/jpeg/.test(await page.evaluate(() => document.querySelector("#app").style.getPropertyValue("--wp-photo"))));
+  await page.locator("#wp-reset").click();
+  await check("Wallpaper: back to Haven's photos", async () => (await page.evaluate(() => document.querySelector("#app").style.getPropertyValue("--wp-photo"))) === "" && await page.locator("#wp-reset").isHidden());
+  await page.locator("#library-close").click();
+
+  for (const id of ["command-center", "family-hub", "nightstand", "rooms", "entry", "wallpaper"]) {
     await page.setViewportSize({ width: 390, height: 844 });
     await useScreen(id);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);

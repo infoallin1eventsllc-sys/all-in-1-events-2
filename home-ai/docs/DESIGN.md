@@ -21,11 +21,12 @@ Whole home shows Climate (a dial with target, mode and system state), Electricit
 On a phone the stage becomes a header card and everything stacks; the voice bar stays pinned to the bottom.
 
 ## Screen library
-Six screens built from the same components on the same live house, each in both finishes. Choose one per panel from **Screens** (on the stage, or the header of any other screen). The choice is remembered on that device; a demo link can open a screen directly with `#screen-id`.
+Seven screens built from the same components on the same live house, each in both finishes. Choose one per panel from **Screens** (on the stage, or the header of any other screen). The choice is remembered on that device; a demo link can open a screen directly with `#screen-id`.
 
 | Screen | id | Best for | What's on it |
 |---|---|---|---|
 | Signature | `signature` | Great room, main entry | House model, room tabs, glass controls, energy, suggestions, About you |
+| Wallpaper | `wallpaper` | Living room, large wall display | The home's photo behind frosted tiles in columns: weather, indoor temperature and humidity, electricity with a live line, climate, fans, water heater, every light (icon switch and pill dimmer), doors & water, scenes, updates |
 | Command Center | `command-center` | Office, large wall display | Map (filters the lights list), climate, energy, every light with dimmer, doors & water, room conditions, scenes, updates |
 | Family Hub | `family-hub` | Kitchen | Large clock, today's briefing, big scenes, feeling buttons, lights |
 | Nightstand | `nightstand` | Bedroom | Dark screen, large clock, Goodnight / Lights off / Warmer / Cooler / Good morning |
@@ -34,7 +35,18 @@ Six screens built from the same components on the same live house, each in both 
 
 **This panel is in** (in the library) sets the panel's room. When the homeowner doesn't name a room, requests at that panel mean that room: "turn off the lights", "too bright", and the Nightstand's buttons.
 
-Weather, cameras, calendars and packages are not in the library yet: they'll arrive as cards when connected to real sources, never as placeholder data.
+Weather is built in (src/weather.js): Home Assistant's weather entity, or Open-Meteo once `weather.latitude` and `weather.longitude` are set in config/home.json. Without either, the Wallpaper screen says the forecast isn't connected and shows the outdoor sensor; the other screens simply leave it out. The demo shows sample weather labeled as a sample. Cameras, calendars and packages are not in the library yet: they'll arrive as cards when connected to real sources, never as placeholder data.
+
+### Wallpaper screen
+Modeled on photo-backed Home Assistant dashboards. It sets its own dark tokens in both finishes (Futuristic swaps the accent to cyan), because it always sits on a photo.
+- **Photo:** `web/wallpapers/{morning,day,evening,night}.webp`, chosen by the house's time of day, on a fixed layer behind the page (`background-attachment: fixed` doesn't work on iPhone/iPad). A darker overlay at dusk and a lighter one by day keep the section titles readable without turning day into night.
+- **Own photo:** Screens → Wallpaper photo → Use my own photo. It's resized to 1920 px, saved as JPEG on that panel only (localStorage), and "Use Haven's photos" removes it.
+- **Tiles:** dark frosted glass (76% opaque, so text stays readable over any photo) with a round icon in each kind's color: amber lights, green fans, orange heat, blue cooling, violet garage, green/red locks, blue water, yellow electricity. A light's round icon is its on/off switch; the thick pill is its dimmer.
+- **Weather card:** clock and date, current conditions, four days with low-to-high range bars, the next six hours with rain chance, and where the forecast came from.
+
+The four photos were made with ElevenLabs (GPT Image 2): the evening photo first, then morning and day as edits of it so it's the same house and camera. The free plan's daily image limit stopped the fourth, so **night is a color grade of the evening photo** (sky replaced, lights kept warm, moon and stars added). Regenerate it, or all four, with a photo of the client's own home. The prompts:
+- Evening: "A modern single-story new-build home seen from across a calm, freshly cut lawn at dusk. Low flat roofline, warm cedar siding with dark charcoal panels, large floor-to-ceiling windows glowing warm amber from inside, a few low landscape path lights along a stone walkway. A young ornamental tree to one side. Sky: deep blue at the top fading to a band of orange and soft rose sunset just above the horizon… The house sits in the lower third; the upper two thirds is mostly sky with smooth gradients. Eye-level camera, 24mm lens, realistic photograph… no people, no cars, no text."
+- Morning / day / night: "Change: the time of day to [early morning just after sunrise, low pale-gold sun and mist / a clear early afternoon / late night with stars and a crescent moon]… Preserve: the same house, architecture, materials, camera position, lens, framing and composition…" with the evening photo as the reference image.
 
 `npm run build:catalog` captures every screen in both finishes from the demo build into a one-page catalog for clients (`dist/catalog/haven-screen-library.html`).
 

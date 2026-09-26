@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import { createRoutes } from "./api.js";
 
 const WEB_DIR = fileURLToPath(new URL("../web/", import.meta.url));
-const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".webmanifest": "application/manifest+json", ".json": "application/json", ".png": "image/png" };
+const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".webmanifest": "application/manifest+json", ".json": "application/json", ".png": "image/png", ".webp": "image/webp", ".jpg": "image/jpeg" };
 const MAX_BODY = 64 * 1024;
 
 export function createServer(home, { token }) {
@@ -76,6 +76,10 @@ export function createServer(home, { token }) {
     try {
       const body = req.method === "POST" ? await readJson(req) : {};
       const result = await handler(url, body, url.pathname.match(re));
+      if (result?.audio instanceof Uint8Array) {
+        res.writeHead(200, { "Content-Type": result.contentType, "Content-Length": result.audio.length, "Cache-Control": "no-store" });
+        return res.end(result.audio);
+      }
       const status = typeof result?.status === "number" ? result.status : 200;
       send(res, status, result);
     } catch (err) {
@@ -117,7 +121,7 @@ function serveStatic(pathname, res) {
   }
   res.writeHead(200, {
     "Content-Type": MIME[path.extname(file)] || "application/octet-stream",
-    "Content-Security-Policy": "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:",
+    "Content-Security-Policy": "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; media-src 'self' blob:",
     "Cache-Control": "no-cache",
   });
   fs.createReadStream(file).pipe(res);

@@ -21,6 +21,7 @@ export function createRoutes(home) {
       timezone: home.config.home.timezone,
       daypart: blockOf(localParts(home.config.home.timezone).hhmm),
       suggestions: home.learner.pendingSuggestions().map(({ id, text, type }) => ({ id, text, type })),
+      voice: home.speech.info(),
     })],
     ["GET", /^\/api\/events$/, true, (url) => home.store.recent.slice(-Math.min(500, Number(url.searchParams.get("limit")) || 100))],
     ["POST", /^\/api\/devices\/([\w.]+)$/, true, (url, body, m) =>
@@ -35,8 +36,15 @@ export function createRoutes(home) {
     ["POST", /^\/api\/presence$/, true, (url, body) =>
       home.presence.update(body.person || "owner", body.kind, { trusted: true })],
     ["POST", /^\/api\/briefing$/, true, () => home.briefings.send()],
+    // Haven's voice as audio (ElevenLabs), for panels to play. 503 means
+    // "use the browser's own voice".
+    ["POST", /^\/api\/speech$/, true, (url, body) => {
+      if (typeof body.text !== "string" || !body.text.trim()) return { status: 400, error: "text is required" };
+      return home.speech.synthesize(body.text);
+    }],
 
     ["GET", /^\/api\/energy$/, true, () => home.energy.report()],
+    ["GET", /^\/api\/weather$/, true, () => home.weather.report()],
 
     // What Haven has learned about the homeowner.
     ["GET", /^\/api\/profile$/, true, () => home.learner.view()],

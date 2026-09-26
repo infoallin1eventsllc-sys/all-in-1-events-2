@@ -7,13 +7,19 @@
 //
 // Where the browser can't listen (no support, no microphone permission, or
 // a page that isn't HTTPS), the mic explains why and typing still works.
+//
+// Speaking: when the home server has an ElevenLabs voice, `synthesize(text)`
+// returns its audio and the panel plays that; if it returns nothing or the
+// audio can't play, the browser's built-in voice says it instead.
 
-export function createVoice({ onInterim, onFinal, onState }) {
+export function createVoice({ onInterim, onFinal, onState, synthesize = null }) {
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const canSpeak = "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined";
   let recognizer = null;
   let listening = false;
   let voice = null;
+  let audio = null;     // the ElevenLabs clip playing now
+  let speakSeq = 0;     // newest speak() wins
 
   const canListen = Boolean(Recognition) && window.isSecureContext !== false;
   const whyNot = !Recognition
@@ -36,7 +42,7 @@ export function createVoice({ onInterim, onFinal, onState }) {
   function listen() {
     if (!canListen) { onState?.("unavailable", whyNot); return false; }
     if (listening) { stopListening(); return false; }
-    if (canSpeak) speechSynthesis.cancel(); // barge in: stop talking when they start
+    silence(); // barge in: stop talking when they start
     recognizer = new Recognition();
     recognizer.lang = navigator.language?.startsWith("en") ? navigator.language : "en-US";
     recognizer.interimResults = true;
@@ -79,7 +85,7 @@ export function createVoice({ onInterim, onFinal, onState }) {
     try { recognizer?.stop(); } catch { /* already stopped */ }
   }
 
-  function speak(text) {
+  function speakWithBrowser(text) {
     if (!canSpeak || !text) return;
     speechSynthesis.cancel();
     // Read the words, not the symbols.
@@ -94,7 +100,36 @@ export function createVoice({ onInterim, onFinal, onState }) {
     speechSynthesis.speak(u);
   }
 
+  async function speak(text) {
+    if (!text) return;
+    const mine = ++speakSeq;
+    silence();
+    speakSeq = mine;
+    let blob = null;
+    try { blob = synthesize ? await synthesize(text) : null; } catch { blob = null; }
+    if (mine !== speakSeq) return; // something newer was said meanwhile
+    if (!blob) return speakWithBrowser(text);
+    const url = URL.createObjectURL(blob);
+    const clip = new Audio(url);
+    audio = clip;
+    let finished = false;
+    const done = (fallback) => {
+      if (finished) return;
+      finished = true;
+      URL.revokeObjectURL(url);
+      if (audio === clip) audio = null;
+      onState?.("idle");
+      if (fallback && mine === speakSeq) speakWithBrowser(text);
+    };
+    clip.onplaying = () => onState?.("speaking");
+    clip.onended = () => done(false);
+    clip.onerror = () => done(true);
+    clip.play().catch(() => done(true));
+  }
+
   function silence() {
+    speakSeq++;
+    if (audio) { audio.pause(); URL.revokeObjectURL(audio.src); audio = null; onState?.("idle"); }
     if (canSpeak) speechSynthesis.cancel();
   }
 

@@ -24,6 +24,7 @@ const LIVE = {
 
 const SCREENS = [
   { id: "signature", name: "Signature", best: "Great room or main entry", about: "The flagship. A live 3D model of the house beside the room you're in, with every control on glass.", has: ["Live house model: rooms glow when lit, turn red on alerts", "Room tabs, scenes, device tiles, climate dial", "Electricity today", "Suggestions and confirmations", "About you: what Haven has learned"] },
+  { id: "wallpaper", name: "Wallpaper", best: "Living room or a large wall display", about: "The home's own photo behind frosted tiles. The photo changes with the time of day, or the homeowner can use a picture of their own house.", has: ["Photo backdrop: morning, day, evening and night", "Weather now, the next hours and days (when connected)", "Indoor temperature, humidity and electricity with a live line", "Climate, fans and water heater", "Every light with an icon switch and a pill dimmer", "Doors, locks, garage and water; scenes; latest updates"] },
   { id: "command-center", name: "Command Center", best: "Office or a large wall display", about: "Everything at once for the person who runs the house.", has: ["House model that filters the lights list by room", "Climate dial and electricity chart", "Every light with switch and dimmer", "Doors, locks, garage and main water", "Room conditions: temperature, humidity, occupancy, leaks", "Scenes and the latest updates"] },
   { id: "family-hub", name: "Family Hub", best: "Kitchen", about: "Big and friendly for everyone in the house, not just the owner.", has: ["Large clock and date", "Today's briefing, with Brief me now", "Big scene cards", "Too cold / Too warm / Too bright / Too dark / Just right", "Lights for the kitchen (or the whole house)"] },
   { id: "nightstand", name: "Nightstand", best: "Bedroom", about: "Dim, quiet and easy to use half-asleep. Talk to it in the dark.", has: ["Large clock on a dark screen", "Goodnight: lock up, lights off, 68°F", "Lights off for this room", "Warmer and Cooler (learned as your preference)", "Good morning"] },
@@ -120,7 +121,7 @@ footer { color: var(--muted); font-size: 0.85rem; }
   <header class="top">
     <p class="kicker">Haven · Screen library</p>
     <h1>Choose a screen for every room</h1>
-    <p class="intro">Six screens, each designed for a different spot in the home. All of them run on the same live house, talk and listen, learn the homeowner's preferences, and come in two finishes. Each panel in the home can use a different one.</p>
+    <p class="intro">Seven screens, each designed for a different spot in the home. All of them run on the same live house, talk and listen, learn the homeowner's preferences, and come in two finishes. Each panel in the home can use a different one.</p>
     <div class="controls">
       <div class="finish" role="group" aria-label="Finish shown in the pictures">
         <button type="button" data-finish="grounded" aria-pressed="true">Grounded</button>
@@ -136,6 +137,7 @@ footer { color: var(--muted); font-size: 0.85rem; }
       <thead><tr><th scope="col">Where</th><th scope="col">Screen</th><th scope="col">Why</th></tr></thead>
       <tbody>
         <tr><td>Great room</td><td>Signature</td><td>The showpiece: the whole house at a glance and every control</td></tr>
+        <tr><td>Living room</td><td>Wallpaper</td><td>Looks like a photo of the home until you need it; weather and every light</td></tr>
         <tr><td>Kitchen</td><td>Family Hub</td><td>Everyone uses it; big clock, briefing and comfort buttons</td></tr>
         <tr><td>Primary bedroom</td><td>Nightstand</td><td>Dark and quiet; bedtime in one tap or by voice</td></tr>
         <tr><td>Mudroom or garage door</td><td>Entry</td><td>Leave or arrive in one tap; nothing left on or unlocked</td></tr>
@@ -145,7 +147,7 @@ footer { color: var(--muted); font-size: 0.85rem; }
   </section>
   <section class="note" aria-labelledby="note-h">
     <h2 class="sec" id="note-h">Coming with integrations</h2>
-    <p>Weather forecasts, security cameras, family calendars and package tracking appear in many smart-home dashboards. Haven will add them as cards once each is connected to a real source, so a screen never shows made-up information. The pictures here are the live demo house, captured as built.</p>
+    <p>Weather is now built in: it comes from the home's Home Assistant weather or from Open-Meteo once the installer adds the home's location, and the screens say so plainly when it isn't connected. The demo shows sample weather, labeled as a sample. Security cameras, family calendars and package tracking will be added as cards once each is connected to a real source, so a screen never shows made-up information. The pictures here are the live demo house, captured as built. The Wallpaper screen's photos were generated for the demo; a homeowner can replace them with a photo of their own home.</p>
   </section>
   <footer>Screens shown with simulated devices. Each installed panel can be set to its own screen and room from Screens on the panel.</footer>
 </div>

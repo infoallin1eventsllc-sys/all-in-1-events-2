@@ -12,6 +12,8 @@ const ready = (async () => {
   home.registry.report("light.living", { on: true, brightness: 60 });
   home.registry.report("sensor.outdoor_lux", { lux: 12 }, "sensor");
   home.registry.report("climate.main", { current: 71.5 }, "sensor");
+  // Sample weather, labeled as a sample on the panel (the demo has no location).
+  home.weather.seedSample();
   await home.start();
   // A simulated day so far, so the energy chart has a shape (the panel
   // labels this house as simulated). Base load, a morning bump, a quiet

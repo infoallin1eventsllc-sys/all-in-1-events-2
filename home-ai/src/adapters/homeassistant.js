@@ -45,6 +45,32 @@ export class HomeAssistantAdapter {
     setTimeout(() => this.poll().catch(() => {}), 500);
   }
 
+  // A weather entity: its state plus hourly and daily forecasts from the
+  // weather.get_forecasts service (Home Assistant 2023.9 and later). Older
+  // versions put a single forecast list in the state's attributes.
+  async weather(entity) {
+    const headers = { Authorization: `Bearer ${this.token}` };
+    const res = await fetch(`${this.url}/api/states/${entity}`, { headers, signal: AbortSignal.timeout(10_000) });
+    if (!res.ok) throw new Error(`Home Assistant ${entity} returned ${res.status}`);
+    const state = await res.json();
+    const forecast = async (type) => {
+      try {
+        const r = await fetch(`${this.url}/api/services/weather/get_forecasts?return_response`, {
+          method: "POST",
+          headers: { ...headers, "Content-Type": "application/json" },
+          body: JSON.stringify({ entity_id: entity, type }),
+          signal: AbortSignal.timeout(10_000),
+        });
+        if (!r.ok) return null;
+        return (await r.json()).service_response?.[entity]?.forecast ?? null;
+      } catch {
+        return null;
+      }
+    };
+    const [hourly, daily] = await Promise.all([forecast("hourly"), forecast("daily")]);
+    return { state, hourly: hourly ?? [], daily: daily ?? state.attributes?.forecast ?? [] };
+  }
+
   async poll() {
     const res = await fetch(`${this.url}/api/states`, {
       headers: { Authorization: `Bearer ${this.token}` },

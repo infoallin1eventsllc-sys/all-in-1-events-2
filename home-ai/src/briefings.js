@@ -71,6 +71,7 @@ export class Briefings {
       people: presence.list().map((p) => `${p.name} ${p.home ? "home" : "away"}`).join(", "),
       indoor: `${th.state.current}°F, ${th.state.humidity}% humidity, thermostat ${describeState(th)}, system ${th.state.hvac}`,
       outdoor: outdoor ? `${outdoor.state.value}°F` : "unknown",
+      weather: this.home.weather?.summary() || null,
       waterHeater: describeState(wh),
       mainWater: describeState(valve),
       garage: garage.state.door,
@@ -105,7 +106,7 @@ export function template(b, { facts: f }) {
   if (f.openDoors.length) issues.push(`${f.openDoors.join(", ")} open.`);
   if (f.waitingForConfirmation.length) issues.push(`Waiting on you: ${f.waitingForConfirmation.join("; ")}.`);
 
-  const comfort = `Inside it's ${f.indoor.split(",")[0]}, outside ${f.outdoor}.`;
+  const comfort = f.weather ? `Inside it's ${f.indoor.split(",")[0]}. ${f.weather}` : `Inside it's ${f.indoor.split(",")[0]}, outside ${f.outdoor}.`;
   let body = issues.length ? `${issues.join(" ")} ${comfort}` : `All secure. ${comfort}`;
   if (b.id === "night") {
     body += issues.length ? " Say \"goodnight\" and I'll lock up." : f.lightsOn.length ? ` ${f.lightsOn.length} light(s) still on.` : "";

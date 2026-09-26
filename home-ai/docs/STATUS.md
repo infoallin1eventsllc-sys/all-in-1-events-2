@@ -1,11 +1,11 @@
 # Haven: Where Things Stand
 
-_Last updated: September 26, 2026 (screen library with six screens, and panel rooms, added). Branch `claude/inspiring-fermi-jpi3vh` in `infoallin1eventsllc-sys/all-in-1-events-2`, folder `home-ai/`._
+_Last updated: September 26, 2026 (Wallpaper screen, weather, and an ElevenLabs voice added). Branch `claude/inspiring-fermi-jpi3vh` in `infoallin1eventsllc-sys/all-in-1-events-2`, folder `home-ai/`._
 
 ## Links
 - Demo A, Futuristic: https://claude.ai/artifact/NHSYrvBSADDcedguH3CBSm
 - Demo B, Grounded: https://claude.ai/artifact/J46Rus2S3KzY9CpbpYKyCk
-- Screen library catalog (all six screens, both finishes, links to open each live): https://claude.ai/artifact/4tyqsjpBgWRi3ds9FwLnb6
+- Screen library catalog (all seven screens, both finishes, links to open each live): https://claude.ai/artifact/4tyqsjpBgWRi3ds9FwLnb6
 
 Both are private until shared from each page's Share menu.
 
@@ -26,6 +26,12 @@ Both are private until shared from each page's Share menu.
 - **Screen library** in the browser run: the library lists six screens; each screen renders its parts and a real control works on it (Command Center light switch, Family Hub briefing, Nightstand Goodnight, Rooms light tap, Entry turn off); the panel room makes "turn on the lights" mean that room; no sideways scrolling on any screen at 390px.
 - **Accessibility:** automated WCAG 2.2 AA audits (axe-core) inside the browser run: sign-in, whole home in both styles, a room, a leak alert, the Updates and About you tabs, phone width, and each library screen (Command Center, Family Hub, Nightstand, Rooms, Entry). 0 violations.
 
+## Added September 26 (evening)
+- **Wallpaper screen** (7th in the library), modeled on the photo-backed dashboard reference: the home's photo behind frosted tiles, a weather card, indoor temperature and humidity, electricity with a live line, climate, fans, water heater, every light with an icon switch and pill dimmer, doors & water, scenes, updates. The photo follows the time of day; a homeowner can use their own photo (kept on that panel).
+- **Photos** made with the ElevenLabs connector (GPT Image 2): evening, then morning and day as edits of it (same house, same camera). The free plan's daily image limit blocked the fourth, so **night is a color grade of the evening photo**. Prompts are in DESIGN.md to regenerate them or to redo them from the client's house.
+- **Weather** (`src/weather.js`): Home Assistant weather entity or Open-Meteo (free, no key) once the home's latitude and longitude are in config/home.json. Used by the Wallpaper screen, screen headers, the conversation agent, the offline parser ("is it going to rain today?") and briefings. Without a source, everything says weather isn't connected. The demo shows sample weather, labeled.
+- **ElevenLabs voice** (`src/speech.js`): with `ELEVENLABS_API_KEY` on the home server, Haven speaks with a natural voice ("River" by default) on every panel; any failure falls back to the browser voice. Samples in `docs/voice/` (River and Eric).
+
 ## Fixed in the debug pass
 1. **Demo safety bypass:** the demo shared live device objects with the screen, so the new +/− buttons could push the water heater to 130°F past its 125°F limit. The demo now copies data both ways, like a real network.
 2. **Double-tapping +/−** only counted once. Taps now add up.
@@ -41,6 +47,7 @@ Both are private until shared from each page's Share menu.
 
 ## Not yet verified
 - **The live Claude AI** (conversation, briefings and the nightly reflection). No API key here, so all three are tested only against a mocked API. First thing to try: put `ANTHROPIC_API_KEY` in `.env`, run `npm start`, and chat.
+- **Live weather and the live ElevenLabs voice.** Open-Meteo and the ElevenLabs API are blocked from this cloud container, so both are tested against stand-ins with the real response shapes. First thing to try: set the home's latitude/longitude and `ELEVENLABS_API_KEY`, run `npm start`, and ask "what's the weather?".
 - **Real microphones and speakers.** Voice is tested with stand-ins for the browser's speech features. Try it on the actual panel device over HTTPS (docs/APPLE-SETUP.md, section 1b). Voice input doesn't work inside the published demo links (the viewer blocks microphones); speech output should.
 - **Real hardware.** Tested against a fake Home Assistant, not a real one.
 - **Real push to a phone.** Payloads are tested; delivery to an actual iPhone/Watch needs an ntfy topic or Pushover keys.
@@ -51,9 +58,10 @@ Both are private until shared from each page's Share menu.
 ## Next steps
 The full enterprise roadmap is in [ENTERPRISE-PLAN.md](ENTERPRISE-PLAN.md). The immediate steps:
 
-1. Live Claude test with an API key: chat, "Review my day", and a briefing.
-2. Try voice on a real tablet or phone over HTTPS.
-3. Choose the demo direction with the client (A or B), then a full room set in that style.
-4. Move `home-ai/` into its own repository. This repo auto-deploys the All in 1 Events site to Netlify, which would publish these files under that site.
-5. Connect a Home Assistant hub and one real device of each type.
-6. Native iOS/watchOS app with Confirm on the watch (see ANALYSIS.md roadmap).
+1. Live Claude test with an API key: chat, "Review my day", and a briefing. Add the home's location for weather and an ElevenLabs key for the voice at the same time.
+2. Pick Haven's voice (River or Eric in `docs/voice/`, or any ElevenLabs voice) and, when the image limit resets, regenerate the night wallpaper (or all four from a photo of the client's house).
+3. Try voice on a real tablet or phone over HTTPS.
+4. Choose the demo direction with the client (A or B), then a full room set in that style.
+5. Move `home-ai/` into its own repository. This repo auto-deploys the All in 1 Events site to Netlify, which would publish these files under that site.
+6. Connect a Home Assistant hub and one real device of each type.
+7. Native iOS/watchOS app with Confirm on the watch (see ANALYSIS.md roadmap).

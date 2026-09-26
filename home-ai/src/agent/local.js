@@ -58,6 +58,16 @@ export function parse(t, home, { panelRoom = null } = {}) {
   const step = (device, command) => ({ steps: [{ device, command }] });
   const scene = (name) => ({ steps: [{ scene: name }] });
 
+  // Weather questions come first so "it's cold outside" is about the
+  // weather, not a request to turn up the heat.
+  const command = /\b(turn|switch|set|open|close|shut|lock|unlock|dim|brighten)\b/.test(t);
+  if (!command && /\b(weather|forecast|umbrella|jacket|coat)\b|\b(rain|snow|storm)(ing|y)?\b.*\b(today|tonight|tomorrow|later)\b|\b(will|is) it (going to )?(rain|snow|storm)\b|\boutside\b.*\b(cold|hot|warm|chilly|nice|like|temperature|temp)\b|\b(cold|hot|warm|chilly|nice|like|temperature|temp)\b.*\boutside\b|\bhow('?s| is) it outside\b/.test(t)) {
+    const summary = home.weather?.summary();
+    if (summary) return { reply: summary[0].toUpperCase() + summary.slice(1) };
+    const outdoor = reg.byType("temperature")[0];
+    return { reply: `${outdoor ? `The outdoor sensor reads ${outdoor.state.value}°F. ` : ""}I don't have a forecast yet: weather isn't connected. Your installer can add your location or a Home Assistant weather entity.` };
+  }
+
   // What the homeowner feels and likes: Haven acts and remembers.
   const hasNumber = /\d/.test(t);
   const feeling = (words) => new RegExp(`\\b(i'?m|i am|it'?s|its|it is|feels?|getting|so|too|kind of|a bit)\\b.*\\b(${words})\\b`).test(t);

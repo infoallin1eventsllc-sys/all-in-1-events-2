@@ -32,7 +32,9 @@ const result = await build({
   }],
 });
 const js = result.outputFiles[0].text.replace(/<\/script/gi, "<\\/script");
-const css = fs.readFileSync(path.join(root, "web/styles.css"), "utf8");
+// The Wallpaper screen's photos go inline too, so the page needs no files.
+const css = fs.readFileSync(path.join(root, "web/styles.css"), "utf8").replace(/url\("(wallpapers\/[\w-]+\.webp)"\)/g, (_, rel) =>
+  `url("data:image/webp;base64,${fs.readFileSync(path.join(root, "web", rel)).toString("base64")}")`);
 const html = fs.readFileSync(path.join(root, "web/index.html"), "utf8");
 const body = html.split("<!--haven:body-->")[1].split("<!--/haven:body-->")[0];
 

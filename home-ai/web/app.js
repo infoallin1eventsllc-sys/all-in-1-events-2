@@ -15,6 +15,7 @@ let state = null;
 let feed = [];
 let profile = { items: [], suggestions: [] };
 let energy = null;
+let weather = null;
 let room = "all";
 let tab = "home";
 let speakAloud = safeGet("haven.speak") !== "off";
@@ -57,7 +58,29 @@ const ICON = {
   shield: "M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3Zm-1.2 14.2-3.5-3.5 1.4-1.4 2.1 2.1 4.9-4.9 1.4 1.4-6.3 6.3Z",
   bolt: "M13 2 4 14h6l-1 8 9-12h-6l1-8Z",
   door: "M6 2h12v20H6V2Zm2 2v16h8V4H8Zm6 7h1.5v2H14v-2Z",
+  home: "M12 3 2 11.5h3V20h5.5v-5.5h3V20H19v-8.5h3L12 3Z",
+  sparkle: "M11 2l2.3 6.2L19.5 10.5 13.3 12.8 11 19l-2.3-6.2L2.5 10.5l6.2-2.3L11 2Zm8 11 1 2.5 2.5 1-2.5 1L19 20l-1-2.5-2.5-1 2.5-1L19 13Z",
+  bell: "M12 22a2.5 2.5 0 0 0 2.5-2.5h-5A2.5 2.5 0 0 0 12 22Zm7-6v-5a7 7 0 0 0-5.5-6.84V3a1.5 1.5 0 0 0-3 0v1.16A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z",
 };
+
+// Weather icons, one per condition (night swaps the sun for the moon).
+const WX = {
+  sun: "M12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10Zm-1-16h2v3h-2V1Zm0 19h2v3h-2v-3ZM1 11h3v2H1v-2Zm19 0h3v2h-3v-2ZM4.2 5.6l1.4-1.4 2.1 2.1-1.4 1.4-2.1-2.1Zm12.1 12.1 1.4-1.4 2.1 2.1-1.4 1.4-2.1-2.1ZM4.2 18.4l2.1-2.1 1.4 1.4-2.1 2.1-1.4-1.4ZM16.3 6.3l2.1-2.1 1.4 1.4-2.1 2.1-1.4-1.4Z",
+  moon: "M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z",
+  cloud: "M7 19a5 5 0 0 1-.6-9.96A6 6 0 0 1 18 9a4.5 4.5 0 0 1-.5 10H7Z",
+  partly: "M8.5 3a4.5 4.5 0 0 0-4.3 5.8 5.2 5.2 0 0 1 6.9-.9A7 7 0 0 1 13 6.5 4.5 4.5 0 0 0 8.5 3Zm0 18a4.5 4.5 0 0 1-.5-8.97A5.5 5.5 0 0 1 18.6 11 4 4 0 0 1 18 21H8.5Z",
+  rain: "M7 15a5 5 0 0 1-.6-9.96A6 6 0 0 1 18 5a4.5 4.5 0 0 1-.5 10H7Zm1 2h2l-1 4H7l1-4Zm4 0h2l-1 4h-2l1-4Zm4 0h2l-1 4h-2l1-4Z",
+  snow: "M7 15a5 5 0 0 1-.6-9.96A6 6 0 0 1 18 5a4.5 4.5 0 0 1-.5 10H7Zm1 3a1.2 1.2 0 1 1 0 2.4A1.2 1.2 0 0 1 8 18Zm4 1a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4Zm4-1a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4Z",
+  storm: "M7 15a5 5 0 0 1-.6-9.96A6 6 0 0 1 18 5a4.5 4.5 0 0 1-.5 10H7Zm5.5 1H15l-1.7 2.8H15L11 23l.9-3.6H10l2.5-3.4Z",
+  fog: "M3 7h18v2H3V7Zm2 4h14v2H5v-2Zm-2 4h18v2H3v-2Zm4 4h10v2H7v-2Z",
+  wind: "M3 8h11a2.5 2.5 0 1 0-2.5-2.5h-2A4.5 4.5 0 1 1 14 10H3V8Zm0 4h15a3 3 0 1 1-3 3h2a1 1 0 1 0 1-1H3v-2Z",
+};
+function wxIcon(condition, isDay = true) {
+  const d = { clear: isDay ? WX.sun : WX.moon, "partly-cloudy": isDay ? WX.partly : WX.cloud, cloudy: WX.cloud, fog: WX.fog, drizzle: WX.rain, rain: WX.rain, sleet: WX.snow, snow: WX.snow, storm: WX.storm, wind: WX.wind }[condition] || WX.cloud;
+  const s = svg(d);
+  s.classList.add("wx-ic", `wx-${condition}${condition === "clear" && !isDay ? "-night" : ""}`);
+  return s;
+}
 
 async function api(path, body) {
   if (demo) return demo.request(body ? "POST" : "GET", path, body);
@@ -549,7 +572,19 @@ function showInterim(text) {
   log.scrollTop = log.scrollHeight;
 }
 
+// Haven's ElevenLabs voice, when the home server has one (never in the demo).
+async function serverSpeech(text) {
+  if (demo || state?.voice?.provider !== "elevenlabs") return null;
+  const res = await fetch("/api/speech", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+  return res.ok ? res.blob() : null;
+}
+
 const voice = createVoice({
+  synthesize: serverSpeech,
   onInterim: showInterim,
   onFinal: (text) => ask(text),
   onState(s, message) {
@@ -626,6 +661,7 @@ function simButtons() {
 // Every screen runs on the same live house; only the arrangement changes.
 const SCREENS = [
   { id: "signature", name: "Signature", best: "Great room or main entry", about: "The house model, the room you're in, and every control on glass. The flagship screen." },
+  { id: "wallpaper", name: "Wallpaper", best: "Living room or a large wall display", about: "Your home's photo behind frosted tiles: weather, climate, every light on a slider, doors, energy and scenes. The photo follows the time of day, or use your own." },
   { id: "command-center", name: "Command Center", best: "Office or a large wall display", about: "Everything at once: climate, energy, every light, every door, room conditions and updates." },
   { id: "family-hub", name: "Family Hub", best: "Kitchen", about: "A big clock, today's briefing, scenes and quick comfort buttons the whole family can use." },
   { id: "nightstand", name: "Nightstand", best: "Bedroom", about: "Dim and quiet: the time, Haven's orb and four big bedtime buttons. Talk to it in the dark." },
@@ -652,6 +688,7 @@ function setScreen(id) {
 // Small schematic of each layout for the library cards.
 const SCHEMATIC = {
   "signature": [[0, 0, 5, 12, "s"], [5, 0, 7, 3], [5, 3, 7, 4], [5, 7, 7, 5]],
+  "wallpaper": [[0, 0, 3, 5, "s"], [0, 5, 3, 3], [0, 8, 3, 4], [3, 0, 3, 4], [3, 4, 3, 8], [6, 0, 3, 7], [6, 7, 3, 5], [9, 0, 3, 5], [9, 5, 3, 7]],
   "command-center": [[0, 0, 3, 6, "s"], [3, 0, 3, 6], [6, 0, 6, 6], [0, 6, 3, 6], [3, 6, 3, 6], [6, 6, 3, 6], [9, 6, 3, 6]],
   "family-hub": [[0, 0, 6, 6, "s"], [6, 0, 6, 6], [0, 6, 12, 3], [0, 9, 4, 3], [4, 9, 4, 3], [8, 9, 4, 3]],
   "nightstand": [[3, 1, 6, 5, "s"], [1, 8, 2.5, 3], [3.8, 8, 2.5, 3], [6.6, 8, 2.5, 3], [9.4, 8, 1.6, 3]],
@@ -711,7 +748,7 @@ function altHeader({ big = false } = {}) {
     el("div", { class: "alt-title" },
       el("p", { class: "eyebrow" }, state.home),
       el("p", { class: "alt-clock" }, clock),
-      el("p", { class: "alt-date" }, `${date} · ${th.state.current}°F inside`)),
+      el("p", { class: "alt-date" }, `${date} · ${th.state.current}°F inside${weather?.available ? ` · ${weather.current.tempF}°F and ${weather.current.text.toLowerCase()} outside` : ""}`)),
     el("div", { class: "alt-status status", "data-state": hs },
       el("span", { class: "status-mark", "aria-hidden": "true" }),
       el("div", { class: "status-text" },
@@ -847,11 +884,254 @@ function roomCard(r) {
     sensors.length ? el("p", { class: "sensors" }, ...sensors.map((d) => el("span", { class: isAlert(d) ? "alert" : "" }, `${d.name.replace(new RegExp(`^${r.name} `), "")}: ${describe(d)}`))) : null);
 }
 
+// ---------- Wallpaper screen ----------
+// The home's photo fills the screen (it follows the time of day, or the
+// homeowner's own picture); frosted tiles float on it in columns, each with
+// a colored icon for what it controls.
+const HUE = { light: "#f0a93b", fan: "#43c47f", heat: "#ef7d3c", cool: "#3a8fe0", idle: "#37b3c8", water: "#3aa0e8", garage: "#9b7bff", ok: "#43c07a", bad: "#ff6b5e", door: "#8fa1b8", energy: "#f2c23a", humidity: "#8c8cff", weather: "#f5b64a", scenes: "#c38bff", updates: "#6fb3ff" };
+
+function wpTile(hue, { cls = "", on = false, alert = false, id, card } = {}, ...children) {
+  return el("div", { class: `wp-tile${on ? " on" : ""}${alert ? " alert" : ""}${cls ? ` ${cls}` : ""}`, style: `--hue:${hue}`, "data-device": id, "data-card": card }, ...children);
+}
+function wpHead(icon, name, stateText, ...extra) {
+  return el("div", { class: "wp-head" },
+    el("span", { class: "badge-ic" }, svg(icon)),
+    el("div", { class: "wp-text" }, el("span", { class: "wp-name" }, name), stateText ? el("span", { class: "wp-state" }, stateText) : null),
+    ...extra);
+}
+const wpSection = (title, icon, ...children) => el("section", { class: "wp-sec", "aria-label": title },
+  el("h2", {}, svg(icon), title), ...children.filter(Boolean));
+
+function localClock() {
+  const tz = state.timezone;
+  try {
+    return {
+      time: new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit" }).format(new Date()),
+      date: new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "long", month: "long", day: "numeric" }).format(new Date()),
+    };
+  } catch { return { time: "", date: "" }; }
+}
+
+function weatherCard() {
+  const { time, date } = localClock();
+  const outdoor = byType("temperature")[0];
+  if (!weather?.available) {
+    return wpTile(HUE.weather, { cls: "wp-weather span2", card: "weather" },
+      el("div", { class: "wx-now" },
+        outdoor ? el("div", { class: "wx-cond" }, el("p", { class: "wx-temp" }, `${outdoor.state.value}°F outside`), el("p", { class: "wp-state" }, "From your outdoor sensor")) : null,
+        el("div", { class: "wx-clock" }, el("p", { class: "wx-time" }, time), el("p", { class: "wx-date" }, date))),
+      el("p", { class: "wx-note" }, "The forecast isn't connected yet. Your installer can add it with your location or a Home Assistant weather entity."));
+  }
+  const c = weather.current;
+  const lo = Math.min(...weather.daily.map((d) => d.lowF));
+  const hi = Math.max(...weather.daily.map((d) => d.highF));
+  const span = Math.max(1, hi - lo);
+  const updated = weather.source === "sample" ? "Sample weather for the demo" : `${weather.source === "homeassistant" ? "Home Assistant" : "Open-Meteo"} · updated ${timeAgo(weather.updated)}${weather.stale ? " (can't reach it right now)" : ""}`;
+  return wpTile(HUE.weather, { cls: "wp-weather span2", card: "weather" },
+    el("div", { class: "wx-now" },
+      el("span", { class: "wx-big" }, wxIcon(c.condition, c.isDay)),
+      el("div", { class: "wx-cond" },
+        el("p", { class: "wx-temp" }, `${c.tempF}°F`),
+        el("p", { class: "wp-state" }, `${c.text}${c.humidity != null ? ` · ${c.humidity}% humidity` : ""}`)),
+      el("div", { class: "wx-clock" }, el("p", { class: "wx-time" }, time), el("p", { class: "wx-date" }, date))),
+    el("ul", { class: "wx-days", "aria-label": "Next days" }, ...weather.daily.map((d) =>
+      el("li", { "aria-label": `${d.label}: ${d.text}, low ${d.lowF}°F, high ${d.highF}°F` },
+        el("span", { class: "wx-day", "aria-hidden": "true" }, d.label),
+        el("span", { "aria-hidden": "true" }, wxIcon(d.condition)),
+        el("span", { class: "wx-lo", "aria-hidden": "true" }, `${d.lowF}°`),
+        el("span", { class: "wx-range", "aria-hidden": "true" }, el("i", { style: `left:${((d.lowF - lo) / span) * 100}%;width:${Math.max(6, ((d.highF - d.lowF) / span) * 100)}%` })),
+        el("span", { class: "wx-hi", "aria-hidden": "true" }, `${d.highF}°`)))),
+    el("ol", { class: "wx-hours", "aria-label": "Next hours" }, ...weather.hourly.slice(0, 6).map((h) =>
+      el("li", { "aria-label": `${h.label}: ${h.tempF}°F, ${h.text}${h.precip ? `, ${h.precip}% chance of rain` : ""}` },
+        el("span", { class: "wx-h", "aria-hidden": "true" }, h.label),
+        el("span", { "aria-hidden": "true" }, wxIcon(h.condition, h.isDay)),
+        el("span", { class: "wx-t", "aria-hidden": "true" }, `${h.tempF}°`),
+        el("span", { class: "wx-p", "aria-hidden": "true" }, h.precip >= 20 ? `${h.precip}%` : "")))),
+    el("p", { class: "wx-source" }, updated));
+}
+
+function sparkline(samples) {
+  const W = 300, H = 64;
+  const box = el("div", { class: "spark" });
+  if (!samples?.length) return box;
+  const max = Math.max(...samples.map((p) => p.kw), 0.5) * 1.1;
+  const pts = samples.map((p) => [(p.minute / 1440) * W, H - (p.kw / max) * (H - 4)]);
+  const line = pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join("");
+  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><path class="spark-area" d="${line}L${pts.at(-1)[0].toFixed(1)} ${H}L${pts[0][0].toFixed(1)} ${H}Z"/><path class="spark-line" d="${line}"/></svg>`;
+  return box;
+}
+
+function powerTile() {
+  if (!energy) return null;
+  const measured = energy.source !== "estimate";
+  const peak = energy.peak ? ` Peak ${energy.peak.kw} kW at ${new Date(Date.UTC(2000, 0, 1, 0, energy.peak.minute)).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" })}.` : "";
+  return wpTile(HUE.energy, { cls: "span2 wp-power", card: "power" },
+    wpHead(ICON.bolt, "Electricity", measured ? "Measured by your energy monitor" : "Estimated from what each device is doing",
+      el("p", { class: "wp-big" }, `${energy.nowKw}`, el("span", {}, " kW"))),
+    el("div", { role: "img", "aria-label": `Electricity today: ${energy.todayKwh} kWh so far, ${energy.nowKw} kW now.${peak}` }, sparkline(energy.samples)),
+    el("p", { class: "wp-state" }, `${energy.todayKwh} kWh today.${peak}`));
+}
+
+function metricTile(hue, icon, label, value, unit, card) {
+  return wpTile(hue, { card, cls: "wp-metric" },
+    el("div", { class: "wp-head" }, el("span", { class: "badge-ic" }, svg(icon)), el("p", { class: "wp-big" }, value, el("span", {}, unit))),
+    el("p", { class: "wp-state" }, label));
+}
+
+function wpClimate(d) {
+  const s = d.state;
+  const hue = s.hvac === "heating" ? HUE.heat : s.hvac === "cooling" ? HUE.cool : HUE.idle;
+  return wpTile(hue, { cls: "span2", on: s.hvac === "heating" || s.hvac === "cooling", id: d.id },
+    wpHead(ICON.climate, "Climate", describe(d)),
+    el("div", { class: "pill-stepper" },
+      el("button", { "aria-label": "Cooler by 1°F", onclick: () => stepTarget(d, -1) }, "−"),
+      el("span", { class: "target" }, `${targetOf(d)}°F`),
+      el("button", { "aria-label": "Warmer by 1°F", onclick: () => stepTarget(d, 1) }, "+")),
+    el("div", { class: "seg wp-seg", role: "group", "aria-label": "Mode" },
+      ...MODES.map(([m, label]) => el("button", { "aria-pressed": String(s.mode === m), onclick: () => send(d.id, { mode: m }) }, label))));
+}
+
+function wpFan(d) {
+  const s = d.state;
+  return wpTile(HUE.fan, { on: s.on, id: d.id, cls: "span2" },
+    wpHead(ICON.fan, d.name, describe(d), toggle(d.name, s.on, () => send(d.id, { on: !s.on }))),
+    s.on ? el("div", { class: "seg wp-seg", role: "group", "aria-label": `${d.name} speed` },
+      ...[1, 2, 3].map((n) => el("button", { "aria-pressed": String(s.speed === n), "aria-label": `Speed ${n}`, onclick: () => send(d.id, { speed: n }) }, String(n)))) : null);
+}
+
+function wpWaterHeater(d) {
+  if (!d) return null;
+  const s = d.state;
+  return wpTile(HUE.heat, { on: s.on, id: d.id, cls: "span2" },
+    wpHead(ICON.heater, d.name, describe(d), toggle("Water heater power", s.on, () => send(d.id, { on: !s.on }))),
+    s.on ? el("div", { class: "pill-stepper" },
+      el("button", { "aria-label": "Lower 5°F", onclick: () => stepTarget(d, -5) }, "−"),
+      el("span", { class: "target" }, `${targetOf(d)}°F`),
+      el("button", { "aria-label": "Raise 5°F", onclick: () => stepTarget(d, 5) }, "+")) : null);
+}
+
+function wpLight(d) {
+  const s = d.state;
+  // The round icon is the on/off switch, as on the reference dashboards.
+  return wpTile(HUE.light, { on: s.on, id: d.id },
+    el("div", { class: "wp-head" },
+      el("button", { class: "badge-ic", role: "switch", "aria-checked": String(s.on), "aria-label": d.name, onclick: () => send(d.id, { on: !s.on }) }, svg(ICON.light)),
+      el("div", { class: "wp-text" }, el("span", { class: "wp-name" }, d.name.replace(/ Lights?$/, "")), el("span", { class: "wp-state" }, s.on ? `${s.brightness}%` : "Off"))),
+    el("input", {
+      type: "range", class: `pill-range${s.on ? "" : " off"}`, min: "5", max: "100", step: "5", value: String(s.brightness),
+      "aria-label": `${d.name} brightness`, "aria-valuetext": s.on ? `${s.brightness}%` : `Off (${s.brightness}% when on)`, style: `--fill:${s.brightness}%`,
+      oninput: (e) => e.target.style.setProperty("--fill", `${e.target.value}%`),
+      onchange: (e) => send(d.id, { on: true, brightness: Number(e.target.value) }),
+    }));
+}
+
+function wpSecure(d) {
+  const s = d.state;
+  const alert = isAlert(d);
+  const spec = {
+    garage: [ICON.garage, alert ? HUE.bad : HUE.garage, [s.door === "closed" ? "Open" : "Close", () => send(d.id, { door: s.door === "closed" ? "open" : "closed" })]],
+    lock: [ICON.lock, alert ? HUE.bad : HUE.ok, [s.locked ? "Unlock" : "Lock", () => send(d.id, { locked: !s.locked })]],
+    water_valve: [ICON.water, alert ? HUE.bad : HUE.water, [s.open ? "Shut off" : "Turn on", () => send(d.id, { open: !s.open }), s.open ? "danger" : "primary"]],
+    contact: [ICON.door, alert ? HUE.bad : HUE.door, null],
+  }[d.type];
+  const [icon, hue, action] = spec;
+  const text = describe(d);
+  return wpTile(hue, { id: d.id, alert },
+    wpHead(icon, d.name.replace(/ Lock$/, "").replace(/^Main /, ""), text[0].toUpperCase() + text.slice(1)),
+    action ? el("button", { class: `wp-action ${action[2] || ""}`, onclick: action[1] }, action[0]) : null);
+}
+
+function wallpaperScreen() {
+  const th = byType("thermostat")[0];
+  const list = issues();
+  const hs = houseState();
+  const secure = [...byType("garage"), ...byType("lock"), ...byType("water_valve"), ...byType("contact")];
+  const lit = byType("light").filter((l) => l.state.on);
+  const recent = feed.map((e) => [e, feedItem(e)]).filter(([, f]) => f).slice(-3).reverse();
+  return el("div", { class: "wp" },
+    el("header", { class: "wp-top" },
+      el("div", { class: "wp-title" },
+        el("p", { class: "eyebrow" }, state.home),
+        el("div", { class: "status", "data-state": hs },
+          el("span", { class: "status-mark", "aria-hidden": "true" }),
+          el("div", { class: "status-text" },
+            el("p", { class: "status-headline" }, hs === "alert" ? "Needs your attention now" : list.length ? `${list.length} ${list.length === 1 ? "thing needs" : "things need"} attention` : state.pending.length ? "Waiting for your OK" : "All secure"),
+            el("ul", { class: "issues" }, ...list.map((i) => el("li", { class: `issue ${i.level}` }, i.text, i.action && el("button", { onclick: i.action[1] }, i.action[0]))))))),
+      el("button", { class: "screens-open", "aria-haspopup": "dialog" }, "Screens")),
+    asksBlock(),
+    el("div", { class: "wp-grid" },
+      wpSection("Main", ICON.home,
+        el("div", { class: "wp-tiles" },
+          weatherCard(),
+          metricTile(HUE.heat, ICON.climate, "Temperature inside", `${th.state.current}`, "°F", "indoor-temp"),
+          metricTile(HUE.humidity, ICON.water, "Humidity inside", `${th.state.humidity ?? "--"}`, "%", "indoor-humidity"),
+          powerTile())),
+      wpSection("Climate", ICON.climate,
+        el("div", { class: "wp-tiles" }, wpClimate(th), ...byType("fan").map(wpFan), wpWaterHeater(byType("water_heater")[0]))),
+      wpSection("Lights", ICON.light,
+        el("div", { class: "wp-tiles" }, ...byType("light").map(wpLight)),
+        lit.length ? el("button", { class: "wp-wide", onclick: () => Promise.all(lit.map((l) => api(`/api/devices/${l.id}`, { command: { on: false } }))).then(() => showResult({ message: "All lights off." })) },
+          lit.length === 1 ? "Turn off the light that's on" : lit.length === 2 ? "Turn off both lights" : `Turn off all ${lit.length} lights`) : null),
+      wpSection("Doors & water", ICON.shield,
+        el("div", { class: "wp-tiles" }, ...secure.map(wpSecure)),
+        list.length ? el("button", { class: "wp-wide primary", onclick: lockUp }, "Lock up") : null),
+      wpSection("Scenes", ICON.sparkle,
+        el("div", { class: "wp-scenes" }, ...Object.entries(state.scenes).map(([id, label]) =>
+          el("button", { class: "scene", "data-scene": id, onclick: () => api(`/api/scenes/${id}`, {}).then(showResult) }, el("span", {}, label))))),
+      wpSection("Updates", ICON.bell,
+        wpTile(HUE.updates, { cls: "wp-updates" },
+          recent.length ? el("ol", { class: "feed" }, ...recent.map(([e, f]) =>
+            el("li", { class: f.urgent ? "urgent" : "" }, el("span", { class: "when" }, timeAgo(e.ts)), el("span", { class: "title" }, f.title), el("span", {}, f.body))))
+            : el("p", { class: "wp-state" }, "Nothing new."),
+          el("button", { class: "ghost", onclick: () => api("/api/briefing", {}) }, "Brief me now")))));
+}
+
+// The Wallpaper screen's photo: Haven's (by time of day) or the homeowner's
+// own, kept on this panel only.
+function applyWallpaperPhoto() {
+  const custom = wallpaperPhoto || safeGet("haven.wallpaper");
+  if (custom) $("#app").style.setProperty("--wp-photo", `url("${custom}")`);
+  else $("#app").style.removeProperty("--wp-photo");
+  $("#wp-reset").hidden = !custom;
+}
+let wallpaperPhoto = null;
+$("#wp-file").addEventListener("change", async (e) => {
+  const file = e.target.files?.[0];
+  e.target.value = "";
+  if (!file || !file.type.startsWith("image/")) return;
+  try {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    await new Promise((ok, fail) => { img.onload = ok; img.onerror = fail; img.src = url; });
+    const scale = Math.min(1, 1920 / img.naturalWidth, 1200 / img.naturalHeight);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.naturalWidth * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+    URL.revokeObjectURL(url);
+    wallpaperPhoto = canvas.toDataURL("image/jpeg", 0.82);
+    let kept = true;
+    try { localStorage.setItem("haven.wallpaper", wallpaperPhoto); } catch { kept = false; }
+    applyWallpaperPhoto();
+    showHint(kept ? "Your photo is now the wallpaper on this panel." : "Your photo is on screen, but it's too large to keep after a restart.");
+  } catch {
+    showHint("That photo couldn't be opened. Try a JPEG or PNG.");
+  }
+});
+$("#wp-reset").addEventListener("click", () => {
+  wallpaperPhoto = null;
+  try { localStorage.removeItem("haven.wallpaper"); } catch { /* storage unavailable */ }
+  applyWallpaperPhoto();
+  showHint("Back to Haven's photos, which follow the time of day.");
+});
+
 function renderAlt() {
   const alt = $("#alt");
   const th = byType("thermostat")[0];
   const nodes = [];
-  if (screen === "command-center") {
+  if (screen === "wallpaper") {
+    nodes.push(wallpaperScreen());
+  } else if (screen === "command-center") {
     nodes.push(altHeader(), asksBlock(),
       el("div", { class: "grid-cc" },
         mapBlock(), climateTile(th), energyTile(), lightsBlock(room === "all" ? null : room), securityBlock(), conditionsBlock(), scenesBlock(), updatesBlock(6)));
@@ -923,7 +1203,7 @@ let refreshTimer;
 function refresh() {
   clearTimeout(refreshTimer);
   refreshTimer = setTimeout(async () => {
-    [state, energy] = await Promise.all([api("/api/state"), api("/api/energy")]);
+    [state, energy, weather] = await Promise.all([api("/api/state"), api("/api/energy"), api("/api/weather")]);
     for (const [id, p] of pendingTarget) if (p.settled) pendingTarget.delete(id);
     render();
     if (tab === "you") loadProfile();
@@ -956,11 +1236,12 @@ function connect() {
 async function start() {
   if (!token) return showLogin();
   try {
-    [state, feed, energy] = await Promise.all([api("/api/state"), api("/api/events?limit=150"), api("/api/energy")]);
+    [state, feed, energy, weather] = await Promise.all([api("/api/state"), api("/api/events?limit=150"), api("/api/energy"), api("/api/weather")]);
   } catch {
     return;
   }
   $("#app").hidden = false;
+  applyWallpaperPhoto();
   renderFeel();
   simButtons();
   render();

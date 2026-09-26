@@ -27,7 +27,7 @@ Try typing or tapping the mic: `turn on the kitchen lights`, `I'm cold`, `the ki
 
 ## Screen library
 
-Six screens for different spots in the home, all on the same live house: Signature, Command Center, Family Hub, Nightstand, Rooms and Entry. Choose one per panel from **Screens**. To make a client catalog of all of them in both finishes: `npm run build:demo && npm run build:catalog`.
+Seven screens for different spots in the home, all on the same live house: Signature, Wallpaper, Command Center, Family Hub, Nightstand, Rooms and Entry. Wallpaper puts a photo of the home (it follows the time of day, or use your own) behind frosted tiles with the weather. Choose one per panel from **Screens**. To make a client catalog of all of them in both finishes: `npm run build:demo && npm run build:catalog`.
 
 ## Check that everything works
 
@@ -40,6 +40,14 @@ npm run check   # all tests, the demo build, a browser run through every control
 Copy `.env.example` to `.env` and set `ANTHROPIC_API_KEY`. Haven then uses Claude (`claude-opus-5` by default; change `HAVEN_MODEL` / `HAVEN_EFFORT`) for conversation and for writing the daily briefings. Without a key, or if the internet is down, it uses a built-in command parser, and every automation keeps running.
 
 Refusal fallbacks are enabled (`fallbacks: "default"`): if the model declines a request, the API retries it on a fallback model automatically.
+
+## Give Haven a natural voice
+
+Set `ELEVENLABS_API_KEY` in `.env` and every panel speaks with an ElevenLabs voice instead of the browser's built-in one ("River" by default; change it with `HAVEN_VOICE_ID`). The key stays on the home server; panels get audio from `/api/speech`. If ElevenLabs is unreachable or out of credits, panels fall back to the browser's voice. Samples: `docs/voice/`.
+
+## Weather
+
+Set `weather.latitude` and `weather.longitude` in `config/home.json` for free forecasts from Open-Meteo (no key), or, with Home Assistant, name its weather entity in `weather.ha_entity`. Haven then answers "what's the weather?", adds the forecast to briefings, and the Wallpaper screen shows it. Without either, it says weather isn't connected rather than guessing.
 
 ## Connect real devices
 
@@ -59,6 +67,8 @@ src/
   briefings.js         morning / midday / evening / night updates
   learning.js          the homeowner profile: comfort, habits, suggestions, routines
   energy.js            live power, today's kWh and history (estimated, or from a meter)
+  weather.js           forecast from Home Assistant or Open-Meteo (never made up)
+  speech.js            Haven's ElevenLabs voice (the key stays on the server)
   reflection.js        runs the daily reflection agent
   notify.js            app feed, ntfy, Pushover, quiet hours
   core/                event bus, device registry, controller, storage, time
@@ -67,7 +77,7 @@ src/
 prompts/agent-system.md  the conversation agent's system prompt
 prompts/reflection.md    the reflection agent's system prompt
 config/home.json         rooms, devices, scenes, limits, schedule
-web/                     the wall panel / phone app (voice.js, map.js home model, energy-chart.js)
+web/                     the wall panel / phone app (voice.js, map.js home model, energy-chart.js, wallpapers/)
 test/                    safety, automation and agent tests (npm test)
 ```
 
@@ -89,6 +99,8 @@ All routes need `Authorization: Bearer <owner token>` except `/api/health`.
 | POST | `/api/presence` | `{person, kind}` | approaching / arrived / left |
 | POST | `/api/briefing` | | Send a briefing now |
 | GET | `/api/energy` | | Power now, kWh today, the day's 5-minute history, top consumers |
+| GET | `/api/weather` | | Current conditions, next 12 hours, next days, and the source (or `available: false`) |
+| POST | `/api/speech` | `{text}` | Haven's voice as MP3 (ElevenLabs); 503 means use the browser's voice |
 | GET | `/api/profile` | | What Haven has learned, and pending suggestions |
 | POST | `/api/feedback` | `{feeling, room?}` | too_cold, too_warm, too_bright, too_dark, just_right |
 | POST | `/api/suggestions/:id` | `{accept}` | Answer a suggestion |

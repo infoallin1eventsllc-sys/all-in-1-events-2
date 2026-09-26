@@ -7,6 +7,13 @@
     ]
   },
 
+  "_weather": "Weather comes from the Home Assistant entity below when HAVEN_ADAPTER=homeassistant, otherwise from Open-Meteo (free, no key) once latitude and longitude are set. With neither, the panel says weather isn't connected.",
+  "weather": {
+    "ha_entity": "weather.home",
+    "latitude": null,
+    "longitude": null
+  },
+
   "settings": {
     "units": "F",
     "motionLightsOffAfterMinutes": 5,

@@ -622,3 +622,146 @@ footer { text-align: center; }
 :root[data-look="futuristic"] .xcard { border-color: rgba(64, 224, 255, 0.16); }
 :root[data-look="futuristic"] .panel[data-screen="nightstand"] .big-btn.primary { background: rgba(64, 224, 255, 0.18); color: #e6f4ff; box-shadow: 0 0 24px rgba(64, 224, 255, 0.25); }
 .grid-cc .lights-card { grid-row: span 2; }
+
+/* ---------- Wallpaper screen ----------
+   The home's photo behind everything, frosted dark tiles in columns, a
+   colored icon per kind of device. Dark by design in both finishes, so the
+   screen sets its own tokens; the photo follows the time of day unless the
+   homeowner picked their own (--wp-photo set on #app). */
+.panel[data-screen="wallpaper"] {
+  --ink: #f3f4f7; --muted: #c6cad4; --line: rgba(255, 255, 255, 0.12);
+  --glass: rgba(18, 20, 26, 0.8); --glass-2: rgba(255, 255, 255, 0.1); --tile: rgba(255, 255, 255, 0.1);
+  --wp-tile: rgba(20, 22, 28, 0.76);
+  --accent: #f0b64e; --accent-text: #1a140f; --on: #f0b64e; --focus: #ffffff;
+  --ok: #7cd69a; --warn: #f0b060; --bad: #ff7a6b; --danger-text: #1f0b07;
+  --stage-ink: #f3f4f7; --stage-muted: rgba(243, 244, 247, 0.82);
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --wp-photo-auto: url("wallpapers/evening.webp");
+  --wp-scrim: rgba(6, 8, 14, 0.4), rgba(6, 8, 14, 0.26) 40%, rgba(6, 8, 14, 0.58);
+  color-scheme: dark;
+}
+.panel[data-screen="wallpaper"][data-daypart="morning"] { --wp-photo-auto: url("wallpapers/morning.webp"); --wp-scrim: rgba(6, 8, 14, 0.3), rgba(6, 8, 14, 0.12) 40%, rgba(6, 8, 14, 0.45); }
+.panel[data-screen="wallpaper"][data-daypart="day"] { --wp-photo-auto: url("wallpapers/day.webp"); --wp-scrim: rgba(6, 8, 14, 0.24), rgba(6, 8, 14, 0.06) 40%, rgba(6, 8, 14, 0.4); }
+.panel[data-screen="wallpaper"][data-daypart="night"] { --wp-photo-auto: url("wallpapers/night.webp"); --wp-scrim: rgba(6, 8, 14, 0.2), rgba(6, 8, 14, 0.1) 40%, rgba(6, 8, 14, 0.4); }
+/* The photo sits on a fixed layer (background-attachment: fixed doesn't work
+   on iPhone and iPad). */
+html .panel.alt-mode[data-screen="wallpaper"] { background: #0b0d14; isolation: isolate; }
+.panel.alt-mode[data-screen="wallpaper"]::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    linear-gradient(180deg, var(--wp-scrim)),
+    var(--wp-photo, var(--wp-photo-auto)) center 62% / cover no-repeat;
+}
+:root[data-look="futuristic"] .panel[data-screen="wallpaper"] { --accent: #40e0ff; --accent-text: #03121a; --on: #40e0ff; --focus: #40e0ff; --wp-tile: rgba(8, 12, 24, 0.78); }
+:root[data-look="futuristic"] .panel[data-screen="wallpaper"] .wp-tile { border-color: rgba(64, 224, 255, 0.18); }
+:root[data-look="futuristic"] .panel[data-screen="wallpaper"] h2 { color: #f3f4f7; letter-spacing: 0.04em; }
+
+.wp { display: grid; gap: 16px; min-width: 0; }
+.wp-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; padding: 4px 6px; color: var(--stage-ink); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
+.wp-top .eyebrow { color: var(--stage-muted); }
+.wp-top .status { margin-top: 2px; }
+.wp-top .screens-open { color: var(--ink); background: rgba(20, 22, 28, 0.6); border-color: rgba(255, 255, 255, 0.22); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); text-shadow: none; }
+.wp-top .issue { text-shadow: none; }
+.wp-grid { columns: 300px; column-gap: 18px; }
+.wp-sec { break-inside: avoid; display: grid; gap: 10px; margin: 0 0 22px; min-width: 0; }
+.wp-sec > h2 {
+  display: flex; align-items: center; gap: 8px; font: 600 1.02rem/1.2 var(--font); text-transform: none; letter-spacing: 0;
+  color: #f4f5f8; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75), 0 0 14px rgba(0, 0, 0, 0.45); padding-left: 2px;
+}
+.wp-sec > h2 svg { width: 18px; height: 18px; fill: currentColor; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6)); }
+.wp-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.wp-tile {
+  --hue: #9aa3b5; position: relative; display: grid; gap: 10px; align-content: start; min-width: 0;
+  padding: 12px; border-radius: 16px; color: var(--ink);
+  background: var(--wp-tile); border: 1px solid rgba(255, 255, 255, 0.09); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(16px) saturate(1.15); -webkit-backdrop-filter: blur(16px) saturate(1.15);
+}
+.wp-tile.span2 { grid-column: 1 / -1; }
+.wp-tile.alert { box-shadow: inset 0 0 0 2px var(--bad), 0 8px 24px rgba(0, 0, 0, 0.28); }
+.wp-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.wp-text { display: grid; min-width: 0; flex: 1; }
+.wp-name { font-weight: 600; font-size: 0.95rem; line-height: 1.25; }
+.wp-state { font-size: 0.8rem; color: var(--muted); }
+.wp-tile.alert .wp-state { color: var(--bad); font-weight: 600; }
+.badge-ic { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; background: color-mix(in srgb, var(--hue) 24%, transparent); color: var(--hue); }
+.badge-ic svg { width: 20px; height: 20px; fill: currentColor; }
+button.badge-ic { width: 42px; height: 42px; min-height: 42px; padding: 0; border: 0; }
+button.badge-ic:hover { box-shadow: 0 0 0 2px color-mix(in srgb, var(--hue) 55%, transparent); }
+.wp-metric .wp-big { margin-left: auto; }
+input[type="range"].pill-range.off::-webkit-slider-thumb { opacity: 0.55; }
+.wp-tile.on .badge-ic { background: var(--hue); color: #14161b; box-shadow: 0 0 18px color-mix(in srgb, var(--hue) 45%, transparent); }
+.wp-big { font-family: var(--font-display); font-size: 2rem; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+.wp-big span { font-size: 0.95rem; font-weight: 500; color: var(--muted); margin-left: 2px; }
+.wp-head .wp-big { margin-left: auto; }
+.wp-tile .switch { margin-left: auto; }
+.wp-tile .switch[aria-checked="true"] { background: var(--hue); }
+
+/* The thick pill slider from the reference, one per light. */
+input[type="range"].pill-range { height: 42px; }
+input[type="range"].pill-range::-webkit-slider-runnable-track { height: 42px; border-radius: 13px; background: linear-gradient(90deg, var(--hue) var(--fill, 50%), rgba(255, 255, 255, 0.12) var(--fill, 50%)); }
+input[type="range"].pill-range.off::-webkit-slider-runnable-track { background: linear-gradient(90deg, color-mix(in srgb, var(--hue) 20%, transparent) var(--fill, 50%), rgba(255, 255, 255, 0.08) var(--fill, 50%)); }
+input[type="range"].pill-range::-webkit-slider-thumb { width: 8px; height: 26px; margin-top: 8px; border-radius: 4px; background: #fff; border: 0; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25); }
+input[type="range"].pill-range::-moz-range-track { height: 42px; border-radius: 13px; background: rgba(255, 255, 255, 0.12); }
+input[type="range"].pill-range::-moz-range-progress { height: 42px; border-radius: 13px; background: var(--hue); }
+input[type="range"].pill-range.off::-moz-range-progress { background: color-mix(in srgb, var(--hue) 28%, transparent); }
+input[type="range"].pill-range::-moz-range-thumb { width: 8px; height: 26px; border-radius: 4px; background: #fff; border: 0; }
+
+.pill-stepper { display: grid; grid-template-columns: 52px 1fr 52px; align-items: center; border-radius: 13px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.pill-stepper button { border: 0; border-radius: 0; background: transparent; font-size: 1.3rem; min-height: 44px; }
+.pill-stepper button:hover { background: rgba(255, 255, 255, 0.08); }
+.pill-stepper .target { text-align: center; font-family: var(--font-display); font-weight: 600; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.wp-seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: rgba(255, 255, 255, 0.08); border-radius: 13px; }
+.wp-seg button { min-height: 40px; color: var(--muted); }
+.wp-seg button[aria-pressed="true"] { background: var(--hue); color: #14161b; font-weight: 600; box-shadow: none; }
+.wp-action { justify-self: start; min-height: 36px; padding: 4px 14px; border-radius: 10px; }
+.panel[data-screen="wallpaper"] .ask-card { background: var(--wp-tile); border-color: rgba(255, 255, 255, 0.12); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28); }
+.wp-wide { width: 100%; background: var(--wp-tile); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.wp-wide.primary { background: var(--accent); }
+
+/* Weather */
+.wp-weather { gap: 14px; }
+.wx-now { display: grid; grid-template-columns: auto 1fr; grid-template-areas: "icon cond" "clock clock"; align-items: center; gap: 6px 14px; }
+.wx-big { grid-area: icon; }
+.wx-cond { grid-area: cond; }
+.wx-clock { grid-area: clock; }
+.wx-big .wx-ic { width: 56px; height: 56px; }
+.wx-ic { width: 20px; height: 20px; fill: #c9d3e6; flex-shrink: 0; }
+.wx-clear, .wx-partly-cloudy { fill: #ffc24b; }
+.wx-clear-night { fill: #e6e3ff; }
+.wx-rain, .wx-drizzle, .wx-storm { fill: #7fb2ff; }
+.wx-snow, .wx-sleet { fill: #e8f1ff; }
+.wx-time { font-family: var(--font-display); font-size: 3rem; font-weight: 500; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wx-date { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+.wx-cond { text-align: right; }
+.wx-cond .wp-state { font-size: 0.85rem; }
+.wx-temp { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; }
+.wx-days { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.wx-days li { display: grid; grid-template-columns: 3.2em 22px 2.4em 1fr 2.4em; align-items: center; gap: 8px; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.wx-day { color: var(--muted); }
+.wx-lo { text-align: right; color: var(--muted); }
+.wx-range { position: relative; height: 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.1); }
+.wx-range i { position: absolute; top: 0; bottom: 0; border-radius: 999px; background: linear-gradient(90deg, #7fb2ff, #ffc24b 60%, #ff8a4c); }
+.wx-hours { list-style: none; margin: 0; padding: 10px 0 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.wx-hours li { display: grid; justify-items: center; gap: 4px; font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+.wx-h { color: var(--muted); white-space: nowrap; }
+.wx-t { font-weight: 600; font-size: 0.9rem; }
+.wx-p { color: #a9c8ff; min-height: 1.2em; }
+.wx-source, .wx-note { font-size: 0.78rem; color: var(--muted); }
+.wx-note { font-size: 0.86rem; }
+@media (max-width: 420px) { .wx-big .wx-ic { width: 44px; height: 44px; } .wx-time { font-size: 2.4rem; } }
+
+/* Power sparkline */
+.spark svg { display: block; width: 100%; height: 64px; }
+.spark-area { fill: color-mix(in srgb, var(--hue) 22%, transparent); }
+.spark-line { fill: none; stroke: var(--hue); stroke-width: 2; vector-effect: non-scaling-stroke; }
+
+.wp-scenes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.wp-scenes .scene { min-height: 84px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28); }
+.wp-updates .feed li { background: rgba(255, 255, 255, 0.06); }
+.wp-updates button { justify-self: start; }
+
+.library-photo { gap: 8px 12px; }
+.library-photo p { flex: 1 1 100%; }
+.file-btn { position: relative; display: inline-flex; align-items: center; min-height: 44px; padding: 8px 14px; border-radius: 12px; background: var(--accent); color: var(--accent-text); font-weight: 600; cursor: pointer; }
+.file-btn input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; min-height: 0; padding: 0; cursor: pointer; }
+.file-btn:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
