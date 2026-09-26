@@ -6,7 +6,7 @@ import { TOOL_DEFS, makeToolRunner, homeState } from "./tools.js";
 const MAX_TOOL_ROUNDS = 8;
 const MAX_HISTORY_MESSAGES = 60; // start a fresh conversation past this
 
-export async function createClaudeAgent(home, { apiKey, model, effort, promptPath, fetch }) {
+export async function createClaudeAgent(home, { apiKey, model, effort, promptPath, reflectionPath = new URL("../../prompts/reflection.md", import.meta.url), fetch }) {
   const { default: Anthropic } = await import("@anthropic-ai/sdk");
   const client = new Anthropic({ apiKey, ...(fetch ? { fetch } : {}) });
   const template = fs.readFileSync(promptPath, "utf8");
@@ -16,6 +16,7 @@ export async function createClaudeAgent(home, { apiKey, model, effort, promptPat
     .replaceAll("{{TIMEZONE}}", home.config.home.timezone);
   const system = [{ type: "text", text: systemText, cache_control: { type: "ephemeral" } }];
   const conversations = new Map();
+  const reflectionText = fs.readFileSync(reflectionPath, "utf8");
 
   async function call(messages, { tools = TOOL_DEFS } = {}) {
     return client.beta.messages.create({
@@ -105,6 +106,31 @@ export async function createClaudeAgent(home, { apiKey, model, effort, promptPat
       return { title: title.replace(/^#+\s*|\*\*/g, "").trim(), body: rest.join("\n").trim() };
     },
 
+    // The reflection agent: reviews the day and returns structured findings
+    // for the learner. JSON output is enforced by the API schema.
+    async reflect(dayLog) {
+      const response = await client.beta.messages.create({
+        model,
+        max_tokens: 16000,
+        betas: ["server-side-fallback-2026-07-01"],
+        fallbacks: "default",
+        thinking: { type: "adaptive" },
+        output_config: { effort, format: { type: "json_schema", schema: REFLECTION_SCHEMA } },
+        system: reflectionText,
+        messages: [{ role: "user", content: `<day>\n${JSON.stringify(dayLog, null, 2)}\n</day>` }],
+      });
+      if (response.stop_reason !== "end_turn") return null;
+      const out = JSON.parse(textOf(response));
+      return {
+        notes: out.notes,
+        likes: out.likes,
+        dislikes: out.dislikes,
+        suggestions: out.suggestions.map((x) => {
+          try { return { device: x.device, command: JSON.parse(x.command_json), time: x.time, text: x.text }; } catch { return null; }
+        }).filter(Boolean),
+      };
+    },
+
     reset(conversationId = "default") {
       conversations.delete(conversationId);
     },
@@ -114,3 +140,29 @@ export async function createClaudeAgent(home, { apiKey, model, effort, promptPat
 function lastIsAssistant(messages) {
   return messages.length > 0 && messages[messages.length - 1].role === "assistant";
 }
+
+const strings = { type: "array", items: { type: "string" } };
+export const REFLECTION_SCHEMA = {
+  type: "object",
+  properties: {
+    notes: strings,
+    likes: strings,
+    dislikes: strings,
+    suggestions: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          device: { type: "string" },
+          command_json: { type: "string" },
+          time: { type: "string" },
+          text: { type: "string" },
+        },
+        required: ["device", "command_json", "time", "text"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["notes", "likes", "dislikes", "suggestions"],
+  additionalProperties: false,
+};

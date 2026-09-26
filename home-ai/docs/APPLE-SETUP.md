@@ -16,6 +16,16 @@ In each Shortcut, replace:
 2. Tap **Share → Add to Home Screen**.
 3. Open Haven from the home screen and enter your owner token once.
 
+## 1b. The wall panel (talk to Haven by voice)
+
+For a panel by the entry or in the kitchen, mount a tablet flush in the wall:
+- **iPad** in an in-wall mount with a power-over-Ethernet adapter, or an **Android tablet** running a kiosk browser (e.g. Fully Kiosk Browser) that keeps the screen on and relaunches Haven.
+- New build: run Cat6 and a recessed outlet (or PoE) to the panel spot, about 48–54 inches from the floor.
+
+Open Haven full screen on it. Tap the **mic** to speak ("I'm cold", "goodnight", "is the garage closed?") and Haven answers out loud; the **speaker** button mutes it. Briefings and urgent alerts are read aloud too.
+
+**Voice needs HTTPS.** Browsers only allow the microphone on secure pages. The simplest way: install Tailscale on the Haven computer and run `tailscale serve 8787`, then open the `https://…ts.net` address it prints on the panel. Over plain `http://192.168…` the panel still works by touch and typing, and the mic explains why it can't listen.
+
 ## 2. Push alerts on iPhone and Apple Watch
 
 Pick one (or both).

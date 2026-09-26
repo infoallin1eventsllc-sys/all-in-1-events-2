@@ -5,13 +5,27 @@
 - **Voice:** calm, plain, trustworthy. The house is handled; Haven reports what happened.
 - **Anti-references:** generic "AI SaaS" styling (purple gradients, glow on everything), dashboards of equal-weight tiles, sensors shouting as loudly as controls.
 
-## Structure (both looks)
-1. **Status line.** One sentence on the house ("All secure", "2 things need attention") with a chip per issue and a one-tap fix (Close, Lock). The summary always comes before the detail.
-2. **Confirmations.** A card for anything waiting on the owner's OK: garage open, unlock, water on.
-3. **At a glance.** Four tiles: Inside, Garage, Doors, Water.
-4. **Ask Haven.** Chat.
-5. **Scenes**, then **Rooms**. Controls get rows; sensors get one quiet line per room and turn red only when they matter.
-6. **Updates** feed, then the **Simulator** when no hardware is connected.
+## Structure: the wall panel (both looks)
+Modeled on an in-wall touch panel: room first, glass controls, voice along the bottom.
+
+1. **Stage (left).** Room tabs, the room name set large, a one-line greeting ("Good evening. It's 71°F inside. 2 lights on, 1 person home."), the house status with one-tap fixes, and the clock. Its backdrop follows the light of the day: warm morning, pale daylight, amber evening, deep blue night.
+2. **Glass (right)**, with four tabs:
+   - **Home:** Haven's suggestions, confirmations, scene cards (each painted with the light it makes), device tiles, and "How does it feel?" buttons (Too cold, Too warm, Too bright, Too dark, Just right).
+   - **Updates:** the activity feed and "Brief me now".
+   - **About you:** everything Haven has learned, each with Forget; "Review my day"; "Forget everything" (two taps).
+   - **Simulator** when no hardware is connected.
+3. **Voice bar (bottom).** Haven's orb, the text box, the mic (push-to-talk), the speaker toggle, and the conversation just above it.
+
+Whole home shows Climate (a dial with target, mode and system state), Lights, Security (with Lock up), Water, and the Water Heater. A room shows its own devices as tiles plus one quiet line of sensors.
+
+On a phone the stage becomes a header card and everything stacks; the voice bar stays pinned to the bottom.
+
+## Tiles
+- **Light:** switch, and a brightness slider while on.
+- **Fan:** switch, and speed 1–3 while on.
+- **Climate:** dial (arc = target within 55–85°F; orange heating, blue cooling), − target +, Auto/Heat/Cool/Off.
+- **Water heater:** power switch, − target +.
+- **Water, garage, lock:** one clear action (Shut off / Turn on, Open / Close, Lock / Unlock). Anything not in its safe state gets a red outline.
 
 ## Color
 Semantic colors (ok / warn / bad) only ever mean state.
@@ -34,8 +48,9 @@ Grounded follows the viewer's light/dark setting. Futuristic is dark only, by de
 - System fonts are the fallback, so the app still reads well when the house has no internet.
 
 ## Motion
-- The Futuristic orb is Haven's status mark. Its color is the house's state (cyan secure, violet waiting, magenta alert). It moves only while Haven is working on a reply, and not at all under reduced motion.
-- Nothing else animates beyond button press feedback.
+- The orb in the voice bar is Haven. Its color is the house state (green/cyan secure, amber/violet waiting, red/magenta alert). It pulses while listening, dips while thinking, and swells while speaking; it's still otherwise, and always still under reduced motion.
+- The Futuristic stage shows the orb large, with faint rings behind the room name.
+- Nothing else animates beyond switches sliding and button press feedback.
 
 ## Components
-Status line, issue chip, confirmation card, summary tile, device row (name, state, controls), sensor line, scene button, feed item, look switch.
+Room tab, status line, issue chip, ask card (suggestion or confirmation), scene card, device tile, switch, slider, segmented control, climate dial, stepper, feeling chip, feed item, profile item, voice bar, orb, style switch.

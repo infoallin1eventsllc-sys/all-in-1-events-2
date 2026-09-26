@@ -116,6 +116,24 @@ test("live event stream delivers events", async () => {
   assert.match(text, /"type":"action"/);
 });
 
+test("profile routes: feedback, suggestions, forget, reflect", async () => {
+  let r = await call("/api/feedback", { feeling: "too_cold" });
+  assert.equal(r.data.status, "done");
+  assert.equal((await call("/api/feedback", { feeling: "hungry" })).data.status, "error");
+  const fan = home.registry.get("fan.living");
+  for (const d of ["2026-09-01", "2026-09-02", "2026-09-03"]) home.learner.observe(fan, { on: true }, { date: d, hhmm: "18:00" });
+  const profile = (await call("/api/profile")).data;
+  assert.ok(profile.items.some((i) => i.kind === "comfort"));
+  const sug = profile.suggestions[0];
+  assert.equal((await call(`/api/suggestions/${sug.id}`, { accept: true })).data.status, "done");
+  assert.equal((await call(`/api/suggestions/${sug.id}`, { accept: true })).data.status, "error");
+  r = await call("/api/profile/reflect", {});
+  assert.equal(r.data.status, "done");
+  assert.equal((await call("/api/profile/forget", { id: "all" })).data.status, "done");
+  assert.equal((await call("/api/profile")).data.items.length, 0);
+});
+
+// Keep last: it locks this client out for a minute.
 test("repeated wrong tokens get locked out", async () => {
   for (let i = 0; i < 10; i++) await call("/api/state", null, "x");
   assert.equal((await call("/api/state", null, "x")).status, 429);

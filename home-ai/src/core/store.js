@@ -62,6 +62,25 @@ export class Store {
     return this.recent.filter((e) => e.ts >= isoTime);
   }
 
+  // Small JSON documents (e.g. the homeowner profile). Memory-only stores
+  // keep them in RAM so tests and the browser demo behave the same way.
+  loadDoc(name) {
+    if (this.memoryOnly) return this.docs?.[name] ?? null;
+    const p = path.join(this.dir, `${name}.json`);
+    if (!fs.existsSync(p)) return null;
+    try { return JSON.parse(fs.readFileSync(p, "utf8")); } catch { return null; }
+  }
+
+  saveDoc(name, value) {
+    if (this.memoryOnly) {
+      this.docs = { ...(this.docs || {}), [name]: value };
+      return;
+    }
+    const p = path.join(this.dir, `${name}.json`);
+    fs.writeFileSync(p + ".tmp", JSON.stringify(value, null, 2));
+    fs.renameSync(p + ".tmp", p);
+  }
+
   // Secrets that Haven generates for itself (e.g. the owner token).
   loadSecret(name) {
     if (this.memoryOnly) return null;

@@ -20,7 +20,7 @@
 <body>
   <!--haven:body-->
   <div id="login" class="login" hidden>
-    <form id="login-form" class="card">
+    <form id="login-form" class="glass-card">
       <h1>Haven</h1>
       <p class="muted">Enter the owner token printed when the home server first started.</p>
       <input id="token-input" type="password" autocomplete="current-password" placeholder="Owner token" aria-label="Owner token" required>
@@ -29,67 +29,110 @@
     </form>
   </div>
 
-  <main id="app" hidden>
-    <header class="top">
-      <div>
-        <h1 id="home-name">Haven</h1>
-        <p id="subtitle" class="muted"></p>
+  <div id="app" class="panel" data-daypart="evening" hidden>
+    <!-- Left: the room, the greeting, the house status, the time -->
+    <section class="stage" aria-label="Home status">
+      <div class="stage-top">
+        <nav id="rooms-nav" class="rooms-nav" aria-label="Rooms"></nav>
       </div>
-      <div class="top-right">
-        <div class="look-switch" role="group" aria-label="App style">
-          <button type="button" data-look="grounded">Grounded</button>
-          <button type="button" data-look="futuristic">Futuristic</button>
+      <div class="stage-body">
+        <p id="home-name" class="eyebrow">Haven</p>
+        <h1 id="room-title">Whole home</h1>
+        <p id="greeting" class="greeting"></p>
+        <div id="status" class="status" data-state="ok" aria-live="polite">
+          <span class="status-mark" aria-hidden="true"></span>
+          <div class="status-text">
+            <p id="status-headline" class="status-headline">All secure</p>
+            <ul id="issues" class="issues"></ul>
+          </div>
         </div>
-        <span id="conn" class="conn" role="img" aria-label="Live connection"></span>
       </div>
-    </header>
-
-    <section id="status" class="card status" data-state="ok" aria-live="polite">
-      <span class="status-mark" aria-hidden="true"></span>
-      <div class="status-text">
-        <p id="status-headline" class="status-headline">All secure</p>
-        <ul id="issues" class="issues"></ul>
+      <div class="stage-foot">
+        <div>
+          <p id="clock" class="clock">--:--</p>
+          <p id="date" class="muted small"></p>
+        </div>
+        <div class="stage-tools">
+          <div class="look-switch" role="group" aria-label="Panel style">
+            <button type="button" data-look="grounded">Grounded</button>
+            <button type="button" data-look="futuristic">Futuristic</button>
+          </div>
+          <span id="conn" class="conn" role="img" aria-label="Live connection"></span>
+        </div>
       </div>
     </section>
 
-    <div id="pending" aria-live="assertive"></div>
+    <!-- Right: controls on frosted glass -->
+    <section class="glass" aria-label="Controls">
+      <nav class="tabs" role="tablist" aria-label="Panel sections">
+        <button role="tab" id="t-home" aria-controls="tab-home" aria-selected="true" data-tab="home">Home</button>
+        <button role="tab" id="t-updates" aria-controls="tab-updates" aria-selected="false" data-tab="updates">Updates</button>
+        <button role="tab" id="t-you" aria-controls="tab-you" aria-selected="false" data-tab="you">About you <span id="you-badge" class="badge" hidden></span></button>
+        <button role="tab" id="t-sim" aria-controls="tab-sim" aria-selected="false" data-tab="sim" hidden>Simulator</button>
+      </nav>
 
-    <section class="summary" id="summary" aria-label="House at a glance"></section>
+      <div id="tab-home" role="tabpanel" aria-labelledby="t-home" class="tabpanel">
+        <div id="suggestions" class="stack"></div>
+        <div id="pending" class="stack" aria-live="assertive"></div>
+        <section class="block">
+          <h2>Scenes</h2>
+          <div id="scenes" class="scenes"></div>
+        </section>
+        <section class="block">
+          <h2 id="devices-title">Devices</h2>
+          <div id="tiles" class="tiles"></div>
+          <p id="sensors" class="sensors"></p>
+        </section>
+        <section class="block">
+          <h2>How does it feel?</h2>
+          <div id="feel" class="feel" role="group" aria-label="Tell Haven how it feels"></div>
+        </section>
+      </div>
 
-    <section class="card ask">
-      <form id="chat-form">
-        <input id="chat-input" autocomplete="off" placeholder="Ask Haven anything" aria-label="Ask Haven">
+      <div id="tab-updates" role="tabpanel" aria-labelledby="t-updates" class="tabpanel" hidden>
+        <div class="row-between">
+          <h2>Updates</h2>
+          <button id="brief-now" class="ghost">Brief me now</button>
+        </div>
+        <ol id="feed" class="feed"></ol>
+      </div>
+
+      <div id="tab-you" role="tabpanel" aria-labelledby="t-you" class="tabpanel" hidden>
+        <p class="muted small">Haven learns from what you tell it, what you change by hand, and what you undo. Nothing here acts on its own until you say yes, and you can forget anything.</p>
+        <div id="you-suggestions" class="stack"></div>
+        <div class="row-between">
+          <h2>What Haven knows about you</h2>
+          <button id="reflect-now" class="ghost">Review my day</button>
+        </div>
+        <ul id="profile" class="profile"></ul>
+        <button id="forget-all" class="ghost danger-text">Forget everything</button>
+      </div>
+
+      <div id="tab-sim" role="tabpanel" aria-labelledby="t-sim" class="tabpanel" hidden>
+        <p class="muted small" id="sim-note">No hardware is connected. Trigger a sensor and watch Haven respond.</p>
+        <div class="sim-grid" id="sim-buttons"></div>
+      </div>
+
+      <footer class="muted small" id="footer"></footer>
+    </section>
+
+    <!-- Bottom: talk to Haven -->
+    <div class="voicebar">
+      <div id="chat-log" class="chat-log" aria-live="polite" hidden></div>
+      <form id="chat-form" class="talk">
+        <span id="orb" class="orb" data-voice="idle" aria-hidden="true"></span>
+        <input id="chat-input" autocomplete="off" placeholder="Try &ldquo;I&rsquo;m cold&rdquo; or &ldquo;goodnight&rdquo;" aria-label="Talk to Haven">
+        <button type="button" id="mic" class="icon-btn" aria-label="Talk to Haven with your voice" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2Z"/></svg>
+        </button>
+        <button type="button" id="speak" class="icon-btn" aria-label="Haven speaks out loud" aria-pressed="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10v4h4l5 4V6L7 10H3Zm13.5 2a4.5 4.5 0 0 0-2.5-4.03v8.06A4.5 4.5 0 0 0 16.5 12ZM14 3.23v2.06a7 7 0 0 1 0 13.42v2.06a9 9 0 0 0 0-17.54Z"/></svg>
+        </button>
         <button class="primary" type="submit">Send</button>
       </form>
-      <div id="chat-log" class="chat-log" aria-live="polite"></div>
-    </section>
-
-    <section>
-      <h2>Scenes</h2>
-      <div id="scenes" class="scenes"></div>
-    </section>
-
-    <section>
-      <h2>Rooms</h2>
-      <div id="rooms" class="rooms"></div>
-    </section>
-
-    <section>
-      <div class="row-between">
-        <h2>Updates</h2>
-        <button id="brief-now" class="ghost">Brief me now</button>
-      </div>
-      <ol id="feed" class="feed"></ol>
-    </section>
-
-    <section id="sim" class="card" hidden>
-      <h2>Simulator</h2>
-      <p class="muted small" id="sim-note">No hardware is connected. Trigger a sensor and watch Haven respond.</p>
-      <div class="sim-grid" id="sim-buttons"></div>
-    </section>
-
-    <footer class="muted small" id="footer"></footer>
-  </main>
+      <p id="voice-hint" class="voice-hint" hidden></p>
+    </div>
+  </div>
   <!--/haven:body-->
   <script src="app.js" type="module"></script>
 </body>

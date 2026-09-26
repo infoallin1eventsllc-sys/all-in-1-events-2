@@ -11,6 +11,8 @@ import { HomeAssistantAdapter } from "./adapters/homeassistant.js";
 import { Notifier } from "./notify.js";
 import { Automations, Presence } from "./automations.js";
 import { Briefings } from "./briefings.js";
+import { Learner } from "./learning.js";
+import { Reflection } from "./reflection.js";
 import { createAgent } from "./agent/index.js";
 
 export function loadConfig(path = new URL("../config/home.json", import.meta.url)) {
@@ -37,21 +39,27 @@ export async function createHome({ config = loadConfig(), env = process.env, dat
       return `${weekday} ${friendlyTime(config.home.timezone)}`;
     },
   };
+  home.learner = new Learner(home);
   home.automations = new Automations(home);
   home.agent = await createAgent(home, env);
   home.briefings = new Briefings({ home });
+  home.reflection = new Reflection({ home });
 
   home.start = async () => {
     await adapter.start();
     home.automations.start();
+    home.learner.start();
     home.briefings.start();
+    home.reflection.start();
     bus.publish("system", { message: `Haven started (${adapter.name} adapter, ${home.agent.kind} agent).` });
   };
   home.stop = () => {
     store.flush();
     adapter.stop();
     home.automations.stop();
+    home.learner.stop();
     home.briefings.stop();
+    home.reflection.stop();
   };
   return home;
 }

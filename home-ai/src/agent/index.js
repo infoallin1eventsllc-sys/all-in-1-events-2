@@ -4,6 +4,23 @@
 import { createLocalAgent } from "./local.js";
 
 export async function createAgent(home, env) {
+  return withMemory(home, await pickAgent(home, env));
+}
+
+// Every conversation, from the app, voice or Siri, is logged for the
+// overnight reflection agent (the homeowner can see and erase it).
+function withMemory(home, agent) {
+  return {
+    ...agent,
+    async chat(text, opts) {
+      const r = await agent.chat(text, opts);
+      home.learner?.logConversation(text, r.reply);
+      return r;
+    },
+  };
+}
+
+async function pickAgent(home, env) {
   const local = createLocalAgent(home);
   if (!env.ANTHROPIC_API_KEY) return local;
 
@@ -40,6 +57,14 @@ export async function createAgent(home, env) {
       } catch (err) {
         home.bus.publish("agent_error", { error: String(err.message || err) });
         return null;
+      }
+    },
+    async reflect(dayLog) {
+      try {
+        return (await claude.reflect(dayLog)) ?? local.reflect(dayLog);
+      } catch (err) {
+        home.bus.publish("agent_error", { error: String(err.message || err) });
+        return local.reflect(dayLog);
       }
     },
     reset: claude.reset,

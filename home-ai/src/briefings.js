@@ -86,6 +86,7 @@ export class Briefings {
         refused,
       },
       heldDuringQuietHours: held.map((h) => `${h.title}: ${h.body}`),
+      newSuggestions: this.home.learner ? this.home.learner.pendingSuggestions().map((x) => x.text) : [],
       waitingForConfirmation: pending,
     };
     const needsAttention = wet.length > 0 || !valve.state.open || unlocked.length > 0 || garage.state.door !== "closed" || pending.length > 0;
@@ -109,6 +110,7 @@ export function template(b, { facts: f }) {
     body += issues.length ? " Say \"goodnight\" and I'll lock up." : f.lightsOn.length ? ` ${f.lightsOn.length} light(s) still on.` : "";
   }
   if (f.sinceLast.automations) body += ` I handled ${f.sinceLast.automations} thing(s) automatically since the last update.`;
+  if (f.newSuggestions?.length) body += ` I have ${f.newSuggestions.length === 1 ? "an idea" : `${f.newSuggestions.length} ideas`} based on your habits; see Haven's suggestions on the panel.`;
   return { title: `${b.label}${issues.length ? ": check the house" : ""}`, body: body.trim() };
 }
 

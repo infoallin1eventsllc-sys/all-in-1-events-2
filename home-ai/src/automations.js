@@ -14,7 +14,7 @@ import { inWindow, localParts } from "./core/time.js";
 import { PRIORITY } from "./notify.js";
 
 export class Automations {
-  constructor({ config, registry, controller, bus, notifier, presence }) {
+  constructor({ config, registry, controller, bus, notifier, presence, learner }) {
     this.config = config;
     this.s = config.settings;
     this.registry = registry;
@@ -22,6 +22,7 @@ export class Automations {
     this.bus = bus;
     this.notifier = notifier;
     this.presence = presence;
+    this.learner = learner;
     this.autoLit = new Map();      // light id -> room it was lit for
     this.garageOpenedAt = null;
     this.garageAlerted = false;
@@ -75,12 +76,15 @@ export class Automations {
 
   async onMotion(sensor) {
     if (!this.isDark()) return;
+    // The homeowner asked not to have this room lit automatically now.
+    if (this.learner && !this.learner.allowMotionLight(sensor.room)) return;
     const lights = sensor.lights
       ? sensor.lights.map((id) => this.registry.get(id)).filter(Boolean)
       : this.registry.byRoom(sensor.room).filter((d) => d.type === "light");
     for (const light of lights) {
       if (light.state.on) continue;
-      const r = await this.run(light.id, { on: true, brightness: 100 }, `Motion: ${sensor.name}`);
+      const brightness = this.learner?.preferredBrightness(light.room) ?? 100;
+      const r = await this.run(light.id, { on: true, brightness }, `Motion: ${sensor.name}`);
       if (r.status === "done") this.autoLit.set(light.id, sensor.room);
     }
   }
@@ -137,7 +141,8 @@ export class Automations {
 
     if (e.kind === "arrived") {
       const thermostat = this.registry.byType("thermostat")[0];
-      if (thermostat?.state.setback) await this.run(thermostat.id, { mode: "auto", target: 71 }, `${e.name} is home`);
+      const target = this.learner?.preferredTemp() ?? 71;
+      if (thermostat?.state.setback) await this.run(thermostat.id, { mode: "auto", target }, `${e.name} is home`);
       if (this.isDark() && e.wasEmpty) await this.controller.runScene("home", "automation", `${e.name} arrived`);
       await this.notifier.send({ priority: PRIORITY.INFO, title: `Welcome home, ${e.name}`, body: "The house is ready." });
     }

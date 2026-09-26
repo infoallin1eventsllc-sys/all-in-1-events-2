@@ -9,6 +9,8 @@ export async function testHome(overrides = {}) {
   home.notifier.isQuietHours = () => false;
   home.automations.start();
   home.automations.stop(); // keep the event subscriptions, drop the timer; tests call tick() directly
+  home.learner.start();
+  home.learner.stop(); // same: listen for actions, but routines run only when a test calls them
   return home;
 }
 

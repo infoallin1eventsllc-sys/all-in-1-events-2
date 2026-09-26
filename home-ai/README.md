@@ -6,7 +6,8 @@ Haven runs a new home: lights, ceiling fans, heating and air conditioning, the w
 - **Prompts**, both the build spec and the agent's own system prompt: [PROMPT.md](PROMPT.md)
 - **iPhone, Apple Watch and car setup**: [docs/APPLE-SETUP.md](docs/APPLE-SETUP.md)
 - **Client demos** in two styles, Futuristic and Grounded, with shareable links, concept images and prompts: [docs/DEMOS.md](docs/DEMOS.md)
-- **Design system** for both looks: [docs/DESIGN.md](docs/DESIGN.md)
+- **Design system** for the wall panel in both looks: [docs/DESIGN.md](docs/DESIGN.md)
+- **Agent stack**: how Haven talks, listens, learns and stays safe: [docs/AGENTS.md](docs/AGENTS.md)
 - **Current status**, what's verified and what's next: [docs/STATUS.md](docs/STATUS.md)
 
 ## Try it now (no hardware needed)
@@ -21,7 +22,7 @@ npm start
 
 Open `http://localhost:8787` and enter the owner token printed in the terminal. The **Simulator** panel at the bottom lets you trigger motion, a leak, a cold snap, arriving and leaving, and watch the house react.
 
-Try typing: `turn on the kitchen lights`, `set the thermostat to 70`, `open the garage` (it waits for you to confirm), `goodnight`, `status`.
+Try typing or tapping the mic: `turn on the kitchen lights`, `I'm cold`, `the kitchen is too bright`, `open the garage` (it waits for you to confirm), `I don't like the porch light on all night`, `what do you know about me`, `goodnight`.
 
 ## Check that everything works
 
@@ -51,13 +52,16 @@ src/
   safety.js            risk tiers, hard limits, who may do what
   automations.js       motion, leak, arrival/away, garage, freeze, energy rules
   briefings.js         morning / midday / evening / night updates
+  learning.js          the homeowner profile: comfort, habits, suggestions, routines
+  reflection.js        runs the daily reflection agent
   notify.js            app feed, ntfy, Pushover, quiet hours
   core/                event bus, device registry, controller, storage, time
   adapters/            simulator, Home Assistant
   agent/               Claude agent, tools, offline parser
-prompts/agent-system.md  the AI's system prompt
+prompts/agent-system.md  the conversation agent's system prompt
+prompts/reflection.md    the reflection agent's system prompt
 config/home.json         rooms, devices, scenes, limits, schedule
-web/                     the phone/tablet app
+web/                     the wall panel / phone app (voice in web/voice.js)
 test/                    safety, automation and agent tests (npm test)
 ```
 
@@ -78,6 +82,11 @@ All routes need `Authorization: Bearer <owner token>` except `/api/health`.
 | POST | `/api/confirm/:id` | `{approve}` | Confirm or cancel a pending action |
 | POST | `/api/presence` | `{person, kind}` | approaching / arrived / left |
 | POST | `/api/briefing` | | Send a briefing now |
+| GET | `/api/profile` | | What Haven has learned, and pending suggestions |
+| POST | `/api/feedback` | `{feeling, room?}` | too_cold, too_warm, too_bright, too_dark, just_right |
+| POST | `/api/suggestions/:id` | `{accept}` | Answer a suggestion |
+| POST | `/api/profile/forget` | `{id}` | Forget one item, or `"all"` |
+| POST | `/api/profile/reflect` | | Run the daily review now |
 | POST | `/api/shortcut/ask` | `{text}` | Siri: returns `{text}` to speak |
 | POST | `/api/shortcut/garage` | `{action}` | Car/watch button: open, close, toggle |
 | POST | `/api/sim/sensor` | `{device, state}` | Simulator only |

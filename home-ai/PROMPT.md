@@ -44,12 +44,19 @@ There are two prompts in this project:
 > - Writes the scheduled briefings from a digest of state and events since the last one.
 > - Falls back to an offline command parser when there's no API key or no internet.
 >
+> **Learning the homeowner**
+> - Learn every day from what they say ("I'm cold", "too bright", "just right", likes and dislikes), what they change by hand, and what automations they undo.
+> - Comfort feedback acts at once and is remembered per time of day; motion lights and arrival use the learned brightness and temperature.
+> - Habits (the same change at about the same time on three different days) and repeated undos become suggestions. Nothing learned acts until the homeowner says yes; accepted routines still pass the safety controller as automations.
+> - A reflection agent reviews each day's conversations and feedback overnight and returns notes, likes, dislikes and routine ideas as structured output.
+> - Everything learned is visible and deletable.
+>
 > **Communication**
 > - Everything appears in the app's live feed. Push alerts go through ntfy or Pushover to iPhone and mirror to Apple Watch.
 > - Priorities: urgent (breaks through quiet hours), normal (held during quiet hours and folded into the next briefing), info (app only).
 >
 > **Apps and integrations**
-> - An installable web app for phone and tablet: at-a-glance status, confirmation cards, chat, scenes, rooms and devices, activity feed, and a simulator panel.
+> - A wall-panel app for in-wall tablets, phones and tablets: room-first stage with a time-of-day backdrop and house status; glass controls with scenes, device tiles (dimmers, climate dial), suggestions and confirmations; a voice bar where the homeowner talks to Haven (push-to-talk) and Haven answers out loud; an "About you" view of what Haven has learned; a simulator.
 > - HTTP API with an owner token for Siri Shortcuts ("Ask Haven", "Garage"), arrival/departure geofences, and CarPlay.
 > - Optional bridge into Apple Home for native Siri, Apple Watch and CarPlay controls.
 >

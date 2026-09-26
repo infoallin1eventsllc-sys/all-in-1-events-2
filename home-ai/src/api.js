@@ -3,6 +3,8 @@
 // token, handler(url, body, match)].
 
 import { SENSOR_TYPES } from "./core/registry.js";
+import { blockOf } from "./learning.js";
+import { localParts } from "./core/time.js";
 
 export function createRoutes(home) {
   return [
@@ -16,6 +18,9 @@ export function createRoutes(home) {
       adapter: home.adapter.name,
       channels: home.notifier.channelNames(),
       now: home.now(),
+      timezone: home.config.home.timezone,
+      daypart: blockOf(localParts(home.config.home.timezone).hhmm),
+      suggestions: home.learner.pendingSuggestions().map(({ id, text, type }) => ({ id, text, type })),
     })],
     ["GET", /^\/api\/events$/, true, (url) => home.store.recent.slice(-Math.min(500, Number(url.searchParams.get("limit")) || 100))],
     ["POST", /^\/api\/devices\/([\w.]+)$/, true, (url, body, m) =>
@@ -29,6 +34,13 @@ export function createRoutes(home) {
     ["POST", /^\/api\/presence$/, true, (url, body) =>
       home.presence.update(body.person || "owner", body.kind, { trusted: true })],
     ["POST", /^\/api\/briefing$/, true, () => home.briefings.send()],
+
+    // What Haven has learned about the homeowner.
+    ["GET", /^\/api\/profile$/, true, () => home.learner.view()],
+    ["POST", /^\/api\/feedback$/, true, (url, body) => home.learner.feedback(body.feeling, { room: body.room, origin: "owner" })],
+    ["POST", /^\/api\/suggestions\/(\w+)$/, true, (url, body, m) => home.learner.respond(m[1], body.accept === true)],
+    ["POST", /^\/api\/profile\/forget$/, true, (url, body) => home.learner.forget(String(body.id || ""))],
+    ["POST", /^\/api\/profile\/reflect$/, true, () => home.reflection.run()],
 
     // Apple Shortcuts: plain-text replies so Siri can read them aloud.
     ["POST", /^\/api\/shortcut\/ask$/, true, async (url, body) => {

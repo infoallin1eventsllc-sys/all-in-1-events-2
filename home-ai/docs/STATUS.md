@@ -1,6 +1,6 @@
 # Haven: Where Things Stand
 
-_Last updated: September 26, 2026. Branch `claude/inspiring-fermi-jpi3vh` in `infoallin1eventsllc-sys/all-in-1-events-2`, folder `home-ai/`._
+_Last updated: September 26, 2026 (wall panel, voice and learning added). Branch `claude/inspiring-fermi-jpi3vh` in `infoallin1eventsllc-sys/all-in-1-events-2`, folder `home-ai/`._
 
 ## Links
 - Demo A, Futuristic: https://claude.ai/artifact/NHSYrvBSADDcedguH3CBSm
@@ -11,17 +11,16 @@ Both are private until shared from each page's Share menu.
 ## Verified working
 `npm run check` runs everything below. Last result: all passing, twice in a row.
 
-- **82 automated tests** (`npm test`)
+- **98 automated tests** (`npm test`)
   - Safety rules: confirmations, hard limits, the leak interlock, garage anti-bounce, owner vs. AI vs. automation permissions
   - Automations: motion lights on and off, leak shutoff, arriving / approaching / leaving, garage reminders, freeze protection, quiet hours
-  - Every chat phrase the app and docs suggest (29 phrases), plus questions, scenes and the "which room?" fallback
-  - Every HTTP route, including login protection, lockout after wrong tokens, bad input, the live event stream, Siri Shortcut endpoints and path-traversal blocking
-  - Home Assistant bridge against a fake Home Assistant: commands out, state back, sensors feeding automations, unreachable devices reported honestly
-  - Push alerts: ntfy and Pushover payloads, a failing channel, info-only messages
-  - Scheduled briefings firing once, and quiet-hours messages rolling into the next briefing
-  - The real `npm start` program: first-run token, and device state plus activity log surviving a restart
-  - The Claude agent's tool loop against a mocked API
-- **118 browser checks** (`npm run e2e`), at phone size, in both the home-server app and the demo build: every room control, the status-line fixes, Confirm and Cancel, chat, all five scenes, Brief me now, every simulator button, the look switch, and no sideways scrolling.
+  - Every chat phrase the panel and docs suggest, plus questions, scenes and the "which room?" fallback
+  - **Learning:** "I'm cold/stuffy/too bright/just right" acting and being remembered per time of day; learned brightness used by motion lights and learned temperature on arrival; a habit on 3 days becoming a suggestion (never an action); dismissed suggestions never repeating; two undone motion lights becoming "stop doing that" and accepting it working; learned routines unable to open, unlock or restore water; likes, dislikes and notes remembered, listed and forgotten; conversations logged for reflection
+  - **Reflection agent:** offline pattern notes, and the Claude version requesting JSON-schema output with its findings merged safely (mocked API)
+  - **Conversation agent tools:** record_feedback and remember through Claude (mocked API)
+  - Every HTTP route including the profile, feedback, suggestion, forget and reflect routes
+  - Home Assistant bridge, ntfy/Pushover payloads, scheduled briefings, and the real server surviving a restart
+- **Browser checks** (`npm run e2e`) in both the home-server panel and the demo build: every tile control (switches, brightness slider, fan speeds, climate dial and modes, water heater, valve, garage, locks, Lock up), room tabs, status fixes, Confirm and Cancel, chat, **voice** (a spoken command runs, Haven answers aloud, the speaker button mutes it, the leak alert is read aloud), all five scenes, the feeling buttons, **About you** (learned items, forget one, review my day, a habit suggestion accepted into a routine, forget everything), Brief me now, every simulator button, both styles, and no sideways scrolling at wall-panel or phone width.
 
 ## Fixed in the debug pass
 1. **Demo safety bypass:** the demo shared live device objects with the screen, so the new +/− buttons could push the water heater to 130°F past its 125°F limit. The demo now copies data both ways, like a real network.
@@ -37,7 +36,8 @@ Both are private until shared from each page's Share menu.
 11. **A quick restart could lose the last change.** State is now saved on shutdown.
 
 ## Not yet verified
-- **The live Claude AI.** No API key here, so it's tested only against a mocked API. First thing to try: put `ANTHROPIC_API_KEY` in `.env`, run `npm start`, and chat.
+- **The live Claude AI** (conversation, briefings and the nightly reflection). No API key here, so all three are tested only against a mocked API. First thing to try: put `ANTHROPIC_API_KEY` in `.env`, run `npm start`, and chat.
+- **Real microphones and speakers.** Voice is tested with stand-ins for the browser's speech features. Try it on the actual panel device over HTTPS (docs/APPLE-SETUP.md, section 1b). Voice input doesn't work inside the published demo links (the viewer blocks microphones); speech output should.
 - **Real hardware.** Tested against a fake Home Assistant, not a real one.
 - **Real push to a phone.** Payloads are tested; delivery to an actual iPhone/Watch needs an ntfy topic or Pushover keys.
 - **Apple Shortcuts** on a real iPhone (the endpoints they call are tested).
@@ -45,8 +45,9 @@ Both are private until shared from each page's Share menu.
 - **Concept images** (docs/DEMOS.md) haven't been looked at by me; the image host is blocked here.
 
 ## Next steps
-1. Live Claude test with an API key.
-2. Choose the demo direction with the client (A or B), then a full room set in that style.
-3. Move `home-ai/` into its own repository. This repo auto-deploys the All in 1 Events site to Netlify, which would publish these files under that site.
-4. Connect a Home Assistant hub and one real device of each type.
-5. Native iOS/watchOS app with Confirm on the watch (see ANALYSIS.md roadmap).
+1. Live Claude test with an API key: chat, "Review my day", and a briefing.
+2. Try voice on a real tablet or phone over HTTPS.
+3. Choose the demo direction with the client (A or B), then a full room set in that style.
+4. Move `home-ai/` into its own repository. This repo auto-deploys the All in 1 Events site to Netlify, which would publish these files under that site.
+5. Connect a Home Assistant hub and one real device of each type.
+6. Native iOS/watchOS app with Confirm on the watch (see ANALYSIS.md roadmap).

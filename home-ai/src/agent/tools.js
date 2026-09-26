@@ -48,6 +48,47 @@ export const TOOL_DEFS = [
     },
   },
   {
+    name: "record_feedback",
+    description: "The homeowner said how the house feels. Adjusts the thermostat or lights right away and remembers the preference for this time of day. Use for 'I'm cold', 'too warm', 'too bright in here', 'too dark', 'this is perfect'.",
+    input_schema: {
+      type: "object",
+      properties: {
+        feeling: { type: "string", enum: ["too_cold", "too_warm", "too_bright", "too_dark", "just_right"] },
+        room: { type: "string", description: "Room id if they named or implied one, e.g. 'kitchen'. Omit to use where they are." },
+      },
+      required: ["feeling"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "remember",
+    description: "Save something lasting about the homeowner: a like, a dislike, or a note (routines, family, schedule). Only save what they said or clearly implied, in their words, short.",
+    input_schema: {
+      type: "object",
+      properties: {
+        kind: { type: "string", enum: ["like", "dislike", "note"] },
+        text: { type: "string", description: "Short phrase, e.g. 'the porch light on all night' or 'Mom visits on Sundays'." },
+      },
+      required: ["kind", "text"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "forget",
+    description: "Remove something Haven learned, by the id shown in get_profile, or 'all' when the homeowner asks to forget everything.",
+    input_schema: {
+      type: "object",
+      properties: { id: { type: "string" } },
+      required: ["id"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "get_profile",
+    description: "Everything Haven has learned about the homeowner (with ids), plus suggestions waiting for their answer.",
+    input_schema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
     name: "notify_homeowner",
     description: "Push a notification to the homeowner's phone and watch. Use only for something they need to see outside this conversation, not to repeat your reply.",
     input_schema: {
@@ -74,6 +115,14 @@ export function makeToolRunner(home, origin) {
         return home.controller.runScene(input.scene, origin, input.reason || "Asked Haven");
       case "get_recent_events":
         return home.store.recent.slice(-Math.min(100, input?.limit || 30)).map(compactEvent);
+      case "record_feedback":
+        return home.learner.feedback(input.feeling, { room: input.room, origin });
+      case "remember":
+        return home.learner.remember(input.kind, input.text);
+      case "forget":
+        return home.learner.forget(input.id);
+      case "get_profile":
+        return home.learner.view();
       case "notify_homeowner":
         return home.notifier.send({ title: input.title, body: input.body, priority: input.urgent ? "urgent" : "normal" });
       default:
@@ -97,6 +146,8 @@ export function homeState(home, room) {
   return [
     ...lines,
     `People: ${people}`,
+    `What you know about the homeowner:\n${home.learner ? home.learner.summary() : "Nothing learned yet."}`,
+    `Suggestions waiting for their answer: ${home.learner?.pendingSuggestions().map((x) => x.text).join(" | ") || "none"}`,
     `Waiting for homeowner confirmation: ${pending.length ? pending.join("; ") : "nothing"}`,
   ].join("\n");
 }
