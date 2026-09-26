@@ -645,7 +645,9 @@ footer { text-align: center; }
 .panel[data-screen="wallpaper"][data-daypart="night"] { --wp-photo-auto: url("wallpapers/night.webp"); --wp-scrim: rgba(6, 8, 14, 0.2), rgba(6, 8, 14, 0.1) 40%, rgba(6, 8, 14, 0.4); }
 /* The photo sits on a fixed layer (background-attachment: fixed doesn't work
    on iPhone and iPad). */
-html .panel.alt-mode[data-screen="wallpaper"] { background: #0b0d14; isolation: isolate; }
+/* color here, not only the tokens: text inherits the computed color from
+   body, so chat bubbles and suggestion cards would otherwise stay dark. */
+html .panel.alt-mode[data-screen="wallpaper"] { background: #0b0d14; isolation: isolate; color: var(--ink); }
 .panel.alt-mode[data-screen="wallpaper"]::before {
   content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
   background:
