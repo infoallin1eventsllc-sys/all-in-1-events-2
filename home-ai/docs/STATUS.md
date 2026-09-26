@@ -1,17 +1,18 @@
 # Haven: Where Things Stand
 
-_Last updated: September 26, 2026 (home map, energy, accessibility audits and the enterprise plan added). Branch `claude/inspiring-fermi-jpi3vh` in `infoallin1eventsllc-sys/all-in-1-events-2`, folder `home-ai/`._
+_Last updated: September 26, 2026 (screen library with six screens, and panel rooms, added). Branch `claude/inspiring-fermi-jpi3vh` in `infoallin1eventsllc-sys/all-in-1-events-2`, folder `home-ai/`._
 
 ## Links
 - Demo A, Futuristic: https://claude.ai/artifact/NHSYrvBSADDcedguH3CBSm
 - Demo B, Grounded: https://claude.ai/artifact/J46Rus2S3KzY9CpbpYKyCk
+- Screen library catalog (all six screens, both finishes, links to open each live): https://claude.ai/artifact/4tyqsjpBgWRi3ds9FwLnb6
 
 Both are private until shared from each page's Share menu.
 
 ## Verified working
 `npm run check` runs everything below. Last result: all passing, twice in a row.
 
-- **103 automated tests** (`npm test`)
+- **104 automated tests** (`npm test`)
   - Safety rules: confirmations, hard limits, the leak interlock, garage anti-bounce, owner vs. AI vs. automation permissions
   - Automations: motion lights on and off, leak shutoff, arriving / approaching / leaving, garage reminders, freeze protection, quiet hours
   - Every chat phrase the panel and docs suggest, plus questions, scenes and the "which room?" fallback
@@ -22,7 +23,8 @@ Both are private until shared from each page's Share menu.
   - Every HTTP route including the profile, feedback, suggestion, forget, reflect and energy routes
   - Home Assistant bridge, ntfy/Pushover payloads, scheduled briefings, and the real server surviving a restart
 - **Browser checks** (`npm run e2e`) in both the home-server panel and the demo build: every tile control (switches, brightness slider, fan speeds, climate dial and modes, water heater, valve, garage, locks, Lock up), room tabs, status fixes, Confirm and Cancel, chat, **voice** (a spoken command runs, Haven answers aloud, the speaker button mutes it, the leak alert is read aloud), all five scenes, the feeling buttons, **About you** (learned items, forget one, review my day, a habit suggestion accepted into a routine, forget everything), Brief me now, every simulator button, both styles, the **home map** (every room drawn, tap to open and back, lit rooms glow, the leak room turns red), **energy** (labeled estimated, live power rises when a fan runs, the chart tooltip and table view), and no sideways scrolling at wall-panel or phone width.
-- **Accessibility:** automated WCAG 2.2 AA audits (axe-core) inside the browser run: sign-in, whole home in both styles, a room, a leak alert, the Updates and About you tabs, and phone width. 0 violations.
+- **Screen library** in the browser run: the library lists six screens; each screen renders its parts and a real control works on it (Command Center light switch, Family Hub briefing, Nightstand Goodnight, Rooms light tap, Entry turn off); the panel room makes "turn on the lights" mean that room; no sideways scrolling on any screen at 390px.
+- **Accessibility:** automated WCAG 2.2 AA audits (axe-core) inside the browser run: sign-in, whole home in both styles, a room, a leak alert, the Updates and About you tabs, phone width, and each library screen (Command Center, Family Hub, Nightstand, Rooms, Entry). 0 violations.
 
 ## Fixed in the debug pass
 1. **Demo safety bypass:** the demo shared live device objects with the screen, so the new +/− buttons could push the water heater to 130°F past its 125°F limit. The demo now copies data both ways, like a real network.

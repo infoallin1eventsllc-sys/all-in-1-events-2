@@ -19,6 +19,7 @@ let room = "all";
 let tab = "home";
 let speakAloud = safeGet("haven.speak") !== "off";
 let started = false;
+let panelRoom = safeGet("haven.panelRoom") || "";
 
 // ---------- helpers ----------
 function safeGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
@@ -55,6 +56,7 @@ const ICON = {
   lock: "M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5Zm-3 8V7a3 3 0 0 1 6 0v3H9Z",
   shield: "M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3Zm-1.2 14.2-3.5-3.5 1.4-1.4 2.1 2.1 4.9-4.9 1.4 1.4-6.3 6.3Z",
   bolt: "M13 2 4 14h6l-1 8 9-12h-6l1-8Z",
+  door: "M6 2h12v20H6V2Zm2 2v16h8V4H8Zm6 7h1.5v2H14v-2Z",
 };
 
 async function api(path, body) {
@@ -153,15 +155,23 @@ const send = (id, command) => api(`/api/devices/${encodeURIComponent(id)}`, { co
 // up. Pending values live apart from the house data (which is only ever
 // replaced by what the house reports), so a refresh arriving between taps
 // can't make a tap step from an old number.
-const pendingTarget = new Map();
-const targetOf = (d) => pendingTarget.get(d.id) ?? d.state.target;
+// A pending value is dropped only when fresh data arrives after its
+// request finished, never before, or a quick second tap could step from
+// data that's a moment old.
+const pendingTarget = new Map(); // device id -> { value, settled }
+const targetOf = (d) => pendingTarget.get(d.id)?.value ?? d.state.target;
 function stepTarget(d, delta) {
   const next = targetOf(d) + delta;
-  pendingTarget.set(d.id, next);
-  renderHome();
+  pendingTarget.set(d.id, { value: next, settled: false });
+  renderCurrent();
   return send(d.id, { target: next }).finally(() => {
-    if (pendingTarget.get(d.id) === next) { pendingTarget.delete(d.id); renderHome(); }
+    const p = pendingTarget.get(d.id);
+    if (p && p.value === next) p.settled = true;
+    refresh();
   });
+}
+function renderCurrent() {
+  if (screen === "signature") renderHome(); else renderAlt();
 }
 
 // What needs the homeowner's attention, most serious first, each with the fix.
@@ -425,14 +435,17 @@ function renderHome() {
 
 const FEELINGS = [["too_cold", "Too cold"], ["too_warm", "Too warm"], ["too_bright", "Too bright"], ["too_dark", "Too dark"], ["just_right", "Just right"]];
 function renderFeel() {
-  $("#feel").replaceChildren(...FEELINGS.map(([f, label]) => el("button", {
+  $("#feel").replaceChildren(...feelButtons());
+}
+function feelButtons() {
+  return FEELINGS.map(([f, label]) => el("button", {
     onclick: async () => {
       say("you", label);
-      const r = await api("/api/feedback", { feeling: f, room: room === "all" ? undefined : room });
+      const r = await api("/api/feedback", { feeling: f, room: room === "all" ? (panelRoom || undefined) : room });
       reply(r.message);
       refresh();
     },
-  }, label)));
+  }, label));
 }
 
 function feedItem(e) {
@@ -567,7 +580,7 @@ async function ask(text) {
   say("you", text);
   $("#orb").dataset.voice = "thinking";
   try {
-    const r = await api("/api/chat", { text, conversationId: "panel" });
+    const r = await api("/api/chat", { text, conversationId: "panel", panelRoom: panelRoom || undefined });
     reply(r.reply || r.error || "Sorry, I didn't get a reply. Try again.");
   } finally {
     if ($("#orb").dataset.voice === "thinking") $("#orb").dataset.voice = "idle";
@@ -609,12 +622,296 @@ function simButtons() {
   $("#sim-buttons").replaceChildren(...buttons.map(([label, fn]) => el("button", { onclick: fn }, label)));
 }
 
+// ---------- screen library ----------
+// Every screen runs on the same live house; only the arrangement changes.
+const SCREENS = [
+  { id: "signature", name: "Signature", best: "Great room or main entry", about: "The house model, the room you're in, and every control on glass. The flagship screen." },
+  { id: "command-center", name: "Command Center", best: "Office or a large wall display", about: "Everything at once: climate, energy, every light, every door, room conditions and updates." },
+  { id: "family-hub", name: "Family Hub", best: "Kitchen", about: "A big clock, today's briefing, scenes and quick comfort buttons the whole family can use." },
+  { id: "nightstand", name: "Nightstand", best: "Bedroom", about: "Dim and quiet: the time, Haven's orb and four big bedtime buttons. Talk to it in the dark." },
+  { id: "rooms", name: "Rooms", best: "Large or busy households", about: "Every room as a card with its lights, fans and conditions, one tap each." },
+  { id: "entry", name: "Entry", best: "Mudroom or garage door", about: "Leaving or arriving: lock up, the garage, what's still on, and one-tap Away or Welcome home." },
+];
+function initialScreen() {
+  const fromHash = location.hash.replace("#", "");
+  if (SCREENS.some((x) => x.id === fromHash)) return fromHash;
+  const saved = safeGet("haven.screen");
+  return SCREENS.some((x) => x.id === saved) ? saved : "signature";
+}
+let screen = initialScreen();
+
+function setScreen(id) {
+  screen = id;
+  safeSet("haven.screen", id);
+  try { history.replaceState(null, "", `#${id}`); } catch { /* not allowed here */ }
+  room = "all";
+  render();
+  renderLibrary();
+}
+
+// Small schematic of each layout for the library cards.
+const SCHEMATIC = {
+  "signature": [[0, 0, 5, 12, "s"], [5, 0, 7, 3], [5, 3, 7, 4], [5, 7, 7, 5]],
+  "command-center": [[0, 0, 3, 6, "s"], [3, 0, 3, 6], [6, 0, 6, 6], [0, 6, 3, 6], [3, 6, 3, 6], [6, 6, 3, 6], [9, 6, 3, 6]],
+  "family-hub": [[0, 0, 6, 6, "s"], [6, 0, 6, 6], [0, 6, 12, 3], [0, 9, 4, 3], [4, 9, 4, 3], [8, 9, 4, 3]],
+  "nightstand": [[3, 1, 6, 5, "s"], [1, 8, 2.5, 3], [3.8, 8, 2.5, 3], [6.6, 8, 2.5, 3], [9.4, 8, 1.6, 3]],
+  "rooms": [[0, 0, 4, 6], [4, 0, 4, 6], [8, 0, 4, 6], [0, 6, 4, 6], [4, 6, 4, 6], [8, 6, 4, 6]],
+  "entry": [[0, 0, 4, 5, "s"], [4, 0, 4, 5, "s"], [8, 0, 4, 5, "s"], [0, 5, 6, 7], [6, 5, 6, 7]],
+};
+function schematic(id) {
+  const box = el("div", { class: "schematic", "aria-hidden": "true" });
+  for (const [x, y, w, h, kind] of SCHEMATIC[id]) {
+    box.append(el("span", { class: kind === "s" ? "hl" : "", style: `left:${(x / 12) * 100}%;top:${(y / 12) * 100}%;width:calc(${(w / 12) * 100}% - 4px);height:calc(${(h / 12) * 100}% - 4px)` }));
+  }
+  return box;
+}
+
+function renderLibrary() {
+  const select = $("#panel-room");
+  select.replaceChildren(el("option", { value: "" }, "Whole home (no single room)"),
+    ...state.rooms.filter((r) => r.devices.length).map((r) => el("option", { value: r.id }, r.name)));
+  select.value = panelRoom;
+  $("#library-list").replaceChildren(...SCREENS.map((x) => el("li", { class: `library-card${x.id === screen ? " current" : ""}` },
+    schematic(x.id),
+    el("div", { class: "library-text" },
+      el("h3", {}, x.name),
+      el("p", { class: "best" }, `Best for: ${x.best}`),
+      el("p", { class: "muted small" }, x.about)),
+    el("button", { class: x.id === screen ? "ghost" : "primary", "aria-pressed": String(x.id === screen), "data-screen": x.id, onclick: () => setScreen(x.id) },
+      x.id === screen ? "In use" : "Use this screen"))));
+}
+
+function openLibrary() {
+  renderLibrary();
+  const d = $("#library");
+  if (d.showModal) d.showModal(); else d.setAttribute("open", "");
+}
+$("#library-close").addEventListener("click", () => $("#library").close ? $("#library").close() : $("#library").removeAttribute("open"));
+$("#panel-room").addEventListener("change", (e) => {
+  panelRoom = e.target.value;
+  safeSet("haven.panelRoom", panelRoom);
+  showHint(panelRoom ? `This panel is in the ${roomName(panelRoom).toLowerCase()}. "Turn off the lights" here means that room.` : "This panel covers the whole home.");
+});
+document.addEventListener("click", (e) => { if (e.target.closest?.(".screens-open")) openLibrary(); });
+
+// ---------- building blocks for the other screens ----------
+const block = (title, cls, ...children) => el("section", { class: `xcard ${cls || ""}` }, title ? el("h2", {}, title) : null, ...children);
+
+function altHeader({ big = false } = {}) {
+  const list = issues();
+  const hs = houseState();
+  const tz = state.timezone;
+  let clock = "", date = "";
+  try {
+    clock = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit" }).format(new Date());
+    date = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "long", month: "long", day: "numeric" }).format(new Date());
+  } catch { /* unknown timezone */ }
+  const th = byType("thermostat")[0];
+  return el("header", { class: `alt-head${big ? " big" : ""}` },
+    el("div", { class: "alt-title" },
+      el("p", { class: "eyebrow" }, state.home),
+      el("p", { class: "alt-clock" }, clock),
+      el("p", { class: "alt-date" }, `${date} · ${th.state.current}°F inside`)),
+    el("div", { class: "alt-status status", "data-state": hs },
+      el("span", { class: "status-mark", "aria-hidden": "true" }),
+      el("div", { class: "status-text" },
+        el("p", { class: "status-headline" }, hs === "alert" ? "Needs your attention now" : list.length ? `${list.length} ${list.length === 1 ? "thing needs" : "things need"} attention` : state.pending.length ? "Waiting for your OK" : "All secure"),
+        el("ul", { class: "issues" }, ...list.map((i) => el("li", { class: `issue ${i.level}` }, i.text, i.action && el("button", { onclick: i.action[1] }, i.action[0])))))),
+    el("button", { class: "screens-open", "aria-haspopup": "dialog" }, "Screens"));
+}
+
+function asksBlock() {
+  const cards = [...suggestionCards(state.suggestions || []), ...state.pending.map((p) => askCard("confirm", "Needs your OK", `${p.summary}?`, [
+    el("button", { onclick: () => api(`/api/confirm/${p.confirmId}`, { approve: false }).then(showResult) }, "Cancel"),
+    el("button", { class: "primary", onclick: () => api(`/api/confirm/${p.confirmId}`, { approve: true }).then(showResult) }, "Confirm"),
+  ]))];
+  return cards.length ? el("div", { class: "stack alt-asks" }, ...cards) : null;
+}
+
+function scenesBlock(title = "Scenes") {
+  return block(title, "scenes-card", el("div", { class: "scenes" }, ...Object.entries(state.scenes).map(([id, label]) =>
+    el("button", { class: "scene", "data-scene": id, onclick: () => api(`/api/scenes/${id}`, {}).then(showResult) }, el("span", {}, label)))));
+}
+
+function lightsBlock(filterRoom = null) {
+  const lights = byType("light").filter((l) => !filterRoom || l.room === filterRoom);
+  const lit = lights.filter((l) => l.state.on);
+  return block(filterRoom ? `${roomName(filterRoom)} lights` : "Lights", "lights-card",
+    el("ul", { class: "lights-list" }, ...lights.map((l) => el("li", { class: l.state.on ? "on" : "", "data-device": l.id },
+      el("span", { class: "tile-icon" }, svg(ICON.light)),
+      el("div", { class: "ll-text" }, el("span", { class: "ll-name" }, l.name), el("span", { class: "ll-state" }, describe(l))),
+      toggle(l.name, l.state.on, () => send(l.id, { on: !l.state.on })),
+      l.state.on ? el("input", { type: "range", class: "ll-slider", min: "5", max: "100", step: "5", value: String(l.state.brightness), "aria-label": `${l.name} brightness`, style: `--fill:${l.state.brightness}%`,
+        oninput: (e) => e.target.style.setProperty("--fill", `${e.target.value}%`), onchange: (e) => send(l.id, { on: true, brightness: Number(e.target.value) }) }) : null))),
+    lit.length ? el("button", { class: "ghost", onclick: () => Promise.all(lit.map((l) => api(`/api/devices/${l.id}`, { command: { on: false } }))).then(() => showResult({ message: "All lights off." })) }, `Turn off ${lit.length === 1 ? "the light" : `all ${lit.length}`}`) : null);
+}
+
+function securityBlock() {
+  const items = [];
+  for (const d of [...byType("garage"), ...byType("lock"), ...byType("contact"), ...byType("water_valve")]) {
+    const s = d.state;
+    let action = null;
+    if (d.type === "garage") action = [s.door === "closed" ? "Open" : "Close", () => send(d.id, { door: s.door === "closed" ? "open" : "closed" })];
+    if (d.type === "lock") action = [s.locked ? "Unlock" : "Lock", () => send(d.id, { locked: !s.locked })];
+    if (d.type === "water_valve") action = [s.open ? "Shut off" : "Turn on", () => send(d.id, { open: !s.open })];
+    const icon = d.type === "garage" ? ICON.garage : d.type === "water_valve" ? ICON.water : d.type === "contact" ? ICON.door : ICON.lock;
+    items.push(el("li", { class: `sec-item${isAlert(d) ? " alert" : ""}`, "data-device": d.id },
+      el("span", { class: "tile-icon" }, svg(icon)),
+      el("div", {}, el("span", { class: "ll-name" }, d.name.replace(/ Lock$/, "")), el("span", { class: "ll-state" }, describe(d)[0].toUpperCase() + describe(d).slice(1))),
+      action ? el("button", { class: d.type === "water_valve" && s.open ? "danger" : "", onclick: action[1] }, action[0]) : null));
+  }
+  const secure = !issues().length;
+  return block("Doors & water", "security-card", el("ul", { class: "sec-list" }, ...items),
+    secure ? null : el("button", { class: "primary", onclick: lockUp }, "Lock up"));
+}
+
+function conditionsBlock() {
+  const rows = [];
+  for (const r of state.rooms) {
+    const devs = allDevices().filter((d) => d.room === r.id);
+    const bits = [];
+    const th = devs.find((d) => d.type === "thermostat");
+    const temp = devs.find((d) => d.type === "temperature");
+    const motion = devs.filter((d) => d.type === "motion");
+    const leak = devs.filter((d) => d.type === "leak");
+    const lux = devs.find((d) => d.type === "illuminance");
+    if (th) bits.push(`${th.state.current}°F · ${th.state.humidity}% humidity`);
+    if (temp) bits.push(`${temp.state.value}°F`);
+    if (lux) bits.push(`${lux.state.lux} lux`);
+    if (motion.length) bits.push(motion.some((m) => m.state.motion) ? "Occupied now" : motion.some((m) => m.state.lastMotion && Date.now() - Date.parse(m.state.lastMotion) < 10 * 60_000) ? "Occupied recently" : "Clear");
+    if (leak.length) bits.push(leak.some((l) => l.state.wet) ? "LEAK" : "Dry");
+    if (!bits.length) continue;
+    rows.push(el("li", { class: bits.includes("LEAK") ? "alert" : "" }, el("span", { class: "ll-name" }, r.name), el("span", { class: "ll-state" }, bits.join(" · "))));
+  }
+  return block("Room conditions", "cond-card", el("ul", { class: "cond-list" }, ...rows));
+}
+
+function updatesBlock(n = 6) {
+  const items = feed.map((e) => [e, feedItem(e)]).filter(([, f]) => f).slice(-n).reverse();
+  return block("Updates", "updates-card", el("ol", { class: "feed" }, ...items.map(([e, f]) =>
+    el("li", { class: f.urgent ? "urgent" : "" }, el("span", { class: "when" }, timeAgo(e.ts)), el("span", { class: "title" }, f.title), el("span", {}, f.body)))));
+}
+
+function briefingBlock() {
+  const last = [...feed].reverse().find((e) => e.type === "briefing");
+  return block("Today", "briefing-card",
+    last ? el("div", { class: "brief" }, el("p", { class: "brief-title" }, last.title), el("p", {}, last.body), el("p", { class: "when" }, timeAgo(last.ts)))
+      : el("p", { class: "muted" }, "Haven's next update arrives at the scheduled time. Ask for one now:"),
+    el("button", { class: "ghost", onclick: () => api("/api/briefing", {}) }, "Brief me now"));
+}
+
+function feelBlock() {
+  return block("How does it feel?", "feel-card", el("div", { class: "feel" }, ...feelButtons()));
+}
+
+function mapBlock() {
+  const box = el("div", { class: "map alt-map" });
+  renderMap(box, { rooms: state.rooms, devicesIn: (id) => allDevices().filter((d) => d.room === id), selected: room, onSelect: (id) => { room = room === id ? "all" : id; render(); } });
+  return block(room === "all" ? "The house" : `The house · ${roomName(room)}`, "map-card", box,
+    room !== "all" ? el("button", { class: "ghost", onclick: () => { room = "all"; render(); } }, "Show every room") : null);
+}
+
+function bigButton(label, sub, onclick, cls = "") {
+  return el("button", { class: `big-btn ${cls}`, onclick }, el("span", { class: "big-label" }, label), sub ? el("span", { class: "big-sub" }, sub) : null);
+}
+
+function roomCard(r) {
+  const devs = allDevices().filter((d) => d.room === r.id);
+  const controls = devs.filter((d) => CONTROL_TYPES.has(d.type));
+  const sensors = devs.filter((d) => !CONTROL_TYPES.has(d.type));
+  const th = devs.find((d) => d.type === "thermostat");
+  const btn = (d) => {
+    const s = d.state;
+    const icon = { light: ICON.light, fan: ICON.fan, garage: ICON.garage, lock: ICON.lock, water_valve: ICON.water, water_heater: ICON.heater, thermostat: ICON.climate }[d.type];
+    const fire = {
+      light: () => send(d.id, { on: !s.on }), fan: () => send(d.id, { on: !s.on }),
+      garage: () => send(d.id, { door: s.door === "closed" ? "open" : "closed" }), lock: () => send(d.id, { locked: !s.locked }),
+      water_valve: () => send(d.id, { open: !s.open }), water_heater: () => send(d.id, { on: !s.on }),
+    }[d.type];
+    if (d.type === "thermostat") {
+      return el("div", { class: "room-dev thermo", "data-device": d.id },
+        el("span", { class: "tile-icon" }, svg(icon)),
+        el("span", { class: "rd-name" }, `${targetOf(d)}°F`),
+        el("span", { class: "rd-state" }, `${s.current}°F now`),
+        el("div", { class: "stepper" }, el("button", { "aria-label": "Cooler by 1°F", onclick: () => stepTarget(d, -1) }, "−"), el("button", { "aria-label": "Warmer by 1°F", onclick: () => stepTarget(d, 1) }, "+")));
+    }
+    const on = (d.type === "light" || d.type === "fan" || d.type === "water_heater") && s.on;
+    return el("button", { class: `room-dev${on ? " on" : ""}${isAlert(d) ? " alert" : ""}`, "data-device": d.id, "aria-pressed": d.type === "light" || d.type === "fan" ? String(s.on) : null, "aria-label": `${d.name}: ${describe(d)}`, onclick: fire },
+      el("span", { class: "tile-icon" }, svg(icon)),
+      el("span", { class: "rd-name" }, d.name.replace(new RegExp(`^${r.name} `), "").replace(/^Main /, "")),
+      el("span", { class: "rd-state" }, describe(d)));
+  };
+  return el("section", { class: "xcard room-card", "data-room": r.id },
+    el("div", { class: "row-between" }, el("h2", {}, r.name), th ? el("span", { class: "muted small" }, `${th.state.current}°F`) : null),
+    el("div", { class: "room-devs" }, ...controls.map(btn)),
+    sensors.length ? el("p", { class: "sensors" }, ...sensors.map((d) => el("span", { class: isAlert(d) ? "alert" : "" }, `${d.name.replace(new RegExp(`^${r.name} `), "")}: ${describe(d)}`))) : null);
+}
+
+function renderAlt() {
+  const alt = $("#alt");
+  const th = byType("thermostat")[0];
+  const nodes = [];
+  if (screen === "command-center") {
+    nodes.push(altHeader(), asksBlock(),
+      el("div", { class: "grid-cc" },
+        mapBlock(), climateTile(th), energyTile(), lightsBlock(room === "all" ? null : room), securityBlock(), conditionsBlock(), scenesBlock(), updatesBlock(6)));
+  } else if (screen === "family-hub") {
+    nodes.push(altHeader({ big: true }), asksBlock(),
+      el("div", { class: "grid-family" }, briefingBlock(), climateTile(th), scenesBlock("Scenes"), feelBlock(), lightsBlock(panelRoom || null)));
+  } else if (screen === "nightstand") {
+    const here = panelRoom || "primary";
+    const lit = byType("light").filter((l) => l.room === here && l.state.on);
+    nodes.push(
+      el("div", { class: "night" },
+        (() => { const h = altHeader(); h.classList.add("night-head"); return h; })(),
+        asksBlock(),
+        el("div", { class: "night-actions" },
+          bigButton("Goodnight", "Lock up, lights off, 68°F", () => api("/api/scenes/goodnight", {}).then(showResult), "primary"),
+          bigButton("Lights off", lit.length ? `${roomName(here)}: ${lit.length} on` : `${roomName(here)} is dark`, () => Promise.all(lit.map((l) => api(`/api/devices/${l.id}`, { command: { on: false } }))).then(() => showResult({ message: `${roomName(here)} lights off.` }))),
+          bigButton("Warmer", `Now ${targetOf(th)}°F`, () => api("/api/feedback", { feeling: "too_cold", room: here }).then((r) => { reply(r.message); refresh(); })),
+          bigButton("Cooler", `Now ${targetOf(th)}°F`, () => api("/api/feedback", { feeling: "too_warm", room: here }).then((r) => { reply(r.message); refresh(); })),
+          bigButton("Good morning", "Lights up, 71°F", () => api("/api/scenes/morning", {}).then(showResult)))));
+  } else if (screen === "rooms") {
+    nodes.push(altHeader(), asksBlock(),
+      el("div", { class: "grid-rooms" }, ...state.rooms.filter((r) => r.devices.length).map(roomCard)));
+  } else if (screen === "entry") {
+    const on = allDevices().filter((d) => (d.type === "light" || d.type === "fan") && d.state.on);
+    nodes.push(altHeader(), asksBlock(),
+      el("div", { class: "entry-actions" },
+        bigButton("I'm leaving", "Lights off, doors locked, garage closed, setback", () => api("/api/scenes/away", {}).then(showResult), "primary"),
+        bigButton("I'm home", "Lights on, comfortable temperature", () => api("/api/scenes/home", {}).then(showResult)),
+        bigButton("Lock up", "Every door, and the garage", lockUp)),
+      el("div", { class: "grid-entry" },
+        securityBlock(),
+        block("Still on", "stillon-card",
+          on.length ? el("ul", { class: "lights-list" }, ...on.map((d) => el("li", { class: "on", "data-device": d.id },
+            el("span", { class: "tile-icon" }, svg(d.type === "fan" ? ICON.fan : ICON.light)),
+            el("div", { class: "ll-text" }, el("span", { class: "ll-name" }, d.name), el("span", { class: "ll-state" }, describe(d))),
+            el("button", { onclick: () => send(d.id, { on: false }) }, "Turn off")))) : el("p", { class: "muted" }, "Everything's off."),
+          on.length > 1 ? el("button", { class: "ghost", onclick: () => Promise.all(on.map((d) => api(`/api/devices/${d.id}`, { command: { on: false } }))).then(() => showResult({ message: "Everything's off." })) }, "Turn everything off") : null),
+        conditionsBlock()));
+  }
+  alt.replaceChildren(...nodes.filter(Boolean));
+  const slot = alt.querySelector(".chart-slot");
+  if (slot && energy) renderEnergyChart(slot, energy, slot.clientWidth || 600);
+}
+
 // ---------- render and live updates ----------
 function render() {
-  renderStage();
-  renderAsks();
-  renderScenes();
-  renderHome();
+  const alt = screen !== "signature";
+  $("#app").classList.toggle("alt-mode", alt);
+  $("#app").dataset.screen = screen;
+  $("#alt").hidden = !alt;
+  if (alt) {
+    $("#app").dataset.daypart = state.daypart || "evening";
+    $("#orb").dataset.house = houseState();
+    renderAlt();
+  } else {
+    renderStage();
+    renderAsks();
+    renderScenes();
+    renderHome();
+  }
   renderFeed();
   $("#t-sim").hidden = state.adapter !== "simulator";
   $("#footer").textContent = demo
@@ -627,6 +924,7 @@ function refresh() {
   clearTimeout(refreshTimer);
   refreshTimer = setTimeout(async () => {
     [state, energy] = await Promise.all([api("/api/state"), api("/api/energy")]);
+    for (const [id, p] of pendingTarget) if (p.settled) pendingTarget.delete(id);
     render();
     if (tab === "you") loadProfile();
   }, 120);

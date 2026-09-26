@@ -20,6 +20,24 @@ Whole home shows Climate (a dial with target, mode and system state), Electricit
 
 On a phone the stage becomes a header card and everything stacks; the voice bar stays pinned to the bottom.
 
+## Screen library
+Six screens built from the same components on the same live house, each in both finishes. Choose one per panel from **Screens** (on the stage, or the header of any other screen). The choice is remembered on that device; a demo link can open a screen directly with `#screen-id`.
+
+| Screen | id | Best for | What's on it |
+|---|---|---|---|
+| Signature | `signature` | Great room, main entry | House model, room tabs, glass controls, energy, suggestions, About you |
+| Command Center | `command-center` | Office, large wall display | Map (filters the lights list), climate, energy, every light with dimmer, doors & water, room conditions, scenes, updates |
+| Family Hub | `family-hub` | Kitchen | Large clock, today's briefing, big scenes, feeling buttons, lights |
+| Nightstand | `nightstand` | Bedroom | Dark screen, large clock, Goodnight / Lights off / Warmer / Cooler / Good morning |
+| Rooms | `rooms` | Large households | A card per room, each device a big button, sensors per room |
+| Entry | `entry` | Mudroom, garage door | I'm leaving / I'm home / Lock up, doors & water, what's still on, conditions |
+
+**This panel is in** (in the library) sets the panel's room. When the homeowner doesn't name a room, requests at that panel mean that room: "turn off the lights", "too bright", and the Nightstand's buttons.
+
+Weather, cameras, calendars and packages are not in the library yet: they'll arrive as cards when connected to real sources, never as placeholder data.
+
+`npm run build:catalog` captures every screen in both finishes from the demo build into a one-page catalog for clients (`dist/catalog/haven-screen-library.html`).
+
 ## Home map
 An isometric cutaway model of the floor plan (rooms placed by `plan` in config/home.json), drawn in SVG back to front. It shows only real state:
 - A room's floor glows where lights are on, stronger for brighter lights.

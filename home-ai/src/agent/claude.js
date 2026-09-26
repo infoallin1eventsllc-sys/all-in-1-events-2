@@ -41,7 +41,7 @@ export async function createClaudeAgent(home, { apiKey, model, effort, promptPat
     model,
 
     // One chat turn. origin is "agent" for a homeowner request.
-    async chat(text, { conversationId = "default", origin = "agent" } = {}) {
+    async chat(text, { conversationId = "default", origin = "agent", panelRoom = null } = {}) {
       let messages = conversations.get(conversationId) || [];
       if (messages.length > MAX_HISTORY_MESSAGES) messages = [];
       const runTool = makeToolRunner(home, origin);
@@ -52,6 +52,7 @@ export async function createClaudeAgent(home, { apiKey, model, effort, promptPat
         role: "user",
         content: [
           { type: "text", text: `<house_state time="${home.now()}">\n${homeState(home)}\n</house_state>` },
+          ...(panelRoom ? [{ type: "text", text: `The homeowner is speaking at the ${home.config.rooms.find((r) => r.id === panelRoom)?.name || panelRoom} panel. When they don't name a room, they mean this one.` }] : []),
           { type: "text", text },
         ],
       });

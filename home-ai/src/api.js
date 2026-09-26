@@ -29,7 +29,8 @@ export function createRoutes(home) {
     ["POST", /^\/api\/confirm\/(\w+)$/, true, (url, body, m) => home.controller.confirm(m[1], body.approve !== false)],
     ["POST", /^\/api\/chat$/, true, (url, body) => {
       if (typeof body.text !== "string" || !body.text.trim()) return { status: 400, error: "text is required" };
-      return home.agent.chat(body.text.slice(0, 2000), { conversationId: String(body.conversationId || "app") });
+      const panelRoom = home.config.rooms.some((r) => r.id === body.panelRoom) ? body.panelRoom : null;
+      return home.agent.chat(body.text.slice(0, 2000), { conversationId: String(body.conversationId || "app"), panelRoom });
     }],
     ["POST", /^\/api\/presence$/, true, (url, body) =>
       home.presence.update(body.person || "owner", body.kind, { trusted: true })],

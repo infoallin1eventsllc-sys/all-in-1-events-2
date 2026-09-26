@@ -10,8 +10,8 @@ const ROOM_ALIASES = { bedroom: "primary", "master": "primary", "living room": "
 export function createLocalAgent(home) {
   return {
     kind: "local",
-    async chat(text, { origin = "agent" } = {}) {
-      const plan = parse(text.toLowerCase().trim(), home);
+    async chat(text, { origin = "agent", panelRoom = null } = {}) {
+      const plan = parse(text.toLowerCase().trim(), home, { panelRoom });
       if (!plan) {
         return {
           reply: "I didn't catch that. Try \"turn off the kitchen lights\", \"I'm cold\", \"close the garage\", \"goodnight\", or \"status\".",
@@ -50,7 +50,10 @@ export function createLocalAgent(home) {
   };
 }
 
-export function parse(t, home) {
+// panelRoom: the room of the panel the homeowner is speaking to, used when
+// they don't name a room ("turn off the lights" at the bedroom panel).
+export function parse(t, home, { panelRoom = null } = {}) {
+  const here = (r) => r || panelRoom || null;
   const reg = home.registry;
   const step = (device, command) => ({ steps: [{ device, command }] });
   const scene = (name) => ({ steps: [{ scene: name }] });
@@ -60,9 +63,9 @@ export function parse(t, home) {
   const feeling = (words) => new RegExp(`\\b(i'?m|i am|it'?s|its|it is|feels?|getting|so|too|kind of|a bit)\\b.*\\b(${words})\\b`).test(t);
   if (!hasNumber && feeling("cold|chilly|freezing")) return { feedback: { feeling: "too_cold" } };
   if (!hasNumber && feeling("hot|warm|stuffy|sweating")) return { feedback: { feeling: "too_warm" } };
-  if (/\btoo bright\b|\bglare\b/.test(t)) return { feedback: { feeling: "too_bright", room: findRoom(t, home) } };
-  if (/\btoo dark\b|\bcan'?t see\b/.test(t)) return { feedback: { feeling: "too_dark", room: findRoom(t, home) } };
-  if (/\b(just right|perfect|feels (good|great|nice)|this is nice|i like (it|this) like this)\b/.test(t)) return { feedback: { feeling: "just_right", room: findRoom(t, home) } };
+  if (/\btoo bright\b|\bglare\b/.test(t)) return { feedback: { feeling: "too_bright", room: here(findRoom(t, home)) } };
+  if (/\btoo dark\b|\bcan'?t see\b/.test(t)) return { feedback: { feeling: "too_dark", room: here(findRoom(t, home)) } };
+  if (/\b(just right|perfect|feels (good|great|nice)|this is nice|i like (it|this) like this)\b/.test(t)) return { feedback: { feeling: "just_right", room: here(findRoom(t, home)) } };
   if (/\bwhat (do you know|have you learned) about me\b|\bwhat do i like\b/.test(t)) return { profile: true };
   if (/^forget (everything|all)\b/.test(t)) return { forgetAll: true };
   let m;
@@ -147,8 +150,9 @@ export function parse(t, home) {
     const room = everywhere || named.length ? null : findRoom(t, home);
     if (named.length) devices = named;
     else if (room) devices = devices.filter((d) => d.room === room);
+    else if (!everywhere && panelRoom && devices.some((d) => d.room === panelRoom)) devices = devices.filter((d) => d.room === panelRoom);
     else if (!everywhere) {
-      // No room named: use where motion was seen in the last 15 minutes.
+      // No room named and no panel room: use where motion was seen in the last 15 minutes.
       const cutoff = new Date(Date.now() - 15 * 60_000).toISOString();
       const recent = reg.byType("motion").filter((m) => m.state.lastMotion && m.state.lastMotion > cutoff)
         .sort((a, b) => b.state.lastMotion.localeCompare(a.state.lastMotion))[0];

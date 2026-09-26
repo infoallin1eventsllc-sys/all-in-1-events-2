@@ -10,7 +10,8 @@
     "test": "node --test --test-force-exit test/*.test.js",
     "build:demo": "node scripts/build-demo.mjs",
     "e2e": "node scripts/e2e.mjs",
-    "check": "npm test && npm run build:demo && npm run e2e"
+    "check": "npm test && npm run build:demo && npm run e2e",
+    "build:catalog": "node scripts/build-catalog.mjs"
   },
   "engines": {
     "node": ">=20"

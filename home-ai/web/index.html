@@ -54,6 +54,7 @@
           <p id="date" class="muted small"></p>
         </div>
         <div class="stage-tools">
+          <button type="button" class="screens-open" aria-haspopup="dialog">Screens</button>
           <div class="look-switch" role="group" aria-label="Panel style">
             <button type="button" data-look="grounded">Grounded</button>
             <button type="button" data-look="futuristic">Futuristic</button>
@@ -117,6 +118,9 @@
       <footer class="muted small" id="footer"></footer>
     </section>
 
+    <!-- Other screens from the library render here instead of stage + glass -->
+    <main id="alt" class="alt" hidden></main>
+
     <!-- Bottom: talk to Haven -->
     <div class="voicebar">
       <div id="chat-log" class="chat-log" role="log" aria-label="Conversation with Haven" tabindex="0" aria-live="polite" hidden></div>
@@ -134,6 +138,24 @@
       <p id="voice-hint" class="voice-hint" hidden></p>
     </div>
   </div>
+  <dialog id="library" class="library" aria-labelledby="library-title">
+    <div class="library-head">
+      <div>
+        <h2 id="library-title" class="library-title">Screen library</h2>
+        <p class="muted small">Pick the screen that suits each spot in the home. Every screen runs on the same live house and works in both finishes.</p>
+      </div>
+      <button type="button" id="library-close" class="ghost" aria-label="Close the screen library">Close</button>
+    </div>
+    <div class="library-settings">
+      <label for="panel-room">This panel is in</label>
+      <select id="panel-room"></select>
+      <div class="look-switch library-look" role="group" aria-label="Finish">
+        <button type="button" data-look="grounded">Grounded</button>
+        <button type="button" data-look="futuristic">Futuristic</button>
+      </div>
+    </div>
+    <ul id="library-list" class="library-list"></ul>
+  </dialog>
   <!--/haven:body-->
   <script src="app.js" type="module"></script>
 </body>

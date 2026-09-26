@@ -6,7 +6,7 @@ Haven runs a new home: lights, ceiling fans, heating and air conditioning, the w
 - **Prompts**, both the build spec and the agent's own system prompt: [PROMPT.md](PROMPT.md)
 - **iPhone, Apple Watch and car setup**: [docs/APPLE-SETUP.md](docs/APPLE-SETUP.md)
 - **Client demos** in two styles, Futuristic and Grounded, with shareable links, concept images and prompts: [docs/DEMOS.md](docs/DEMOS.md)
-- **Design system** for the wall panel in both looks: [docs/DESIGN.md](docs/DESIGN.md)
+- **Design system and screen library** (six screens, two finishes): [docs/DESIGN.md](docs/DESIGN.md)
 - **Agent stack**: how Haven talks, listens, learns and stays safe: [docs/AGENTS.md](docs/AGENTS.md)
 - **Enterprise readiness plan**: security, privacy, AI governance, fleet management, certifications and a phased roadmap: [docs/ENTERPRISE-PLAN.md](docs/ENTERPRISE-PLAN.md)
 - **Current status**, what's verified and what's next: [docs/STATUS.md](docs/STATUS.md)
@@ -24,6 +24,10 @@ npm start
 Open `http://localhost:8787` and enter the owner token printed in the terminal. The **Simulator** panel at the bottom lets you trigger motion, a leak, a cold snap, arriving and leaving, and watch the house react.
 
 Try typing or tapping the mic: `turn on the kitchen lights`, `I'm cold`, `the kitchen is too bright`, `open the garage` (it waits for you to confirm), `I don't like the porch light on all night`, `what do you know about me`, `goodnight`.
+
+## Screen library
+
+Six screens for different spots in the home, all on the same live house: Signature, Command Center, Family Hub, Nightstand, Rooms and Entry. Choose one per panel from **Screens**. To make a client catalog of all of them in both finishes: `npm run build:demo && npm run build:catalog`.
 
 ## Check that everything works
 

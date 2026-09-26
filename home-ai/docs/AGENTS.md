@@ -45,6 +45,10 @@ Haven is several parts with separate jobs. Only two of them use a language model
 | 5 | **Safety controller** | No | The only path to hardware, for every part above and for the homeowner. Hard limits, the leak interlock, and permissions by origin. | `src/core/controller.js`, `src/safety.js` |
 | 6 | **Briefing writer** | Claude, template fallback | Short scheduled updates that fit a watch face, including new suggestions. | `src/briefings.js` |
 
+## Which room a request means
+
+Each panel can be told which room it's in (Screens → This panel is in). When the homeowner doesn't name a room, the conversation agent treats the request as meaning that room ("turn off the lights" at the bedroom panel turns off the bedroom lights). Otherwise it uses the room with motion in the last 15 minutes, or asks.
+
 ## Voice
 
 The panel listens only while the mic button is pressed (push-to-talk) and uses the browser's own speech recognition, so only the finished sentence reaches Haven. Haven answers out loud with the browser's speech synthesis and reads briefings and urgent alerts aloud; the speaker button mutes it. On iPhone, Apple Watch and in the car, Siri Shortcuts do the same job (docs/APPLE-SETUP.md).

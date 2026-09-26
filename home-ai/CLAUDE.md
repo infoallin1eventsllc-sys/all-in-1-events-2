@@ -8,6 +8,7 @@ An AI agent for a new home: Node 20+, ES modules, one runtime dependency (`@anth
 - `npm run build:demo`: browser-only demos in `dist/demo/` (gitignored)
 - `npm run e2e`: browser checks of every control (needs Chromium; uses /opt/pw-browsers/chromium if present, or `CHROMIUM_PATH`)
 - `npm run check`: all of the above. Run it before every commit.
+- `npm run build:catalog`: client catalog of every screen in both finishes (after build:demo)
 
 ## Rules that matter
 - Nothing touches hardware except `src/core/controller.js`, which runs `src/safety.js`. The AI's tools never take a "confirmed" flag.
@@ -19,7 +20,8 @@ An AI agent for a new home: Node 20+, ES modules, one runtime dependency (`@anth
 - Panel devices come from `state.rooms[].devices` and carry no `room`; `allDevices()` in `web/app.js` adds it. Tiles have `data-device` for tests.
 - Voice is push-to-talk (`web/voice.js`) and needs a secure page; e2e replaces speech APIs with stand-ins.
 - Energy is labeled "estimated" unless a `power` device (a real meter) exists. Never show an estimate as measured. Only the demo seeds a simulated day.
-- Setpoint +/- keeps pending values in `pendingTarget`, never mutating `state` (a refresh between taps once made taps step from stale values).
+- Setpoint +/- keeps pending values in `pendingTarget` until a refresh *after* the request settles; never mutate `state`, and never drop the pending value on completion (the panel would briefly redraw from a stale snapshot and a quick second tap would step from it).
+- Screens: `signature` uses the stage/glass DOM; the other five render into `#alt` via `renderAlt()`. Use classes, not ids, inside `#alt`. `panelRoom` (Screens → This panel is in) is sent with chat and feelings.
 - e2e runs axe-core WCAG 2.2 AA audits; keep them at 0 violations. Chart colors were validated with the dataviz validator; re-run it if you change `--series`.
 - A full `npm run e2e` (both targets) takes over 10 minutes: run it in the background, or run `server` and `demo` separately.
 
@@ -27,6 +29,8 @@ An AI agent for a new home: Node 20+, ES modules, one runtime dependency (`@anth
 Republish after `npm run build:demo` by passing the Artifact URL:
 - Futuristic: https://claude.ai/artifact/NHSYrvBSADDcedguH3CBSm (`dist/demo/haven-futuristic.html`)
 - Grounded: https://claude.ai/artifact/J46Rus2S3KzY9CpbpYKyCk (`dist/demo/haven-grounded.html`)
+- Screen library catalog: https://claude.ai/artifact/4tyqsjpBgWRi3ds9FwLnb6 (`dist/catalog/haven-screen-library.html`; rebuild with `DEMO_URL_GROUNDED=… DEMO_URL_FUTURISTIC=… npm run build:catalog`)
+- Each demo opens a specific screen with `#signature`, `#command-center`, `#family-hub`, `#nightstand`, `#rooms` or `#entry`.
 
 ## Environment gotchas (cloud sessions)
 - Google Fonts and the Higgsfield image host (`d8j0ntlcm91z4.cloudfront.net`) are blocked by the network policy.

@@ -89,3 +89,14 @@ test("gibberish gets a helpful fallback", async () => {
   assert.match(r.reply, /didn't catch that/);
   assert.equal(r.actions.length, 0);
 });
+
+test("the panel's room is used when no room is named", async () => {
+  const home = await testHome();
+  assert.deepEqual(parse("turn off the lights", home, { panelRoom: "primary" }).steps, [{ device: "light.primary", command: { on: false } }]);
+  assert.equal(parse("it's too bright", home, { panelRoom: "kitchen" }).feedback.room, "kitchen");
+  // A named room still wins.
+  assert.deepEqual(parse("turn off the kitchen lights", home, { panelRoom: "primary" }).steps, [{ device: "light.kitchen", command: { on: false } }]);
+  const r = await home.agent.chat("turn on the lights", { panelRoom: "living" });
+  assert.equal(home.registry.get("light.living").state.on, true);
+  assert.match(r.reply, /Living Room Lights/);
+});
