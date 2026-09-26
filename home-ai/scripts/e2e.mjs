@@ -122,6 +122,12 @@ async function exercise(page, { garageTravelMs, home }) {
   await audit(page, "whole home, Grounded");
   await page.click('.look-switch button[data-look="futuristic"]');
   await audit(page, "whole home, Futuristic");
+  await page.click('.look-switch button[data-look="vivid"]');
+  await check("Style switch: Vivid", async () => (await page.getAttribute("html", "data-look")) === "vivid");
+  await audit(page, "whole home, Vivid light");
+  await page.emulateMedia({ colorScheme: "dark" });
+  await audit(page, "whole home, Vivid dark (device setting)");
+  await page.emulateMedia({ colorScheme: "light" });
   await page.click('.look-switch button[data-look="grounded"]');
 
   // ----- home map and energy -----
@@ -267,10 +273,10 @@ async function exercise(page, { garageTravelMs, home }) {
     await new Promise((r) => fake.listen(0, "127.0.0.1", r));
     const before = home.speech;
     home.speech = new Speech({ env: { ELEVENLABS_API_KEY: "e2e" }, apiUrl: `http://127.0.0.1:${fake.address().port}/v1/text-to-speech` });
-    await page.evaluate(() => { window.__spoken = []; window.__played = []; });
-    await chat("status"); // refreshes state (voice: elevenlabs) ...
+    await chat("status"); // refreshes the panel's state (voice: elevenlabs) ...
+    await page.waitForTimeout(1500); // ... and lets that reply finish speaking, whichever voice it used
     await page.evaluate(() => { window.__played = []; window.__spoken = []; });
-    await chat("status"); // ... so this reply is spoken with it
+    await chat("status"); // this reply must use the ElevenLabs voice
     await check("Voice: with an ElevenLabs key, Haven speaks with its natural voice", async () =>
       (await page.evaluate(() => window.__played.length)) === 1 && (await spoken()) === "");
     home.speech = before;
@@ -386,7 +392,11 @@ async function exercise(page, { garageTravelMs, home }) {
     await check(`Library: switches to ${id}`, async () => (await page.getAttribute("#app", "data-screen")) === id);
   };
   await openLibrary();
-  await check("Library lists seven screens", async () => (await page.locator(".library-card").count()) === 7);
+  await check("Library lists eight screens", async () => (await page.locator(".library-card").count()) === 8);
+  await page.locator('#library [data-theme-choice="dark"]').click();
+  await check("Appearance: Dark pins the dark theme", async () => (await page.getAttribute("html", "data-theme")) === "dark");
+  await page.locator('#library [data-theme-choice="auto"]').click();
+  await check("Appearance: Auto follows the device", async () => (await page.getAttribute("html", "data-theme")) === null);
   await page.selectOption("#panel-room", "primary");
   await page.locator("#library-close").click();
   await chat("turn on the lights");
@@ -463,7 +473,50 @@ async function exercise(page, { garageTravelMs, home }) {
   await check("Wallpaper: back to Haven's photos", async () => (await page.evaluate(() => document.querySelector("#app").style.getPropertyValue("--wp-photo"))) === "" && await page.locator("#wp-reset").isHidden());
   await page.locator("#library-close").click();
 
-  for (const id of ["command-center", "family-hub", "nightstand", "rooms", "entry", "wallpaper"]) {
+  // Studio: Haven at the center, its agents underneath.
+  await useScreen("studio");
+  await check("Studio shows the orb, the agents, the time, lights, climate, electricity and doors", async () =>
+    (await page.locator("#alt .st-orb").count()) === 1 && (await page.locator("#alt .agent").count()) === 4 &&
+    (await page.locator("#alt .st-clock").count()) === 1 && (await page.locator("#alt .st-lights .lights-list li").count()) === 7 &&
+    (await page.locator("#alt .st-climate").count()) === 1 && (await page.locator("#alt .st-energy").count()) === 1 && (await page.locator("#alt .st-secure").count()) === 1);
+  await chat("turn off all the lights");
+  await page.evaluate(() => { window.__heard = "turn on the kitchen lights"; });
+  await page.locator("#alt .st-orb").click();
+  await check("Studio: tapping the orb talks to Haven", async () => ((await page.locator('#alt .st-lights li[data-device="light.kitchen"]').getAttribute("class")) || "").includes("on"));
+  await check("Studio: the Lighting agent glows while a light is on", async () => (await page.getAttribute('#alt .agent[data-agent="lighting"]', "data-active")) === "true");
+  await check("Studio: Haven's reply shows under the orb", async () => /Kitchen/i.test(await page.textContent("#alt .st-reply")));
+  await page.locator("#alt .st-chips button", { hasText: "Goodnight" }).click();
+  await check("Studio: Goodnight lights the lines between agents", async () => (await page.getAttribute("#alt .agents", "data-sync")) === "true");
+  await check("Studio: the lines go quiet again afterwards", async () => (await page.getAttribute("#alt .agents", "data-sync")) === "false", 12_000);
+  const stTarget = async () => Number((await page.locator("#alt .st-climate .target").textContent()).replace(/\D/g, ""));
+  const st0 = await stTarget();
+  await page.locator("#alt .st-climate").getByRole("button", { name: "Warmer by 1°F" }).click();
+  await check("Studio: climate + raises the setpoint", async () => (await stTarget()) === st0 + 1);
+  await audit(page, "Studio");
+  await page.evaluate(() => document.documentElement.setAttribute("data-look", "vivid"));
+  await audit(page, "Studio, Vivid light");
+  await page.emulateMedia({ colorScheme: "dark" });
+  await audit(page, "Studio, Vivid dark");
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.evaluate(() => document.documentElement.setAttribute("data-look", "grounded"));
+
+  // Model home showcase: a live tour after the panel sits untouched.
+  await page.evaluate(() => localStorage.setItem("haven.showcaseIdleMs", "1500"));
+  await useScreen("rooms");
+  await openLibrary();
+  await page.locator("#showcase-toggle").click();
+  await check("Showcase: the switch turns on", async () => (await page.getAttribute("#showcase-toggle", "aria-checked")) === "true");
+  await page.locator("#library-close").click();
+  await check("Showcase: starts on its own on the Studio screen", async () => !(await page.locator("#showcase-banner").isHidden()) && (await page.getAttribute("#app", "data-screen")) === "studio", 8000);
+  await check("Showcase: runs a real scene and says what it did", async () => /Welcome home/.test(await page.textContent("#chat-log")) && ((await page.locator('#alt .st-lights li[data-device="light.kitchen"]').getAttribute("class")) || "").includes("on"), 8000);
+  await page.mouse.click(5, 400);
+  await check("Showcase: a touch hands control back", async () => (await page.locator("#showcase-banner").isHidden()) && (await page.getAttribute("#app", "data-screen")) === "rooms");
+  await openLibrary();
+  await page.locator("#showcase-toggle").click();
+  await page.locator("#library-close").click();
+  await page.evaluate(() => localStorage.removeItem("haven.showcaseIdleMs"));
+
+  for (const id of ["command-center", "family-hub", "nightstand", "rooms", "entry", "wallpaper", "studio"]) {
     await page.setViewportSize({ width: 390, height: 844 });
     await useScreen(id);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);

@@ -20,11 +20,21 @@ const executablePath = process.env.CHROMIUM_PATH || (fs.existsSync("/opt/pw-brow
 const LIVE = {
   grounded: process.env.DEMO_URL_GROUNDED || "",
   futuristic: process.env.DEMO_URL_FUTURISTIC || "",
+  vivid: process.env.DEMO_URL_VIVID || "",
 };
+// Each finish as shown in the pictures: the demo build it comes from and
+// the device appearance it's captured in.
+const FINISHES = [
+  { key: "grounded", label: "Grounded", look: "grounded", scheme: "light" },
+  { key: "futuristic", label: "Futuristic", look: "futuristic", scheme: "dark" },
+  { key: "vivid", label: "Vivid light", look: "vivid", scheme: "light" },
+  { key: "vivid-dark", label: "Vivid dark", look: "vivid", scheme: "dark" },
+];
 
 const SCREENS = [
   { id: "signature", name: "Signature", best: "Great room or main entry", about: "The flagship. A live 3D model of the house beside the room you're in, with every control on glass.", has: ["Live house model: rooms glow when lit, turn red on alerts", "Room tabs, scenes, device tiles, climate dial", "Electricity today", "Suggestions and confirmations", "About you: what Haven has learned"] },
   { id: "wallpaper", name: "Wallpaper", best: "Living room or a large wall display", about: "The home's own photo behind frosted tiles. The photo changes with the time of day, or the homeowner can use a picture of their own house.", has: ["Photo backdrop: morning, day, evening and night", "Weather now, the next hours and days (when connected)", "Indoor temperature, humidity and electricity with a live line", "Climate, fans and water heater", "Every light with an icon switch and a pill dimmer", "Doors, locks, garage and water; scenes; latest updates"] },
+  { id: "studio", name: "Studio", best: "Living room or kitchen; the model-home showpiece", about: "Haven at the center. A large orb listens, thinks and speaks, and underneath it Haven's agents show what each is doing, with the lines between them lighting up when they work together.", has: ["Tap the orb to talk; a waveform follows the voice", "Agents: Lighting, Climate, Security, Energy, each glowing while it works", "Lines between agents light when one event involves several (a scene, leaving home)", "Big clock, weather now and the next hours", "Climate with a temperature range bar, lighting, electricity, doors"] },
   { id: "command-center", name: "Command Center", best: "Office or a large wall display", about: "Everything at once for the person who runs the house.", has: ["House model that filters the lights list by room", "Climate dial and electricity chart", "Every light with switch and dimmer", "Doors, locks, garage and main water", "Room conditions: temperature, humidity, occupancy, leaks", "Scenes and the latest updates"] },
   { id: "family-hub", name: "Family Hub", best: "Kitchen", about: "Big and friendly for everyone in the house, not just the owner.", has: ["Large clock and date", "Today's briefing, with Brief me now", "Big scene cards", "Too cold / Too warm / Too bright / Too dark / Just right", "Lights for the kitchen (or the whole house)"] },
   { id: "nightstand", name: "Nightstand", best: "Bedroom", about: "Dim, quiet and easy to use half-asleep. Talk to it in the dark.", has: ["Large clock on a dark screen", "Goodnight: lock up, lights off, 68°F", "Lights off for this room", "Warmer and Cooler (learned as your preference)", "Good morning"] },
@@ -32,15 +42,15 @@ const SCREENS = [
   { id: "entry", name: "Entry", best: "Mudroom or garage door", about: "Built for the moment you walk in or out.", has: ["I'm leaving (Away), I'm home, Lock up", "Doors, locks, garage and main water with one-tap actions", "What's still on, with Turn off", "Room conditions before you go"] },
 ];
 
-async function capture(browser, look, id) {
-  const wrapper = path.join(demoDir, `_catalog-${look}.html`);
-  fs.writeFileSync(wrapper, `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>${fs.readFileSync(path.join(demoDir, `haven-${look}.html`), "utf8")}</body></html>`);
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1, colorScheme: look === "grounded" ? "light" : "dark" });
+async function capture(browser, finish, id) {
+  const wrapper = path.join(demoDir, `_catalog-${finish.key}.html`);
+  fs.writeFileSync(wrapper, `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>${fs.readFileSync(path.join(demoDir, `haven-${finish.look}.html`), "utf8")}</body></html>`);
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1, colorScheme: finish.scheme });
   await page.addInitScript(() => { try { localStorage.clear(); } catch {} });
   await page.goto(`file://${wrapper}#${id}`);
   await page.waitForSelector("#app:not([hidden])");
   await page.waitForTimeout(800);
-  const jpg = await page.screenshot({ type: "jpeg", quality: 72 });
+  const jpg = await page.screenshot({ type: "jpeg", quality: 70 });
   await page.close();
   fs.rmSync(wrapper, { force: true });
   return `data:image/jpeg;base64,${jpg.toString("base64")}`;
@@ -48,8 +58,8 @@ async function capture(browser, look, id) {
 
 const browser = await chromium.launch(executablePath ? { executablePath } : {});
 const shots = {};
-for (const look of ["grounded", "futuristic"]) {
-  for (const s of SCREENS) shots[`${look}/${s.id}`] = await capture(browser, look, s.id);
+for (const f of FINISHES) {
+  for (const s of SCREENS) shots[`${f.key}/${s.id}`] = await capture(browser, f, s.id);
 }
 await browser.close();
 
@@ -57,19 +67,19 @@ const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 const card = (s, i) => `
 <article class="screen" id="${s.id}">
   <figure class="shot">
-    <img class="img-grounded" src="${shots[`grounded/${s.id}`]}" alt="${esc(s.name)} screen in the Grounded finish" loading="${i < 2 ? "eager" : "lazy"}" width="1440" height="900">
-    <img class="img-futuristic" src="${shots[`futuristic/${s.id}`]}" alt="${esc(s.name)} screen in the Futuristic finish" loading="lazy" width="1440" height="900">
+    ${FINISHES.map((f, k) => `<img class="img-${f.key}" src="${shots[`${f.key}/${s.id}`]}" alt="${esc(s.name)} screen in the ${f.label} finish" loading="${i < 2 && k === 0 ? "eager" : "lazy"}" width="1440" height="900">`).join("\n    ")}
   </figure>
   <div class="about">
     <h2>${esc(s.name)}</h2>
     <p class="best">Best for: ${esc(s.best)}</p>
     <p class="lede">${esc(s.about)}</p>
     <ul>${s.has.map((h) => `<li>${esc(h)}</li>`).join("")}</ul>
-    ${LIVE.grounded || LIVE.futuristic ? `<p class="links">${LIVE.grounded ? `<a href="${LIVE.grounded}#${s.id}">Open live · Grounded</a>` : ""}${LIVE.futuristic ? `<a href="${LIVE.futuristic}#${s.id}">Open live · Futuristic</a>` : ""}</p>` : ""}
+    ${Object.values(LIVE).some(Boolean) ? `<p class="links">${[["grounded", "Grounded"], ["futuristic", "Futuristic"], ["vivid", "Vivid"]].filter(([k]) => LIVE[k]).map(([k, l]) => `<a href="${LIVE[k]}#${s.id}">Open live · ${l}</a>`).join("")}</p>` : ""}
   </div>
 </article>`;
 
-const html = `<title>Haven Screen Library</title>
+const html = `<meta charset="utf-8">
+<title>Haven Screen Library</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
@@ -100,7 +110,8 @@ nav.jump a { color: var(--ink); text-decoration: none; font-size: 0.9rem; paddin
 @media (max-width: 860px) { .screen { grid-template-columns: 1fr; } }
 .shot { margin: 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); aspect-ratio: 16 / 10; background: #0b0b0e; }
 .shot img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top left; max-width: 100%; }
-body:not([data-finish="futuristic"]) .img-futuristic, body[data-finish="futuristic"] .img-grounded { display: none; }
+.shot img { display: none; }
+${FINISHES.map((f) => `body[data-finish="${f.key}"] .img-${f.key}`).join(", ")} { display: block; }
 .about { display: grid; gap: 8px; }
 .about h2 { margin: 0; font-size: 1.7rem; letter-spacing: -0.01em; }
 .best { margin: 0; font-weight: 600; color: var(--accent); }
@@ -121,11 +132,10 @@ footer { color: var(--muted); font-size: 0.85rem; }
   <header class="top">
     <p class="kicker">Haven · Screen library</p>
     <h1>Choose a screen for every room</h1>
-    <p class="intro">Seven screens, each designed for a different spot in the home. All of them run on the same live house, talk and listen, learn the homeowner's preferences, and come in two finishes. Each panel in the home can use a different one.</p>
+    <p class="intro">Eight screens, each designed for a different spot in the home. All of them run on the same live house, talk and listen, learn the homeowner's preferences, and come in three finishes: Grounded, Futuristic, and Vivid in light and dark. Each panel in the home can use a different one.</p>
     <div class="controls">
       <div class="finish" role="group" aria-label="Finish shown in the pictures">
-        <button type="button" data-finish="grounded" aria-pressed="true">Grounded</button>
-        <button type="button" data-finish="futuristic" aria-pressed="false">Futuristic</button>
+        ${FINISHES.map((f, k) => `<button type="button" data-finish="${f.key}" aria-pressed="${k === 0}">${f.label}</button>`).join("\n        ")}
       </div>
       <nav class="jump" aria-label="Screens">${SCREENS.map((s) => `<a href="#${s.id}">${esc(s.name)}</a>`).join("")}</nav>
     </div>
@@ -137,6 +147,7 @@ footer { color: var(--muted); font-size: 0.85rem; }
       <thead><tr><th scope="col">Where</th><th scope="col">Screen</th><th scope="col">Why</th></tr></thead>
       <tbody>
         <tr><td>Great room</td><td>Signature</td><td>The showpiece: the whole house at a glance and every control</td></tr>
+        <tr><td>Model home, living room</td><td>Studio</td><td>Shows the intelligence working: talk to the orb, watch the agents coordinate</td></tr>
         <tr><td>Living room</td><td>Wallpaper</td><td>Looks like a photo of the home until you need it; weather and every light</td></tr>
         <tr><td>Kitchen</td><td>Family Hub</td><td>Everyone uses it; big clock, briefing and comfort buttons</td></tr>
         <tr><td>Primary bedroom</td><td>Nightstand</td><td>Dark and quiet; bedtime in one tap or by voice</td></tr>
@@ -144,6 +155,10 @@ footer { color: var(--muted); font-size: 0.85rem; }
         <tr><td>Office</td><td>Command Center</td><td>Every system on one wall for whoever runs the house</td></tr>
       </tbody>
     </table></div>
+  </section>
+  <section class="note" aria-labelledby="builder-h">
+    <h2 class="sec" id="builder-h">For builders: the model home</h2>
+    <p>Haven is designed to be a standard feature in new construction. On a model-home panel, turn on <strong>Model home showcase</strong> (Screens, on the panel): when nobody has touched it for a minute, Haven gives a short live tour on the Studio screen. It runs Welcome home, Movie night, Goodnight and Good morning on the real lights, locks and thermostat, and says what it's doing, so visitors watch the agents work together. Any touch hands control back, and it pauses if anything needs attention. The agent row shows only what the house is really doing; nothing on it is animated for show.</p>
   </section>
   <section class="note" aria-labelledby="note-h">
     <h2 class="sec" id="note-h">Coming with integrations</h2>
@@ -161,7 +176,7 @@ footer { color: var(--muted); font-size: 0.85rem; }
   }
   var saved = null;
   try { saved = localStorage.getItem("haven.catalog.finish"); } catch (e) {}
-  set(saved === "futuristic" ? "futuristic" : "grounded");
+  set(${JSON.stringify(FINISHES.map((f) => f.key))}.indexOf(saved) >= 0 ? saved : "grounded");
   document.querySelectorAll(".finish button").forEach(function (b) { b.addEventListener("click", function () { set(b.dataset.finish); }); });
 })();
 </script>

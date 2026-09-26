@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600&family=Hanken+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="styles.css">
   <script src="look.js"></script>
 </head>
@@ -58,6 +58,7 @@
           <div class="look-switch" role="group" aria-label="Panel style">
             <button type="button" data-look="grounded">Grounded</button>
             <button type="button" data-look="futuristic">Futuristic</button>
+            <button type="button" data-look="vivid">Vivid</button>
           </div>
           <span id="conn" class="conn" role="img" aria-label="Live connection"></span>
         </div>
@@ -121,11 +122,14 @@
     <!-- Other screens from the library render here instead of stage + glass -->
     <main id="alt" class="alt" hidden></main>
 
+    <p id="showcase-banner" class="showcase-banner" role="status" hidden>Model home showcase · touch anywhere to take over</p>
+
     <!-- Bottom: talk to Haven -->
     <div class="voicebar">
       <div id="chat-log" class="chat-log" role="log" aria-label="Conversation with Haven" tabindex="0" aria-live="polite" hidden></div>
       <form id="chat-form" class="talk">
         <span id="orb" class="orb" data-voice="idle" aria-hidden="true"></span>
+        <span class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
         <input id="chat-input" autocomplete="off" placeholder="Try &ldquo;I&rsquo;m cold&rdquo; or &ldquo;goodnight&rdquo;" aria-label="Talk to Haven">
         <button type="button" id="mic" class="icon-btn" aria-label="Talk to Haven with your voice" aria-pressed="false">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2Z"/></svg>
@@ -152,7 +156,17 @@
       <div class="look-switch library-look" role="group" aria-label="Finish">
         <button type="button" data-look="grounded">Grounded</button>
         <button type="button" data-look="futuristic">Futuristic</button>
+        <button type="button" data-look="vivid">Vivid</button>
       </div>
+      <div class="look-switch library-look theme-switch" role="group" aria-label="Appearance">
+        <button type="button" data-theme-choice="auto">Auto</button>
+        <button type="button" data-theme-choice="light">Light</button>
+        <button type="button" data-theme-choice="dark">Dark</button>
+      </div>
+    </div>
+    <div class="library-settings library-showcase">
+      <p><strong>Model home showcase</strong> <span class="muted small">For a builder's model home. After a minute untouched, Haven gives a short live tour on the Studio screen: Welcome home, Movie night, Goodnight and Good morning, saying what it's doing. It pauses if anything needs attention. Any touch hands control back.</span></p>
+      <button type="button" id="showcase-toggle" class="switch" role="switch" aria-checked="false" aria-label="Model home showcase"></button>
     </div>
     <div class="library-settings library-photo">
       <p><strong>Wallpaper photo</strong> <span class="muted small">For the Wallpaper screen. Haven's photos follow the time of day; a photo of your own stays on this panel.</span></p>

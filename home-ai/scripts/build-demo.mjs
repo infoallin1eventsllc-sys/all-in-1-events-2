@@ -41,20 +41,22 @@ const body = html.split("<!--haven:body-->")[1].split("<!--/haven:body-->")[0];
 const looks = {
   futuristic: { title: "Haven Futuristic Demo" },
   grounded: { title: "Haven Grounded Demo" },
+  vivid: { title: "Haven Vivid Demo" },
 };
 for (const [look, { title }] of Object.entries(looks)) {
   const page = `<title>${title}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600&family=Hanken+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap">
 <style>
 ${css}
 </style>
 <script>
 (function () {
-  var look = "${look}";
-  try { look = localStorage.getItem("haven.look") || look; } catch (e) {}
+  var look = "${look}", theme = null;
+  try { look = localStorage.getItem("haven.look") || look; theme = localStorage.getItem("haven.theme"); } catch (e) {}
   document.documentElement.setAttribute("data-look", look);
+  if (theme === "light" || theme === "dark") document.documentElement.setAttribute("data-theme", theme);
   if (!document.documentElement.lang) document.documentElement.lang = "en";
 })();
 </script>

@@ -27,7 +27,7 @@ Try typing or tapping the mic: `turn on the kitchen lights`, `I'm cold`, `the ki
 
 ## Screen library
 
-Seven screens for different spots in the home, all on the same live house: Signature, Wallpaper, Command Center, Family Hub, Nightstand, Rooms and Entry. Wallpaper puts a photo of the home (it follows the time of day, or use your own) behind frosted tiles with the weather. Choose one per panel from **Screens**. To make a client catalog of all of them in both finishes: `npm run build:demo && npm run build:catalog`.
+Eight screens for different spots in the home, all on the same live house: Signature, Studio, Wallpaper, Command Center, Family Hub, Nightstand, Rooms and Entry, in three finishes (Grounded, Futuristic, and Vivid in light and dark). Studio puts Haven's orb at the center with its agents underneath, showing what each is doing. Wallpaper puts a photo of the home (it follows the time of day, or use your own) behind frosted tiles with the weather. For builders' model homes, **Model home showcase** (under Screens) gives a live tour when the panel sits untouched. Choose one per panel from **Screens**. To make a client catalog of all of them in both finishes: `npm run build:demo && npm run build:catalog`.
 
 ## Check that everything works
 

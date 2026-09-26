@@ -1,11 +1,12 @@
 # Haven: Where Things Stand
 
-_Last updated: September 26, 2026 (Wallpaper screen, weather, and an ElevenLabs voice added). Branch `claude/inspiring-fermi-jpi3vh` in `infoallin1eventsllc-sys/all-in-1-events-2`, folder `home-ai/`._
+_Last updated: September 26, 2026 (Vivid finish, Studio screen with the agent row, and Model home showcase added, for the builder pitch). Branch `claude/inspiring-fermi-jpi3vh` in `infoallin1eventsllc-sys/all-in-1-events-2`, folder `home-ai/`._
 
 ## Links
 - Demo A, Futuristic: https://claude.ai/artifact/NHSYrvBSADDcedguH3CBSm
 - Demo B, Grounded: https://claude.ai/artifact/J46Rus2S3KzY9CpbpYKyCk
-- Screen library catalog (all seven screens, both finishes, links to open each live): https://claude.ai/artifact/4tyqsjpBgWRi3ds9FwLnb6
+- Vivid (light and dark; Screens → Appearance): https://claude.ai/artifact/9SmqdXDppENdd3uGKZyWiV
+- Screen library catalog (all eight screens, every finish, links to open each live): https://claude.ai/artifact/4tyqsjpBgWRi3ds9FwLnb6
 
 Both are private until shared from each page's Share menu.
 
@@ -25,10 +26,19 @@ Both are private until shared from each page's Share menu.
   - **Weather:** Open-Meteo and Home Assistant forecasts (stand-in servers with the real response shapes), keeping the last reading on errors, "not connected" everywhere without a source, weather questions vs. "I'm cold", and the forecast in briefings
   - **Voice:** ElevenLabs requests (key, voice, model, words not symbols), cached repeats, fallback and pause after errors, and `/api/speech` returning audio without exposing the key
 - **Browser checks** (`npm run e2e`) in both the home-server panel and the demo build: every tile control (switches, brightness slider, fan speeds, climate dial and modes, water heater, valve, garage, locks, Lock up), room tabs, status fixes, Confirm and Cancel, chat, **voice** (a spoken command runs, Haven answers aloud, the speaker button mutes it, the leak alert is read aloud), all five scenes, the feeling buttons, **About you** (learned items, forget one, review my day, a habit suggestion accepted into a routine, forget everything), Brief me now, every simulator button, both styles, the **home map** (every room drawn, tap to open and back, lit rooms glow, the leak room turns red), **energy** (labeled estimated, live power rises when a fan runs, the chart tooltip and table view), and no sideways scrolling at wall-panel or phone width.
-- **Browser run totals:** 147 checks on the home-server panel and 142 on the demo, all passing (September 26, after the Wallpaper screen).
+- **Browser run totals:** 170 checks on the home-server panel and 165 on the demo, all passing (September 26, after Vivid, Studio and showcase). One run before that had a one-time failure of "About you lists the learned temperature" on the server panel that didn't reproduce on the next full run; watch for it.
+- **Vivid, Studio, showcase** in the browser run: the Vivid switch and Appearance (Dark / Auto); Studio's orb, agents, time, lights, climate, electricity and doors; tapping the orb to talk; the Lighting agent glowing while a light is on; the reply under the orb; Goodnight lighting the lines between agents and the lines going quiet after; climate +; the showcase switching on, starting on its own on Studio, running a real scene and saying so, and a touch handing control back. Accessibility audits of the whole home in Vivid light and dark, and Studio in Grounded, Vivid light and Vivid dark.
 - **Wallpaper screen** in the browser run: weather card (sample in the demo, "not connected" on a house without a source), the photo following the time of day, a light's icon switch, the pill dimmer, climate +, uploading your own photo and going back, and the panel playing Haven's ElevenLabs voice when the server has a key (stand-in ElevenLabs).
 - **Screen library** in the browser run: the library lists seven screens; each screen renders its parts and a real control works on it (Command Center light switch, Family Hub briefing, Nightstand Goodnight, Rooms light tap, Entry turn off); the panel room makes "turn on the lights" mean that room; no sideways scrolling on any screen at 390px.
-- **Accessibility:** automated WCAG 2.2 AA audits (axe-core) inside the browser run: sign-in, whole home in both styles, a room, a leak alert, the Updates and About you tabs, phone width, and each library screen (Command Center, Family Hub, Nightstand, Rooms, Entry, Wallpaper). 0 violations. (The audit caught dark chat and suggestion text on the Wallpaper screen's dark glass; fixed.)
+- **Accessibility:** automated WCAG 2.2 AA audits (axe-core) inside the browser run: sign-in, whole home in both styles, a room, a leak alert, the Updates and About you tabs, phone width, and each library screen (Command Center, Family Hub, Nightstand, Rooms, Entry, Wallpaper, Studio). 0 violations. (The audit caught dark chat and suggestion text on the Wallpaper screen's dark glass; fixed.)
+
+## Added September 26 (night): the builder pitch
+Haven is being pitched to homebuilders as a standard feature in new construction, with the agent layer as a selling point.
+- **Vivid finish**, light and dark: keynote-style clarity with vivid accents (light: electric blue, coral, mint; dark: electric blue, cyan, magenta), frosted layers with accent hairlines, bold type. Screens → Appearance switches Auto / Light / Dark.
+- **Studio screen** (8th): a large orb (tap to talk) with a voice waveform and the **agent row** (Lighting, Climate, Security, Energy). Agents glow only while working; the lines between them light when one event involves several.
+- **Model home showcase**: a per-panel switch for model homes; after a minute untouched Haven runs a short live tour of scenes and says what it's doing; any touch hands control back.
+- **Voice waveform** from real signals (recognized words, spoken words, measured ElevenLabs loudness), **lighting previews** (lit tiles glow with their brightness), **animated weather icons**; all motion respects Reduce Motion.
+- **Keynote hero renders** (light, dark, builder showcase) from the supplied prompts via the Canva connector; links in DEMOS.md.
 
 ## Added September 26 (evening)
 - **Wallpaper screen** (7th in the library), modeled on the photo-backed dashboard reference: the home's photo behind frosted tiles, a weather card, indoor temperature and humidity, electricity with a live line, climate, fans, water heater, every light with an icon switch and pill dimmer, doors & water, scenes, updates. The photo follows the time of day; a homeowner can use their own photo (kept on that panel).

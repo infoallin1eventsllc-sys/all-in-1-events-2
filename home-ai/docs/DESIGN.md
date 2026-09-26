@@ -4,6 +4,7 @@
 - **Mode:** Operate. The homeowner glances at the app, often on a phone and on the move, to see whether the house is OK and to fix what isn't. The client demo adds a Persuade layer, but the app itself stays task-first.
 - **Voice:** calm, plain, trustworthy. The house is handled; Haven reports what happened.
 - **Anti-references:** generic "AI SaaS" styling (purple gradients, glow on everything), dashboards of equal-weight tiles, sensors shouting as loudly as controls.
+- **Builder pitch (added Sept 26):** Haven is also sold to homebuilders as a standard feature in new construction ($500K+ homes). That adds three tests: it must look premium enough to be standard, demo well on a model-home walkthrough, and make the intelligence visible without feeling gimmicky. The Vivid finish, the Studio screen's agent row and Model home showcase answer those. The rule that keeps it from being gimmicky: every glow, pulse and line on screen comes from something the house really did.
 
 ## Structure: the wall panel (both looks)
 Modeled on an in-wall touch panel: room first, glass controls, voice along the bottom.
@@ -21,11 +22,12 @@ Whole home shows Climate (a dial with target, mode and system state), Electricit
 On a phone the stage becomes a header card and everything stacks; the voice bar stays pinned to the bottom.
 
 ## Screen library
-Seven screens built from the same components on the same live house, each in both finishes. Choose one per panel from **Screens** (on the stage, or the header of any other screen). The choice is remembered on that device; a demo link can open a screen directly with `#screen-id`.
+Eight screens built from the same components on the same live house, each in every finish. Choose one per panel from **Screens** (on the stage, or the header of any other screen). The choice is remembered on that device; a demo link can open a screen directly with `#screen-id`.
 
 | Screen | id | Best for | What's on it |
 |---|---|---|---|
 | Signature | `signature` | Great room, main entry | House model, room tabs, glass controls, energy, suggestions, About you |
+| Studio | `studio` | Living room, kitchen, model home | Haven's orb (tap to talk) with the voice waveform and the agent row, time and weather, climate range bar, lighting, electricity, doors |
 | Wallpaper | `wallpaper` | Living room, large wall display | The home's photo behind frosted tiles in columns: weather, indoor temperature and humidity, electricity with a live line, climate, fans, water heater, every light (icon switch and pill dimmer), doors & water, scenes, updates |
 | Command Center | `command-center` | Office, large wall display | Map (filters the lights list), climate, energy, every light with dimmer, doors & water, room conditions, scenes, updates |
 | Family Hub | `family-hub` | Kitchen | Large clock, today's briefing, big scenes, feeling buttons, lights |
@@ -89,6 +91,35 @@ Semantic colors (ok / warn / bad) only ever mean state.
 | `--ok` / `--warn` / `--bad` | `#3f7a52` / `#a8641e` / `#b3362b` | `#7cc593` / `#e3a45a` / `#f07a6b` | `#3df5b0` / `#b592ff` / `#ff4d8d` |
 
 Grounded follows the viewer's light/dark setting. Futuristic is dark only, by design.
+
+### Vivid finish (light and dark)
+Keynote clarity from the hero-shot prompts: vivid accents that still mean something, real depth, confident type.
+
+| Token | Vivid light | Vivid dark |
+|---|---|---|
+| `--bg` | `#eef1f7` with soft blue/coral/mint light behind the glass | `#000000` (true black) with faint blue/magenta/cyan light |
+| `--ink` / `--muted` | `#0b0d12` / `#5b6270` (6.1:1) | `#f5f7fa` / `#9aa3b2` (7.0:1 on cards) |
+| `--accent` (actions, Haven) | `#0a66ff` electric blue, white text 4.8:1 | `#3d8bff`, dark text `#00122e` 5.6:1 |
+| `--on` (a light or heat is on) | `#f0492a` coral | `#22d3ee` cyan |
+| `--ok` / `--warn` / `--bad` | `#008f6b` mint / `#b45f00` / `#d70f3c` | `#34e0a1` / `#ffb547` / `#ff4d9a` magenta |
+| `--series` (chart) | `#0a66ff`, validated on `#f4f6fb` | `#3d8bff`, validated on `#15171d` and `#000` |
+
+- **Depth:** top-level surfaces are frosted (blur 24px, saturate 180%) over the luminous backdrop, with stacked soft shadows and a 1px hairline of accent gradient. Tiles inside them stay flat so cards don't stack on cards.
+- **Type:** the system face (SF Pro on Apple devices), Inter elsewhere; big numbers at 700–800 with tight tracking; section headings in bold sentence case.
+- **Appearance:** Screens → Appearance: Auto (follows the device), Light or Dark. `?look=vivid&theme=dark` in a link.
+
+## Studio screen and the agent row
+Built from the builder-showcase render: a large orb in the middle (tap it to talk), a waveform under it, and a row of Haven's agents (Lighting, Climate, Security, Energy), with the time and weather, climate (a 55–85°F range bar with the set point and the current temperature), lighting, electricity and doors around it.
+- **Orb:** a ring in the finish's three colors; it turns amber or red with the house state, spins only while listening, thinking or speaking, and swells with the voice.
+- **Waveform:** driven by real speech signals only: words the recognizer hears, each word the browser voice says, and the measured loudness of the ElevenLabs audio (after the first touch, when the browser allows audio measurement). It is never a looping animation.
+- **Agents:** each glows while it's working (a light on; heating or cooling; everyone away or something needing attention; power above the always-on load) and pulses when it just acted. The lines between them flow only when one event involves several (a scene, or actions in two systems within three seconds), for four seconds.
+
+## Model home showcase
+A per-panel switch (Screens → Model home showcase) for builders' model homes. After a minute untouched, Haven switches to Studio and every 14 seconds runs one scene (Welcome home, Movie night, Goodnight, Good morning) through the normal safety checks, saying what it did. It never starts while something needs attention or a confirmation is waiting, stops if an alert appears, and any touch returns the panel to its own screen. No garage opening or unlocking is ever part of the tour.
+
+## Lighting and weather previews (every finish)
+- A lit tile or light row glows as brightly as the light is set (`--glow` = brightness).
+- Weather icons move a little: the sun turns slowly, rain and snow fall, clouds drift. All motion stops with the device's Reduce Motion setting.
 
 ## Type
 - **Hanken Grotesk** (400–700) for everything in Grounded and for body text in Futuristic.

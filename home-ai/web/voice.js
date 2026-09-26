@@ -11,8 +11,13 @@
 // Speaking: when the home server has an ElevenLabs voice, `synthesize(text)`
 // returns its audio and the panel plays that; if it returns nothing or the
 // audio can't play, the browser's built-in voice says it instead.
+//
+// onLevel(0..1) drives the waveform from real speech signals only: words the
+// recognizer hears, each word the browser voice says, and the loudness of
+// the ElevenLabs audio (measured once the panel has been touched, since
+// browsers keep audio processing asleep until then).
 
-export function createVoice({ onInterim, onFinal, onState, synthesize = null }) {
+export function createVoice({ onInterim, onFinal, onState, onLevel, synthesize = null }) {
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const canSpeak = "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined";
   let recognizer = null;
@@ -20,6 +25,41 @@ export function createVoice({ onInterim, onFinal, onState, synthesize = null }) 
   let voice = null;
   let audio = null;     // the ElevenLabs clip playing now
   let speakSeq = 0;     // newest speak() wins
+  let audioCtx = null;  // for measuring the clip's loudness
+
+  // Wake audio processing on the first touch, as browsers require.
+  const wake = () => {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (Ctx && !audioCtx) audioCtx = new Ctx();
+      audioCtx?.resume?.();
+    } catch { audioCtx = null; }
+  };
+  window.addEventListener("pointerdown", wake, { once: true, capture: true });
+  window.addEventListener("keydown", wake, { once: true, capture: true });
+
+  // Measure the clip as it plays. Only when audio processing is running:
+  // routing sound through a sleeping context would silence it.
+  function measure(clip) {
+    try {
+      if (!onLevel || audioCtx?.state !== "running") return;
+      const source = audioCtx.createMediaElementSource(clip);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 512;
+      source.connect(analyser);
+      analyser.connect(audioCtx.destination);
+      const buf = new Uint8Array(analyser.fftSize);
+      const tick = () => {
+        if (clip.paused || clip.ended || audio !== clip) return;
+        analyser.getByteTimeDomainData(buf);
+        let sum = 0;
+        for (const x of buf) { const d = (x - 128) / 128; sum += d * d; }
+        onLevel(Math.min(1, Math.sqrt(sum / buf.length) * 5));
+        requestAnimationFrame(tick);
+      };
+      clip.addEventListener("playing", () => requestAnimationFrame(tick));
+    } catch { /* no measurement; the waveform stays calm */ }
+  }
 
   const canListen = Boolean(Recognition) && window.isSecureContext !== false;
   const whyNot = !Recognition
@@ -50,6 +90,7 @@ export function createVoice({ onInterim, onFinal, onState, synthesize = null }) 
     recognizer.maxAlternatives = 1;
     let finalText = "";
     recognizer.onresult = (e) => {
+      onLevel?.(0.85);
       let interim = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const t = e.results[i][0].transcript;
@@ -94,7 +135,8 @@ export function createVoice({ onInterim, onFinal, onState, synthesize = null }) 
     if (voice) u.voice = voice;
     u.rate = 1.02;
     u.pitch = 1;
-    u.onstart = () => onState?.("speaking");
+    u.onstart = () => { onState?.("speaking"); onLevel?.(0.6); };
+    u.onboundary = () => onLevel?.(0.9);
     u.onend = () => onState?.("idle");
     u.onerror = () => onState?.("idle");
     speechSynthesis.speak(u);
@@ -121,6 +163,7 @@ export function createVoice({ onInterim, onFinal, onState, synthesize = null }) 
       onState?.("idle");
       if (fallback && mine === speakSeq) speakWithBrowser(text);
     };
+    measure(clip);
     clip.onplaying = () => onState?.("speaking");
     clip.onended = () => done(false);
     clip.onerror = () => done(true);

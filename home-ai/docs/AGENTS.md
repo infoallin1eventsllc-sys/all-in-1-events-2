@@ -45,6 +45,10 @@ Haven is several parts with separate jobs. Only two of them use a language model
 | 5 | **Safety controller** | No | The only path to hardware, for every part above and for the homeowner. Hard limits, the leak interlock, and permissions by origin. | `src/core/controller.js`, `src/safety.js` |
 | 6 | **Briefing writer** | Claude, template fallback | Short scheduled updates that fit a watch face, including new suggestions. | `src/briefings.js` |
 
+## Showing the agents at work
+
+The Studio screen shows the agents under Haven's orb: Lighting, Climate, Security and Energy. Each glows only while it's doing something real, pulses when it just acted, and the lines between them flow when one event involves several at once (a scene, "I'm leaving", an automation touching lights and locks together). They're driven by the same action and scene events the activity feed shows, so homeowners and builders see the coordination as it happens rather than taking it on faith. Model home showcase (docs/DESIGN.md) runs a live tour of scenes so this is visible on a model-home walkthrough.
+
 ## Weather
 
 `src/weather.js` reads the forecast from Home Assistant's weather entity or Open-Meteo every 15 minutes. The conversation agent sees it in the house state, the offline parser answers weather questions ("is it going to rain today?"; "it's cold outside" is about the weather, not a request for heat), and briefings include it. With no source, every one of them says weather isn't connected.

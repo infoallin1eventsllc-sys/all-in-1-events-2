@@ -115,15 +115,37 @@ $("#login-form").addEventListener("submit", (e) => {
   start();
 });
 
-// ---------- look switch ----------
+// ---------- look switch and appearance ----------
+const LOOKS = ["grounded", "futuristic", "vivid"];
+function themeColor() {
+  const look = document.documentElement.getAttribute("data-look");
+  const theme = document.documentElement.getAttribute("data-theme");
+  const dark = theme ? theme === "dark" : window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+  if (look === "futuristic") return "#05060b";
+  if (look === "vivid") return dark ? "#000000" : "#eef1f7";
+  return dark ? "#15110d" : "#efe9df";
+}
 function setLook(look) {
+  if (!LOOKS.includes(look)) look = "grounded";
   document.documentElement.setAttribute("data-look", look);
   safeSet("haven.look", look);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", look === "futuristic" ? "#05060b" : "#17130f");
-  for (const b of document.querySelectorAll(".look-switch button")) b.setAttribute("aria-pressed", String(b.dataset.look === look));
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", themeColor());
+  for (const b of document.querySelectorAll(".look-switch button[data-look]")) b.setAttribute("aria-pressed", String(b.dataset.look === look));
 }
-for (const b of document.querySelectorAll(".look-switch button")) b.addEventListener("click", () => setLook(b.dataset.look));
+for (const b of document.querySelectorAll(".look-switch button[data-look]")) b.addEventListener("click", () => setLook(b.dataset.look));
 setLook(document.documentElement.getAttribute("data-look") || "grounded");
+
+// Appearance: Auto follows the device; Light or Dark pins it (Grounded and
+// Vivid have both; Futuristic is always dark).
+function setTheme(choice) {
+  if (choice === "light" || choice === "dark") document.documentElement.setAttribute("data-theme", choice);
+  else { choice = "auto"; document.documentElement.removeAttribute("data-theme"); }
+  safeSet("haven.theme", choice);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", themeColor());
+  for (const b of document.querySelectorAll("[data-theme-choice]")) b.setAttribute("aria-pressed", String(b.dataset.themeChoice === choice));
+}
+for (const b of document.querySelectorAll("[data-theme-choice]")) b.addEventListener("click", () => setTheme(b.dataset.themeChoice));
+setTheme(document.documentElement.getAttribute("data-theme") || "auto");
 
 // ---------- tabs ----------
 function setTab(name) {
@@ -301,8 +323,8 @@ function renderScenes() {
     el("button", { class: "scene", "data-scene": id, onclick: () => api(`/api/scenes/${id}`, {}).then(showResult) }, el("span", {}, label))));
 }
 
-function tile(d, { icon, name, stateText, on = false, alert = false, head = [], body = [], wide = false, id }) {
-  return el("div", { class: `tile${on ? " on" : ""}${alert ? " alert" : ""}${wide ? " wide" : ""}`, "data-device": id || d?.id || "" },
+function tile(d, { icon, name, stateText, on = false, alert = false, head = [], body = [], wide = false, id, style }) {
+  return el("div", { class: `tile${on ? " on" : ""}${alert ? " alert" : ""}${wide ? " wide" : ""}`, "data-device": id || d?.id || "", style },
     el("div", { class: "tile-head" },
       el("div", { class: "tile-title" },
         el("span", { class: "tile-icon" }, svg(icon)),
@@ -323,7 +345,7 @@ function deviceTile(d) {
         oninput: (e) => e.target.style.setProperty("--fill", `${e.target.value}%`),
         onchange: (e) => send(d.id, { on: true, brightness: Number(e.target.value) }),
       });
-      return tile(d, { icon: ICON.light, name: d.name, stateText: describe(d), on: s.on,
+      return tile(d, { icon: ICON.light, name: d.name, stateText: describe(d), on: s.on, style: s.on ? `--glow:${s.brightness / 100}` : undefined,
         head: [toggle(d.name, s.on, () => send(d.id, { on: !s.on }))], body: s.on ? [slider] : [] });
     }
     case "fan":
@@ -546,10 +568,44 @@ function say(who, text) {
   say.hideTimer = setTimeout(() => { if (!voice.isListening()) log.hidden = true; }, 20_000);
 }
 
+let lastReply = "";
 function reply(text, { spoken = true } = {}) {
   if (!text) return;
   say("haven", text);
+  lastReply = text;
+  const st = document.querySelector(".st-reply");
+  if (st) st.textContent = text;
   if (speakAloud && spoken) voice.speak(text);
+}
+
+// Haven's voice state, shown by the orb in the voice bar and the Studio orb.
+const VOICE_LABEL = { idle: "Tap to talk", listening: "Listening…", thinking: "Thinking…", speaking: "Speaking" };
+let voiceState = "idle";
+function setVoiceState(s) {
+  voiceState = VOICE_LABEL[s] ? s : "idle";
+  $("#orb").dataset.voice = voiceState;
+  for (const o of document.querySelectorAll(".st-orb")) o.dataset.voice = voiceState;
+  for (const l of document.querySelectorAll(".st-state")) l.textContent = VOICE_LABEL[voiceState];
+}
+
+// The waveform: speech signals push a level up, it eases back down.
+const level = { now: 0, target: 0, raf: 0 };
+function pushLevel(v) {
+  level.target = Math.max(level.target, v);
+  if (!level.raf) level.raf = requestAnimationFrame(stepLevel);
+}
+function stepLevel(t) {
+  level.raf = 0;
+  level.now += (level.target - level.now) * 0.35;
+  level.target *= 0.88;
+  const active = level.now > 0.01 || level.target > 0.01;
+  const bars = document.querySelectorAll(".wave i");
+  bars.forEach((b, i) => {
+    const shape = 0.5 + 0.5 * Math.abs(Math.sin(t / 150 + i * 1.7));
+    b.style.setProperty("--l", active ? (level.now * shape).toFixed(3) : "0");
+  });
+  for (const o of document.querySelectorAll(".orb, .st-orb")) o.style.setProperty("--lvl", active ? level.now.toFixed(3) : "0");
+  if (active) level.raf = requestAnimationFrame(stepLevel);
 }
 
 function showResult(r) {
@@ -587,8 +643,9 @@ const voice = createVoice({
   synthesize: serverSpeech,
   onInterim: showInterim,
   onFinal: (text) => ask(text),
+  onLevel: pushLevel,
   onState(s, message) {
-    $("#orb").dataset.voice = s === "unavailable" || s === "error" ? "idle" : s;
+    setVoiceState(s === "unavailable" || s === "error" ? "idle" : s);
     $("#mic").setAttribute("aria-pressed", String(s === "listening"));
     if (s === "listening") { showHint("Listening… tap the mic again to stop."); showInterim(""); }
     if (s !== "listening" && interimNode?.textContent === "Listening…") { interimNode.remove(); interimNode = null; }
@@ -599,10 +656,11 @@ if (!voice.canListen) $("#mic").classList.add("unavailable");
 $("#speak").setAttribute("aria-pressed", String(speakAloud && voice.canSpeak));
 if (!voice.canSpeak) $("#speak").hidden = true;
 
-$("#mic").addEventListener("click", () => {
-  if (!voice.canListen) { showHint(voice.whyNot); return; }
+function talk() {
+  if (!voice.canListen) { showHint(voice.whyNot); $("#chat-input").focus(); return; }
   voice.listen();
-});
+}
+$("#mic").addEventListener("click", talk);
 $("#speak").addEventListener("click", () => {
   speakAloud = !speakAloud;
   safeSet("haven.speak", speakAloud ? "on" : "off");
@@ -613,12 +671,12 @@ $("#speak").addEventListener("click", () => {
 
 async function ask(text) {
   say("you", text);
-  $("#orb").dataset.voice = "thinking";
+  setVoiceState("thinking");
   try {
     const r = await api("/api/chat", { text, conversationId: "panel", panelRoom: panelRoom || undefined });
     reply(r.reply || r.error || "Sorry, I didn't get a reply. Try again.");
   } finally {
-    if ($("#orb").dataset.voice === "thinking") $("#orb").dataset.voice = "idle";
+    if (voiceState === "thinking") setVoiceState("idle");
   }
   refresh();
 }
@@ -662,6 +720,7 @@ function simButtons() {
 const SCREENS = [
   { id: "signature", name: "Signature", best: "Great room or main entry", about: "The house model, the room you're in, and every control on glass. The flagship screen." },
   { id: "wallpaper", name: "Wallpaper", best: "Living room or a large wall display", about: "Your home's photo behind frosted tiles: weather, climate, every light on a slider, doors, energy and scenes. The photo follows the time of day, or use your own." },
+  { id: "studio", name: "Studio", best: "Living room or kitchen, where people talk to Haven", about: "Haven at the center: a large orb that listens, thinks and speaks (tap it to talk), with the time, weather, lighting, climate, electricity and doors around it." },
   { id: "command-center", name: "Command Center", best: "Office or a large wall display", about: "Everything at once: climate, energy, every light, every door, room conditions and updates." },
   { id: "family-hub", name: "Family Hub", best: "Kitchen", about: "A big clock, today's briefing, scenes and quick comfort buttons the whole family can use." },
   { id: "nightstand", name: "Nightstand", best: "Bedroom", about: "Dim and quiet: the time, Haven's orb and four big bedtime buttons. Talk to it in the dark." },
@@ -689,6 +748,7 @@ function setScreen(id) {
 const SCHEMATIC = {
   "signature": [[0, 0, 5, 12, "s"], [5, 0, 7, 3], [5, 3, 7, 4], [5, 7, 7, 5]],
   "wallpaper": [[0, 0, 3, 5, "s"], [0, 5, 3, 3], [0, 8, 3, 4], [3, 0, 3, 4], [3, 4, 3, 8], [6, 0, 3, 7], [6, 7, 3, 5], [9, 0, 3, 5], [9, 5, 3, 7]],
+  "studio": [[0, 0, 4, 4], [0, 4, 4, 4], [4, 0, 4, 8, "s"], [8, 0, 4, 8], [0, 8, 8, 4], [8, 8, 4, 4]],
   "command-center": [[0, 0, 3, 6, "s"], [3, 0, 3, 6], [6, 0, 6, 6], [0, 6, 3, 6], [3, 6, 3, 6], [6, 6, 3, 6], [9, 6, 3, 6]],
   "family-hub": [[0, 0, 6, 6, "s"], [6, 0, 6, 6], [0, 6, 12, 3], [0, 9, 4, 3], [4, 9, 4, 3], [8, 9, 4, 3]],
   "nightstand": [[3, 1, 6, 5, "s"], [1, 8, 2.5, 3], [3.8, 8, 2.5, 3], [6.6, 8, 2.5, 3], [9.4, 8, 1.6, 3]],
@@ -774,7 +834,7 @@ function lightsBlock(filterRoom = null) {
   const lights = byType("light").filter((l) => !filterRoom || l.room === filterRoom);
   const lit = lights.filter((l) => l.state.on);
   return block(filterRoom ? `${roomName(filterRoom)} lights` : "Lights", "lights-card",
-    el("ul", { class: "lights-list" }, ...lights.map((l) => el("li", { class: l.state.on ? "on" : "", "data-device": l.id },
+    el("ul", { class: "lights-list" }, ...lights.map((l) => el("li", { class: l.state.on ? "on" : "", "data-device": l.id, style: l.state.on ? `--glow:${l.state.brightness / 100}` : undefined },
       el("span", { class: "tile-icon" }, svg(ICON.light)),
       el("div", { class: "ll-text" }, el("span", { class: "ll-name" }, l.name), el("span", { class: "ll-state" }, describe(l))),
       toggle(l.name, l.state.on, () => send(l.id, { on: !l.state.on })),
@@ -873,7 +933,7 @@ function roomCard(r) {
         el("div", { class: "stepper" }, el("button", { "aria-label": "Cooler by 1°F", onclick: () => stepTarget(d, -1) }, "−"), el("button", { "aria-label": "Warmer by 1°F", onclick: () => stepTarget(d, 1) }, "+")));
     }
     const on = (d.type === "light" || d.type === "fan" || d.type === "water_heater") && s.on;
-    return el("button", { class: `room-dev${on ? " on" : ""}${isAlert(d) ? " alert" : ""}`, "data-device": d.id, "aria-pressed": d.type === "light" || d.type === "fan" ? String(s.on) : null, "aria-label": `${d.name}: ${describe(d)}`, onclick: fire },
+    return el("button", { class: `room-dev${on ? " on" : ""}${isAlert(d) ? " alert" : ""}`, "data-device": d.id, style: d.type === "light" && s.on ? `--glow:${s.brightness / 100}` : undefined, "aria-pressed": d.type === "light" || d.type === "fan" ? String(s.on) : null, "aria-label": `${d.name}: ${describe(d)}`, onclick: fire },
       el("span", { class: "tile-icon" }, svg(icon)),
       el("span", { class: "rd-name" }, d.name.replace(new RegExp(`^${r.name} `), "").replace(/^Main /, "")),
       el("span", { class: "rd-state" }, describe(d)));
@@ -882,6 +942,132 @@ function roomCard(r) {
     el("div", { class: "row-between" }, el("h2", {}, r.name), th ? el("span", { class: "muted small" }, `${th.state.current}°F`) : null),
     el("div", { class: "room-devs" }, ...controls.map(btn)),
     sensors.length ? el("p", { class: "sensors" }, ...sensors.map((d) => el("span", { class: isAlert(d) ? "alert" : "" }, `${d.name.replace(new RegExp(`^${r.name} `), "")}: ${describe(d)}`))) : null);
+}
+
+// ---------- Studio screen ----------
+// Built around Haven itself: a large orb in the middle that shows it
+// listening, thinking and speaking (tap it to talk), with the time and
+// weather, lighting, climate, electricity and the doors around it.
+function studioTime() {
+  const { time, date } = localClock();
+  const outdoor = byType("temperature")[0];
+  const w = weather?.available ? weather : null;
+  return el("section", { class: "xcard st-card st-time", "aria-label": "Time and weather" },
+    el("p", { class: "st-clock" }, time),
+    el("p", { class: "st-date" }, date),
+    w ? el("div", { class: "st-weather" },
+      el("span", { class: "st-wx-icon" }, wxIcon(w.current.condition, w.current.isDay)),
+      el("div", {}, el("p", { class: "st-temp" }, `${w.current.tempF}°`), el("p", { class: "muted small" }, `${w.current.text} · H ${w.daily[0]?.highF ?? "--"}° L ${w.daily[0]?.lowF ?? "--"}°`)))
+      : el("div", { class: "st-weather" }, el("div", {},
+        el("p", { class: "st-temp" }, outdoor ? `${outdoor.state.value}°` : "--"),
+        el("p", { class: "muted small" }, outdoor ? "Outside, from your sensor. Forecast not connected." : "Forecast not connected."))),
+    w ? el("ol", { class: "st-hours", "aria-label": "Next hours" }, ...w.hourly.slice(1, 6).map((h) =>
+      el("li", { "aria-label": `${h.label}: ${h.tempF}°F, ${h.text}` },
+        el("span", { class: "muted small", "aria-hidden": "true" }, h.label.replace(" ", "")),
+        el("span", { "aria-hidden": "true" }, wxIcon(h.condition, h.isDay)),
+        el("span", { class: "st-h-temp", "aria-hidden": "true" }, `${h.tempF}°`)))) : null,
+    w?.source === "sample" ? el("p", { class: "muted small" }, "Sample weather for the demo") : null);
+}
+
+// Haven's agents, shown under the orb. Each glows while it's working; the
+// lines between them light up when one real event involves several of them
+// at once (a scene, "I'm leaving", an automation), so people can see the
+// house coordinating instead of guessing.
+const AGENT_OF = { light: "lighting", climate: "climate", fan: "climate", water_heater: "climate", lock: "security", garage: "security", valve: "security" };
+const agentSync = { last: {}, until: 0, timer: 0 };
+function noteAgents(e) {
+  const now = Date.now();
+  if (e.type === "action") {
+    const a = AGENT_OF[String(e.device).split(".")[0]];
+    if (a) { agentSync.last[a] = now; agentSync.last.energy = now; }
+  }
+  if (e.type !== "action" && e.type !== "scene") return;
+  const recent = ["lighting", "climate", "security"].filter((a) => now - (agentSync.last[a] || 0) < 3000);
+  if (e.type === "scene" || recent.length >= 2) agentSync.until = now + 4000;
+  clearTimeout(agentSync.timer);
+  agentSync.timer = setTimeout(() => { if (screen === "studio" && state) renderAlt(); }, 6100);
+}
+
+function agentRow() {
+  const now = Date.now();
+  const lit = byType("light").filter((l) => l.state.on).length;
+  const th = byType("thermostat")[0];
+  const fans = byType("fan").filter((f) => f.state.on).length;
+  const list = issues();
+  const away = state.people.length > 0 && state.people.every((p) => !p.home);
+  const running = energy ? energy.breakdown.filter((p) => !p.name.startsWith("Always-on")).length : 0;
+  const agents = [
+    ["lighting", "Lighting", ICON.light, lit ? `${lit} on` : "All off", lit > 0],
+    ["climate", "Climate", ICON.climate, th.state.hvac === "heating" ? `Heating to ${th.state.target}°` : th.state.hvac === "cooling" ? `Cooling to ${th.state.target}°` : `Holding ${th.state.target}°`, th.state.hvac === "heating" || th.state.hvac === "cooling" || fans > 0],
+    ["security", "Security", ICON.shield, list.length ? list[0].text : away ? "Guarding the house" : "All secure", away || list.length > 0],
+    ["energy", "Energy", ICON.bolt, energy ? `${energy.nowKw} kW now` : "Not measured", running > 0],
+  ];
+  return el("div", { class: "agents", role: "list", "aria-label": "What Haven's agents are doing", "data-sync": String(agentSync.until > now) },
+    ...agents.map(([id, name, icon, text, active]) => el("div", {
+      class: "agent", role: "listitem", "data-agent": id, "data-active": String(active),
+      "data-busy": String(now - (agentSync.last[id] || 0) < 6000),
+      "data-alert": String(id === "security" && list.some((i) => i.level === "bad")),
+    },
+      el("span", { class: "agent-ic", "aria-hidden": "true" }, svg(icon)),
+      el("span", { class: "agent-name" }, name),
+      el("span", { class: "agent-state" }, text))));
+}
+
+function studioOrb() {
+  const orb = el("button", { class: "st-orb", "data-voice": voiceState, "data-house": houseState(), "aria-label": "Talk to Haven", onclick: talk },
+    el("span", { class: "st-ring", "aria-hidden": "true" }), el("span", { class: "st-core", "aria-hidden": "true" }));
+  return el("section", { class: "xcard st-card st-orb-card", "aria-label": "Haven" },
+    el("p", { class: "st-state" }, VOICE_LABEL[voiceState]),
+    orb,
+    el("span", { class: "wave st-wave", "aria-hidden": "true" }, ...Array.from({ length: 21 }, () => el("i"))),
+    agentRow(),
+    el("p", { class: "st-reply" }, lastReply || "Ask me anything about the house, or tap the orb and talk."),
+    el("div", { class: "st-chips" },
+      el("button", { onclick: () => api("/api/briefing", {}) }, "Brief me"),
+      el("button", { onclick: () => ask("status") }, "How's the house?"),
+      el("button", { onclick: () => api("/api/scenes/goodnight", {}).then(showResult) }, "Goodnight")));
+}
+
+function studioClimate(d) {
+  const s = d.state;
+  const pos = (v) => `${Math.min(100, Math.max(0, ((v - 55) / 30) * 100))}%`;
+  const doing = s.mode === "off" ? "System off" : s.hvac === "heating" ? `Heating to ${targetOf(d)}°` : s.hvac === "cooling" ? `Cooling to ${targetOf(d)}°` : `Holding ${targetOf(d)}°`;
+  return el("section", { class: "xcard st-card st-climate", "data-device": d.id, "aria-label": "Climate" },
+    el("div", { class: "row-between" }, el("h2", {}, "Climate"), el("span", { class: "muted small" }, `${s.humidity ?? "--"}% humidity`)),
+    el("div", { class: "st-climate-now" }, el("p", { class: "st-temp big" }, `${Math.round(s.current)}°`), el("p", { class: "muted" }, doing)),
+    el("div", { class: "st-range", role: "img", "aria-label": `Set to ${targetOf(d)}°F; it's ${s.current}°F inside. Range 55 to 85°F.` },
+      el("span", { class: "st-range-now", style: `left:${pos(s.current)}` }),
+      el("span", { class: "st-range-set", style: `left:${pos(targetOf(d))}` })),
+    el("div", { class: "st-range-labels muted small", "aria-hidden": "true" }, el("span", {}, "55°"), el("span", {}, "85°")),
+    el("div", { class: "pill-stepper" },
+      el("button", { "aria-label": "Cooler by 1°F", onclick: () => stepTarget(d, -1) }, "−"),
+      el("span", { class: "target" }, `${targetOf(d)}°F`),
+      el("button", { "aria-label": "Warmer by 1°F", onclick: () => stepTarget(d, 1) }, "+")),
+    el("div", { class: "seg st-seg", role: "group", "aria-label": "Mode" },
+      ...MODES.map(([m, label]) => el("button", { "aria-pressed": String(s.mode === m), onclick: () => send(d.id, { mode: m }) }, label))));
+}
+
+function studioScreen() {
+  const list = issues();
+  const hs = houseState();
+  const lights = lightsBlock(panelRoom || null);
+  const secure = securityBlock();
+  const power = energyTile();
+  lights.classList.add("st-card", "st-lights");
+  secure.classList.add("st-card", "st-secure");
+  power.classList.add("st-card", "st-energy");
+  return el("div", { class: "studio" },
+    el("header", { class: "st-top" },
+      el("div", { class: "st-title" },
+        el("p", { class: "eyebrow" }, state.home),
+        el("div", { class: "status", "data-state": hs },
+          el("span", { class: "status-mark", "aria-hidden": "true" }),
+          el("div", { class: "status-text" },
+            el("p", { class: "status-headline" }, hs === "alert" ? "Needs your attention now" : list.length ? `${list.length} ${list.length === 1 ? "thing needs" : "things need"} attention` : state.pending.length ? "Waiting for your OK" : "All secure"),
+            el("ul", { class: "issues" }, ...list.map((i) => el("li", { class: `issue ${i.level}` }, i.text, i.action && el("button", { onclick: i.action[1] }, i.action[0]))))))),
+      el("button", { class: "screens-open", "aria-haspopup": "dialog" }, "Screens")),
+    asksBlock(),
+    el("div", { class: "st-grid" }, studioTime(), studioOrb(), lights, studioClimate(byType("thermostat")[0]), power, secure));
 }
 
 // ---------- Wallpaper screen ----------
@@ -1131,6 +1317,8 @@ function renderAlt() {
   const nodes = [];
   if (screen === "wallpaper") {
     nodes.push(wallpaperScreen());
+  } else if (screen === "studio") {
+    nodes.push(studioScreen());
   } else if (screen === "command-center") {
     nodes.push(altHeader(), asksBlock(),
       el("div", { class: "grid-cc" },
@@ -1176,6 +1364,62 @@ function renderAlt() {
   if (slot && energy) renderEnergyChart(slot, energy, slot.clientWidth || 600);
 }
 
+// ---------- model home showcase ----------
+// For a builder's model home: when nobody has touched the panel for a
+// while, Haven shows what it does with a short live tour of scenes (the
+// same ones a homeowner would tap, through the same safety checks). It
+// never runs while something needs attention, and any touch stops it.
+const SHOWCASE = [
+  ["home", "Welcome home. I turned the lights on and set a comfortable temperature."],
+  ["movie", "Movie night. Lights down low, all with one word."],
+  ["goodnight", "Goodnight. Doors locked, garage closed, lights off, and the house cooled for sleep."],
+  ["morning", "Good morning. Warm light, a comfortable temperature, and the day's weather ready."],
+];
+let showcaseOn = safeGet("haven.showcase") === "on";
+const showcase = { idleTimer: 0, stepTimer: 0, running: false, step: 0, returnTo: null };
+const showcaseIdleMs = () => Number(safeGet("haven.showcaseIdleMs")) || 60_000;
+function armShowcase() {
+  clearTimeout(showcase.idleTimer);
+  if (showcaseOn && !showcase.running) showcase.idleTimer = setTimeout(startShowcase, showcaseIdleMs());
+}
+function startShowcase() {
+  if (!showcaseOn || !state || houseState() === "alert" || state.pending.length) return armShowcase();
+  showcase.running = true;
+  showcase.returnTo = screen;
+  $("#showcase-banner").hidden = false;
+  if (screen !== "studio") { screen = "studio"; room = "all"; render(); }
+  runShowcaseStep();
+}
+async function runShowcaseStep() {
+  if (!showcase.running) return;
+  if (houseState() === "alert") return stopShowcase();
+  const [scene, line] = SHOWCASE[showcase.step++ % SHOWCASE.length];
+  await api(`/api/scenes/${scene}`, {});
+  if (!showcase.running) return;
+  reply(line);
+  refresh();
+  showcase.stepTimer = setTimeout(runShowcaseStep, 14_000);
+}
+function stopShowcase() {
+  if (showcase.running) {
+    showcase.running = false;
+    clearTimeout(showcase.stepTimer);
+    $("#showcase-banner").hidden = true;
+    if (showcase.returnTo && showcase.returnTo !== screen) { screen = showcase.returnTo; render(); }
+  }
+  armShowcase();
+}
+window.addEventListener("pointerdown", stopShowcase, true);
+window.addEventListener("keydown", stopShowcase, true);
+$("#showcase-toggle").setAttribute("aria-checked", String(showcaseOn));
+$("#showcase-toggle").addEventListener("click", () => {
+  showcaseOn = !showcaseOn;
+  safeSet("haven.showcase", showcaseOn ? "on" : "off");
+  $("#showcase-toggle").setAttribute("aria-checked", String(showcaseOn));
+  showHint(showcaseOn ? "Showcase on: after a minute untouched, Haven gives a live tour." : "Showcase off.");
+  armShowcase();
+});
+
 // ---------- render and live updates ----------
 function render() {
   const alt = screen !== "signature";
@@ -1211,6 +1455,7 @@ function refresh() {
 }
 
 function onEvent(e) {
+  noteAgents(e);
   feed.push(e);
   if (feed.length > 300) feed.shift();
   if (started) {
@@ -1247,6 +1492,7 @@ async function start() {
   render();
   connect();
   started = true;
+  armShowcase();
   setInterval(tickClock, 15_000);
   setInterval(() => { renderFeed(); refresh(); }, 60_000);
 }
