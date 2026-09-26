@@ -80,3 +80,11 @@ test("garage door can't be bounced up and down", async () => {
   const r = await home.controller.execute({ device: "garage.door", command: { door: "closed" }, origin: "owner" });
   assert.equal(r.status, "refused");
 });
+
+test("asking twice for the same risky action makes one confirmation, not two", async () => {
+  const home = await testHome();
+  const a = await home.controller.execute({ device: "garage.door", command: { door: "open" }, origin: "agent" });
+  const b = await home.controller.execute({ device: "garage.door", command: { door: "open" }, origin: "agent" });
+  assert.equal(a.confirmId, b.confirmId);
+  assert.equal(home.controller.pendingList().length, 1);
+});

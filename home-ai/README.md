@@ -5,6 +5,7 @@ Haven runs a new home: lights, ceiling fans, heating and air conditioning, the w
 - **Full analysis** of integrating a home with AI agents, hardware choices, costs and a new-build checklist: [docs/ANALYSIS.md](docs/ANALYSIS.md)
 - **Prompts**, both the build spec and the agent's own system prompt: [PROMPT.md](PROMPT.md)
 - **iPhone, Apple Watch and car setup**: [docs/APPLE-SETUP.md](docs/APPLE-SETUP.md)
+- **Client demos** in two styles, Futuristic and Grounded, with concept images and prompts: [docs/DEMOS.md](docs/DEMOS.md)
 
 ## Try it now (no hardware needed)
 

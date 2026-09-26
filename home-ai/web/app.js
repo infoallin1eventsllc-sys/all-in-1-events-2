@@ -209,7 +209,8 @@ $("#chat-form").addEventListener("submit", async (e) => {
   if (!text) return;
   $("#chat-input").value = "";
   say("you", text);
-  const r = await api("/api/chat", { text, conversationId: "app" });
+  $("#orb").classList.add("thinking");
+  const r = await api("/api/chat", { text, conversationId: "app" }).finally(() => $("#orb").classList.remove("thinking"));
   say("haven", r.reply || r.error || "…");
   refresh();
 });
@@ -241,6 +242,16 @@ function simButtons() {
   ];
   $("#sim-buttons").replaceChildren(...buttons.map(([label, fn]) => el("button", { onclick: fn }, label)));
 }
+
+// ---------- look switch ----------
+function setLook(look) {
+  document.documentElement.setAttribute("data-look", look);
+  safeSet("haven.look", look);
+  document.querySelector('meta[name="theme-color"]').setAttribute("content", look === "futuristic" ? "#06070c" : "#0f1720");
+  for (const b of document.querySelectorAll(".look-switch button")) b.setAttribute("aria-pressed", String(b.dataset.look === look));
+}
+for (const b of document.querySelectorAll(".look-switch button")) b.addEventListener("click", () => setLook(b.dataset.look));
+setLook(document.documentElement.getAttribute("data-look") || "grounded");
 
 // ---------- live updates ----------
 let refreshTimer;

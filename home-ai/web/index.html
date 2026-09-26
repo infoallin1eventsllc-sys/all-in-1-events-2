@@ -12,6 +12,7 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="stylesheet" href="styles.css">
+  <script src="look.js"></script>
 </head>
 <body>
   <div id="login" class="login" hidden>
@@ -26,11 +27,20 @@
 
   <main id="app" hidden>
     <header class="top">
-      <div>
-        <h1 id="home-name">Haven</h1>
-        <p id="subtitle" class="muted"></p>
+      <div class="brand">
+        <span id="orb" class="orb" aria-hidden="true"></span>
+        <div>
+          <h1 id="home-name">Haven</h1>
+          <p id="subtitle" class="muted"></p>
+        </div>
       </div>
-      <span id="conn" class="conn" title="Live connection">●</span>
+      <div class="top-right">
+        <div class="look-switch" role="group" aria-label="App style">
+          <button type="button" data-look="grounded">Grounded</button>
+          <button type="button" data-look="futuristic">Futuristic</button>
+        </div>
+        <span id="conn" class="conn" title="Live connection">●</span>
+      </div>
     </header>
 
     <section id="pending" aria-live="assertive"></section>

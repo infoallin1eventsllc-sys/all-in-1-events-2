@@ -44,8 +44,13 @@ export class Controller {
       return { status: "refused", message: auth.reason };
     }
     if (auth.decision === "confirm") {
-      const confirmId = Math.random().toString(36).slice(2, 10);
       const summary = describe(device, command);
+      // Asking again for the same thing reuses the open request.
+      const existing = this.pendingList().find((p) => p.device === id && p.summary === summary);
+      if (existing) {
+        return { status: "needs_confirmation", confirmId: existing.confirmId, message: `Still waiting for your OK to ${lcFirst(summary)}. Tap Confirm in the Haven app.` };
+      }
+      const confirmId = Math.random().toString(36).slice(2, 10);
       this.pending.set(confirmId, { device: id, command, reason, summary, expires: Date.now() + CONFIRM_TTL_MS });
       this.bus.publish("confirm_request", { confirmId, device: id, name: device.name, summary, reason });
       return {
