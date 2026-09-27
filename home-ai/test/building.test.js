@@ -2,7 +2,7 @@
 // plan at all get a layout.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { normalizeHome, autoLayout, sharedStretches, STYLES, polyArea, kindOf } from "../web/building.js";
+import { normalizeHome, autoLayout, sharedStretches, STYLES, polyArea, kindOf, mainRect } from "../web/building.js";
 import { SAMPLE_HOMES } from "../web/homes.js";
 import { loadConfig } from "../src/home.js";
 
@@ -83,4 +83,23 @@ test("unknown styles and floors fall back and say so", () => {
   assert.equal(h.styleId, "modern");
   assert.equal(h.warnings.length, 2);
   assert.equal(kindOf({ id: "powder", name: "Powder Room" }), "bath");
+});
+
+test("a broken or empty description still gives a ground floor to draw on, never a crash", () => {
+  for (const input of [undefined, {}, { rooms: null }, { rooms: {} }, { building: { floors: [null] }, rooms: [null, { name: "no id" }] }, { rooms: [{ id: "yard", name: "Yard" }] }]) {
+    const h = normalizeHome(input);
+    assert.equal(h.floors.length, 1, JSON.stringify(input));
+    assert.ok(h.floors[0].bbox.every(Number.isFinite));
+  }
+  const h = normalizeHome({ rooms: [{ id: "office", plan: [0, 0, 3, 3] }], building: { features: [{ type: "deck", plan: [0, 0, "wide", 2] }, { type: "patio", plan: [0, 4, 3, 0] }] } });
+  assert.equal(h.rooms[0].name, "office", "a room with no name is called by its id");
+  assert.equal(h.features.length, 0, "features with bad sizes are left out");
+});
+
+test("the drawn model shows an L-shaped room as its largest rectangle, clear of its neighbours", () => {
+  const craftsman = SAMPLE_HOMES.find((s) => s.id === "craftsman");
+  const h = normalizeHome(craftsman);
+  const plans = h.rooms.map((r) => (r.shape ? mainRect(r.poly) : r.bbox));
+  assert.deepEqual(mainRect(h.rooms.find((r) => r.id === "living").poly), [4, 0, 8, 4]);
+  for (let i = 0; i < plans.length; i++) for (let j = i + 1; j < plans.length; j++) assert.ok(overlap(plans[i], plans[j]) < 0.01, `${h.rooms[i].id} / ${h.rooms[j].id}`);
 });

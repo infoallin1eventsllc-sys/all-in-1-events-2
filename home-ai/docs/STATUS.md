@@ -1,6 +1,41 @@
 # Haven: Where Things Stand
 
-_Last updated: September 26, 2026 (Vivid finish, Studio screen with the agent row, and Model home showcase added, for the builder pitch). Branch `claude/inspiring-fermi-jpi3vh` in `infoallin1eventsllc-sys/all-in-1-events-2`, folder `home-ai/`._
+_Last updated: September 27, 2026 (debug pass after the any-home hologram). Branch `claude/inspiring-fermi-jpi3vh` in `infoallin1eventsllc-sys/all-in-1-events-2`, folder `home-ai/`._
+
+## Pick up here (next session)
+**State:** everything is committed and pushed; the working tree is clean. The last full run was all passing (see the September 27 debug pass below).
+
+**Waiting on you:**
+- An empty GitHub repository (suggested name `haven`) to move Haven out of this one (Next steps, item 5). Haven's history on its own is made with `git subtree split --prefix=home-ai -b haven-export` (a local branch; it isn't pushed, so a new cloud session has to recreate it before pushing it to the new repository). This session's GitHub access can't create repositories.
+- `ANTHROPIC_API_KEY` in the cloud environment's settings (never in chat), then `npm run live-check`.
+
+**Suggested order for tomorrow:**
+1. `npm test` (about 10 s), then `npm run build:demo`.
+2. Open the Grounded demo on a real tablet or phone and try the hologram: drag, pinch, tap a room, Screens → Home style → Two-story Colonial, and the explorer's floor buttons. It's only been checked in software rendering (SwiftShader), never on a real tablet's GPU.
+3. Work down "Known issues" below; each one says where to look.
+4. When the repo exists: move Haven, then add the API key and run the live check.
+
+**Known issues (not fixed yet):**
+- **Two-story homes glow too brightly** in the hologram. The layers of see-through walls add up, so the Colonial and Contemporary look washed out, especially zoomed in on a phone. Look at the rim and edge opacity in `makeMats()` in `web/holo.js`; dimming the floors that aren't selected (already done when a room is picked) could also apply at the whole-house view.
+- **Tags can hide under the explorer's floor bar** at the top of the view on a phone (for example the Hallway tag in the Colonial). The tag layout (`renderTags` in `web/holo.js`) doesn't know about the bars.
+- **Upstairs tags crowd together** on two-story homes at the whole-house view, because the tags of both floors share the same screen space.
+- **Roofs are approximate** over L-shaped footprints and where an upper floor is smaller than the one below (the roof covers each floor's bounding box). Porch posts are drawn on the south and east sides only.
+- **The drawn model** (the fallback without WebGL) shows an L-shaped room as its largest rectangle, so the rest of that room is left empty. It shows one floor at a time.
+- **Not measured:** hologram frame rate and battery use on a real wall tablet; how a 4,000 sq ft, three-floor home looks.
+- **The browser run is slow** (about 15 minutes per target) because WebGL runs in software here.
+
+## Debug pass, September 27
+A code review of the hologram and any-home code, plus a sweep of every screen in every finish at wall-panel and phone width with five home styles (no script errors, no sideways scrolling, the hologram ready everywhere). Fixed:
+1. **A home with no rooms** (or only outdoor areas) put the hologram's camera at infinity and a porch crashed the render. It now keeps a ground floor to stand on.
+2. **A typo in home.json** (a room or floor that isn't an object, `rooms` not a list, a room with no name, a deck with a non-number size) crashed the panel. Bad entries are now skipped and a nameless room is called by its id.
+3. **Drawn model, L-shaped rooms:** the Craftsman's living room was drawn as its whole bounding box, covering the Dining Nook. It's now drawn as its largest rectangle (`mainRect` in `web/building.js`).
+4. **Drawn model, floors:** the explorer showed an "All floors" button that showed only the ground floor, and an upstairs room picked from the room list couldn't be seen. The drawn model now offers just the floors, and shows the picked room's floor.
+5. **Drawn model with no rooms:** opening the explorer or pressing Fit threw an error.
+6. **Hologram bloom ran at half resolution** on high-density screens (most tablets and phones), so the glow was soft and slightly offset.
+7. **Furniture could land outside a four-cornered room** that isn't a rectangle (a trapezoid or angled room).
+8. **The hologram could stop redrawing** after the explorer was opened and closed quickly (it read the oldest visibility change, not the newest).
+9. **A small graphics memory leak** each time Home style changed.
+10. **Phone explorer:** the view and floor bars wrapped onto several rows and covered the middle of the model. Each is now one scrolling row, only as wide as its buttons.
 
 ## Links
 - Demo A, Futuristic: https://claude.ai/artifact/NHSYrvBSADDcedguH3CBSm
@@ -13,7 +48,7 @@ Both are private until shared from each page's Share menu.
 ## Verified working
 `npm run check` runs everything below. Last result: all passing, twice in a row.
 
-- **115 automated tests** (`npm test`)
+- **124 automated tests** (`npm test`)
   - Safety rules: confirmations, hard limits, the leak interlock, garage anti-bounce, owner vs. AI vs. automation permissions
   - Automations: motion lights on and off, leak shutoff, arriving / approaching / leaving, garage reminders, freeze protection, quiet hours
   - Every chat phrase the panel and docs suggest, plus questions, scenes and the "which room?" fallback

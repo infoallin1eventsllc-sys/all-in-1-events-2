@@ -91,6 +91,29 @@ export function polyArea(poly) {
   for (let i = 0; i < poly.length; i++) { const [x1, y1] = poly[i], [x2, y2] = poly[(i + 1) % poly.length]; a += x1 * y2 - x2 * y1; }
   return Math.abs(a) / 2;
 }
+// The largest rectangle inside a room's outline, [x, y, w, d]: how the drawn
+// model (which draws rectangles only) shows an L-shaped or odd room without
+// spilling over its neighbours.
+export function mainRect(poly) {
+  const xs = [...new Set(poly.map((p) => p[0]))].sort((a, b) => a - b);
+  const ys = [...new Set(poly.map((p) => p[1]))].sort((a, b) => a - b);
+  const inCell = (i, j) => pointInPoly([(xs[i] + xs[i + 1]) / 2, (ys[j] + ys[j + 1]) / 2], poly);
+  const cells = xs.slice(1).map((_, i) => ys.slice(1).map((__, j) => inCell(i, j)));
+  let best = null, bestA = 0;
+  for (let i0 = 0; i0 < xs.length - 1; i0++) for (let j0 = 0; j0 < ys.length - 1; j0++) {
+    for (let i1 = i0; i1 < xs.length - 1; i1++) {
+      if (!cells[i1][j0]) break;
+      for (let j1 = j0; j1 < ys.length - 1; j1++) {
+        let ok = true;
+        for (let i = i0; i <= i1 && ok; i++) ok = cells[i][j1];
+        if (!ok) break;
+        const w = xs[i1 + 1] - xs[i0], d = ys[j1 + 1] - ys[j0];
+        if (w * d > bestA) { bestA = w * d; best = [xs[i0], ys[j0], w, d]; }
+      }
+    }
+  }
+  return best || bboxOf(poly);
+}
 export function pointInPoly([px, py], poly) {
   let inside = false;
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
@@ -138,14 +161,18 @@ export function autoLayout(rooms, placed = []) {
  * Returns { style, styleId, floors, rooms, features, bounds, approximate, warnings }.
  * rooms: [{ ...room, kind, floor, poly, bbox, auto }] (outdoor rooms left out).
  */
-export function normalizeHome({ building, rooms = [] } = {}) {
-  const b = building || {};
+export function normalizeHome({ building, rooms } = {}) {
+  const b = building && typeof building === "object" ? building : {};
+  // A typo in home.json must not take the panel down: ignore anything that isn't a room.
+  rooms = (Array.isArray(rooms) ? rooms : []).filter((r) => r && typeof r === "object" && r.id != null)
+    .map((r) => (r.name ? r : { ...r, name: String(r.id) }));
   const styleId = STYLES[b.style] ? b.style : "modern";
   const style = { ...STYLES[styleId], ...(ROOFS.includes(b.roof) ? { roof: b.roof } : {}), ...(typeof b.pitch === "number" ? { pitch: b.pitch } : {}) };
   const warnings = [];
   if (b.style && !STYLES[b.style]) warnings.push(`Unknown style "${b.style}"; showing Modern.`);
 
-  const floorsIn = Array.isArray(b.floors) && b.floors.length ? b.floors : [{ id: "ground", name: "Ground floor", level: 0 }];
+  const floorsGiven = Array.isArray(b.floors) ? b.floors.filter((f) => f && typeof f === "object") : [];
+  const floorsIn = floorsGiven.length ? floorsGiven : [{ id: "ground", name: "Ground floor", level: 0 }];
   const floors = floorsIn.map((f, i) => ({ id: String(f.id ?? `floor${i}`), name: f.name || (i === 0 ? "Ground floor" : `Floor ${i + 1}`), level: typeof f.level === "number" ? f.level : i, wall: f.wall || style.wall }))
     .sort((a, b2) => a.level - b2.level);
   // Elevation: ground (level 0) at 0, upper floors stacked, basements below.
@@ -176,7 +203,7 @@ export function normalizeHome({ building, rooms = [] } = {}) {
   const approximate = out.some((r) => r.auto);
   if (approximate) warnings.push("Some rooms have no plan, so their layout is estimated.");
 
-  const features = (Array.isArray(b.features) ? b.features : []).filter((f) => f && ["deck", "patio", "pool", "driveway", "porch"].includes(f.type) && Array.isArray(f.plan) && f.plan.length === 4)
+  const features = (Array.isArray(b.features) ? b.features : []).filter((f) => f && ["deck", "patio", "pool", "driveway", "porch"].includes(f.type) && Array.isArray(f.plan) && f.plan.length === 4 && f.plan.every(Number.isFinite) && f.plan[2] > 0 && f.plan[3] > 0)
     .map((f) => ({ ...f, floor: floorIds.has(f.floor) ? f.floor : defaultFloor }));
 
   const all = out.map((r) => r.bbox);
@@ -193,7 +220,10 @@ export function normalizeHome({ building, rooms = [] } = {}) {
       return [x, y, Math.max(...bs.map((q) => q[0] + q[2])) - x, Math.max(...bs.map((q) => q[1] + q[3])) - y];
     })() : null;
   }
-  return { style, styleId, floors: floors.filter((f) => f.rooms > 0), rooms: out, features, bounds, approximate, warnings };
+  // A home with no indoor rooms still has its ground floor, so the camera and porches have something to stand on.
+  const kept = floors.filter((f) => f.rooms > 0);
+  if (!kept.length) { const g = floors.find((f) => f.id === defaultFloor); g.bbox = bounds; kept.push(g); }
+  return { style, styleId, floors: kept, rooms: out, features, bounds, approximate, warnings };
 }
 
 // Where two room outlines share a wall on the same floor: for each edge of

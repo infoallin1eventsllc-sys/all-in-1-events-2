@@ -8,7 +8,7 @@ import { createVoice } from "./voice.js";
 import { renderMap } from "./map.js";
 import { enableMapZoom } from "./mapzoom.js";
 import { createHologram, hologramSupported } from "./holo.js";
-import { normalizeHome } from "./building.js";
+import { normalizeHome, mainRect } from "./building.js";
 import { SAMPLE_HOMES } from "./homes.js";
 import { renderEnergyChart } from "./energy-chart.js";
 
@@ -938,12 +938,14 @@ function houseView(box, { selected, onSelect, onExpand, explorer = false }) {
     $("#explorer").classList.toggle("holo-mode", Boolean($("#explorer-map").__holo && !$("#explorer-map").__holo.failed));
     return h;
   }
-  // The drawn model shows one floor at a time: the explorer's, or the ground floor.
+  // The drawn model shows one floor at a time: the explorer's, the selected
+  // room's, or the ground floor. It draws rectangles, so an L-shaped or odd
+  // room shows its largest rectangle rather than covering its neighbours.
   const hm = normalizeHome(home);
-  const floor = (explorer && explorerFloor) || hm.floors.find((f) => f.level === 0)?.id || hm.floors[0]?.id;
-  const flat = hm.rooms.filter((r) => r.floor === floor).map((r) => ({ id: r.id, name: r.name, plan: r.bbox }));
+  const floor = (explorer && explorerFloor) || hm.rooms.find((r) => r.id === selected)?.floor || hm.floors.find((f) => f.level === 0)?.id || hm.floors[0]?.id;
+  const flat = hm.rooms.filter((r) => r.floor === floor).map((r) => ({ id: r.id, name: r.name, kind: r.kind, plan: r.shape ? mainRect(r.poly) : r.bbox }));
   renderMap(box, { rooms: flat, devicesIn: (id) => allDevices().filter((d) => d.room === id), selected, onSelect, pinInfo });
-  if (explorer) renderExplorerFloors(hm);
+  if (explorer) renderExplorerFloors(hm, floor);
   return enableMapZoom(box, { onExpand, wheel: explorer });
 }
 
@@ -996,7 +998,8 @@ function selectExplorerRoom(id) {
   if (id) z.focusRoom(id); else z.reset();
 }
 // Floor buttons in the explorer, for homes with more than one floor.
-function renderExplorerFloors(hm) {
+// `shown` is set by the drawn model, which shows one floor at a time and so has no "All floors".
+function renderExplorerFloors(hm, shown) {
   const bar = $("#explorer-floors");
   const floors = hm?.floors || [];
   bar.hidden = floors.length < 2;
@@ -1006,10 +1009,11 @@ function renderExplorerFloors(hm) {
     explorerFloor = id;
     const h = $("#explorer-map").__holo;
     if (h && !h.failed) h.setFloor(id); else renderExplorer();
-    renderExplorerFloors(hm);
+    if (h && !h.failed) renderExplorerFloors(hm);
   };
-  bar.replaceChildren(...[{ id: null, name: "All floors" }, ...[...floors].reverse()].map((f) =>
-    el("button", { type: "button", "data-floor": f.id ?? "", "aria-pressed": String(explorerFloor === f.id), onclick: () => pick(f.id) }, f.name)));
+  const current = shown === undefined ? explorerFloor : shown;
+  bar.replaceChildren(...[...(shown === undefined ? [{ id: null, name: "All floors" }] : []), ...[...floors].reverse()].map((f) =>
+    el("button", { type: "button", "data-floor": f.id ?? "", "aria-pressed": String(current === f.id), onclick: () => pick(f.id) }, f.name)));
 }
 // Screens → Home style: preview the house view as another kind of home.
 function renderHomePreview() {

@@ -91,7 +91,7 @@ function create(container, { onExpand, wheel }) {
     const from = z.goal || z;
     animateTo(Math.min(MAX, Math.max(1, from.s * factor)), from.cx, from.cy);
   };
-  z.reset = () => { const [cx, cy] = center(); animateTo(1, cx, cy); };
+  z.reset = () => { if (!z.base) return; const [cx, cy] = center(); animateTo(1, cx, cy); };
   // Fly the camera to one room, filling most of the view.
   z.focusRoom = (id) => {
     const g = z.svg?.querySelector(`.map-room[data-room="${CSS.escape(id)}"] .map-floor`);

@@ -606,7 +606,13 @@ footer { text-align: center; }
 
 .explorer.holo-mode .explorer-map { padding: 0; }
 .explorer.holo-mode .explorer-map.holo { border-radius: 0; box-shadow: none; }
-@media (max-width: 760px) { .explorer-views { left: 12px; right: 12px; bottom: 76px; justify-content: center; } }
+/* Phones: each bar is one scrolling row, so it covers a strip of the model rather than the middle of it. */
+@media (max-width: 760px) {
+  .explorer-views { left: 12px; bottom: 76px; max-width: calc(100% - 24px); }
+  .explorer-floors { left: 12px; top: 10px; max-width: calc(100% - 24px); }
+  .explorer-views, .explorer-floors { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .explorer-views button, .explorer-floors button { flex: none; min-height: 32px; padding: 0 10px; white-space: nowrap; }
+}
 
 /* Vivid light: the same model, cooler and brighter, with a pop of color. */
 :root[data-look="vivid"] {

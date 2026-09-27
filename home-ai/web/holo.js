@@ -15,7 +15,7 @@
 // If WebGL isn't available, createHologram() calls fallback() and the panel
 // keeps the drawn house model (web/map.js).
 
-import { normalizeHome, sharedStretches, pointInPoly } from "./building.js";
+import { normalizeHome, sharedStretches, pointInPoly, polyArea } from "./building.js";
 
 let THREE = null;
 let loading = null;
@@ -240,12 +240,11 @@ function init(h) {
     camera.updateProjectionMatrix();
     renderer.setSize(w, hh, false);
     composer.setSize(w, hh);
-    bloom.setSize(w, hh);
     kick(h);
   };
   new ResizeObserver(resize).observe(h.wrap);
   resize();
-  new IntersectionObserver(([e]) => { h.visible = e.isIntersecting; if (h.visible) kick(h); }).observe(h.container);
+  new IntersectionObserver((es) => { h.visible = es[es.length - 1].isIntersecting; if (h.visible) kick(h); }).observe(h.container);
   h.container.classList.add("holo-ready");
   document.addEventListener("visibilitychange", () => { if (!document.hidden) kick(h); });
 
@@ -314,7 +313,7 @@ function fly(h, pos, target, ms = 850) {
 function build(h, data) {
   if (h.house) {
     h.scene.remove(h.house);
-    h.house.traverse((o) => { o.geometry?.dispose(); o.material?.dispose?.(); });
+    h.house.traverse((o) => { o.geometry?.dispose(); o.material?.map?.dispose?.(); o.material?.dispose?.(); });
   }
   const home = normalizeHome({ building: data.building, rooms: data.rooms });
   const style = home.style;
@@ -384,7 +383,9 @@ function build(h, data) {
     byFloor.get(r.floor).push(group);
     const solid = (geo, px, py, pz, dust = 1, rotY = 0) => solidIn(group, mats, geo, px, py, pz, dust, rotY);
     const [x, y, w, d] = r.bbox;
-    const inside = (px, py) => r.poly.length === 4 || pointInPoly([px, py], r.poly);
+    // Plain rectangles skip the test; any other outline (L-shape, trapezoid, rotated) keeps furniture inside it.
+    const rect = r.poly.length === 4 && Math.abs(polyArea(r.poly) - w * d) < 1e-6;
+    const inside = (px, py) => rect || pointInPoly([px, py], r.poly);
     const box = (bx, by, bw, bd, bh, bz = 0, dust = 1) => {
       if (!inside(bx + bw / 2, by + bd / 2)) return null;
       return solid(new THREE.BoxGeometry(bw * U, bh * U, bd * U), W2(bx + bw / 2), y0 + (bz + bh / 2) * U, D2(by + bd / 2), dust);
