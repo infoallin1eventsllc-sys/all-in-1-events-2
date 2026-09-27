@@ -72,7 +72,8 @@ function create(container, { onExpand, wheel }) {
   }
   function animateTo(s, cx, cy) {
     cancelAnimationFrame(z.anim);
-    if (reduceMotion()) { Object.assign(z, { s, cx, cy }); apply(); return; }
+    z.goal = { s, cx, cy };
+    if (reduceMotion()) { Object.assign(z, { s, cx, cy }); z.goal = null; apply(); return; }
     const from = { s: z.s, cx: z.cx, cy: z.cy }, t0 = performance.now(), T = 420;
     const step = (t) => {
       const k = Math.min(1, (t - t0) / T), e = 1 - Math.pow(1 - k, 3);
@@ -80,15 +81,15 @@ function create(container, { onExpand, wheel }) {
       z.cx = from.cx + (cx - from.cx) * e;
       z.cy = from.cy + (cy - from.cy) * e;
       apply();
-      if (k < 1) z.anim = requestAnimationFrame(step);
+      if (k < 1) z.anim = requestAnimationFrame(step); else z.goal = null;
     };
     z.anim = requestAnimationFrame(step);
   }
   const center = () => [z.base[0] + z.base[2] / 2, z.base[1] + z.base[3] / 2];
+  // Quick repeated taps add up: each one starts from where the last was heading.
   z.zoomBy = (factor) => {
-    const [cx, cy] = [z.cx, z.cy];
-    const s = Math.min(MAX, Math.max(1, z.s * factor));
-    animateTo(s, cx, cy);
+    const from = z.goal || z;
+    animateTo(Math.min(MAX, Math.max(1, from.s * factor)), from.cx, from.cy);
   };
   z.reset = () => { const [cx, cy] = center(); animateTo(1, cx, cy); };
   // Fly the camera to one room, filling most of the view.
@@ -133,6 +134,7 @@ function create(container, { onExpand, wheel }) {
     if (!z.svg || !z.svg.contains(e.target)) return;
     if (e.pointerType === "mouse" && e.button !== 0) return;
     cancelAnimationFrame(z.anim);
+    z.goal = null;
     z.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (z.pointers.size === 1) { start = { x: e.clientX, y: e.clientY }; z.moved = false; }
     if (z.pointers.size === 2) { const [a, b] = pts(); last = { dist: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; z.moved = true; }
