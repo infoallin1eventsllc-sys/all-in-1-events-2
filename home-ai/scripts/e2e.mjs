@@ -29,7 +29,7 @@ async function audit(page, label) {
   await page.waitForTimeout(400); // let color transitions settle before measuring contrast
   if (!(await page.evaluate(() => typeof window.axe !== "undefined"))) await page.addScriptTag({ content: AXE });
   const r = await page.evaluate((tags) => window.axe.run(document, { runOnly: { type: "tag", values: tags } }), WCAG);
-  const detail = r.violations.map((v) => `${v.id}: ${v.nodes.slice(0, 2).map((n) => n.target.join(" ")).join(", ")}`).join("; ");
+  const detail = r.violations.map((v) => `${v.id}: ${v.nodes.slice(0, 2).map((n) => `${n.target.join(" ")}${v.id === "color-contrast" ? ` [${(n.any[0]?.message || "").replace(/\s+/g, " ").slice(0, 160)}]` : ""}`).join(", ")}`).join("; ");
   report(r.violations.length === 0, `Accessibility (WCAG 2.2 AA): ${label}`, detail);
 }
 const targets = process.argv.slice(2).filter((a) => a === "server" || a === "demo");
@@ -633,7 +633,8 @@ async function runTarget(browser, target) {
   await page.addInitScript(() => { try { localStorage.setItem("haven.holoMotion", "still"); } catch {} });
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
-  page.on("requestfailed", (r) => { if (!/fonts\.(googleapis|gstatic)/.test(r.url())) errors.push(`request failed: ${r.url()}`); });
+  // A reload cuts the live-update stream on purpose; that isn't an error.
+  page.on("requestfailed", (r) => { if (!/fonts\.(googleapis|gstatic)/.test(r.url()) && !(/\/api\/stream/.test(r.url()) && /ABORTED/.test(r.failure()?.errorText || ""))) errors.push(`request failed: ${r.url()} ${r.failure()?.errorText || ""}`); });
 
   let cleanup = () => {};
   let home = null;
