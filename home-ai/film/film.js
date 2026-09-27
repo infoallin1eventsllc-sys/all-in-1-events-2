@@ -457,8 +457,8 @@ function drawPanel(p, t) {
   const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, "#08131f"); bg.addColorStop(1, "#050a12");
   g.fillStyle = bg; g.fillRect(0, 0, W, H);
   g.fillStyle = `rgba(90,210,255,${0.06 + glow * 0.12})`; g.fillRect(0, 0, W, H);
-  g.fillStyle = "#e8f6ff"; g.font = "600 30px "Avenir Next", "Helvetica Neue", system-ui, sans-serif"; g.fillText("Haven", 32, 54);
-  g.fillStyle = "#8fb4cc"; g.font = "400 20px "Avenir Next", "Helvetica Neue", system-ui, sans-serif"; g.fillText("Good evening. Everything is calm.", 32, 86);
+  g.fillStyle = "#e8f6ff"; g.font = "600 30px 'Avenir Next', 'Helvetica Neue', system-ui, sans-serif"; g.fillText("Haven", 32, 54);
+  g.fillStyle = "#8fb4cc"; g.font = "400 20px 'Avenir Next', 'Helvetica Neue', system-ui, sans-serif"; g.fillText("Good evening. Everything is calm.", 32, 86);
   // A tiny hologram of this house.
   g.save(); g.translate(430, 205); g.strokeStyle = `rgba(110,215,255,${0.75 + glow * 0.25})`; g.lineWidth = 2;
   const iso = (x, y, z) => [(x - z) * 9, (x + z) * 4.5 - y * 11];
@@ -470,7 +470,7 @@ function drawPanel(p, t) {
   boxL(-8, -5, -2, 2, 3); boxL(-2, -5, 8, 5, 3); boxL(-2, -5, 8, 3, 2.8, 3.2);
   g.restore();
   const rows = [["Doors", "Locked"], ["Water", "Normal"], ["Air", "72°"], ["Garage", "Closed"]];
-  g.font = "500 22px "Avenir Next", "Helvetica Neue", system-ui, sans-serif";
+  g.font = "500 22px 'Avenir Next', 'Helvetica Neue', system-ui, sans-serif";
   rows.forEach(([a, b], i) => { const y = 150 + i * 56; g.fillStyle = "#6fd3ff"; g.beginPath(); g.arc(40, y - 7, 6, 0, Math.PI * 2); g.fill(); g.fillStyle = "#cfe6f5"; g.fillText(a, 58, y); g.fillStyle = "#ffffff"; g.fillText(b, 170, y); });
   if (tap > 0 && tap < 1.2) { g.strokeStyle = `rgba(160,230,255,${1 - tap / 1.2})`; g.lineWidth = 4; g.beginPath(); g.arc(430, 205, 20 + tap * 190, 0, Math.PI * 2); g.stroke(); }
   p.tex.needsUpdate = true;

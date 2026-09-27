@@ -1,7 +1,6 @@
 // Builds the film page as one self-contained HTML file:
 //   dist/film/meridian-film.html  (the film, its code and its soundtrack inlined)
 // Needs ffmpeg (on PATH, or FFMPEG=/path/to/ffmpeg) and Python 3 with numpy.
-// MP4=<url or path> adds a "Download MP4" link to the page.
 import { build } from "esbuild";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -16,7 +15,7 @@ execFileSync(FF, ["-v", "error", "-y", "-i", `${OUT}/film-audio.wav`, "-c:a", "l
 const voice = readFileSync(`${OUT}/voice-env.json`, "utf8");
 const js = await build({
   entryPoints: ["film/main.js"], bundle: true, format: "esm", minify: true, write: false, target: "es2020",
-  define: { __VOICE__: voice, __MP4__: JSON.stringify(process.env.MP4 || "") },
+  define: { __VOICE__: voice },
 });
 const code = js.outputFiles[0].text.replace(/<\/script/gi, "<\\/script");
 const audio = readFileSync(`${OUT}/film-audio.mp3`).toString("base64");

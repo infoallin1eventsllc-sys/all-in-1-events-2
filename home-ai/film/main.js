@@ -4,9 +4,8 @@
 
 import { createFilm, DURATION } from "./film.js";
 
-/* global __VOICE__, __MP4__ */
+/* global __VOICE__ */
 const VOICE = typeof __VOICE__ !== "undefined" ? __VOICE__ : [];
-const MP4 = typeof __MP4__ !== "undefined" ? __MP4__ : "";
 
 const params = new URLSearchParams(location.search);
 const RENDER = params.has("render");
@@ -87,7 +86,6 @@ async function main() {
 
   new ResizeObserver(() => { const s = size(); film.resize(s.w, s.h); if (!playing) draw(clock()); }).observe(stage);
   const audio = $("#audio"), play = $("#play"), scrub = $("#scrub"), time = $("#time"), start = $("#start");
-  if (MP4) { const a = $("#download"); a.href = MP4; a.hidden = false; }
   let playing = false, t0 = 0, base = 0, audioOk = true;
   const clock = () => (playing ? (audioOk && !audio.paused ? audio.currentTime : base + (performance.now() - t0) / 1000) : base);
   const setPlaying = async (on) => {
