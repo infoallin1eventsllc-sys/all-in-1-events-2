@@ -1,0 +1,702 @@
+<title>Haven Hologram House</title>
+<meta name="description" content="A hologram of the Williams residence you can orbit from every angle, built with the Drone Command hologram technique.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
+<style>
+  /* One visual world: a lit hologram on deep navy, the Drone Command palette. */
+  :root {
+    color-scheme: dark;
+    --bg: #050a13;
+    --holo: #5ad2ff;
+    --ink: #dff3ff;
+    --ink-2: #a9c2d8;
+    --ink-3: #7f93ad;
+    --panel: rgba(8, 18, 34, 0.72);
+    --line: rgba(90, 210, 255, 0.22);
+    --ok: #4ade80;
+    --watch: #fbbf24;
+    --fault: #f87171;
+    --lit: #ffd27a;
+    --display: "Chakra Petch", "Hanken Grotesk", system-ui, sans-serif;
+    --body: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); overflow: hidden; }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--holo); outline-offset: 2px; }
+
+  .stage { position: fixed; inset: 0; }
+  .stage canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+  .stage canvas:active { cursor: grabbing; }
+  .tags { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+
+  /* Holo tags, as in Aircraft Health: a hairline box of light. */
+  .holo-tag {
+    position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer; white-space: nowrap;
+    padding: 5px 10px 5px 9px; border: 1px solid var(--line); border-left: 2px solid var(--c, var(--holo));
+    background: rgba(5, 14, 28, 0.66); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    font-size: 12.5px; line-height: 1.25; color: var(--ink); border-radius: 3px;
+    transition: opacity 0.2s, border-color 0.2s;
+  }
+  .holo-tag b { font-family: var(--display); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; font-size: 11.5px; }
+  .holo-tag span { color: var(--ink-2); margin-left: 6px; font-variant-numeric: tabular-nums; }
+  .holo-tag::after { content: ""; position: absolute; left: 50%; top: 100%; width: 1px; height: 18px; background: linear-gradient(var(--c, var(--holo)), transparent); }
+  .holo-tag.selected { border-color: var(--c, var(--holo)); box-shadow: 0 0 18px -4px var(--c, var(--holo)); }
+  .holo-tag.dev { pointer-events: none; font-size: 11.5px; padding: 3px 8px; }
+  .holo-tag.dev::after { height: 12px; }
+  .holo-tag[data-level="LIT"] { --c: var(--lit); }
+  .holo-tag[data-level="WATCH"] { --c: var(--watch); }
+  .holo-tag[data-level="FAULT"] { --c: var(--fault); }
+  .holo-tag.hidden { opacity: 0; pointer-events: none; }
+
+  /* Heads-up display */
+  .hud { position: fixed; pointer-events: none; }
+  .hud > * { pointer-events: auto; }
+  .hud-top { top: calc(env(safe-area-inset-top, 0px) + 16px); left: 16px; right: 16px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: flex-start; }
+  .brand { display: grid; gap: 4px; max-width: 30rem; }
+  .eyebrow { font-family: var(--display); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--holo); }
+  .brand h1 { margin: 0; font-family: var(--display); font-weight: 600; font-size: clamp(1.35rem, 3.2vw, 2rem); letter-spacing: 0.02em; text-wrap: balance; }
+  .brand p { margin: 0; color: var(--ink-3); font-size: 13px; }
+  .readout { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); font-size: 13px; font-variant-numeric: tabular-nums; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px currentColor; color: var(--ok); }
+  .chip.fault i { background: var(--fault); color: var(--fault); }
+
+  .rooms { top: calc(env(safe-area-inset-top, 0px) + 118px); left: 16px; display: grid; gap: 6px; }
+  .rooms button { justify-self: start; min-height: 34px; padding: 0 12px; border-radius: 4px; border: 1px solid var(--line); background: var(--panel); text-align: left; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+  .rooms button i { width: 7px; height: 7px; border-radius: 50%; background: var(--holo); }
+  .rooms button[data-level="LIT"] i { background: var(--lit); box-shadow: 0 0 8px var(--lit); }
+  .rooms button[data-level="FAULT"] i { background: var(--fault); box-shadow: 0 0 8px var(--fault); }
+  .rooms button[data-level="WATCH"] i { background: var(--watch); }
+  .rooms button[aria-pressed="true"] { border-color: var(--holo); background: rgba(90, 210, 255, 0.14); }
+
+  .bar { left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; padding: 6px; max-width: calc(100vw - 32px); border-radius: 12px; border: 1px solid var(--line); background: var(--panel); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  .bar button { min-height: 38px; min-width: 38px; padding: 0 12px; border-radius: 8px; border: 1px solid transparent; background: transparent; cursor: pointer; font-size: 13px; }
+  .bar button:hover { background: rgba(90, 210, 255, 0.1); }
+  .bar button[aria-pressed="true"] { border-color: var(--holo); background: rgba(90, 210, 255, 0.16); }
+  .bar .sep { width: 1px; background: var(--line); margin: 6px 2px; }
+  .bar .danger[aria-pressed="true"] { border-color: var(--fault); background: rgba(248, 113, 113, 0.16); }
+
+  .panel { top: calc(env(safe-area-inset-top, 0px) + 118px); right: 16px; width: min(320px, calc(100vw - 32px)); max-height: calc(100% - 220px); overflow: auto; padding: 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); display: grid; gap: 12px; }
+  .panel h2 { margin: 0; font-family: var(--display); font-weight: 600; font-size: 1.25rem; letter-spacing: 0.03em; }
+  .panel .state { font-size: 13px; color: var(--ink-2); }
+  .devs { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .devs li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(90, 210, 255, 0.12); background: rgba(5, 14, 28, 0.5); font-size: 13.5px; }
+  .devs small { display: block; color: var(--ink-3); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .devs li.on { border-color: rgba(255, 210, 122, 0.45); }
+  .devs li.alert { border-color: rgba(248, 113, 113, 0.55); }
+  .switch { min-height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: transparent; cursor: pointer; font-size: 12.5px; }
+  .switch[aria-pressed="true"] { background: var(--lit); color: #2a1a00; border-color: var(--lit); }
+  .panel .back { justify-self: start; min-height: 34px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line); background: transparent; cursor: pointer; font-size: 13px; }
+  .note { font-size: 12px; color: var(--ink-3); }
+
+  .hint { left: 16px; bottom: calc(env(safe-area-inset-bottom, 0px) + 84px); font-size: 12px; color: var(--ink-3); max-width: 22rem; }
+  .fallback { position: fixed; inset: 0; display: grid; place-items: center; padding: 16px; text-align: center; color: var(--ink-2); }
+
+  @media (max-width: 720px) {
+    .rooms { top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 150px); display: flex; flex-wrap: wrap; right: 16px; }
+    .rooms button { min-height: 32px; }
+    .readout { display: none; }
+    .panel { top: auto; bottom: calc(env(safe-area-inset-bottom, 0px) + 150px); max-height: 42%; }
+    .hint { display: none; }
+  }
+</style>
+
+<div class="stage" id="stage" aria-hidden="true"></div>
+<div class="tags" id="tags"></div>
+
+<header class="hud hud-top">
+  <div class="brand">
+    <span class="eyebrow">Haven · Hologram</span>
+    <h1>The Williams Residence</h1>
+    <p>Sample house. The rooms come from Haven's floor plan; device states on this page are simulated.</p>
+  </div>
+  <div class="readout" aria-live="polite">
+    <span class="chip" id="chip-status"><i></i><span>All secure</span></span>
+    <span class="chip" id="chip-lights">2 lights on</span>
+    <span class="chip">72°F inside · holding 71°F</span>
+  </div>
+</header>
+
+<nav class="hud rooms" id="rooms" aria-label="Rooms"></nav>
+
+<aside class="hud panel" id="panel" aria-live="polite" hidden></aside>
+
+<p class="hud hint">Drag to orbit from any angle. Pinch or scroll to zoom. Two fingers or right-drag to move. Tap a room to fly in.</p>
+
+<div class="hud bar" role="toolbar" aria-label="View">
+  <button type="button" id="spin" aria-pressed="true">Auto-orbit</button>
+  <span class="sep" aria-hidden="true"></span>
+  <button type="button" data-view="iso" aria-pressed="true">3D</button>
+  <button type="button" data-view="top" aria-pressed="false">Top</button>
+  <button type="button" data-view="front" aria-pressed="false">Front</button>
+  <button type="button" data-view="side" aria-pressed="false">Side</button>
+  <span class="sep" aria-hidden="true"></span>
+  <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
+  <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
+  <span class="sep" aria-hidden="true"></span>
+  <button type="button" id="leak" class="danger" aria-pressed="false">Simulate a leak</button>
+</div>
+
+<div class="fallback" id="fallback" hidden>This hologram needs WebGL, which this browser has turned off.</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// ---------- the house: Haven's config/home.json floor plan ----------
+const ROOMS = [
+  { id: "kitchen", name: "Kitchen", plan: [6, 0, 7, 6] },
+  { id: "living", name: "Living Room", plan: [13, 0, 7, 9] },
+  { id: "primary", name: "Primary Bedroom", plan: [6, 9, 14, 5] },
+  { id: "hallway", name: "Hallway", plan: [6, 6, 7, 3] },
+  { id: "garage", name: "Garage", plan: [0, 0, 6, 7] },
+  { id: "utility", name: "Utility Room", plan: [0, 7, 6, 4] },
+];
+// Sample states, as the Haven demo starts: kitchen and living room lit.
+const DEVICES = [
+  { id: "light.kitchen", name: "Kitchen Lights", type: "light", room: "kitchen", on: true, level: 80 },
+  { id: "leak.kitchen_sink", name: "Sink Leak Sensor", type: "leak", room: "kitchen", wet: false },
+  { id: "motion.kitchen", name: "Kitchen Motion", type: "motion", room: "kitchen", motion: false },
+  { id: "light.living", name: "Living Room Lights", type: "light", room: "living", on: true, level: 60 },
+  { id: "fan.living", name: "Living Room Fan", type: "fan", room: "living", on: false },
+  { id: "contact.back_door", name: "Back Door", type: "contact", room: "living", open: false },
+  { id: "light.primary", name: "Bedroom Lights", type: "light", room: "primary", on: false, level: 70 },
+  { id: "fan.primary", name: "Bedroom Fan", type: "fan", room: "primary", on: false },
+  { id: "light.hallway", name: "Hallway Lights", type: "light", room: "hallway", on: false, level: 70 },
+  { id: "climate.main", name: "Thermostat", type: "thermostat", room: "hallway", current: 72, target: 71 },
+  { id: "light.garage", name: "Garage Lights", type: "light", room: "garage", on: false, level: 100 },
+  { id: "garage.door", name: "Garage Door", type: "garage", room: "garage", door: "closed" },
+  { id: "lock.garage_entry", name: "Garage Entry Lock", type: "lock", room: "garage", locked: true },
+  { id: "water_heater.main", name: "Water Heater", type: "water_heater", room: "utility", on: true, temp: 120 },
+  { id: "valve.main_water", name: "Main Water Shutoff", type: "valve", room: "utility", open: true },
+  { id: "leak.water_heater", name: "Water Heater Leak Sensor", type: "leak", room: "utility", wet: false },
+];
+const describe = (d) => ({
+  light: () => d.on ? `On · ${d.level}%` : "Off",
+  fan: () => d.on ? "On" : "Off",
+  leak: () => d.wet ? "Water detected" : "Dry",
+  motion: () => d.motion ? "Motion" : "No motion",
+  contact: () => d.open ? "Open" : "Closed",
+  thermostat: () => `${d.current}°F · set ${d.target}°F`,
+  garage: () => d.door === "closed" ? "Closed" : "Open",
+  lock: () => d.locked ? "Locked" : "Unlocked",
+  water_heater: () => d.on ? `${d.temp}°F` : "Off",
+  valve: () => d.open ? "Water on" : "Water off",
+}[d.type]?.() ?? "");
+const devicesIn = (id) => DEVICES.filter((d) => d.room === id);
+function levelOf(id) {
+  const ds = devicesIn(id);
+  if (ds.some((d) => (d.type === "leak" && d.wet) || (d.type === "valve" && !d.open) || (d.type === "garage" && d.door !== "closed"))) return "FAULT";
+  if (ds.some((d) => (d.type === "lock" && !d.locked) || (d.type === "contact" && d.open))) return "WATCH";
+  if (ds.some((d) => d.type === "light" && d.on)) return "LIT";
+  return "OK";
+}
+const litLevel = (id) => Math.max(0, ...devicesIn(id).filter((d) => d.type === "light" && d.on).map((d) => d.level / 100));
+
+// ---------- renderer, scene, camera ----------
+const stage = document.getElementById("stage");
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" }); }
+catch { document.getElementById("fallback").hidden = false; throw new Error("WebGL unavailable"); }
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color("#050a13");
+const camera = new THREE.PerspectiveCamera(34, 1, 0.05, 200);
+scene.add(camera);
+// The Drone Command vignette: a lit center fading to deep navy, carried with the camera.
+const vignette = new THREE.Mesh(new THREE.PlaneGeometry(80, 60), new THREE.ShaderMaterial({
+  depthWrite: false,
+  vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+  fragmentShader: "varying vec2 vUv; void main(){ float d = distance((vUv - 0.5) * vec2(1.3, 1.0), vec2(0.0, 0.03)); vec3 c = mix(vec3(0.03, 0.09, 0.19), vec3(0.012, 0.024, 0.05), smoothstep(0.0, 0.42, d)); gl_FragColor = vec4(c, 1.0); }",
+}));
+vignette.position.z = -40;
+camera.add(vignette);
+
+// ---------- hologram materials (from Aircraft Health) ----------
+const HOLO = new THREE.Color("#5ad2ff");
+const COLORS = { OK: HOLO, LIT: HOLO, WATCH: new THREE.Color("#fbbf24"), FAULT: new THREE.Color("#f87171") };
+const scan = { value: 0 };
+const EDGE_V = "uniform float uScan; varying float vY; void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vY = w.y; gl_Position = projectionMatrix * viewMatrix * w; }";
+const EDGE_F = "uniform vec3 uColor; uniform float uOpacity; uniform float uScan; uniform float uFlash; varying float vY; void main(){ float s = exp(-pow((vY - uScan) / 0.035, 2.0)); gl_FragColor = vec4(uColor * (uOpacity + s * 0.9 + uFlash), 1.0); }";
+const RIM_V = "varying vec3 vN; varying vec3 vV; void main(){ vN = normalize(normalMatrix * normal); vec4 mv = modelViewMatrix * vec4(position, 1.0); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }";
+const RIM_F = "uniform vec3 uColor; uniform float uOpacity; varying vec3 vN; varying vec3 vV; void main(){ float f = pow(1.0 - abs(dot(vN, vV)), 2.4); gl_FragColor = vec4(uColor * f * uOpacity, 1.0); }";
+const additive = { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending };
+
+const U = 0.3;                 // world units per plan unit
+const WALL = 2.1, INNER = 1.5, T = 0.18;
+const W2 = (px) => (px - 10) * U, D2 = (py) => (py - 7) * U;
+
+const house = new THREE.Group();
+scene.add(house);
+const rooms = new Map();       // id -> { group, edge, rim, floor, beam, pick, tag, points }
+const surfacePoints = [];
+
+function roomMaterials() {
+  const edge = { uColor: { value: HOLO.clone() }, uOpacity: { value: 0.34 }, uScan: scan, uFlash: { value: 0 } };
+  const rim = { uColor: { value: HOLO.clone() }, uOpacity: { value: 0.2 } };
+  return {
+    edgeU: edge, rimU: rim,
+    edgeM: new THREE.ShaderMaterial({ uniforms: edge, vertexShader: EDGE_V, fragmentShader: EDGE_F, ...additive }),
+    rimM: new THREE.ShaderMaterial({ uniforms: rim, vertexShader: RIM_V, fragmentShader: RIM_F, ...additive, side: THREE.DoubleSide }),
+  };
+}
+
+// A hologram solid: faint rim-lit faces, bright edges, a dusting of points.
+function solid(room, geo, x, y, z, rot = 0, dust = 1) {
+  const m = new THREE.Mesh(geo, room.mats.rimM);
+  m.position.set(x, y, z);
+  m.rotation.y = rot;
+  m.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 24), room.mats.edgeM));
+  room.group.add(m);
+  if (dust > 0) {
+    m.updateMatrixWorld(true);
+    const pos = geo.getAttribute("position"), v = new THREE.Vector3();
+    const step = Math.max(1, Math.floor(pos.count / (14 * dust)));
+    for (let i = 0; i < pos.count; i += step) { v.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld); surfacePoints.push(v.x, v.y, v.z); }
+    // A few more on the faces, so the shapes read as a cloud of light.
+    geo.computeBoundingBox();
+    const b = geo.boundingBox, n = Math.round(10 * dust * Math.cbrt((b.max.x - b.min.x) * (b.max.y - b.min.y) * (b.max.z - b.min.z) * 400 + 1));
+    for (let i = 0; i < n; i++) {
+      v.set(THREE.MathUtils.lerp(b.min.x, b.max.x, Math.random()), b.max.y, THREE.MathUtils.lerp(b.min.z, b.max.z, Math.random())).applyMatrix4(m.matrixWorld);
+      surfacePoints.push(v.x, v.y, v.z);
+    }
+  }
+  return m;
+}
+// A box in plan units: x, y (depth), footprint w × d, height h, lifted by z.
+const box = (room, x, y, w, d, h, z = 0, dust = 1) =>
+  solid(room, new THREE.BoxGeometry(w * U, h * U, d * U), W2(x + w / 2), (z + h / 2) * U, D2(y + d / 2), 0, dust);
+const cyl = (room, x, y, r, h, z = 0) =>
+  solid(room, new THREE.CylinderGeometry(r * U, r * U, h * U, 18), W2(x), (z + h / 2) * U, D2(y), 0, 0.6);
+const plant = (room, x, y, s = 1) => {
+  cyl(room, x, y, 0.22 * s, 0.45 * s);
+  solid(room, new THREE.IcosahedronGeometry(0.42 * s * U, 1), W2(x), (0.45 * s + 0.35 * s) * U, D2(y), 0, 0.8);
+};
+
+// Same furniture as Haven's 2D model (web/map.js), laid out from each room's size.
+const FURNISH = {
+  kitchen(r, x, y, w, d) {
+    box(r, x + 0.3, y + 0.3, 1.0, 0.9, 1.95);
+    box(r, x + 1.4, y + 0.3, w - 1.7, 0.85, 0.88);
+    box(r, x + 1.35, y + 0.25, w - 1.6, 0.95, 0.08, 0.88, 0.3);
+    box(r, x + 1.4, y + 0.3, w - 1.7, 0.45, 0.55, 1.4, 0.5);
+    const iw = Math.max(1.6, w * 0.42), ix = x + (w - iw) / 2 + 0.3, iy = y + d * 0.47;
+    box(r, ix, iy, iw, 1.05, 0.88);
+    box(r, ix - 0.08, iy - 0.08, iw + 0.16, 1.46, 0.08, 0.88, 0.3);
+    for (let k = 0; k < 3; k++) cyl(r, ix + 0.46 + (k * (iw - 0.9)) / 2, iy + 1.76, 0.2, 0.66);
+    plant(r, x + w - 0.6, y + d - 0.6, 0.9);
+  },
+  living(r, x, y, w, d) {
+    box(r, x + 1.2, y + 2.2, w - 2.4, d - 4.4, 0.02, 0, 0.4);
+    box(r, x + w * 0.24, y + 0.3, w * 0.52, 0.5, 0.45);
+    box(r, x + w * 0.29, y + 0.45, w * 0.42, 0.08, 0.95, 0.55, 0.3);
+    box(r, x + 0.35, y + 2.4, 0.3, d - 5.2, 0.95);
+    box(r, x + 0.65, y + 2.4, 1.0, d - 5.2, 0.45);
+    box(r, x + w * 0.36, y + d * 0.4, w * 0.28, 1.1, 0.38);
+    box(r, x + 1.4, y + d - 3.1, w - 2.6, 1.1, 0.45);
+    box(r, x + 1.4, y + d - 2.0, w - 2.6, 0.32, 0.95);
+    plant(r, x + w - 0.8, y + 0.6, 1.15);
+    plant(r, x + 0.6, y + d - 0.8, 0.9);
+  },
+  primary(r, x, y, w, d) {
+    const bw = Math.min(3.2, w * 0.4), bd = Math.min(3.8, d - 0.8), bx = x + (w - bw) / 2;
+    box(r, bx - 0.8, y + 1.2, bw + 1.6, bd, 0.02, 0, 0.4);
+    box(r, x + 0.7, y + 0.3, 2.0, 0.75, 0.75);
+    box(r, x + 1.35, y + 1.3, 0.6, 0.6, 0.5);
+    box(r, x + w - 3.1, y + 0.3, 2.6, 0.75, 1.85);
+    box(r, bx - 1.0, y + 0.3, 0.72, 0.6, 0.55);
+    box(r, bx + bw + 0.28, y + 0.3, 0.72, 0.6, 0.55);
+    box(r, bx, y + 0.25, bw, 0.25, 1.25);
+    box(r, bx, y + 0.5, bw, bd - 0.25, 0.42);
+    box(r, bx + 0.08, y + 0.55, bw - 0.16, bd - 0.4, 0.2, 0.42);
+    box(r, bx + 0.3, y + 0.7, bw / 2 - 0.4, 0.6, 0.16, 0.62, 0.4);
+    box(r, bx + bw / 2 + 0.1, y + 0.7, bw / 2 - 0.4, 0.6, 0.16, 0.62, 0.4);
+    plant(r, x + w - 0.8, y + d - 0.8);
+  },
+  garage(r, x, y, w, d) {
+    const cl = Math.min(4.4, d - 2), cw = 2.2, cx = x + (w - cw) / 2 + 0.4, cy = y + 1.1;
+    for (const [wx, wy] of [[cx - 0.12, cy + 0.55], [cx - 0.12, cy + cl - 1.35], [cx + cw - 0.18, cy + 0.55], [cx + cw - 0.18, cy + cl - 1.35]]) box(r, wx, wy, 0.3, 0.8, 0.42, 0, 0.3);
+    box(r, cx, cy, cw, cl, 0.55, 0.2);
+    box(r, cx + 0.18, cy + cl * 0.3, cw - 0.36, cl * 0.42, 0.5, 0.75);
+    box(r, x + 0.3, y + d - 2.9, 0.75, 2.4, 0.9);
+    box(r, x + w - 0.95, y + d - 1.3, 0.6, 0.85, 1.1);
+  },
+  utility(r, x, y, w, d) {
+    box(r, x + 0.3, y + 0.5, 0.95, 0.95, 1.0);
+    box(r, x + 0.3, y + 1.55, 0.95, 0.95, 1.0);
+    cyl(r, x + w - 0.9, y + 0.9, 0.5, 1.7);
+  },
+  hallway(r, x, y, w, d) {
+    box(r, x + 0.9, y + 0.8, w - 1.8, d - 1.6, 0.02, 0, 0.4);
+    box(r, x + w - 2.3, y + 0.3, 1.5, 0.42, 0.8);
+    plant(r, x + 0.6, y + 0.6, 0.9);
+  },
+};
+
+// Where two rooms share a wall: the overlap along it.
+function shared(a, b, side) {
+  const [ax, ay, aw, ad] = a.plan, [bx, by, bw, bd] = b.plan;
+  const span = (lo1, hi1, lo2, hi2) => { const lo = Math.max(lo1, lo2), hi = Math.min(hi1, hi2); return hi - lo > 0.01 ? [lo, hi] : null; };
+  if (side === "n" && by + bd === ay) return span(ax, ax + aw, bx, bx + bw);
+  if (side === "s" && by === ay + ad) return span(ax, ax + aw, bx, bx + bw);
+  if (side === "w" && bx + bw === ax) return span(ay, ay + ad, by, by + bd);
+  if (side === "e" && bx === ax + aw) return span(ay, ay + ad, by, by + bd);
+  return null;
+}
+// A wall along one side, with a doorway where it meets another room.
+function wall(room, side, h, door) {
+  const [x, y, w, d] = room.plan;
+  const horiz = side === "n" || side === "s";
+  const fixed = side === "n" ? y : side === "s" ? y + d : side === "w" ? x : x + w;
+  const from = horiz ? x : y, to = horiz ? x + w : y + d;
+  const segs = door ? [[from, door - 0.55], [door + 0.55, to]] : [[from, to]];
+  for (const [a, b] of segs) {
+    if (b - a < 0.05) continue;
+    const len = b - a, mid = (a + b) / 2;
+    const geo = new THREE.BoxGeometry(horiz ? len * U : T * U, h * U, horiz ? T * U : len * U);
+    solid(room, geo, horiz ? W2(mid) : W2(fixed), (h / 2) * U, horiz ? D2(fixed) : D2(mid), 0, 0.5);
+  }
+  if (door) {
+    // The door frame's lintel.
+    const geo = new THREE.BoxGeometry(horiz ? 1.1 * U : T * U, 0.12 * U, horiz ? T * U : 1.1 * U);
+    solid(room, geo, horiz ? W2(door) : W2(fixed), 1.2 * U, horiz ? D2(fixed) : D2(door), 0, 0);
+  }
+}
+function windows(room, side) {
+  const [x, y, w, d] = room.plan;
+  const horiz = side === "n" || side === "s";
+  const len = horiz ? w : d, fixed = side === "n" ? y - 0.02 : side === "s" ? y + d + 0.02 : side === "w" ? x - 0.02 : x + w + 0.02;
+  const count = Math.max(1, Math.floor(len / 2.6));
+  for (let k = 1; k <= count; k++) {
+    const at = (horiz ? x : y) + (len * k) / (count + 1);
+    const geo = new THREE.BoxGeometry(horiz ? 1.2 * U : 0.02, 0.9 * U, horiz ? 0.02 : 1.2 * U);
+    solid(room, geo, horiz ? W2(at) : W2(fixed), 1.25 * U, horiz ? D2(fixed) : D2(at), 0, 0);
+  }
+}
+
+const floorV = "varying vec2 vP; void main(){ vP = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }";
+const floorF = `uniform vec3 uColor; uniform float uK; uniform vec2 uSize; varying vec2 vP;
+  void main(){
+    vec2 p = vP * uSize;
+    vec2 g = abs(fract(p * 1.0 - 0.5) - 0.5) / fwidth(p);
+    float grid = 1.0 - min(min(g.x, g.y), 1.0);
+    float d = distance(vP, vec2(0.5));
+    gl_FragColor = vec4(uColor * (uK * smoothstep(0.75, 0.0, d) + grid * 0.05), 1.0);
+  }`;
+const beamV = "varying float vH; void main(){ vH = uv.y; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }";
+const beamF = "uniform vec3 uColor; uniform float uK; varying float vH; void main(){ gl_FragColor = vec4(uColor * uK * pow(vH, 1.6), 1.0); }";
+const LIT = new THREE.Color("#ffd27a");
+
+for (const r of ROOMS) {
+  const [x, y, w, d] = r.plan;
+  const room = { ...r, group: new THREE.Group(), mats: roomMaterials() };
+  room.group.userData.room = r.id;
+  house.add(room.group);
+  const others = ROOMS.filter((o) => o !== r);
+  // Walls: north and west belong to this room; south and east only on the outside.
+  for (const side of ["n", "w", "s", "e"]) {
+    const hit = others.map((o) => shared(r, o, side)).find(Boolean);
+    if ((side === "s" || side === "e") && hit) continue;
+    const door = hit && hit[1] - hit[0] > 1.4 ? (hit[0] + hit[1]) / 2 : null;
+    wall(room, side, hit ? INNER : WALL, door);
+    if (!hit) windows(room, side);
+  }
+  FURNISH[r.id]?.(room, x, y, w, d);
+  // The floor: a faint grid, glowing warm where lights are on, red on an alert.
+  const fu = { uColor: { value: HOLO.clone() }, uK: { value: 0.05 }, uSize: { value: new THREE.Vector2(w, d) } };
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(w * U, d * U), new THREE.ShaderMaterial({ uniforms: fu, vertexShader: floorV, fragmentShader: floorF, ...additive }));
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.set(W2(x + w / 2), 0.002, D2(y + d / 2));
+  house.add(floor);
+  // A column of light under the ceiling fixture, like Aircraft Health's status columns.
+  const bu = { uColor: { value: LIT.clone() }, uK: { value: 0 } };
+  const rad = Math.min(w, d) * 0.3 * U;
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(rad * 0.35, rad, WALL * U, 40, 1, true), new THREE.ShaderMaterial({ uniforms: bu, vertexShader: beamV, fragmentShader: beamF, ...additive, side: THREE.DoubleSide }));
+  beam.position.set(W2(x + w / 2), (WALL / 2) * U, D2(y + d / 2));
+  house.add(beam);
+  // An invisible volume for tapping the room.
+  const pick = new THREE.Mesh(new THREE.BoxGeometry(w * U, WALL * U, d * U), new THREE.MeshBasicMaterial({ visible: false }));
+  pick.position.set(W2(x + w / 2), (WALL / 2) * U, D2(y + d / 2));
+  pick.userData.room = r.id;
+  house.add(pick);
+  Object.assign(room, { floorU: fu, beamU: bu, pick, center: new THREE.Vector3(W2(x + w / 2), 0, D2(y + d / 2)), size: Math.max(w, d) * U });
+  rooms.set(r.id, room);
+}
+
+// Light dust over every surface.
+const spriteTex = (() => {
+  const c = document.createElement("canvas"); c.width = c.height = 32;
+  const g = c.getContext("2d"), grad = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+  grad.addColorStop(0, "rgba(255,255,255,1)"); grad.addColorStop(0.35, "rgba(255,255,255,0.5)"); grad.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = grad; g.fillRect(0, 0, 32, 32);
+  return new THREE.CanvasTexture(c);
+})();
+const dustGeo = new THREE.BufferGeometry();
+dustGeo.setAttribute("position", new THREE.Float32BufferAttribute(surfacePoints, 3));
+scene.add(new THREE.Points(dustGeo, new THREE.PointsMaterial({ map: spriteTex, color: HOLO, size: 0.022, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending })));
+
+// The projection floor: grid and rings, from Aircraft Health.
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(16, 16), new THREE.ShaderMaterial({
+  ...additive,
+  vertexShader: "varying vec2 vP; void main(){ vP = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+  fragmentShader: `varying vec2 vP; void main(){
+    vec2 g = abs(fract(vP * 2.5 - 0.5) - 0.5) / fwidth(vP * 2.5);
+    float grid = 1.0 - min(min(g.x, g.y), 1.0);
+    float r = length(vP);
+    float rings = 1.0 - min(abs(fract(r * 1.25 - 0.5) - 0.5) / fwidth(r * 1.25), 1.0);
+    float fade = smoothstep(6.5, 1.2, r);
+    gl_FragColor = vec4(vec3(0.2, 0.62, 0.95) * (grid * 0.1 + rings * 0.2) * fade, 1.0); }`,
+}));
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -0.004;
+scene.add(ground);
+// A slow ring around the footprint, the projector's edge.
+const ringMat = new THREE.MeshBasicMaterial({ color: HOLO, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
+const ring = new THREE.Group();
+for (let i = 0; i < 24; i++) ring.add(new THREE.Mesh(new THREE.RingGeometry(4.05, 4.15, 8, 1, (i / 24) * Math.PI * 2, (Math.PI * 2 / 24) * 0.6), ringMat));
+ring.rotation.x = -Math.PI / 2;
+scene.add(ring);
+const scanPlane = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 5.2), new THREE.ShaderMaterial({
+  ...additive, side: THREE.DoubleSide,
+  vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+  fragmentShader: "varying vec2 vUv; void main(){ float r = distance(vUv, vec2(0.5)); gl_FragColor = vec4(vec3(0.2, 0.6, 1.0) * 0.035 * smoothstep(0.5, 0.1, r), 1.0); }",
+}));
+scanPlane.rotation.x = -Math.PI / 2;
+scene.add(scanPlane);
+
+// ---------- bloom ----------
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.6, 0.35, 0.28);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+// ---------- camera and controls: every angle ----------
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 1.2;
+controls.maxDistance = 16;
+controls.minPolarAngle = 0.02;
+controls.maxPolarAngle = Math.PI * 0.58;   // a little below the floor line, to look up at the house
+controls.screenSpacePanning = true;
+controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+controls.autoRotateSpeed = 0.55;
+const VIEWS = {
+  iso: { pos: [6.4, 5.6, 7.9], target: [0, 0.1, 0.2] },
+  top: { pos: [0.001, 11, 0.01], target: [0, 0, 0] },
+  front: { pos: [0, 1.8, 10.5], target: [0, 0.3, 0] },
+  side: { pos: [11, 1.8, 0], target: [0, 0.3, 0] },
+};
+camera.position.set(...VIEWS.iso.pos);
+controls.target.set(...VIEWS.iso.target);
+
+let spin = !reduce, lastTouch = 0, fly = null;
+controls.addEventListener("start", () => { lastTouch = performance.now(); fly = null; });
+controls.addEventListener("end", () => { lastTouch = performance.now(); });
+function flyTo(pos, target, ms = 900) {
+  if (reduce) { camera.position.copy(pos); controls.target.copy(target); return; }
+  fly = { p0: camera.position.clone(), t0: controls.target.clone(), p1: pos, t1: target, start: performance.now(), ms };
+}
+function setView(name) {
+  const v = VIEWS[name];
+  flyTo(new THREE.Vector3(...v.pos), new THREE.Vector3(...v.target));
+  document.querySelectorAll("[data-view]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.view === name)));
+}
+
+// ---------- selection ----------
+let selected = null;
+const tagsEl = document.getElementById("tags");
+const roomTags = new Map(), devTags = [];
+for (const r of rooms.values()) {
+  const t = document.createElement("div");
+  t.className = "holo-tag";
+  t.addEventListener("click", () => select(r.id));
+  tagsEl.append(t);
+  roomTags.set(r.id, t);
+}
+function select(id) {
+  selected = selected === id ? null : id;
+  if (selected) {
+    const r = rooms.get(selected);
+    const dir = camera.position.clone().sub(controls.target).normalize();
+    dir.y = Math.max(dir.y, 0.55); dir.normalize();
+    flyTo(r.center.clone().add(dir.multiplyScalar(r.size * 2.7 + 1.3)), r.center.clone().setY(0.18));
+  } else setView("iso");
+  render();
+}
+
+// Tap versus drag: a tap barely moves.
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+let down = null;
+renderer.domElement.addEventListener("pointerdown", (e) => { down = { x: e.clientX, y: e.clientY, t: performance.now(), n: e.isPrimary }; });
+renderer.domElement.addEventListener("pointerup", (e) => {
+  if (!down || !e.isPrimary || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6 || performance.now() - down.t > 450) return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  ndc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const hit = ray.intersectObjects([...rooms.values()].map((r) => r.pick))[0];
+  if (hit) select(hit.object.userData.room);
+  else if (selected) select(selected);
+});
+
+// ---------- HUD ----------
+const roomsNav = document.getElementById("rooms");
+const panel = document.getElementById("panel");
+function render() {
+  const lights = DEVICES.filter((d) => d.type === "light" && d.on).length;
+  document.getElementById("chip-lights").textContent = `${lights} light${lights === 1 ? "" : "s"} on`;
+  const fault = [...rooms.keys()].find((id) => levelOf(id) === "FAULT");
+  const chip = document.getElementById("chip-status");
+  chip.classList.toggle("fault", Boolean(fault));
+  chip.querySelector("span").textContent = fault ? `Needs attention: ${rooms.get(fault).name}` : "All secure";
+
+  roomsNav.replaceChildren(...[...rooms.values()].map((r) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.dataset.level = levelOf(r.id);
+    b.setAttribute("aria-pressed", String(selected === r.id));
+    b.innerHTML = `<i aria-hidden="true"></i>${r.name}`;
+    b.addEventListener("click", () => select(r.id));
+    return b;
+  }));
+
+  for (const [id, t] of roomTags) {
+    const lv = levelOf(id), lit = devicesIn(id).filter((d) => d.type === "light" && d.on).length;
+    const note = lv === "FAULT" ? "Needs attention" : lv === "WATCH" ? "Check doors" : lit ? `${lit} light on` : "";
+    t.dataset.level = lv;
+    t.classList.toggle("selected", selected === id);
+    t.innerHTML = `<b>${rooms.get(id).name.replace(/ Room$/, "")}</b>${note ? `<span>${note}</span>` : ""}`;
+  }
+  devTags.splice(0).forEach((t) => t.el.remove());
+  if (selected) {
+    const r = rooms.get(selected), ds = devicesIn(selected), [x, y, w] = r.plan;
+    ds.forEach((d, i) => {
+      const el = document.createElement("div");
+      el.className = "holo-tag dev";
+      el.dataset.level = (d.type === "leak" && d.wet) || (d.type === "valve" && !d.open) ? "FAULT" : d.type === "light" && d.on ? "LIT" : "OK";
+      el.innerHTML = `<b>${d.name.replace(new RegExp(`^${r.name.replace(/ Room$/, "")} `), "")}</b><span>${describe(d)}</span>`;
+      tagsEl.append(el);
+      // Spread across the room on a diagonal, alternating heights, so tags don't stack.
+      const k = (i + 1) / (ds.length + 1), d2 = r.plan[3];
+      devTags.push({ el, at: new THREE.Vector3(W2(x + k * w), (1.0 + (i % 2) * 0.55) * U, D2(y + 0.6 + k * (d2 - 1.2))) });
+    });
+    panel.hidden = false;
+    const lv = levelOf(selected);
+    panel.innerHTML = `<button type="button" class="back">← Whole house</button>
+      <div><h2>${r.name}</h2><p class="state">${lv === "FAULT" ? "Needs attention" : lv === "WATCH" ? "A door needs checking" : lv === "LIT" ? "Lights on" : "All quiet"}</p></div>
+      <ul class="devs">${ds.map((d) => {
+        const alert = (d.type === "leak" && d.wet) || (d.type === "valve" && !d.open);
+        const sw = d.type === "light" || d.type === "fan";
+        return `<li class="${alert ? "alert" : sw && d.on ? "on" : ""}"><span>${d.name}<small>${describe(d)}</small></span>${sw ? `<button type="button" class="switch" data-dev="${d.id}" aria-pressed="${d.on}">${d.on ? "On" : "Off"}</button>` : ""}</li>`;
+      }).join("")}</ul>
+      <p class="note">Sample controls: they change this page only.</p>`;
+    panel.querySelector(".back").addEventListener("click", () => select(selected));
+    panel.querySelectorAll(".switch").forEach((b) => b.addEventListener("click", () => {
+      const d = DEVICES.find((x) => x.id === b.dataset.dev);
+      d.on = !d.on;
+      render();
+    }));
+  } else {
+    panel.hidden = true;
+  }
+}
+
+document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => { selected = null; setView(b.dataset.view); render(); }));
+document.getElementById("spin").addEventListener("click", (e) => { spin = !spin; e.currentTarget.setAttribute("aria-pressed", String(spin)); });
+if (reduce) document.getElementById("spin").setAttribute("aria-pressed", "false");
+const dolly = (k) => {
+  const off = camera.position.clone().sub(controls.target).multiplyScalar(k);
+  const len = THREE.MathUtils.clamp(off.length(), controls.minDistance, controls.maxDistance);
+  flyTo(controls.target.clone().add(off.setLength(len)), controls.target.clone(), 350);
+};
+document.getElementById("zoom-in").addEventListener("click", () => dolly(1 / 1.35));
+document.getElementById("zoom-out").addEventListener("click", () => dolly(1.35));
+document.getElementById("leak").addEventListener("click", (e) => {
+  const on = e.currentTarget.getAttribute("aria-pressed") !== "true";
+  e.currentTarget.setAttribute("aria-pressed", String(on));
+  DEVICES.find((d) => d.id === "leak.water_heater").wet = on;
+  DEVICES.find((d) => d.id === "valve.main_water").open = !on;
+  if (on && selected !== "utility") select("utility"); else render();
+});
+
+// ---------- frame loop ----------
+const tmp = new THREE.Vector3();
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h, false);
+  composer.setSize(w, h);
+  bloom.setSize(w, h);
+}
+new ResizeObserver(resize).observe(stage);
+resize();
+
+function place(el, v) {
+  tmp.copy(v).project(camera);
+  const hidden = tmp.z > 1 || tmp.x < -1.2 || tmp.x > 1.2 || tmp.y < -1.2 || tmp.y > 1.2;
+  el.classList.toggle("hidden", hidden);
+  if (!hidden) el.style.transform = `translate(${((tmp.x * 0.5 + 0.5) * stage.clientWidth).toFixed(1)}px, ${((-tmp.y * 0.5 + 0.5) * stage.clientHeight).toFixed(1)}px) translate(-50%, calc(-100% - 18px))`;
+}
+
+let t = 0, prev = performance.now();
+const ease = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+function frame(now) {
+  const dt = Math.min(0.05, (now - prev) / 1000);
+  prev = now; t += dt;
+  if (fly) {
+    const k = Math.min(1, (now - fly.start) / fly.ms), e = ease(k);
+    camera.position.lerpVectors(fly.p0, fly.p1, e);
+    controls.target.lerpVectors(fly.t0, fly.t1, e);
+    if (k >= 1) fly = null;
+  }
+  controls.autoRotate = spin && !fly && now - lastTouch > 2500;
+  controls.update(dt);
+
+  // The scan band sweeps up the walls; the projector ring turns.
+  const top = WALL * U + 0.05;
+  scan.value = reduce ? -10 : (0.5 - 0.5 * Math.cos(t * 0.9)) * top;
+  scanPlane.position.y = scan.value;
+  scanPlane.visible = !reduce;
+  if (!reduce) ring.rotation.z += dt * 0.12;
+
+  for (const r of rooms.values()) {
+    const lv = levelOf(r.id), lit = litLevel(r.id);
+    const pulse = reduce ? 1 : lv === "FAULT" ? 0.55 + 0.45 * Math.sin(t * 7) : lv === "WATCH" ? 0.75 + 0.25 * Math.sin(t * 2.4) : 1;
+    const c = COLORS[lv];
+    r.mats.edgeU.uColor.value.copy(c);
+    r.mats.rimU.uColor.value.copy(c);
+    r.mats.edgeU.uFlash.value = lv === "FAULT" ? 0.35 * pulse : 0;
+    r.mats.edgeU.uOpacity.value = selected && selected !== r.id ? 0.16 : 0.34;
+    r.mats.rimU.uOpacity.value = selected && selected !== r.id ? 0.1 : 0.2;
+    r.floorU.uColor.value.copy(lv === "FAULT" ? COLORS.FAULT : lit ? LIT : HOLO);
+    r.floorU.uK.value = lv === "FAULT" ? 0.16 * pulse : lit ? 0.05 + lit * 0.1 : 0.03;
+    r.beamU.uK.value = lit ? 0.018 + lit * 0.03 : 0;
+    place(roomTags.get(r.id), tmp.set(r.center.x, WALL * U + 0.12, r.center.z).clone());
+  }
+  for (const d of devTags) place(d.el, d.at);
+  composer.render();
+  requestAnimationFrame(frame);
+}
+render();
+requestAnimationFrame(frame);
+</script>
