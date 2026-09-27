@@ -568,8 +568,9 @@ footer { text-align: center; }
 .holo.holo-active .holo-canvas canvas { cursor: grabbing; }
 .holo-tags { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .holo-tag {
-  position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer; white-space: nowrap; min-height: 0;
-  padding: 4px 9px 4px 8px; border: 1px solid rgba(90, 210, 255, 0.24); border-left: 2px solid var(--hc, #5ad2ff); border-radius: 3px;
+  position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer; white-space: nowrap;
+  display: inline-flex; align-items: center; box-sizing: border-box; min-height: 24px;
+  padding: 3px 9px 3px 8px; border: 1px solid rgba(90, 210, 255, 0.24); border-left: 2px solid var(--hc, #5ad2ff); border-radius: 3px;
   background: rgba(5, 14, 28, 0.72); color: #dff3ff; font: 500 12px/1.25 var(--font-body, "Hanken Grotesk", system-ui, sans-serif);
   -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); transition: opacity 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
@@ -583,7 +584,7 @@ footer { text-align: center; }
 .holo-tag[data-level="WATCH"] { --hc: #fbbf24; }
 .holo-tag[data-level="FAULT"] { --hc: #f87171; }
 .holo-tag.lit:not([data-level="FAULT"]), .holo-tag.dev[data-level="LIT"] { --hc: #ffd27a; }
-.holo-tag.dev { pointer-events: none; padding: 2px 7px; font-size: 11px; }
+.holo-tag.dev { pointer-events: none; min-height: 0; padding: 2px 7px; font-size: 11px; }
 .holo-tag.dev b { font-size: 10px; }
 .holo-tag.dev::after { height: 10px; }
 .holo-tag.off { opacity: 0; pointer-events: none; }

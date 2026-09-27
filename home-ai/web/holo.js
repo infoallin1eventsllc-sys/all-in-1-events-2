@@ -649,17 +649,29 @@ function frame(h, now) {
   // Tags follow their rooms and devices.
   const W = h.wrap.clientWidth, H = h.wrap.clientHeight;
   tmp.v ||= new THREE.Vector3();
-  const place = (el, v) => {
+  const project = (v) => {
     tmp.v.copy(v).project(h.camera);
-    const off = tmp.v.z > 1 || Math.abs(tmp.v.x) > 1.1 || Math.abs(tmp.v.y) > 1.1;
-    el.classList.toggle("off", off);
-    if (!off) el.style.transform = `translate(${((tmp.v.x * 0.5 + 0.5) * W).toFixed(1)}px, ${((-tmp.v.y * 0.5 + 0.5) * H).toFixed(1)}px) translate(-50%, calc(-100% - 14px))`;
+    return { off: tmp.v.z > 1 || Math.abs(tmp.v.x) > 1.1 || Math.abs(tmp.v.y) > 1.1, x: (tmp.v.x * 0.5 + 0.5) * W, y: (-tmp.v.y * 0.5 + 0.5) * H };
   };
-  for (const [id, t] of h.tags) {
+  const put = (el, p) => {
+    el.classList.toggle("off", p.off);
+    if (!p.off) el.style.transform = `translate(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px) translate(-50%, calc(-100% - 14px))`;
+  };
+  // Room tags are buttons: step them apart so no two overlap (and each stays a full target).
+  const placed = [];
+  const roomTags = [...h.tags].map(([id, t]) => {
     const r = h.rooms.get(id);
-    if (r) place(t, new THREE.Vector3(r.center.x, WALL * U + 0.1, r.center.z));
+    return r ? { t, p: project(new THREE.Vector3(r.center.x, WALL * U + 0.1, r.center.z)), w: t.offsetWidth || 80, hgt: t.offsetHeight || 24 } : null;
+  }).filter(Boolean).sort((a, b) => a.p.y - b.p.y);
+  for (const g of roomTags) {
+    if (!g.p.off) {
+      const hits = () => placed.some((q) => Math.abs(q.p.x - g.p.x) < (q.w + g.w) / 2 + 4 && Math.abs(q.p.y - g.p.y) < (q.hgt + g.hgt) / 2 + 4);
+      for (let k = 0; k < 24 && hits(); k++) g.p.y += 6;
+      placed.push(g);
+    }
+    put(g.t, g.p);
   }
-  for (const d of h.devTags) place(d.el, d.at);
+  for (const d of h.devTags) put(d.el, project(d.at));
 
   h.composer.render();
   h.container.dataset.view = `${h.camera.position.x.toFixed(2)},${h.camera.position.y.toFixed(2)},${h.camera.position.z.toFixed(2)}`;

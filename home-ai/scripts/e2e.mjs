@@ -568,6 +568,7 @@ async function exercise(page, { garageTravelMs, home }) {
   await page.evaluate(() => document.documentElement.setAttribute("data-look", "vivid"));
   await audit(page, "Studio, Vivid light");
   await page.emulateMedia({ colorScheme: "dark" });
+  await page.waitForTimeout(300); // buttons fade to their dark colors over 0.15 s
   await audit(page, "Studio, Vivid dark");
   await page.emulateMedia({ colorScheme: "light" });
   await page.evaluate(() => document.documentElement.setAttribute("data-look", "grounded"));
