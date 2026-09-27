@@ -11,6 +11,7 @@ An AI agent for a new home: Node 20+, ES modules, one runtime dependency (`@anth
 - `npm run build:catalog`: client catalog of every screen in both finishes (after build:demo)
 - `npm run build:vendor`: rebuilds `web/vendor/three.js` (the parts of Three.js the hologram uses, committed so panels work offline). Run it after changing which `THREE.*` names `web/holo.js` uses; the script's export list must include them.
 - `npm run build:film` / `npm run render:film`: the Meridian Interface film (`film/`, see film/README.md) as one page (`dist/film/meridian-film.html`) and as an MP4. Needs ffmpeg (or `FFMPEG=`) and Python 3 with numpy. The film is a pure function of time (`film.render(t)`); keep it that way so the page and the frame-by-frame render match.
+- `npm run build:sites`: the two scroll sites in `site/` (Meridian Interface, and the Linden House property template) as pages in `dist/site/`. Scrolling drives the film engine (`site/scrollfilm.js` → `film.render(t)`); nothing renders while the page is still.
 - `npm run live-check`: the real Claude agent against the simulated house (chat, a device, the garage confirmation, "I'm cold", a briefing, a reflection). Needs `ANTHROPIC_API_KEY`; spends a few cents; fails if any step falls back to offline mode.
 
 ## Rules that matter
@@ -44,6 +45,8 @@ Republish after `npm run build:demo` by passing the Artifact URL:
 - Grounded: https://claude.ai/artifact/J46Rus2S3KzY9CpbpYKyCk (`dist/demo/haven-grounded.html`)
 - Vivid: https://claude.ai/artifact/9SmqdXDppENdd3uGKZyWiV (`dist/demo/haven-vivid.html`)
 - The film: https://claude.ai/artifact/Md8dJzhNvV6ZM5Wbb39Mhu (`dist/film/meridian-film.artifact.html`, after `npm run build:film`)
+- Meridian Interface scroll site: https://claude.ai/artifact/Fv4i2cKycgoSzHW46MRuru (`dist/site/meridian.artifact.html`, after `npm run build:sites`)
+- Linden House property-site template: https://claude.ai/artifact/HaLXwEUshczLYYctJR5gxW (`dist/site/residence.artifact.html`)
 - Screen library catalog: https://claude.ai/artifact/4tyqsjpBgWRi3ds9FwLnb6 (`dist/catalog/haven-screen-library.html`; rebuild with `DEMO_URL_GROUNDED=… DEMO_URL_FUTURISTIC=… DEMO_URL_VIVID=… npm run build:catalog`)
 - Each demo opens a specific screen with `#signature`, `#studio`, `#wallpaper`, `#command-center`, `#family-hub`, `#nightstand`, `#rooms` or `#entry`.
 

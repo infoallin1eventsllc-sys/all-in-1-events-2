@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Linden House</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500&family=Manrope:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #edf0ec; --surface: #f7f8f5; --ink: #18201c; --muted: #56625b; --line: rgba(24, 32, 28, 0.14);
+    --oak: #93582a; --green: #274235; --on-green: #eef3ef; --room: #ffffff; --room-line: #2b3a31; --garage: #e3e6e1;
+    --display: "Bodoni Moda", "Didot", "Bodoni 72", Georgia, serif;
+    --body: "Manrope", "Segoe UI", system-ui, sans-serif;
+    --mono: "DM Mono", ui-monospace, Menlo, monospace;
+    --gutter: clamp(16px, 4.5vw, 64px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0f1411; --surface: #161d19; --ink: #e8ede9; --muted: #9aa8a0; --line: rgba(232, 237, 233, 0.14);
+      --oak: #d69b66; --green: #8cc0a2; --on-green: #0f1411; --room: #1b241f; --room-line: #b9cbbf; --garage: #141a16;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0f1411; --surface: #161d19; --ink: #e8ede9; --muted: #9aa8a0; --line: rgba(232, 237, 233, 0.14);
+    --oak: #d69b66; --green: #8cc0a2; --on-green: #0f1411; --room: #1b241f; --room-line: #b9cbbf; --garage: #141a16;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16.5px/1.65 var(--body); }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--oak); outline-offset: 3px; }
+
+  .top { position: fixed; inset: 0 0 auto 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: calc(16px + env(safe-area-inset-top, 0px)) var(--gutter) 16px; color: #f4f1ec; pointer-events: none; }
+  .top > * { pointer-events: auto; }
+  .mark { font: 500 20px/1 var(--display); letter-spacing: 0.02em; text-decoration: none; }
+  .top nav { display: flex; gap: 22px; font: 500 13px/1 var(--body); letter-spacing: 0.04em; }
+  .top nav a { text-decoration: none; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5); }
+  .top .book { padding: 11px 18px; border-radius: 999px; background: rgba(244, 241, 236, 0.94); color: #18201c; text-shadow: none; }
+
+  .track { position: relative; height: 520vh; }
+  .stage { position: sticky; top: 0; height: 100vh; height: 100dvh; overflow: hidden; background: #0d110f; color: #f4f1ec; }
+  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .shade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(0deg, rgba(8, 11, 9, 0.8) 0%, rgba(8, 11, 9, 0.2) 38%, rgba(8, 11, 9, 0) 55%), linear-gradient(180deg, rgba(8, 11, 9, 0.45) 0%, rgba(8, 11, 9, 0) 18%); }
+  .fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+  .hero-copy { position: absolute; left: var(--gutter); right: var(--gutter); bottom: clamp(24px, 6vh, 64px); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: end; }
+  .panel { grid-column: 1; grid-row: 1; opacity: 0; }
+  .panel .kicker { font: 500 12px/1 var(--mono); letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; margin: 0 0 14px; }
+  .panel h1, .panel h2 { margin: 0; font: 400 clamp(52px, 9vw, 132px)/0.92 var(--display); letter-spacing: -0.01em; }
+  .panel h2 { font-size: clamp(38px, 5.6vw, 80px); }
+  .panel p.sub { margin: 14px 0 0; font-size: clamp(15px, 1.3vw, 18px); max-width: 44ch; opacity: 0.88; }
+  .stats { grid-column: 2; grid-row: 1; display: grid; grid-template-columns: repeat(4, auto); gap: 0 clamp(18px, 2.4vw, 40px); margin: 0; }
+  .stats div { display: grid; gap: 6px; }
+  .stats dt { font: 500 11px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.72; order: 2; }
+  .stats dd { margin: 0; font: 400 clamp(24px, 2.4vw, 34px)/1 var(--display); font-variant-numeric: tabular-nums; }
+  .scroll-note { position: absolute; top: 50%; right: var(--gutter); transform: translateY(-50%) rotate(90deg); transform-origin: right center; font: 500 11px/1 var(--mono); letter-spacing: 0.24em; text-transform: uppercase; opacity: 0.7; }
+  .sample { position: absolute; left: var(--gutter); top: calc(70px + env(safe-area-inset-top, 0px)); font: 500 11px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; padding: 7px 10px; border: 1px solid rgba(244, 241, 236, 0.45); border-radius: 999px; }
+  .loading { position: absolute; inset: 0; display: grid; place-items: center; font: 500 12px/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; opacity: 0.7; }
+
+  section { padding-block: clamp(72px, 11vw, 140px); padding-inline: var(--gutter); }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  .eyebrow { font: 500 12px/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--oak); margin: 0 0 16px; }
+  h3 { margin: 0 0 18px; font: 400 clamp(34px, 4.6vw, 60px)/1.04 var(--display); text-wrap: balance; max-width: 18ch; }
+  .lede { color: var(--muted); max-width: 60ch; margin: 0 0 40px; }
+  .intro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(28px, 6vw, 96px); }
+  .intro p { margin: 0 0 16px; }
+  .facts { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  .facts th, .facts td { text-align: left; padding: 13px 0; border-bottom: 1px solid var(--line); vertical-align: baseline; }
+  .facts th { font: 500 12px/1.4 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); width: 42%; }
+  .facts td { font-weight: 600; }
+  .plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 28px; }
+  figure { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 22px; }
+  figcaption { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 14px; font: 500 12px/1.4 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  figcaption b { color: var(--ink); font-weight: 500; }
+  .plan-scroll { overflow-x: auto; }
+  svg.plan { width: 100%; min-width: 360px; height: auto; display: block; }
+  svg.plan .room { fill: var(--room); stroke: var(--room-line); stroke-width: 2.2; }
+  svg.plan .room.garage { fill: var(--garage); }
+  svg.plan .name { font: 600 12px var(--body); fill: var(--ink); }
+  svg.plan .dim { font: 400 10.5px var(--mono); fill: var(--muted); }
+  svg.plan .glass { stroke: var(--oak); stroke-width: 3.5; }
+  svg.plan .scale { stroke: var(--muted); stroke-width: 1.2; }
+  .haven { background: var(--green); color: var(--on-green); }
+  .haven .eyebrow { color: inherit; opacity: 0.8; }
+  .haven .lede { color: inherit; opacity: 0.85; }
+  .points { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 0 36px; }
+  .points li { padding: 22px 0; border-top: 1px solid color-mix(in srgb, currentColor 25%, transparent); }
+  .points h4 { margin: 0 0 6px; font: 600 17px/1.35 var(--body); }
+  .points p { margin: 0; opacity: 0.85; font-size: 15.5px; }
+  .book-grid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: clamp(28px, 6vw, 96px); align-items: start; }
+  form { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  label { display: grid; gap: 7px; font: 500 12px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  label.full { grid-column: 1 / -1; }
+  input, select, textarea { font: 400 16px/1.4 var(--body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 13px 14px; min-height: 48px; width: 100%; }
+  textarea { min-height: 110px; resize: vertical; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--oak); outline-offset: 1px; border-color: transparent; }
+  .submit { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+  button.primary { min-height: 52px; padding: 0 28px; border: 0; border-radius: 999px; background: var(--ink); color: var(--bg); font: 600 15px/1 var(--body); cursor: pointer; }
+  .status { margin: 0; font-size: 14.5px; color: var(--muted); }
+  footer { padding: 36px var(--gutter) calc(36px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; font-size: 13.5px; color: var(--muted); }
+
+  @media (max-width: 820px) {
+    .hero-copy { grid-template-columns: 1fr; }
+    .stats { grid-column: 1; grid-row: 2; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .intro, .book-grid { grid-template-columns: 1fr; }
+    form { grid-template-columns: 1fr; }
+    .top nav a:not(.book) { display: none; }
+    .scroll-note { display: none; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="mark" href="#top">Linden House</a>
+  <nav aria-label="Sections"><a href="#house">The house</a><a href="#plans">Plans</a><a href="#haven">Haven</a><a class="book" href="#book">Book a private preview</a></nav>
+</header>
+
+<main id="top">
+  <div class="track" id="track">
+    <div class="stage">
+      <canvas id="canvas" aria-label="Linden House: the exterior at golden hour, the rooms being staged, the walk in, and the house at dusk, driven by scrolling"></canvas>
+      <div class="shade"></div>
+      <div class="fade" id="fade"></div>
+      <div class="loading" id="loading">Opening the house&hellip;</div>
+      <span class="sample">Sample listing</span>
+      <div class="hero-copy">
+        <div class="panel" data-from="0" data-to="0.3">
+          <p class="kicker">Two-story modern &middot; Haven built in</p>
+          <h1>Linden House</h1>
+          <p class="sub">Oak, glass and stone on two floors, with an AI home agent that knows the house from the first day.</p>
+        </div>
+        <div class="panel" data-from="0.3" data-to="0.55">
+          <p class="kicker">Inside</p>
+          <h2>Staged, room by room</h2>
+          <p class="sub">Wide oak floors, a stone fireplace wall, a marble island under three pendants.</p>
+        </div>
+        <div class="panel" data-from="0.55" data-to="0.8">
+          <p class="kicker">Arrival</p>
+          <h2>It meets you at the door</h2>
+          <p class="sub">Haven greets you, unlocks only when you say so, and walks you through the systems.</p>
+        </div>
+        <div class="panel" data-from="0.8" data-to="1.01">
+          <p class="kicker">Evening</p>
+          <h2>Lit from within</h2>
+          <p class="sub">Floor-to-ceiling glass across the living room and the study above it.</p>
+        </div>
+        <dl class="stats" id="stats"></dl>
+      </div>
+      <span class="scroll-note">Scroll to walk through</span>
+    </div>
+  </div>
+
+  <section id="house">
+    <div class="wrap intro">
+      <div>
+        <p class="eyebrow">The house</p>
+        <h3>Built around one long room of glass.</h3>
+        <p>The living room runs the width of the ground floor, glazed floor to ceiling on the garden side, with the kitchen and dining room behind it. Upstairs, two bedrooms face north and a study opens onto the terrace over the living room.</p>
+        <p>Every room was laid out in Meridian&rsquo;s planner, so the house on your panel is the house you live in.</p>
+      </div>
+      <table class="facts" id="facts"><tbody></tbody></table>
+    </div>
+  </section>
+
+  <section id="plans" style="padding-top: 0">
+    <div class="wrap">
+      <p class="eyebrow">Floor plans</p>
+      <h3>Two floors, nine rooms.</h3>
+      <p class="lede">Drawn from the same plan as the house above. Dimensions in metres; glass walls in oak.</p>
+      <div class="plans" id="plan-figs"></div>
+    </div>
+  </section>
+
+  <section class="haven" id="haven">
+    <div class="wrap">
+      <p class="eyebrow">Built in: Haven</p>
+      <h3>A home that looks out for you.</h3>
+      <p class="lede">A wall panel in the hall and in any room you choose. Haven talks with the family, watches the house and follows rules it can&rsquo;t argue its way around.</p>
+      <ul class="points">
+        <li><h4>Asks before anything risky</h4><p>Unlocking the door, opening the garage or turning the water back on waits for your yes.</p></li>
+        <li><h4>Stops leaks</h4><p>A wet sensor under the sink or by the water heater shuts off the water and tells you where.</p></li>
+        <li><h4>Learns your comfort</h4><p>Say &ldquo;I&rsquo;m cold&rdquo; and it warms the room now, and remembers for that time of day.</p></li>
+        <li><h4>Shows the whole house</h4><p>A live hologram of Linden House on the panel. Tap a room for its controls.</p></li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="book">
+    <div class="wrap book-grid">
+      <div>
+        <p class="eyebrow">Private preview</p>
+        <h3>See it in person.</h3>
+        <p class="lede">Tell us when suits you and we&rsquo;ll walk you through the house and show you Haven running on the panel.</p>
+      </div>
+      <form id="book-form" novalidate>
+        <label>Name<input id="f-name" name="name" autocomplete="name" required></label>
+        <label>Email<input id="f-email" name="email" type="email" autocomplete="email" required></label>
+        <label>Preferred day<input id="f-date" name="date" type="date"></label>
+        <label>Time<select id="f-time" name="time"><option>Morning</option><option>Afternoon</option><option>Evening, to see it at dusk</option></select></label>
+        <label class="full">Anything we should know<textarea id="f-note" name="note"></textarea></label>
+        <div class="submit">
+          <button class="primary" type="submit">Request a preview</button>
+          <p class="status" id="book-status" role="status"></p>
+        </div>
+      </form>
+    </div>
+  </section>
+</main>
+<footer>
+  <span>Linden House is a sample listing: a Meridian Interface property-site template, shown with the house from our film.</span>
+  <span>Meridian Interface</span>
+</footer>
+<script type="module" src="main.js"></script>
+</body>
+</html>

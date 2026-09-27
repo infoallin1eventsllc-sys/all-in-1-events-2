@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meridian Interface</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112,300;112,600;125,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    color-scheme: dark;
+    --night: #05080e; --panel: #0b121c; --line: rgba(90, 210, 255, 0.22);
+    --cyan: #5ad2ff; --amber: #ffb35c; --paper: #e9f0f5; --muted: #8ca2b4;
+    --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --gutter: clamp(16px, 4vw, 56px);
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; background: var(--night); color: var(--paper); font: 400 17px/1.6 var(--body); }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+
+  .top { position: fixed; inset: 0 0 auto 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: calc(14px + env(safe-area-inset-top, 0px)) var(--gutter) 14px; pointer-events: none; }
+  .top > * { pointer-events: auto; }
+  .brand { font: 700 13px/1 var(--display); font-stretch: 125%; letter-spacing: 0.32em; text-transform: uppercase; text-decoration: none; }
+  .brand span { color: var(--cyan); }
+  .top nav { display: flex; gap: 6px; }
+  .top nav a { font: 500 13px/1 var(--body); text-decoration: none; padding: 10px 14px; border-radius: 999px; border: 1px solid var(--line); background: rgba(5, 8, 14, 0.55); backdrop-filter: blur(8px); }
+  .top nav a:hover { border-color: var(--cyan); }
+
+  /* The film, pinned while the track scrolls past. */
+  .track { position: relative; height: 1000vh; }
+  .stage { position: sticky; top: 0; height: 100vh; height: 100dvh; overflow: hidden; }
+  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .stage .fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+  .stage .vignette { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(5, 8, 14, 0.78) 0%, rgba(5, 8, 14, 0.25) 42%, rgba(5, 8, 14, 0) 60%); }
+  .sheet { position: absolute; left: var(--gutter); bottom: clamp(28px, 9vh, 96px); width: min(460px, calc(100% - 2 * var(--gutter)));
+    opacity: 0; transform: translateY(12px); transition: none; }
+  .sheet .block { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: baseline; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--line);
+    font: 500 11px/1.4 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .sheet .block b { color: var(--cyan); font-weight: 500; }
+  .sheet h2 { margin: 0 0 12px; font: 300 clamp(30px, 4.2vw, 56px)/1.04 var(--display); font-stretch: 112%; letter-spacing: -0.01em; text-wrap: balance; }
+  .sheet h2 em { font-style: normal; font-weight: 600; color: var(--cyan); }
+  .sheet p { margin: 0; color: #c9d6e0; max-width: 44ch; }
+  .sheet .dims { margin-top: 16px; font: 400 12px/1.7 var(--mono); color: var(--muted); }
+  .sheet .dims span { color: var(--paper); }
+  .sheet blockquote { margin: 18px 0 0; padding-left: 14px; border-left: 2px solid var(--amber); font: 500 19px/1.45 var(--body); color: #ffe2bd; }
+  .progress { position: absolute; right: var(--gutter); top: 50%; transform: translateY(-50%); display: grid; gap: 10px; }
+  .progress button { width: 28px; height: 28px; padding: 0; border: 0; background: none; cursor: pointer; display: grid; place-items: center; }
+  .progress button::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: rgba(233, 240, 245, 0.28); transition: background 0.2s, transform 0.2s; }
+  .progress button[aria-current="step"]::before { background: var(--cyan); transform: scale(1.5); box-shadow: 0 0 10px var(--cyan); }
+  .hint { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); font: 500 11px/1 var(--mono); letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+
+  /* After the film. */
+  section.after { padding-block: clamp(72px, 12vw, 140px); padding-inline: var(--gutter); border-top: 1px solid var(--line); }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+  .eyebrow { font: 500 12px/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--cyan); margin: 0 0 18px; }
+  h3 { margin: 0 0 20px; font: 300 clamp(30px, 4vw, 52px)/1.06 var(--display); font-stretch: 112%; text-wrap: balance; max-width: 22ch; }
+  .lede { color: #c9d6e0; max-width: 62ch; margin: 0 0 48px; }
+  .features { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 0; border-top: 1px solid var(--line); }
+  .features li { padding: 26px 24px 28px 0; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 44px 1fr; gap: 4px 12px; }
+  .features .n { font: 500 12px/1.9 var(--mono); color: var(--cyan); grid-row: span 2; }
+  .features h4 { margin: 0; font: 600 18px/1.35 var(--body); }
+  .features p { margin: 0; color: var(--muted); font-size: 15.5px; }
+  .rule { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: clamp(28px, 5vw, 72px); align-items: center; }
+  .rule blockquote { margin: 0; font: 300 clamp(26px, 3.4vw, 42px)/1.2 var(--display); font-stretch: 112%; color: #ffe2bd; }
+  .rule pre { margin: 0; padding: 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); font: 400 13px/1.7 var(--mono); color: #bcd3e3; overflow-x: auto; }
+  .rule pre b { color: var(--cyan); font-weight: 500; }
+  .styles { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .styles li { font: 500 13px/1 var(--mono); padding: 10px 14px; border: 1px solid var(--line); border-radius: 999px; color: #cfe6f5; }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px; }
+  .btn { display: inline-flex; align-items: center; min-height: 48px; padding: 0 22px; border-radius: 999px; font: 600 15px/1 var(--body); text-decoration: none; border: 1px solid var(--cyan); }
+  .btn.solid { background: var(--cyan); color: #04121c; }
+  .btn:hover { filter: brightness(1.1); }
+  footer { padding: 40px var(--gutter) calc(40px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 14px; }
+  .loading { position: absolute; inset: 0; display: grid; place-items: center; font: 500 12px/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+
+  @media (max-width: 760px) {
+    .stage .vignette { background: linear-gradient(0deg, rgba(5, 8, 14, 0.92) 0%, rgba(5, 8, 14, 0.55) 45%, rgba(5, 8, 14, 0) 70%); }
+    .sheet { bottom: 22px; }
+    .sheet p { font-size: 15.5px; }
+    .progress { right: 6px; }
+    .rule { grid-template-columns: minmax(0, 1fr); }
+    .top nav a:not(:last-child) { display: none; }
+    .hint { display: none; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#top">Meridian<span>&nbsp;/&nbsp;</span>Interface</a>
+  <nav aria-label="Sections"><a href="#haven">Haven</a><a href="#builders">For builders</a></nav>
+</header>
+
+<main id="top">
+  <div class="track" id="track">
+    <div class="stage">
+      <canvas id="canvas" aria-label="A home being designed and built as a hologram, driven by scrolling"></canvas>
+      <div class="vignette"></div>
+      <div class="fade" id="fade"></div>
+      <div class="loading" id="loading">Drawing the plan&hellip;</div>
+
+      <article class="sheet" data-from="0" data-to="0.13">
+        <div class="block"><b>A-01</b><span>Design &middot; ground floor plan</span></div>
+        <h2>Every home starts as a <em>line of light.</em></h2>
+        <p>Meridian&rsquo;s software lays out a home from a plan, a sketch, or just a list of rooms. This one is drawn room by room.</p>
+        <p class="dims">Garage <span>6.0 &times; 7.0 m</span> &middot; Kitchen <span>6.0 &times; 4.5 m</span> &middot; Living <span>7.0 &times; 5.5 m</span></p>
+      </article>
+      <article class="sheet" data-from="0.13" data-to="0.29">
+        <div class="block"><b>A-02</b><span>Structure &middot; two floors</span></div>
+        <h2>Walls rise <em>where rooms meet.</em></h2>
+        <p>Inside walls get doorways. Outside walls get the windows the style calls for. The same engine draws Haven&rsquo;s live hologram of your own home.</p>
+        <p class="dims">Floors <span>2</span> &middot; Rooms <span>9</span> &middot; Interior <span>180 m&sup2;</span></p>
+      </article>
+      <article class="sheet" data-from="0.29" data-to="0.43">
+        <div class="block"><b>A-03</b><span>Build &middot; golden hour</span></div>
+        <h2>Then it becomes <em>real.</em></h2>
+        <p>Foundation, frame, glass, oak siding, roof. The lot comes in with it: drive, path, planters and trees.</p>
+      </article>
+      <article class="sheet" data-from="0.43" data-to="0.57">
+        <div class="block"><b>A-04</b><span>Finish &middot; interiors</span></div>
+        <h2>Room by room, <em>down to the furniture.</em></h2>
+        <p>Paint, oak floors, a stone fireplace wall, the kitchen and its island, and then the lights come on.</p>
+      </article>
+      <article class="sheet" data-from="0.57" data-to="0.69">
+        <div class="block"><b>A-05</b><span>Handover &middot; dusk</span></div>
+        <h2>When it&rsquo;s finished, <em>it greets you.</em></h2>
+        <p>Haven, the AI agent built into the home, meets its owners at the door. The door&rsquo;s light strip glows and the lock turns green.</p>
+      </article>
+      <article class="sheet" data-from="0.69" data-to="0.81">
+        <div class="block"><b>A-06</b><span>Systems &middot; sensors</span></div>
+        <h2>It knows every wall, <em>window and pipe.</em></h2>
+        <p>Doors, windows, water, heat and air report to one place, so the home notices a problem before you do.</p>
+      </article>
+      <article class="sheet" data-from="0.81" data-to="0.93">
+        <div class="block"><b>A-07</b><span>Control &middot; the wall panel</span></div>
+        <h2>One place to <em>talk to your home.</em></h2>
+        <blockquote>&ldquo;I&rsquo;ll never unlock a door or open the garage unless you say so.&rdquo;</blockquote>
+      </article>
+      <article class="sheet" data-from="0.93" data-to="1.01">
+        <div class="block"><b>A-08</b><span>Meridian Interface</span></div>
+        <h2>The future, <em>in your hands.</em></h2>
+        <p>Keep scrolling to see what Haven does.</p>
+      </article>
+
+      <div class="progress" id="progress" aria-label="Chapters"></div>
+      <div class="hint" id="hint">Scroll to build</div>
+    </div>
+  </div>
+
+  <section class="after" id="haven">
+    <div class="wrap">
+      <p class="eyebrow">Haven &middot; the AI home agent</p>
+      <h3>Everything the guide said is something Haven does.</h3>
+      <p class="lede">Haven runs on a small server in the home and a wall panel in each room you choose. It talks with the family, watches the house, and keeps a rulebook it can&rsquo;t argue its way around.</p>
+      <ul class="features">
+        <li><span class="n">01</span><h4>Talks and listens</h4><p>Push to talk on the panel. It answers in its own voice.</p></li>
+        <li><span class="n">02</span><h4>Asks before anything risky</h4><p>Unlocking a door, opening the garage or turning the water back on waits for a person&rsquo;s yes.</p></li>
+        <li><span class="n">03</span><h4>Stops leaks</h4><p>A wet leak sensor shuts off the water and the water heater, and tells you where.</p></li>
+        <li><span class="n">04</span><h4>Learns your comfort</h4><p>Say &ldquo;I&rsquo;m cold&rdquo; and it warms the room now, and remembers for that time of day.</p></li>
+        <li><span class="n">05</span><h4>Briefs you</h4><p>A morning and evening summary: the house, the weather when it&rsquo;s connected, and anything that needs you.</p></li>
+        <li><span class="n">06</span><h4>Shows the whole house</h4><p>A live hologram of your own home. Tap a room to fly in and use its controls.</p></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="after">
+    <div class="wrap rule">
+      <blockquote>&ldquo;I&rsquo;ll never unlock a door or open the garage unless you say so.&rdquo;</blockquote>
+      <div>
+        <p class="eyebrow">A rule in the code, not the brochure</p>
+        <pre>// src/safety.js: the AI's tools can't set this
+<b>unlock</b>       &rarr; needs the owner's confirmation
+<b>garage open</b>  &rarr; needs the owner's confirmation
+<b>water on</b>     &rarr; needs the owner's confirmation
+<b>water heater</b> &rarr; never above 125&deg;F</pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="after" id="builders">
+    <div class="wrap">
+      <p class="eyebrow">For builders</p>
+      <h3>Every plan you sell can ship with its own hologram and its own AI.</h3>
+      <p class="lede">Describe a plan once: its style, its floors and the outline of each room. Every home built from it gets a hologram in that style and a Haven that already knows the house. Eight styles today:</p>
+      <ul class="styles">
+        <li>Modern</li><li>Contemporary</li><li>Farmhouse</li><li>Craftsman</li><li>Colonial</li><li>Ranch</li><li>Mediterranean</li><li>Cabin</li>
+      </ul>
+      <div class="cta">
+        <a class="btn solid" href="#top">Build it again</a>
+      </div>
+    </div>
+  </section>
+</main>
+<footer>
+  <span>Meridian Interface</span>
+  <span>The future, in your hands.</span>
+</footer>
+<script type="module" src="main.js"></script>
+</body>
+</html>

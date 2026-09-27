@@ -30,7 +30,7 @@ import { normalizeHome, sharedStretches } from "../web/building.js";
 export const DURATION = 92;
 
 // ---------- the film's house ----------
-const HOME = {
+export const HOME = {
   building: { style: "modern", floors: [{ id: "ground", name: "Ground floor" }, { id: "upper", name: "Upstairs" }] },
   rooms: [
     { id: "garage", name: "Garage", plan: [0, 0, 6, 7] },
@@ -326,7 +326,7 @@ function patch(mat, { planks = false, glow = false } = {}) {
         vec3 baseCol = vPaint < 0.0 ? vCol : mix(uPrimer, vCol, clamp((uT - vPaint) / 0.6, 0.0, 1.0));
         vec4 diffuseColor = vec4(baseCol, opacity);`)
       .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
-        totalEmissiveRadiance += uHoloColor * front * 1.3;
+        totalEmissiveRadiance += uHoloColor * front * 0.6;
         ${glow ? "totalEmissiveRadiance += vCol * (0.3 + 1.6 * uLights);" : ""}
         if (vPaint >= 0.0) totalEmissiveRadiance += uHoloColor * exp(-pow((uT - vPaint - 0.25) / 0.22, 2.0)) * 0.5;`);
   };
@@ -704,8 +704,8 @@ export async function createFilm(canvas, { width, height, voice = [] } = {}) {
     U.uCutY.value = t > 33 && t < 44 ? 2.96 : 99;
     U.uHolo.value = 1 - smooth(43, 44, t);
     U.uScan.value = t < 24 ? ((t - 13) % 3.6) * 2.2 - 0.5 : -10;
-    bloom.strength = t < 27 ? 0.7 : t < 44 ? lerp(0.7, 0.35, smooth(26, 29, t)) : 0.45;
-    bloom.threshold = t < 27 ? 0.12 : 0.85;
+    bloom.strength = t < 24 ? 0.7 : t < 44 ? lerp(0.45, 0.35, smooth(26, 29, t)) : 0.45;
+    bloom.threshold = t < 24 ? 0.12 : t < 27 ? 0.5 : 0.85;
     renderer.toneMappingExposure = t < 27 ? 1.0 : lerp(1.0, 0.95, dusk);
 
     // Plan drawing.
@@ -718,9 +718,9 @@ export async function createFilm(canvas, { width, height, voice = [] } = {}) {
 
     // Door, its light strip and lock.
     doorPivot.rotation.y = smooth(51.6, 53.2, t) * 1.45;
-    const stripA = smooth(50.2, 50.9, t) * (1 - smooth(57, 58, t));
+    const stripA = smooth(50.2, 50.9, t) * (1 - smooth(55.2, 56.0, t));
     stripMat.opacity = stripA;
-    lockRing.material.opacity = smooth(50.9, 51.3, t) * (1 - smooth(57, 58, t));
+    lockRing.material.opacity = smooth(50.9, 51.3, t) * (1 - smooth(55.2, 56.0, t));
 
     // The guide.
     const gs = guideState(t);
@@ -766,7 +766,9 @@ export async function createFilm(canvas, { width, height, voice = [] } = {}) {
     // Camera.
     const cam = shotCamera(t);
     camera.position.copy(cam.pos); camera.lookAt(cam.tgt);
-    if (camera.fov !== cam.fov) { camera.fov = cam.fov; camera.updateProjectionMatrix(); }
+    // On a tall screen (a phone held upright) widen the view so the house still fits; at the film's 16:9 nothing changes.
+    const fov = cam.fov * (camera.aspect < 1.3 ? Math.min(1.9, Math.pow(1.3 / camera.aspect, 0.7)) : 1);
+    if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
     composer.render();
   };
   return film;

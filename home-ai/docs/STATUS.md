@@ -45,6 +45,8 @@ A code review of the hologram and any-home code, plus a sweep of every screen in
 - Demo B, Grounded: https://claude.ai/artifact/J46Rus2S3KzY9CpbpYKyCk
 - Vivid (light and dark; Screens → Appearance): https://claude.ai/artifact/9SmqdXDppENdd3uGKZyWiV
 - The film, "The future, in your hands": https://claude.ai/artifact/Md8dJzhNvV6ZM5Wbb39Mhu
+- Meridian Interface scroll site (scrolling builds the home): https://claude.ai/artifact/Fv4i2cKycgoSzHW46MRuru
+- Linden House, a property-site template: https://claude.ai/artifact/HaLXwEUshczLYYctJR5gxW
 - Screen library catalog (all eight screens, every finish, links to open each live): https://claude.ai/artifact/4tyqsjpBgWRi3ds9FwLnb6
 
 Both are private until shared from each page's Share menu.

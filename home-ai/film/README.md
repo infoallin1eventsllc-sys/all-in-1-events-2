@@ -59,3 +59,12 @@ Paste these three descriptions into every prompt:
 | P10 | 1:23-1:26 | The camera pulls back through the living room's glass wall and rises to reveal the whole of [house] at dusk, lit from within. |
 
 For the most consistent guide, first generate one still image of the guide and use it as the reference image for P4-P9. For the house, use a still from the hologram film at 0:31 (the finished exterior) as the reference image for P2 and P10.
+
+## One continuous flythrough (image to video)
+The single-shot technique from the "one photo to a cinematic website" workflow: one reference still of the house, one continuous 8-10 second camera move, no cuts. Use `film/refs/golden-hour.jpg` or `film/refs/dusk.jpg` (stills of this house from the film) as the start image in Veo, Flow, Runway or Kling, and paste:
+
+> CINEMATIC FPV DRONE POV. A TWO-STORY MODERN HOME AT DUSK. ONE CONTINUOUS SHOT, 10 SECONDS, NO CUTS.
+> Start low over the lawn, 15 metres out, facing the house: warm oak siding upstairs, white render and floor-to-ceiling glass downstairs, a dark stone entry wall, a flat roof with a deep overhang, lit warmly from inside. Glide slowly toward the glass wall of the living room. The sliding glass door opens as the camera arrives; fly through it into the living room, past a linen sofa and a walnut coffee table, with a stone fireplace wall on the right and wide oak floors below. Turn gently left toward the hallway, where a slim wall-mounted control panel glows soft cyan and faint cyan lines run through the walls to it. A translucent blue-white holographic AI guide stands beside the panel and turns toward the camera. Hold for a beat, then reverse smoothly back out through the glass door and rise, revealing the whole house lit from within against a deep blue sky.
+> Smooth gimbal motion, no shake, natural parallax, realistic materials, warm 2700K interior light against cool blue hour, volumetric haze, photoreal, 4K, no text, no people other than the guide.
+
+The Linden House site (`site/residence/`) scrubs the hologram engine as you scroll; once this clip exists, the same scroll can scrub the clip instead (a `<video>` whose `currentTime` follows the scroll), keeping the rest of the page as it is.
