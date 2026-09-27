@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Future, in Your Hands</title>
+<style>
+  :root { color-scheme: dark; --ink: #eaf6ff; --muted: #9db8cc; --cyan: #5ad2ff; --bg: #03060b; --face: "Avenir Next", "Segoe UI Variable Display", "Helvetica Neue", system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font-family: var(--face); }
+  body { display: grid; place-items: center; min-height: 100vh; padding: 16px; }
+  .player { width: min(100%, calc((100vh - 120px) * 16 / 9), 1600px); }
+  .stage { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #000; border-radius: 12px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6); container-type: inline-size; }
+  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .layer { position: absolute; inset: 0; pointer-events: none; }
+  .fade { background: #000; opacity: 1; }
+  .label { position: absolute; transform: translate(-50%, -50%); font: 600 1.05cqw/1 var(--face); letter-spacing: 0.22em; color: #bfeeff; text-shadow: 0 0 8px rgba(90, 210, 255, 0.8); white-space: nowrap; }
+  .chapter { position: absolute; left: 4.2cqw; bottom: 4.6cqw; display: flex; gap: 1.1cqw; align-items: baseline; opacity: 0; }
+  .chapter b { font: 300 3.2cqw/1 var(--face); color: var(--cyan); }
+  .chapter span { font: 500 1.35cqw/1 var(--face); letter-spacing: 0.3em; text-transform: uppercase; }
+  .caption { position: absolute; left: 50%; bottom: 6.5cqw; transform: translateX(-50%); max-width: 70cqw; text-align: center; font: 500 2.05cqw/1.35 var(--face); color: #fff; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.85), 0 0 2px rgba(0, 0, 0, 0.9); opacity: 0; }
+  .card { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; gap: 1.2cqw; opacity: 0; }
+  .card .brand { font: 600 1.6cqw/1 var(--face); letter-spacing: 0.55em; text-indent: 0.55em; color: #d9f3ff; }
+  .card .small { font: 400 1.2cqw/1 var(--face); letter-spacing: 0.3em; text-indent: 0.3em; color: var(--muted); text-transform: uppercase; }
+  .card .big { font: 300 3.6cqw/1.1 var(--face); letter-spacing: 0.02em; }
+  .card svg { width: 16cqw; height: auto; margin: 0 auto 1cqw; overflow: visible; }
+  .card svg path { fill: none; stroke: var(--cyan); stroke-width: 1.4; filter: drop-shadow(0 0 4px rgba(90, 210, 255, 0.9)); }
+  .end > * { opacity: 0; }
+  .controls { display: flex; align-items: center; gap: 12px; margin-top: 14px; color: var(--muted); font-size: 14px; }
+  .controls button, .controls a { min-height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(90, 210, 255, 0.4); background: rgba(90, 210, 255, 0.1); color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; }
+  .controls button:hover, .controls a:hover { background: rgba(90, 210, 255, 0.2); }
+  .controls button:focus-visible, .controls a:focus-visible, .controls input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  .controls input[type="range"] { flex: 1; accent-color: var(--cyan); min-width: 80px; }
+  .controls output { font-variant-numeric: tabular-nums; min-width: 88px; text-align: right; }
+  .note { margin-top: 10px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+  .start { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(circle at 50% 45%, rgba(10, 40, 70, 0.55), rgba(0, 0, 0, 0.85)); border: 0; color: var(--ink); cursor: pointer; font: inherit; }
+  .start span { display: inline-flex; align-items: center; gap: 12px; padding: 14px 26px; border-radius: 999px; border: 1px solid rgba(90, 210, 255, 0.55); background: rgba(90, 210, 255, 0.14); font-weight: 600; font-size: clamp(14px, 1.4cqw, 20px); }
+  .start[hidden] { display: none; }
+  .loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 14px; }
+  body.render { padding: 0; display: block; }
+  body.render .player { width: auto; }
+  body.render .stage { border-radius: 0; box-shadow: none; }
+  body.render .controls, body.render .note, body.render .start, body.render .loading { display: none; }
+  @media (max-width: 600px) { .controls { flex-wrap: wrap; } .controls input[type="range"] { order: 3; flex-basis: 100%; } }
+  @media (prefers-reduced-motion: reduce) { .start span { transition: none; } }
+</style>
+</head>
+<body>
+<main class="player">
+  <div class="stage" id="stage">
+    <canvas id="film" aria-label="The film: an AI designs and builds a home as a hologram, then its AI guide welcomes the client inside"></canvas>
+    <div class="layer" id="labels" aria-hidden="true"></div>
+    <div class="layer" aria-hidden="true"><div class="chapter" id="chapter"><b></b><span></span></div></div>
+    <div class="layer" aria-live="off"><p class="caption" id="caption"></p></div>
+    <div class="layer fade" id="fade"></div>
+    <div class="layer card" id="title" aria-hidden="true"><div class="brand">MERIDIAN INTERFACE</div><div class="small">presents</div></div>
+    <div class="layer card end" id="end" aria-hidden="true">
+      <svg viewBox="0 0 200 110" aria-hidden="true"><path id="end-house" d="M10 100 H190 M20 100 V58 H70 V100 M70 100 V40 H180 V100 M60 40 H188 M76 36 V18 H176 V36 M70 18 H182 M120 100 V74 H136 V100 M150 58 H170 V76 H150 Z M84 58 H108 V76 H84 Z"/></svg>
+      <div class="brand">MERIDIAN INTERFACE</div>
+      <div class="big">The future, in your hands.</div>
+      <div class="small">Haven &middot; the AI home agent</div>
+    </div>
+    <div class="loading" id="loading">Preparing the hologram&hellip;</div>
+    <button class="start" id="start" type="button" hidden><span>&#9654;&nbsp; Play the film (1:32, with sound)</span></button>
+  </div>
+  <div class="controls">
+    <button type="button" id="play" aria-label="Play">Play</button>
+    <input type="range" id="scrub" min="0" max="92" step="0.05" value="0" aria-label="Position in the film">
+    <output id="time">0:00 / 1:32</output>
+    <a id="download" hidden download>Download MP4</a>
+  </div>
+  <p class="note">Rendered live in your browser from the same hologram engine as Haven&rsquo;s panel. The house is laid out with Haven&rsquo;s any-home code; the guide&rsquo;s voice is ElevenLabs &ldquo;River&rdquo;.</p>
+</main>
+<audio id="audio" src="film-audio.mp3" preload="auto"></audio>
+<script type="module" src="main.js"></script>
+</body>
+</html>

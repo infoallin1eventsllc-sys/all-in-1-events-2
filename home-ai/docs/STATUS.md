@@ -24,6 +24,9 @@ _Last updated: September 27, 2026 (debug pass after the any-home hologram). Bran
 - **Not measured:** hologram frame rate and battery use on a real wall tablet; how a 4,000 sq ft, three-floor home looks.
 - **The browser run is slow** (about 15 minutes per target) because WebGL runs in software here.
 
+## Added September 27: the Meridian Interface film
+"The future, in your hands" (`film/`, film/README.md) is a 1:32 film in which an AI sketches a home as a hologram and builds it through to paint, floors, furniture and lights. It then becomes a holographic guide who welcomes the client in, walks them through the house and explains the control panel. It is rendered from code in Haven's hologram style, with the house laid out by `web/building.js` and the guide voiced by ElevenLabs "River". `npm run build:film` makes the page; `npm run render:film` makes the MP4. The photoreal version is written up as ten shot prompts in film/README.md, blocked on a paid video plan (ElevenLabs video needs one; Higgsfield has 0.6 credits).
+
 ## Debug pass, September 27
 A code review of the hologram and any-home code, plus a sweep of every screen in every finish at wall-panel and phone width with five home styles (no script errors, no sideways scrolling, the hologram ready everywhere). Fixed:
 1. **A home with no rooms** (or only outdoor areas) put the hologram's camera at infinity and a porch crashed the render. It now keeps a ground floor to stand on.

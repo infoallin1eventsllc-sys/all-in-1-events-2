@@ -13,7 +13,9 @@
     "check": "npm test && npm run build:demo && npm run e2e",
     "build:catalog": "node scripts/build-catalog.mjs",
     "live-check": "node scripts/live-check.mjs",
-    "build:vendor": "node scripts/build-vendor.mjs"
+    "build:vendor": "node scripts/build-vendor.mjs",
+    "build:film": "node scripts/build-film.mjs",
+    "render:film": "node scripts/render-film.mjs"
   },
   "engines": {
     "node": ">=20"
