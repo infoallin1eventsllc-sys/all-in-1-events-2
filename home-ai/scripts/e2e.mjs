@@ -26,7 +26,10 @@ const WCAG = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
 // Automated WCAG 2.2 AA audit of what's on screen right now.
 async function audit(page, label) {
-  await page.waitForTimeout(400); // let color transitions settle before measuring contrast
+  // An idle page draws no frames, so a theme change's color fade only starts at
+  // the next frame: ask for one, then let the fade finish before measuring.
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+  await page.waitForTimeout(400);
   if (!(await page.evaluate(() => typeof window.axe !== "undefined"))) await page.addScriptTag({ content: AXE });
   const r = await page.evaluate((tags) => window.axe.run(document, { runOnly: { type: "tag", values: tags } }), WCAG);
   const detail = r.violations.map((v) => `${v.id}: ${v.nodes.slice(0, 2).map((n) => `${n.target.join(" ")}${v.id === "color-contrast" ? ` [${(n.any[0]?.message || "").replace(/\s+/g, " ").slice(0, 160)}]` : ""}`).join(", ")}`).join("; ");
