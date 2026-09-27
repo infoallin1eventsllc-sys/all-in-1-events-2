@@ -560,6 +560,45 @@ footer { text-align: center; }
   .explorer-room { border-left: 0; border-top: 1px solid var(--line); max-height: 48dvh; }
 }
 
+/* ---------- the hologram house (web/holo.js) ---------- */
+/* A projection well: the Drone Command palette in every finish. */
+.map.holo { position: relative; overflow: hidden; border-radius: 16px; background: #050a13; box-shadow: inset 0 0 0 1px rgba(90, 210, 255, 0.18), 0 18px 40px -24px rgba(0, 0, 0, 0.6); }
+.holo-canvas { position: absolute; inset: 0; }
+.holo-canvas canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+.holo.holo-active .holo-canvas canvas { cursor: grabbing; }
+.holo-tags { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.holo-tag {
+  position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer; white-space: nowrap; min-height: 0;
+  padding: 4px 9px 4px 8px; border: 1px solid rgba(90, 210, 255, 0.24); border-left: 2px solid var(--hc, #5ad2ff); border-radius: 3px;
+  background: rgba(5, 14, 28, 0.72); color: #dff3ff; font: 500 12px/1.25 var(--font-body, "Hanken Grotesk", system-ui, sans-serif);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); transition: opacity 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.holo:not(.holo-ready) .holo-tag { visibility: hidden; }
+.holo-tag b { font: 600 11px/1.25 "Chakra Petch", "Hanken Grotesk", system-ui, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; }
+.holo-tag span { color: #a9c2d8; margin-left: 6px; font-variant-numeric: tabular-nums; }
+.holo-tag::after { content: ""; position: absolute; left: 50%; top: 100%; width: 1px; height: 14px; background: linear-gradient(var(--hc, #5ad2ff), transparent); }
+.holo-tag:hover { border-color: var(--hc, #5ad2ff); }
+.holo-tag:focus-visible { outline: 2px solid #5ad2ff; outline-offset: 2px; }
+.holo-tag.selected { border-color: var(--hc, #5ad2ff); box-shadow: 0 0 16px -4px var(--hc, #5ad2ff); }
+.holo-tag[data-level="WATCH"] { --hc: #fbbf24; }
+.holo-tag[data-level="FAULT"] { --hc: #f87171; }
+.holo-tag.lit:not([data-level="FAULT"]), .holo-tag.dev[data-level="LIT"] { --hc: #ffd27a; }
+.holo-tag.dev { pointer-events: none; padding: 2px 7px; font-size: 11px; }
+.holo-tag.dev b { font-size: 10px; }
+.holo-tag.dev::after { height: 10px; }
+.holo-tag.off { opacity: 0; pointer-events: none; }
+.map.holo .map-zoom { background: rgba(8, 18, 34, 0.78); border-color: rgba(90, 210, 255, 0.22); color: #dff3ff; }
+.map.holo .map-zoom-level { color: #a9c2d8; }
+.map.holo .map-zoom-btn:hover:not(:disabled) { background: rgba(90, 210, 255, 0.14); }
+.stage .map.holo { margin-inline: -4px; }
+.explorer-views { position: absolute; left: 20px; bottom: 20px; z-index: 3; display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: 12px; background: rgba(8, 18, 34, 0.78); border: 1px solid rgba(90, 210, 255, 0.22); }
+.explorer-views button { min-height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #dff3ff; font-size: 0.85rem; }
+.explorer-views button[aria-pressed="true"] { border-color: #5ad2ff; background: rgba(90, 210, 255, 0.16); }
+.explorer:not(.holo-mode) .explorer-views { display: none; }
+.explorer.holo-mode .explorer-map { padding: 0; }
+.explorer.holo-mode .explorer-map.holo { border-radius: 0; box-shadow: none; }
+@media (max-width: 760px) { .explorer-views { left: 12px; right: 12px; bottom: 76px; justify-content: center; } }
+
 /* Vivid light: the same model, cooler and brighter, with a pop of color. */
 :root[data-look="vivid"] {
   --m-wall: #ffffff; --m-cap: #ffffff; --m-wood: #dcb58c; --m-wood-dark: #5a4636; --m-tile: #eef1f5; --m-concrete: #d6dae0;

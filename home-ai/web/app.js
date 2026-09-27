@@ -7,6 +7,7 @@
 import { createVoice } from "./voice.js";
 import { renderMap } from "./map.js";
 import { enableMapZoom } from "./mapzoom.js";
+import { createHologram, hologramSupported } from "./holo.js";
 import { renderEnergyChart } from "./energy-chart.js";
 
 const $ = (sel) => document.querySelector(sel);
@@ -270,14 +271,7 @@ function renderStage() {
   $("#issues").replaceChildren(...list.map((i) =>
     el("li", { class: `issue ${i.level}` }, i.text, i.action && el("button", { onclick: i.action[1] }, i.action[0]))));
 
-  renderMap($("#map"), {
-    rooms: state.rooms,
-    devicesIn: (id) => allDevices().filter((d) => d.room === id),
-    selected: room,
-    onSelect: (id) => { room = room === id ? "all" : id; render(); },
-    pinInfo,
-  });
-  enableMapZoom($("#map"), { onExpand: () => openExplorer() });
+  houseView($("#map"), { selected: room === "all" ? null : room, onSelect: (id) => { room = room === id ? "all" : id; render(); }, onExpand: () => openExplorer() });
 
   const rooms = state.rooms.filter((r) => r.devices.length);
   $("#rooms-nav").replaceChildren(
@@ -910,10 +904,30 @@ function feelBlock() {
 const altMapBox = el("div", { class: "map alt-map" });
 function mapBlock() {
   const box = altMapBox;
-  renderMap(box, { rooms: state.rooms, devicesIn: (id) => allDevices().filter((d) => d.room === id), selected: room, onSelect: (id) => { room = room === id ? "all" : id; render(); }, pinInfo });
-  enableMapZoom(box, { onExpand: () => openExplorer() });
+  houseView(box, { selected: room === "all" ? null : room, onSelect: (id) => { room = room === id ? "all" : id; render(); }, onExpand: () => openExplorer() });
   return block(room === "all" ? "The house" : `The house · ${roomName(room)}`, "map-card", box,
     room !== "all" ? el("button", { class: "ghost", onclick: () => { room = "all"; render(); } }, "Show every room") : null);
+}
+
+// The house: the hologram (web/holo.js) where the panel can draw 3D, or the
+// drawn model (web/map.js). Screens → House view picks; the hologram falls
+// back to the drawn model by itself if WebGL isn't there. Choosing a room
+// flies the hologram's camera into it.
+let houseViewPref = safeGet("haven.houseView") || "hologram";
+function houseView(box, { selected, onSelect, onExpand, explorer = false }) {
+  const holo = houseViewPref !== "model" && hologramSupported() && !box.__holo?.failed;
+  if (holo) {
+    let h = box.__holo;
+    if (!h) h = box.__holo = createHologram(box, { onSelect, onExpand, explorer, describe, fallback: () => { if (state) render(); } });
+    h.opts.onSelect = onSelect;
+    h.update({ rooms: state.rooms, devices: allDevices(), selected });
+    if (box.__lastSel !== undefined && box.__lastSel !== selected && h.ready) selected ? h.focusRoom(selected) : h.reset();
+    box.__lastSel = selected;
+    $("#explorer").classList.toggle("holo-mode", Boolean($("#explorer-map").__holo && !$("#explorer-map").__holo.failed));
+    return h;
+  }
+  renderMap(box, { rooms: state.rooms, devicesIn: (id) => allDevices().filter((d) => d.room === id), selected, onSelect, pinInfo });
+  return enableMapZoom(box, { onExpand, wheel: explorer });
 }
 
 // A device's pin on the zoomed-in house model.
@@ -936,20 +950,14 @@ function openExplorer() {
   const dlg = $("#explorer");
   if (!dlg.open) dlg.showModal();
   renderExplorer();
-  $("#explorer-map").__zoom?.reset();
+  const box = $("#explorer-map");
+  (box.__holo && !box.__holo.failed ? box.__holo : box.__zoom)?.reset();
 }
 function renderExplorer() {
   const dlg = $("#explorer");
   if (!dlg.open || !state) return;
   const box = $("#explorer-map");
-  renderMap(box, {
-    rooms: state.rooms,
-    devicesIn: (id) => allDevices().filter((d) => d.room === id),
-    selected: explorerRoom,
-    onSelect: (id) => selectExplorerRoom(explorerRoom === id ? null : id),
-    pinInfo,
-  });
-  const z = enableMapZoom(box, { wheel: true });
+  const z = houseView(box, { selected: explorerRoom, onSelect: (id) => selectExplorerRoom(explorerRoom === id ? null : id), explorer: true });
   const r = explorerRoom && state.rooms.find((x) => x.id === explorerRoom);
   const aside = $("#explorer-room");
   aside.hidden = !r;
@@ -966,15 +974,41 @@ function renderExplorer() {
 function selectExplorerRoom(id) {
   explorerRoom = id;
   const z = renderExplorer();
-  if (!z) return;
+  // The hologram flies on its own when the selection changes; the drawn model needs telling.
+  if (!z || z.update) return;
   if (id) z.focusRoom(id); else z.reset();
 }
+// Hologram views in the explorer: 3D, top, front, side, and a slow auto-orbit.
+for (const b of document.querySelectorAll("#explorer [data-hview]")) b.addEventListener("click", () => {
+  const h = $("#explorer-map").__holo;
+  if (!h?.ready) return;
+  if (explorerRoom) { explorerRoom = null; renderExplorer(); }
+  h.setView(b.dataset.hview);
+  for (const x of document.querySelectorAll("#explorer [data-hview]")) x.setAttribute("aria-pressed", String(x === b));
+});
+$("#explorer-spin").addEventListener("click", (e) => {
+  const on = e.currentTarget.getAttribute("aria-pressed") !== "true";
+  e.currentTarget.setAttribute("aria-pressed", String(on));
+  $("#explorer-map").__holo?.setSpin?.(on);
+});
 $("#explorer-close").addEventListener("click", () => $("#explorer").close());
 $("#explorer").addEventListener("close", () => {
   explorerRoom = null;
   $("#explorer").classList.remove("has-room");
   $("#explorer-map > svg.map-svg")?.remove();
+  $("#explorer-map").__holo?.setSpin?.(false);
+  $("#explorer-spin").setAttribute("aria-pressed", "false");
 });
+// Screens → House view: the hologram or the drawn model. Reloads, so each
+// panel builds only the one it uses.
+for (const b of document.querySelectorAll("[data-house-view]")) {
+  b.setAttribute("aria-pressed", String(b.dataset.houseView === houseViewPref));
+  b.addEventListener("click", () => {
+    if (b.dataset.houseView === houseViewPref) return;
+    safeSet("haven.houseView", b.dataset.houseView);
+    location.reload();
+  });
+}
 
 function bigButton(label, sub, onclick, cls = "") {
   return el("button", { class: `big-btn ${cls}`, onclick }, el("span", { class: "big-label" }, label), sub ? el("span", { class: "big-sub" }, sub) : null);

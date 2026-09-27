@@ -131,61 +131,62 @@ async function exercise(page, { garageTravelMs, home }) {
   await page.click('.look-switch button[data-look="grounded"]');
 
   // ----- home map and energy -----
-  await check("Home map draws every room", async () => (await page.locator(".map-room").count()) === 6);
-  await page.locator('.map-room[data-room="kitchen"]').click();
+  await check("Home map draws every room", async () => (await page.locator("#map .map-room").count()) === 6);
+  await page.locator('#map .map-room[data-room="kitchen"]').click();
   await check("Tapping a room on the map opens it", async () => (await page.textContent("#room-title")) === "Kitchen");
-  await page.locator('.map-room[data-room="kitchen"]').click();
+  await page.locator('#map .map-room[data-room="kitchen"]').click();
   await check("Tapping it again goes back to the whole home", async () => (await page.textContent("#room-title")) === "Whole home");
 
-  // Touch: zoom, look around, pinch, device pins, and the full-screen explorer.
-  const mapView = (sel = "#map") => page.evaluate((sel) => {
-    const svg = document.querySelector(`${sel} svg.map-svg`);
-    const [, , w] = svg.getAttribute("viewBox").split(" ").map(Number);
-    const [, , bw] = svg.dataset.base.split(" ").map(Number);
-    return { zoom: bw / w, box: svg.getAttribute("viewBox") };
+  // The hologram: zoom, orbit from any angle, pinch, device tags, and the full-screen explorer.
+  const holo = (sel = "#map") => page.evaluate((sel) => {
+    const m = document.querySelector(sel);
+    return { on: m.classList.contains("holo-ready"), zoom: Number(m.dataset.zoom || 0), view: m.dataset.view || "" };
   }, sel);
-  await page.locator("#map .map-zoom-btn.zin").click();
-  await page.locator("#map .map-zoom-btn.zin").click();
-  await check("Home map: + zooms in", async () => (await mapView()).zoom > 2);
-  await check("Home map: up close, each room shows its devices", async () =>
-    (await page.locator("#map.detail").count()) === 1 && (await page.locator('#map .map-pin[data-pin="light.kitchen"]').count()) === 1);
-  const mb = await page.locator("#map svg.map-svg").boundingBox();
-  const viewBefore = (await mapView()).box;
-  await page.mouse.move(mb.x + mb.width / 2, mb.y + mb.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(mb.x + mb.width / 2 + 90, mb.y + mb.height / 2 + 30, { steps: 8 });
-  await page.mouse.up();
-  await check("Home map: dragging looks around", async () => (await mapView()).box !== viewBefore);
-  await check("Home map: a drag doesn't open a room", async () => (await page.textContent("#room-title")) === "Whole home");
+  await check("House: the hologram draws the house", async () => (await holo()).on && (await page.locator("#map canvas").count()) === 1, 8000);
+  for (let k = 0; k < 3; k++) await page.locator("#map .map-zoom-btn.zin").click();
+  await check("House: + zooms in", async () => (await holo()).zoom > 2.5, 4000);
+  await check("House: up close, each room shows its devices", async () =>
+    (await page.locator("#map.detail").count()) === 1 && (await page.locator('#map [data-pin="light.kitchen"]').count()) === 1);
   await page.locator("#map .map-zoom-btn.fit").click();
-  await check("Home map: Fit shows the whole house again", async () => (await mapView()).zoom < 1.01, 3000);
-  await page.evaluate(() => {
-    const svg = document.querySelector("#map svg.map-svg"), r = svg.getBoundingClientRect();
-    const cx = r.x + r.width / 2, cy = r.y + r.height / 2, t = svg.querySelector(".map-floor");
-    const opts = (id, x) => ({ pointerId: id, clientX: x, clientY: cy, bubbles: true, pointerType: "touch", isPrimary: id === 1 });
-    t.dispatchEvent(new PointerEvent("pointerdown", opts(1, cx - 20)));
-    t.dispatchEvent(new PointerEvent("pointerdown", opts(2, cx + 20)));
-    for (let k = 1; k <= 8; k++) window.dispatchEvent(new PointerEvent("pointermove", opts(2, cx + 20 + k * 12)));
-    window.dispatchEvent(new PointerEvent("pointerup", opts(2, cx + 116)));
-    window.dispatchEvent(new PointerEvent("pointerup", opts(1, cx - 20)));
-  });
-  await check("Home map: a two-finger pinch zooms", async () => (await mapView()).zoom > 2);
+  await check("House: Fit shows the whole house again", async () => { const z = (await holo()).zoom; return z > 0.95 && z < 1.1; }, 4000);
+  const cb = await page.locator("#map canvas").boundingBox();
+  const viewBefore = (await holo()).view;
+  await page.mouse.move(cb.x + cb.width * 0.2, cb.y + cb.height * 0.9);
+  await page.mouse.down();
+  await page.mouse.move(cb.x + cb.width * 0.6, cb.y + cb.height * 0.8, { steps: 10 });
+  await page.mouse.up();
+  await check("House: dragging turns the house to another angle", async () => (await holo()).view !== viewBefore, 4000);
+  await check("House: a drag doesn't open a room", async () => (await page.textContent("#room-title")) === "Whole home");
+  await page.locator("#map .map-zoom-btn.fit").click();
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
+  const px = cb.x + cb.width / 2, py = cb.y + cb.height * 0.85;
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: px - 25, y: py, id: 1 }, { x: px + 25, y: py, id: 2 }] });
+  for (let k = 1; k <= 10; k++) await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: px - 25 - k * 9, y: py, id: 1 }, { x: px + 25 + k * 9, y: py, id: 2 }] });
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await cdp.send("Emulation.setTouchEmulationEnabled", { enabled: false });
+  await check("House: a two-finger pinch zooms", async () => (await holo()).zoom > 1.3, 4000);
   await page.locator("#map .map-zoom-btn.fit").click();
 
   await page.locator("#map .map-zoom-btn.expand").click();
-  await check("Full screen: the house opens in the explorer", async () => page.evaluate(() => document.querySelector("#explorer").open));
+  await check("Full screen: the house opens in the explorer", async () => (await page.evaluate(() => document.querySelector("#explorer").open)) && (await holo("#explorer-map")).on, 8000);
   await audit(page, "House explorer");
-  await page.locator('#explorer-map .map-room[data-room="kitchen"]').dispatchEvent("click");
+  await page.locator('#explorer [data-hview="top"]').click();
+  await check("Full screen: Top looks straight down", async () => Number((await holo("#explorer-map")).view.split(",")[1]) > 8, 4000);
+  await page.locator('#explorer [data-hview="iso"]').click();
+  await page.locator('#explorer-map .map-room[data-room="kitchen"]').click();
   await check("Full screen: tapping a room flies into it and opens its controls", async () =>
-    (await mapView("#explorer-map")).zoom > 1.5 && (await page.locator("#explorer-room .room-card h2, #explorer-room .room-card .kicker, #explorer-room .room-card").first().textContent()).includes("Kitchen"), 3000);
+    (await holo("#explorer-map")).zoom > 1.5 && (await page.locator("#explorer-room .room-card").first().textContent()).includes("Kitchen"), 4000);
   const explorerKitchenOn = async () => (await page.locator(`#explorer-room [data-device="light.kitchen"]`).textContent()).includes("On");
   const explorerWasOn = await explorerKitchenOn();
   await page.locator('#explorer-room [data-device="light.kitchen"]').click();
   await check("Full screen: the room's controls work", async () => (await explorerKitchenOn()) !== explorerWasOn);
+  await check("Full screen: the hologram follows the change", async () =>
+    (await page.locator('#explorer-map .map-room[data-room="kitchen"]').getAttribute("class")).includes("lit") !== explorerWasOn);
   await page.locator('#explorer-room [data-device="light.kitchen"]').click();
   await audit(page, "House explorer with a room open");
   await page.locator("#explorer-room .explorer-back").click();
-  await check("Full screen: Whole house flies back out", async () => (await page.locator("#explorer-room").isHidden()) && (await mapView("#explorer-map")).zoom < 1.05, 3000);
+  await check("Full screen: Whole house flies back out", async () => { const z = (await holo("#explorer-map")).zoom; return (await page.locator("#explorer-room").isHidden()) && z < 1.1; }, 4000);
   await page.keyboard.press("Escape");
   await check("Full screen: Escape closes it", async () => !(await page.evaluate(() => document.querySelector("#explorer").open)));
   await check("Energy tile says the numbers are estimated", async () => /Estimated/.test(await tileOf("energy").textContent()));
@@ -221,7 +222,7 @@ async function exercise(page, { garageTravelMs, home }) {
   await tileOf("light.kitchen").locator('input[type="range"]').evaluate((el) => { el.value = "40"; el.dispatchEvent(new Event("change", { bubbles: true })); });
   await check("Brightness slider sets 40%", async () => (await stateOf("light.kitchen")) === "On · 40%");
 
-  await check("Home map glows where the light is on", async () => (await page.locator('.map-room[data-room="kitchen"].lit').count()) === 1);
+  await check("Home map glows where the light is on", async () => (await page.locator('#map .map-room[data-room="kitchen"].lit').count()) === 1);
   await audit(page, "a room view");
 
   await openRoom("Living Room");
@@ -405,7 +406,7 @@ async function exercise(page, { garageTravelMs, home }) {
   await check("Leak turns off the water heater", async () => (await stateOf("water_heater.main")) === "Off");
   await check("Leak makes the status urgent", async () => (await headline()) === "Needs your attention now");
   await check("Leak alert is read out loud", async () => /Water leak detected/.test(await spoken()));
-  await check("Home map marks the utility room red", async () => (await page.locator('.map-room[data-room="utility"].alert').count()) === 1);
+  await check("Home map marks the utility room red", async () => (await page.locator('#map .map-room[data-room="utility"].alert').count()) === 1);
   await audit(page, "during a leak alert");
   await check("Leak posts an urgent update", async () => (await page.locator("#feed li.urgent", { hasText: "Water leak detected" }).count()) >= 1);
   await press("valve.main_water", "Turn on");
@@ -606,11 +607,29 @@ async function exercise(page, { garageTravelMs, home }) {
   await audit(page, "phone width");
 }
 
+// Screens → House view → Drawn model: the panel uses the drawn model instead.
+async function houseViewFallback(page) {
+  const openLib = async () => { await page.locator(".screens-open:visible").first().click(); await page.waitForSelector("#library[open]"); };
+  const useSig = async () => { await openLib(); await page.locator('#library [data-screen="signature"]').click(); await page.locator("#library-close").click(); };
+  await useSig();
+  await openLib();
+  await Promise.all([page.waitForEvent("load"), page.locator('[data-house-view="model"]').click()]);
+  await page.waitForSelector("#app:not([hidden])", { timeout: 10_000 });
+  await check("House view: the drawn model replaces the hologram", async () =>
+    (await page.locator("#map svg.map-svg .map-room").count()) === 6 && (await page.locator("#map canvas").count()) === 0, 8000);
+  await openLib();
+  await Promise.all([page.waitForEvent("load"), page.locator('[data-house-view="hologram"]').click()]);
+  await page.waitForSelector("#app:not([hidden])", { timeout: 10_000 });
+  await check("House view: back to the hologram", async () => (await page.locator("#map canvas").count()) === 1, 8000);
+}
+
 async function runTarget(browser, target) {
   console.log(`\n${target === "server" ? "Panel on the home server" : "Browser-only demo"}`);
   const errors = [];
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, bypassCSP: true });
   await page.addInitScript(FAKE_VOICE);
+  // The hologram's flights and sweeps finish instantly, so checks don't wait on animation.
+  await page.addInitScript(() => { try { localStorage.setItem("haven.holoMotion", "still"); } catch {} });
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
   page.on("requestfailed", (r) => { if (!/fonts\.(googleapis|gstatic)/.test(r.url())) errors.push(`request failed: ${r.url()}`); });
@@ -643,6 +662,7 @@ async function runTarget(browser, target) {
   report(true, "Panel loads");
   try {
     await exercise(page, { garageTravelMs: target === "server" ? 400 : 4000, home });
+    await houseViewFallback(page);
   } catch (err) {
     report(false, "Run finished", err.message.split("\n")[0]);
   }
@@ -651,7 +671,8 @@ async function runTarget(browser, target) {
   cleanup();
 }
 
-const browser = await chromium.launch(executablePath ? { executablePath } : {});
+// Software WebGL, so the hologram runs in headless Chromium.
+const browser = await chromium.launch({ ...(executablePath ? { executablePath } : {}), args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
 try {
   for (const t of run) await runTarget(browser, t);
 } finally {

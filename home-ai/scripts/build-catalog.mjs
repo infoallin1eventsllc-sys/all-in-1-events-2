@@ -32,10 +32,10 @@ const FINISHES = [
 ];
 
 const SCREENS = [
-  { id: "signature", name: "Signature", best: "Great room or main entry", about: "The flagship. A live 3D model of the house beside the room you're in, with every control on glass.", has: ["Live house model: rooms glow when lit, turn red on alerts", "Room tabs, scenes, device tiles, climate dial", "Electricity today", "Suggestions and confirmations", "About you: what Haven has learned"] },
+  { id: "signature", name: "Signature", best: "Great room or main entry", about: "The flagship. A live hologram of the house beside the room you're in, with every control on glass.", has: ["Hologram of the house: orbit from any angle, pinch to zoom, tap a room to fly in", "Rooms glow when lit and pulse red on alerts; full-screen explorer", "Room tabs, scenes, device tiles, climate dial", "Electricity today", "Suggestions and confirmations", "About you: what Haven has learned"] },
   { id: "wallpaper", name: "Wallpaper", best: "Living room or a large wall display", about: "The home's own photo behind frosted tiles. The photo changes with the time of day, or the homeowner can use a picture of their own house.", has: ["Photo backdrop: morning, day, evening and night", "Weather now, the next hours and days (when connected)", "Indoor temperature, humidity and electricity with a live line", "Climate, fans and water heater", "Every light with an icon switch and a pill dimmer", "Doors, locks, garage and water; scenes; latest updates"] },
   { id: "studio", name: "Studio", best: "Living room or kitchen; the model-home showpiece", about: "Haven at the center. A large orb listens, thinks and speaks, and underneath it Haven's agents show what each is doing, with the lines between them lighting up when they work together.", has: ["Tap the orb to talk; a waveform follows the voice", "Agents: Lighting, Climate, Security, Energy, each glowing while it works", "Lines between agents light when one event involves several (a scene, leaving home)", "Big clock, weather now and the next hours", "Climate with a temperature range bar, lighting, electricity, doors"] },
-  { id: "command-center", name: "Command Center", best: "Office or a large wall display", about: "Everything at once for the person who runs the house.", has: ["House model that filters the lights list by room", "Climate dial and electricity chart", "Every light with switch and dimmer", "Doors, locks, garage and main water", "Room conditions: temperature, humidity, occupancy, leaks", "Scenes and the latest updates"] },
+  { id: "command-center", name: "Command Center", best: "Office or a large wall display", about: "Everything at once for the person who runs the house.", has: ["Hologram of the house that filters the lights list by room", "Climate dial and electricity chart", "Every light with switch and dimmer", "Doors, locks, garage and main water", "Room conditions: temperature, humidity, occupancy, leaks", "Scenes and the latest updates"] },
   { id: "family-hub", name: "Family Hub", best: "Kitchen", about: "Big and friendly for everyone in the house, not just the owner.", has: ["Large clock and date", "Today's briefing, with Brief me now", "Big scene cards", "Too cold / Too warm / Too bright / Too dark / Just right", "Lights for the kitchen (or the whole house)"] },
   { id: "nightstand", name: "Nightstand", best: "Bedroom", about: "Dim, quiet and easy to use half-asleep. Talk to it in the dark.", has: ["Large clock on a dark screen", "Goodnight: lock up, lights off, 68°F", "Lights off for this room", "Warmer and Cooler (learned as your preference)", "Good morning", "Each bedroom's own photo behind the clock, if its owner adds one"] },
   { id: "rooms", name: "Rooms", best: "Large or busy households", about: "Every room as its own card. One tap per device.", has: ["A card per room with its devices as big buttons", "Thermostat with − and + in its room", "Each room's sensors: motion, leaks, doors, light level"] },
@@ -46,17 +46,20 @@ async function capture(browser, finish, id) {
   const wrapper = path.join(demoDir, `_catalog-${finish.key}.html`);
   fs.writeFileSync(wrapper, `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>${fs.readFileSync(path.join(demoDir, `haven-${finish.look}.html`), "utf8")}</body></html>`);
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1, colorScheme: finish.scheme });
-  await page.addInitScript(() => { try { localStorage.clear(); } catch {} });
+  await page.addInitScript(() => { try { localStorage.clear(); localStorage.setItem("haven.holoMotion", "still"); } catch {} });
   await page.goto(`file://${wrapper}#${id}`);
   await page.waitForSelector("#app:not([hidden])");
-  await page.waitForTimeout(800);
+  // Let the hologram load and draw its first frame.
+  await page.waitForFunction(() => !document.querySelector(".map.holo:not(.holo-ready)"), null, { timeout: 20000 }).catch(() => {});
+  await page.waitForTimeout(1500);
   const jpg = await page.screenshot({ type: "jpeg", quality: 70 });
   await page.close();
   fs.rmSync(wrapper, { force: true });
   return `data:image/jpeg;base64,${jpg.toString("base64")}`;
 }
 
-const browser = await chromium.launch(executablePath ? { executablePath } : {});
+// Software WebGL, so the hologram renders in headless Chromium.
+const browser = await chromium.launch({ ...(executablePath ? { executablePath } : {}), args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
 const shots = {};
 for (const f of FINISHES) {
   for (const s of SCREENS) shots[`${f.key}/${s.id}`] = await capture(browser, f, s.id);

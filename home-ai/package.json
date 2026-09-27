@@ -12,7 +12,8 @@
     "e2e": "node scripts/e2e.mjs",
     "check": "npm test && npm run build:demo && npm run e2e",
     "build:catalog": "node scripts/build-catalog.mjs",
-    "live-check": "node scripts/live-check.mjs"
+    "live-check": "node scripts/live-check.mjs",
+    "build:vendor": "node scripts/build-vendor.mjs"
   },
   "engines": {
     "node": ">=20"
@@ -24,6 +25,7 @@
   "devDependencies": {
     "axe-core": "^4.13.0",
     "esbuild": "^0.25.12",
-    "playwright": "^1.56.1"
+    "playwright": "^1.56.1",
+    "three": "^0.170.0"
   }
 }
