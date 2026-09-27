@@ -8,6 +8,8 @@ import { createVoice } from "./voice.js";
 import { renderMap } from "./map.js";
 import { enableMapZoom } from "./mapzoom.js";
 import { createHologram, hologramSupported } from "./holo.js";
+import { normalizeHome } from "./building.js";
+import { SAMPLE_HOMES } from "./homes.js";
 import { renderEnergyChart } from "./energy-chart.js";
 
 const $ = (sel) => document.querySelector(sel);
@@ -914,19 +916,34 @@ function mapBlock() {
 // back to the drawn model by itself if WebGL isn't there. Choosing a room
 // flies the hologram's camera into it.
 let houseViewPref = safeGet("haven.houseView") || "hologram";
+// Which home the house view shows: this home (from its config), or a sample
+// home in another style (Screens → Home style) with this home's devices.
+let homePreview = safeGet("haven.homePreview") || "";
+function currentHome() {
+  const sample = SAMPLE_HOMES.find((x) => x.id === homePreview);
+  if (!sample) return { building: state.building || null, rooms: state.rooms };
+  return { building: sample.building, rooms: sample.rooms, sample };
+}
+let explorerFloor = null;
 function houseView(box, { selected, onSelect, onExpand, explorer = false }) {
   const holo = houseViewPref !== "model" && hologramSupported() && !box.__holo?.failed;
+  const home = currentHome();
   if (holo) {
     let h = box.__holo;
-    if (!h) h = box.__holo = createHologram(box, { onSelect, onExpand, explorer, describe, fallback: () => { if (state) render(); } });
+    if (!h) h = box.__holo = createHologram(box, { onSelect, onExpand, explorer, describe, fallback: () => { if (state) render(); }, onBuilt: explorer ? renderExplorerFloors : null });
     h.opts.onSelect = onSelect;
-    h.update({ rooms: state.rooms, devices: allDevices(), selected });
+    h.update({ building: home.building, rooms: home.rooms, devices: allDevices(), selected });
     if (box.__lastSel !== undefined && box.__lastSel !== selected && h.ready) selected ? h.focusRoom(selected) : h.reset();
     box.__lastSel = selected;
     $("#explorer").classList.toggle("holo-mode", Boolean($("#explorer-map").__holo && !$("#explorer-map").__holo.failed));
     return h;
   }
-  renderMap(box, { rooms: state.rooms, devicesIn: (id) => allDevices().filter((d) => d.room === id), selected, onSelect, pinInfo });
+  // The drawn model shows one floor at a time: the explorer's, or the ground floor.
+  const hm = normalizeHome(home);
+  const floor = (explorer && explorerFloor) || hm.floors.find((f) => f.level === 0)?.id || hm.floors[0]?.id;
+  const flat = hm.rooms.filter((r) => r.floor === floor).map((r) => ({ id: r.id, name: r.name, plan: r.bbox }));
+  renderMap(box, { rooms: flat, devicesIn: (id) => allDevices().filter((d) => d.room === id), selected, onSelect, pinInfo });
+  if (explorer) renderExplorerFloors(hm);
   return enableMapZoom(box, { onExpand, wheel: explorer });
 }
 
@@ -978,6 +995,46 @@ function selectExplorerRoom(id) {
   if (!z || z.update) return;
   if (id) z.focusRoom(id); else z.reset();
 }
+// Floor buttons in the explorer, for homes with more than one floor.
+function renderExplorerFloors(hm) {
+  const bar = $("#explorer-floors");
+  const floors = hm?.floors || [];
+  bar.hidden = floors.length < 2;
+  if (floors.length < 2) { bar.replaceChildren(); return; }
+  if (explorerFloor && !floors.some((f) => f.id === explorerFloor)) explorerFloor = null;
+  const pick = (id) => {
+    explorerFloor = id;
+    const h = $("#explorer-map").__holo;
+    if (h && !h.failed) h.setFloor(id); else renderExplorer();
+    renderExplorerFloors(hm);
+  };
+  bar.replaceChildren(...[{ id: null, name: "All floors" }, ...[...floors].reverse()].map((f) =>
+    el("button", { type: "button", "data-floor": f.id ?? "", "aria-pressed": String(explorerFloor === f.id), onclick: () => pick(f.id) }, f.name)));
+}
+// Screens → Home style: preview the house view as another kind of home.
+function renderHomePreview() {
+  const sel = $("#home-preview");
+  sel.replaceChildren(el("option", { value: "" }, "This home"), ...SAMPLE_HOMES.map((x) => el("option", { value: x.id }, x.label)));
+  sel.value = homePreview;
+  const sample = SAMPLE_HOMES.find((x) => x.id === homePreview);
+  $("#home-preview-note").textContent = sample ? `${sample.about} Your devices stay in their rooms.` : "The house as it's described in this home's plan.";
+}
+$("#home-preview").addEventListener("change", (e) => {
+  homePreview = e.target.value;
+  safeSet("haven.homePreview", homePreview);
+  explorerFloor = null;
+  renderHomePreview();
+  if (state) render();
+  const sample = SAMPLE_HOMES.find((x) => x.id === homePreview);
+  showHint(sample ? `Showing a ${sample.label} home. Choose "This home" to go back.` : "Showing this home.");
+});
+renderHomePreview();
+$("#explorer-roof").addEventListener("click", (e) => {
+  const on = e.currentTarget.getAttribute("aria-pressed") !== "true";
+  e.currentTarget.setAttribute("aria-pressed", String(on));
+  $("#explorer-map").__holo?.setRoof?.(on);
+});
+
 // Hologram views in the explorer: 3D, top, front, side, and a slow auto-orbit.
 for (const b of document.querySelectorAll("#explorer [data-hview]")) b.addEventListener("click", () => {
   const h = $("#explorer-map").__holo;
@@ -997,6 +1054,8 @@ $("#explorer").addEventListener("close", () => {
   $("#explorer").classList.remove("has-room");
   $("#explorer-map > svg.map-svg")?.remove();
   $("#explorer-map").__holo?.setSpin?.(false);
+  explorerFloor = null;
+  $("#explorer-map").__holo?.setFloor?.(null);
   $("#explorer-spin").setAttribute("aria-pressed", "false");
 });
 // Screens → House view: the hologram or the drawn model. Reloads, so each

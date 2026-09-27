@@ -98,6 +98,9 @@ export class Registry {
         id: r.id,
         name: r.name,
         plan: r.plan || null,
+        ...(r.shape ? { shape: r.shape } : {}),
+        ...(r.floor ? { floor: r.floor } : {}),
+        ...(r.kind ? { kind: r.kind } : {}),
         devices: this.byRoom(r.id).map(({ id, name, type, state, updated }) => ({ id, name, type, state, updated })),
       })),
     };

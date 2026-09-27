@@ -11,6 +11,7 @@ export function createRoutes(home) {
     ["GET", /^\/api\/health$/, false, () => ({ ok: true })],
     ["GET", /^\/api\/state$/, true, () => ({
       ...home.registry.snapshot(),
+      building: home.config.building || null,
       people: home.presence.list(),
       pending: home.controller.pendingList(),
       scenes: Object.fromEntries(Object.entries(home.config.scenes).map(([k, v]) => [k, v.label])),

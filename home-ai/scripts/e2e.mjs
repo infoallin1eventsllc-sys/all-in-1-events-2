@@ -192,6 +192,28 @@ async function exercise(page, { garageTravelMs, home }) {
   await check("Full screen: Whole house flies back out", async () => { const z = (await holo("#explorer-map")).zoom; return (await page.locator("#explorer-room").isHidden()) && z < 1.1; }, 4000);
   await page.keyboard.press("Escape");
   await check("Full screen: Escape closes it", async () => !(await page.evaluate(() => document.querySelector("#explorer").open)));
+
+  // Any home: preview a two-story Colonial, walk its floors, then come back to this home.
+  const openLib0 = async () => { await page.locator(".screens-open:visible").first().click(); await page.waitForSelector("#library[open]"); };
+  await openLib0();
+  await page.selectOption("#home-preview", "colonial");
+  await page.locator("#library-close").click();
+  await check("Home style: the hologram becomes a two-story Colonial", async () =>
+    (await page.evaluate(() => document.querySelector("#map").dataset.style)) === "colonial" && (await page.evaluate(() => document.querySelector("#map").dataset.floors)) === "2", 8000);
+  await check("Home style: its extra rooms get tags", async () => (await page.locator('#map .map-room[data-room="bed2"]').count()) === 1);
+  await page.locator("#map .map-zoom-btn.expand").click();
+  await check("Home style: the explorer offers each floor", async () => (await page.locator("#explorer-floors button").count()) === 3 && await page.locator("#explorer-floors").isVisible(), 8000);
+  await page.locator("#explorer-floors button", { hasText: "Ground floor" }).click();
+  await check("Home style: the ground floor on its own hides upstairs", async () =>
+    (await page.locator('#explorer-map .map-room[data-room="primary"]').isHidden()) && (await page.locator('#explorer-map .map-room[data-room="kitchen"]').isVisible()));
+  await audit(page, "House explorer, two-story home");
+  await page.locator("#explorer-floors button", { hasText: "All floors" }).click();
+  await check("Home style: All floors shows upstairs again", async () => page.locator('#explorer-map .map-room[data-room="primary"]').isVisible());
+  await page.keyboard.press("Escape");
+  await openLib0();
+  await page.selectOption("#home-preview", "");
+  await page.locator("#library-close").click();
+  await check("Home style: back to this home", async () => (await page.evaluate(() => document.querySelector("#map").dataset.style)) === "modern" && (await page.locator("#map .map-room").count()) === 6, 8000);
   await check("Energy tile says the numbers are estimated", async () => /Estimated/.test(await tileOf("energy").textContent()));
   const kwNow = async () => Number((await tileOf("energy").locator(".energy-num").first().textContent()).trim());
   const kw0 = await kwNow();

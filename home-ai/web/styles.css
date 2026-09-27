@@ -596,6 +596,14 @@ footer { text-align: center; }
 .explorer-views button { min-height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #dff3ff; font-size: 0.85rem; }
 .explorer-views button[aria-pressed="true"] { border-color: #5ad2ff; background: rgba(90, 210, 255, 0.16); }
 .explorer:not(.holo-mode) .explorer-views { display: none; }
+.explorer-floors { position: absolute; left: 20px; top: 16px; z-index: 3; display: flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: 12px; background: rgba(8, 18, 34, 0.78); border: 1px solid rgba(90, 210, 255, 0.22); }
+.explorer-floors button { min-height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #dff3ff; font-size: 0.85rem; }
+.explorer-floors button[aria-pressed="true"] { border-color: #5ad2ff; background: rgba(90, 210, 255, 0.16); }
+.holo-note { position: absolute; left: 12px; top: 10px; z-index: 2; margin: 0; padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; color: #a9c2d8; background: rgba(8, 18, 34, 0.78); border: 1px solid rgba(90, 210, 255, 0.22); pointer-events: none; }
+.explorer .holo-note { top: auto; bottom: 76px; left: 20px; }
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.library-home select { min-height: 40px; max-width: 100%; }
+
 .explorer.holo-mode .explorer-map { padding: 0; }
 .explorer.holo-mode .explorer-map.holo { border-radius: 0; box-shadow: none; }
 @media (max-width: 760px) { .explorer-views { left: 12px; right: 12px; bottom: 76px; justify-content: center; } }

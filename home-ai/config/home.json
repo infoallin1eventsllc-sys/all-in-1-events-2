@@ -49,6 +49,15 @@
   },
 
   "_plan": "Each room's plan is [x, y, width, depth] on the floor plan in 2-foot grid units, used to draw the home map.",
+  "_building": "What the house looks like, for the hologram: style (modern, contemporary, farmhouse, craftsman, colonial, ranch, mediterranean, cabin), floors, roof and outdoor features. Rooms take a plan [x, y, width, depth], a shape [[x, y], ...], and a floor. See docs/HOME-PLAN.md.",
+  "building": {
+    "style": "modern",
+    "features": [
+      { "type": "driveway", "plan": [0, -5, 6, 5] },
+      { "type": "patio", "plan": [13, 9, 7, 3] }
+    ]
+  },
+
   "rooms": [
     { "id": "kitchen",   "name": "Kitchen", "plan": [6, 0, 7, 6] },
     { "id": "living",    "name": "Living Room", "plan": [13, 0, 7, 9] },
