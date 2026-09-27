@@ -3,7 +3,7 @@
 _Last updated: September 27, 2026 (debug pass after the any-home hologram). Branch `claude/inspiring-fermi-jpi3vh` in `infoallin1eventsllc-sys/all-in-1-events-2`, folder `home-ai/`._
 
 ## Pick up here (next session)
-**State:** everything is committed and pushed; the working tree is clean. The last full run was all passing (see the September 27 debug pass below).
+**State:** everything is committed and pushed; the working tree is clean. The last full run (September 27, after the debug pass) was all passing: 124 unit tests and 397 browser checks across the server panel and the demo, with 0 accessibility violations. The published demo links still have the build from before the debug pass; republish them (CLAUDE.md, Published demos) to pick up the fixes.
 
 **Waiting on you:**
 - An empty GitHub repository (suggested name `haven`) to move Haven out of this one (Next steps, item 5). Haven's history on its own is made with `git subtree split --prefix=home-ai -b haven-export` (a local branch; it isn't pushed, so a new cloud session has to recreate it before pushing it to the new repository). This session's GitHub access can't create repositories.
