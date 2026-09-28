@@ -24,6 +24,8 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
+import { Sky } from "three/examples/jsm/objects/Sky.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { normalizeHome, sharedStretches } from "../web/building.js";
 
@@ -71,7 +73,9 @@ function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 10139
 // material still lets every wall rise, turn solid and get painted on its own cue.
 const kinds = { wall: [], clad: [], glass: [], floor: [], furn: [], glow: [] };
 const lineGeos = [];
-function piece(kind, geo, { birth, solid, color, paint = -1, lines = true }) {
+// Surface textures, drawn in the shader from world position: no image files.
+const TEX = { flat: 0, wood: 1, render: 2, stone: 3, concrete: 4, planks: 5, fabric: 6, foliage: 7, roof: 8, grass: 9 };
+function piece(kind, geo, { birth, solid, color, paint = -1, lines = true, tex = "flat" }) {
   geo = geo.index ? geo.toNonIndexed() : geo;
   geo.computeBoundingBox();
   const n = geo.attributes.position.count, base = geo.boundingBox.min.y;
@@ -80,10 +84,11 @@ function piece(kind, geo, { birth, solid, color, paint = -1, lines = true }) {
   geo.setAttribute("aSolid", fill(solid));
   geo.setAttribute("aBase", fill(base));
   geo.setAttribute("aPaint", fill(paint));
+  geo.setAttribute("aTex", fill(TEX[tex] ?? 0));
   const col = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) col.set(color, i * 3);
   geo.setAttribute("aColor", new THREE.Float32BufferAttribute(col, 3));
-  for (const k of Object.keys(geo.attributes)) if (!["position", "normal", "aBirth", "aSolid", "aBase", "aPaint", "aColor"].includes(k)) geo.deleteAttribute(k);
+  for (const k of Object.keys(geo.attributes)) if (!["position", "normal", "aBirth", "aSolid", "aBase", "aPaint", "aColor", "aTex"].includes(k)) geo.deleteAttribute(k);
   kinds[kind].push(geo);
   if (lines) {
     const e = new THREE.EdgesGeometry(geo, 25);
@@ -142,7 +147,7 @@ function buildHouse() {
 
     // Floor: oak planks (concrete in the garage), laid in the Finish scene.
     const floorCol = r.id === "garage" ? C.concrete : (r.kind === "kitchen" || r.id === "bath") ? C.tile : C.oak;
-    piece("floor", box(x, y0 - 0.08, z, x + w, y0, z + d), { birth: riseAt - 0.4, solid: 24.3, color: floorCol, paint: r.id === "garage" ? -1 : paintAt + 1.0 });
+    piece("floor", box(x, y0 - 0.08, z, x + w, y0, z + d), { birth: riseAt - 0.4, solid: 24.3, color: floorCol, paint: r.id === "garage" ? -1 : paintAt + 1.0, tex: r.id === "garage" ? "concrete" : floorCol === C.tile ? "flat" : "planks" });
 
     // Walls from where rooms meet (Haven's sharedStretches): inside walls with
     // doorways, drawn once; outside walls with this house's windows and doors.
@@ -186,7 +191,8 @@ function buildHouse() {
           if (s1 - s0 < 0.01 || yy1 - yy0 < 0.01) return;
           piece("wall", wallBox(edge, s0, s1, y0 + yy0, y0 + yy1, -0.08, 0.16), { birth: riseAt, solid: 24.8, color: C.paint, paint: paintAt });
           const clad = r.id === "garage" || (r.id === "hall" && side === "s") ? C.stone : f === "upper" ? C.oakSiding : C.render;
-          piece("clad", wallBox(edge, s0 - (s0 <= 0.01 ? 0.14 : 0), s1 + (s1 >= L - 0.01 ? 0.14 : 0), y0 + yy0 - (yy0 === 0 ? 0.02 : 0), y0 + yy1, 0.08, 0.06), { birth: riseAt + 0.2, solid: 26.8, color: clad, lines: false });
+          const tex = clad === C.stone ? "stone" : clad === C.oakSiding ? "wood" : "render";
+          piece("clad", wallBox(edge, s0 - (s0 <= 0.01 ? 0.14 : 0), s1 + (s1 >= L - 0.01 ? 0.14 : 0), y0 + yy0 - (yy0 === 0 ? 0.02 : 0), y0 + yy1, 0.08, 0.06), { birth: riseAt + 0.2, solid: 26.8, color: clad, lines: false, tex });
         };
         for (const o of ops) {
           const a = Math.max(o.a, sp.a), b = Math.min(o.b, sp.b);
@@ -215,14 +221,16 @@ function buildHouse() {
   // Ceilings, the upper floor's deck, the terrace and the roofs.
   const g = byFloorBBox("ground");
   piece("wall", box(6, 3.0, 0, 16, 3.14, 10), { birth: 16.3, solid: 25.4, color: C.paint, paint: 34.6 });
-  piece("clad", box(-0.14, 2.98, -0.14, 6.14, 3.28, 7.14), { birth: 16.1, solid: 27.6, color: C.frame });
+  piece("clad", box(-0.14, 2.98, -0.14, 6.14, 3.28, 7.14), { birth: 16.1, solid: 27.6, color: C.frame, tex: "roof" });
   piece("clad", box(5.86, 3.0, 9.86, 16.14, 3.25, 10.14), { birth: 16.4, solid: 25.6, color: C.render, lines: false });
-  piece("clad", box(5.4, 6.0, -0.6, 16.7, 6.28, 8.7), { birth: 19.4, solid: 27.8, color: C.frame });
+  piece("clad", box(5.4, 6.0, -0.6, 16.7, 6.28, 8.7), { birth: 19.4, solid: 27.8, color: C.frame, tex: "roof" });
+  // Fascia in oak under the roof edge, and a slim steel edge to the lower roof.
+  piece("clad", box(5.4, 5.72, -0.6, 16.7, 6.0, 8.7), { birth: 19.4, solid: 27.8, color: C.oakSiding, tex: "wood", lines: false });
   piece("clad", box(6.0, 3.14, 8.0, 16.0, 3.25, 9.86), { birth: 19.0, solid: 27.0, color: [0.5, 0.48, 0.45], lines: false });
   // Terrace glass balustrade over the living room.
   piece("glass", box(9.0, 3.25, 9.93, 16.0, 4.25, 9.97), { birth: 19.2, solid: 27.4, color: [0.2, 0.28, 0.34] });
   // Foundation.
-  piece("clad", box(-0.3, -0.35, -0.3, g[2] + 0.3, -0.06, g[3] + 0.3), { birth: 13.1, solid: 24.1, color: C.concrete });
+  piece("clad", box(-0.3, -0.35, -0.3, g[2] + 0.3, -0.06, g[3] + 0.3), { birth: 13.1, solid: 24.1, color: C.concrete, tex: "concrete" });
   // Stairs up the west side of the hall.
   for (let k = 0; k < 16; k++) piece("furn", box(6.08, k * 0.19, 5.0 + k * 0.22, 7.08, k * 0.19 + 0.19, 5.0 + k * 0.22 + 0.24), { birth: 15.6 + k * 0.03, solid: 25.2, color: C.oak, paint: -1 });
 }
@@ -274,15 +282,33 @@ function buildFurniture() {
 
 // Landscape: lawn, driveway, path, planters and trees (Build scene).
 function buildLandscape() {
-  piece("furn", box(0.4, -0.05, 7.14, 5.6, 0.02, 20), { birth: 22, solid: 25.5, color: C.concrete, lines: false });
-  piece("furn", box(7.0, -0.05, 10.1, 8.0, 0.025, 20), { birth: 22, solid: 25.7, color: C.path, lines: false });
-  piece("furn", box(9.2, 0, 10.35, 15.8, 0.45, 10.95), { birth: 22, solid: 27.5, color: C.stone, lines: false });
-  for (let k = 0; k < 7; k++) piece("furn", ball(9.7 + k * 1.0, 0.62, 10.65, 0.36, 0.7), { birth: 22, solid: 28 + k * 0.05, color: C.leaf, lines: false });
+  piece("furn", box(0.4, -0.05, 7.14, 5.6, 0.02, 20), { birth: 22, solid: 25.5, color: C.concrete, lines: false, tex: "concrete" });
+  piece("furn", box(7.0, -0.05, 10.1, 8.0, 0.025, 20), { birth: 22, solid: 25.7, color: C.path, lines: false, tex: "concrete" });
+  piece("furn", box(9.2, 0, 10.35, 15.8, 0.45, 10.95), { birth: 22, solid: 27.5, color: C.stone, lines: false, tex: "stone" });
+  for (let k = 0; k < 7; k++) piece("furn", ball(9.7 + k * 1.0, 0.62, 10.65, 0.36, 0.7), { birth: 22, solid: 28 + k * 0.05, color: C.leaf, lines: false, tex: "foliage" });
   const trees = [[-4, -3, 1.2], [19.5, -2, 1.0], [21, 12.5, 1.3], [-3.5, 12, 0.9], [23, 5, 1.1], [-6, 4, 1.15], [12, -5, 1.0]];
+  let seed = 11;
   for (const [tx, tz, s] of trees) {
-    piece("furn", cyl(tx, 0, tz, 0.16 * s, 2.2 * s, 0.1 * s), { birth: 22, solid: 28.3, color: C.bark, lines: false });
-    piece("furn", ball(tx, 3.2 * s, tz, 1.5 * s, 1.25), { birth: 22, solid: 28.5, color: C.leaf, lines: false });
-    piece("furn", ball(tx + 0.5 * s, 2.6 * s, tz + 0.4 * s, 1.1 * s, 1.1), { birth: 22, solid: 28.6, color: [0.2, 0.4, 0.2], lines: false });
+    const r = rng(seed++);
+    piece("furn", cyl(tx, 0, tz, 0.17 * s, 2.3 * s, 0.09 * s, 10), { birth: 22, solid: 28.3, color: C.bark, lines: false, tex: "wood" });
+    for (let k = 0; k < 3; k++) {
+      const a = r() * Math.PI * 2, br = new THREE.CylinderGeometry(0.03 * s, 0.07 * s, 1.4 * s, 6);
+      br.translate(0, 0.7 * s, 0); br.rotateZ(0.6 + r() * 0.5); br.rotateY(a); br.translate(tx, 1.7 * s + k * 0.3 * s, tz);
+      piece("furn", br, { birth: 22, solid: 28.3, color: C.bark, lines: false });
+    }
+    for (let k = 0; k < 5; k++) {
+      const a = r() * Math.PI * 2, d = (k ? 0.45 + r() * 0.5 : 0) * s, rad = (k ? 0.75 + r() * 0.35 : 1.25) * s;
+      const cx = tx + Math.cos(a) * d, cz = tz + Math.sin(a) * d, cy = (2.6 + (k ? r() * 1.1 : 0.7)) * s;
+      const g2 = new THREE.IcosahedronGeometry(rad, 3), pa = g2.attributes.position, off = r() * 100;
+      for (let i = 0; i < pa.count; i++) {
+        const x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i);
+        const n = 0.82 + 0.3 * Math.abs(Math.sin(x * 3.1 + off) * Math.cos(y * 2.7 + off) + 0.5 * Math.sin(z * 4.3 + y * 2.0));
+        pa.setXYZ(i, x * n, y * n * 0.92, z * n);
+      }
+      g2.computeVertexNormals(); g2.translate(cx, cy, cz);
+      const shade = 0.8 + r() * 0.4;
+      piece("furn", g2, { birth: 22, solid: 28.5 + k * 0.05, color: [C.leaf[0] * shade, C.leaf[1] * shade, C.leaf[2] * shade], lines: false, tex: "foliage" });
+    }
   }
 }
 
@@ -291,23 +317,46 @@ const U = {
   uT: { value: 0 }, uPrimer: { value: new THREE.Color(...C.primer) }, uCutY: { value: 99 }, uHolo: { value: 1 },
   uScan: { value: -10 }, uHoloColor: { value: new THREE.Color(0.36, 0.82, 1.0) }, uLights: { value: 0 },
 };
-const HASH = "float hash3(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }";
+const HASH = `float hash3(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+  float vnoise(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(mix(hash3(i), hash3(i + vec3(1,0,0)), f.x), mix(hash3(i + vec3(0,1,0)), hash3(i + vec3(1,1,0)), f.x), f.y),
+               mix(mix(hash3(i + vec3(0,0,1)), hash3(i + vec3(1,0,1)), f.x), mix(hash3(i + vec3(0,1,1)), hash3(i + vec3(1,1,1)), f.x), f.y), f.z); }
+  float fbm(vec3 p){ return vnoise(p) * 0.5 + vnoise(p * 2.03) * 0.25 + vnoise(p * 4.11) * 0.125 + vnoise(p * 8.3) * 0.0625; }
+  // Surfaces from world position: returns a colour multiplier and writes roughness.
+  vec3 surface(float tex, vec3 p, vec3 base, inout float rough){
+    if (tex < 0.5) { rough = 0.88 + 0.06 * vnoise(p * 9.0); return base * (0.965 + 0.05 * fbm(p * 5.0)); } // paint
+    if (tex < 1.5) { // horizontal oak boards, 0.18 m, with grain and dark gaps
+      float row = floor(p.y / 0.18); float gap = smoothstep(0.93, 0.985, fract(p.y / 0.18)) + smoothstep(0.03, 0.0, fract(p.y / 0.18));
+      float grain = fbm(vec3(p.x * 1.5, row * 7.0 + p.y * 40.0, p.z * 1.5)); float v = hash3(vec3(row, floor(p.x / 2.4 + row * 0.37), 1.0));
+      rough = 0.55 + grain * 0.2; return base * (0.72 + 0.42 * grain + 0.14 * v) * (1.0 - 0.55 * gap); }
+    if (tex < 2.5) { float n = fbm(p * 9.0); rough = 0.85 + n * 0.1; return base * (0.9 + 0.16 * n); } // render
+    if (tex < 3.5) { // stone blocks, staggered courses, mortar lines
+      float course = floor(p.y / 0.32); float sx = (p.x + p.z) + course * 0.53; float blk = floor(sx / 0.75);
+      float mortar = max(smoothstep(0.9, 0.97, fract(p.y / 0.32)), smoothstep(0.92, 0.985, fract(sx / 0.75)));
+      float v = hash3(vec3(course, blk, 2.0)); float n = fbm(p * 12.0);
+      rough = 0.8; return mix(base * (0.78 + 0.4 * v + 0.15 * n), vec3(0.42, 0.42, 0.4), mortar); }
+    if (tex < 4.5) { float n = fbm(p * 5.0); rough = 0.88; return base * (0.86 + 0.22 * n) * (1.0 - 0.3 * step(0.985, fract(p.z / 3.0))); } // concrete slabs
+    if (tex < 6.5) { rough = 0.65; return base; }
+    if (tex < 7.5) { float n = fbm(p * 2.5); rough = 0.9; return base * (0.7 + 0.6 * n); } // foliage
+    if (tex < 8.5) { float n = fbm(p * 6.0); rough = 0.75; return base * (0.85 + 0.3 * n); } // roof membrane
+    return base;
+  }`;
 function patch(mat, { planks = false, glow = false } = {}) {
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, U);
     sh.vertexShader = sh.vertexShader
       .replace("#include <common>", `#include <common>
-        attribute float aBirth; attribute float aSolid; attribute float aBase; attribute float aPaint; attribute vec3 aColor;
-        uniform float uT; varying float vSolid; varying float vPaint; varying vec3 vCol; varying vec3 vWorld;`)
+        attribute float aBirth; attribute float aSolid; attribute float aBase; attribute float aPaint; attribute vec3 aColor; attribute float aTex;
+        uniform float uT; varying float vSolid; varying float vPaint; varying vec3 vCol; varying vec3 vWorld; varying float vTex;`)
       .replace("#include <begin_vertex>", `#include <begin_vertex>
         float rk = clamp((uT - aBirth) / 1.4, 0.0, 1.0); rk = rk * rk * (3.0 - 2.0 * rk);
         transformed.y = aBase + (transformed.y - aBase) * max(rk, 0.0001);
-        vSolid = aSolid; vPaint = aPaint; vCol = aColor;
+        vSolid = aSolid; vPaint = aPaint; vCol = aColor; vTex = aTex;
         vWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
     sh.fragmentShader = sh.fragmentShader
       .replace("#include <common>", `#include <common>
         uniform float uT; uniform vec3 uPrimer; uniform float uCutY; uniform float uLights; uniform vec3 uHoloColor;
-        varying float vSolid; varying float vPaint; varying vec3 vCol; varying vec3 vWorld; ${HASH}`)
+        varying float vSolid; varying float vPaint; varying vec3 vCol; varying vec3 vWorld; varying float vTex; ${HASH}`)
       .replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>
         if (vWorld.y > uCutY && vWorld.x > -0.6 && vWorld.x < 16.8 && vWorld.z > -0.8 && vWorld.z < 10.4) discard;
         float raw = (uT - vSolid - vWorld.y * 0.22) / 0.9;
@@ -324,11 +373,37 @@ function patch(mat, { planks = false, glow = false } = {}) {
         vec3 finish = vPaint < 0.0 ? vCol : vCol * (0.84 + 0.28 * v) * (1.0 - 0.3 * seam);
         vec4 diffuseColor = vec4(mix(vec3(0.5, 0.5, 0.49), finish, pk), opacity);` : `
         vec3 baseCol = vPaint < 0.0 ? vCol : mix(uPrimer, vCol, clamp((uT - vPaint) / 0.6, 0.0, 1.0));
+        float roughT = roughness;
+        baseCol = surface(vTex, vWorld, baseCol, roughT);
         vec4 diffuseColor = vec4(baseCol, opacity);`)
+      .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
+        if (vTex > 0.5) roughnessFactor = roughT;`)
       .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
         totalEmissiveRadiance += uHoloColor * front * 0.6;
         ${glow ? "totalEmissiveRadiance += vCol * (0.3 + 1.6 * uLights);" : ""}
         if (vPaint >= 0.0) totalEmissiveRadiance += uHoloColor * exp(-pow((uT - vPaint - 0.25) / 0.22, 2.0)) * 0.5;`);
+  };
+  return mat;
+}
+// The shadow-map twin of patch(): shadows rise, dissolve in and cut away with the surface.
+function depthTwin() {
+  const mat = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
+  mat.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, U);
+    sh.vertexShader = sh.vertexShader
+      .replace("#include <common>", `#include <common>
+        attribute float aBirth; attribute float aSolid; attribute float aBase; uniform float uT; varying float vSolid; varying vec3 vWorld;`)
+      .replace("#include <begin_vertex>", `#include <begin_vertex>
+        float rk = clamp((uT - aBirth) / 1.4, 0.0, 1.0); rk = rk * rk * (3.0 - 2.0 * rk);
+        transformed.y = aBase + (transformed.y - aBase) * max(rk, 0.0001);
+        vSolid = aSolid; vWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
+    sh.fragmentShader = sh.fragmentShader
+      .replace("#include <common>", `#include <common>
+        uniform float uT; uniform float uCutY; varying float vSolid; varying vec3 vWorld; ${HASH}`)
+      .replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>
+        if (vWorld.y > uCutY && vWorld.x > -0.6 && vWorld.x < 16.8 && vWorld.z > -0.8 && vWorld.z < 10.4) discard;
+        float prog = clamp((uT - vSolid - vWorld.y * 0.22) / 0.9, 0.0, 1.0);
+        if (hash3(floor(vWorld * 16.0)) > prog) discard;`);
   };
   return mat;
 }
@@ -580,6 +655,8 @@ export async function createFilm(canvas, { width, height, voice = [] } = {}) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance", preserveDrawingBuffer: true });
   renderer.setPixelRatio(1);
   renderer.setSize(width, height, false);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
   const scene = new THREE.Scene();
@@ -587,11 +664,11 @@ export async function createFilm(canvas, { width, height, voice = [] } = {}) {
 
   buildHouse(); buildFurniture(); buildLandscape();
   const matFor = {
-    wall: patch(new THREE.MeshStandardMaterial({ roughness: 0.92 })),
-    clad: patch(new THREE.MeshStandardMaterial({ roughness: 0.8 })),
-    glass: patch(new THREE.MeshStandardMaterial({ roughness: 0.05, metalness: 0.2, transparent: true, opacity: 0.32, depthWrite: false })),
-    floor: patch(new THREE.MeshStandardMaterial({ roughness: 0.55 }), { planks: true }),
-    furn: patch(new THREE.MeshStandardMaterial({ roughness: 0.7 })),
+    wall: patch(new THREE.MeshStandardMaterial({ roughness: 0.92, envMapIntensity: 0.35 })),
+    clad: patch(new THREE.MeshPhysicalMaterial({ roughness: 0.8, envMapIntensity: 0.4 })),
+    glass: patch(new THREE.MeshPhysicalMaterial({ roughness: 0.04, metalness: 0.0, transparent: true, opacity: 0.28, depthWrite: false, envMapIntensity: 1.6, reflectivity: 0.9 })),
+    floor: patch(new THREE.MeshPhysicalMaterial({ roughness: 0.45, envMapIntensity: 0.5 }), { planks: true }),
+    furn: patch(new THREE.MeshStandardMaterial({ roughness: 0.7, envMapIntensity: 0.35 })),
     glow: patch(new THREE.MeshStandardMaterial({ roughness: 0.5 }), { glow: true }),
   };
   const house = new THREE.Group(); scene.add(house);
@@ -600,6 +677,7 @@ export async function createFilm(canvas, { width, height, voice = [] } = {}) {
     if (!list.length) continue;
     const geo = mergeGeometries(list);
     const m = new THREE.Mesh(geo, matFor[k]); if (k === "glass") m.renderOrder = 2; house.add(m);
+    if (k !== "glass") { m.castShadow = true; m.receiveShadow = true; m.customDepthMaterial = depthTwin(); }
     if (k !== "glow") { const rim = new THREE.Mesh(geo, rimMat); rim.renderOrder = 3; house.add(rim); }
   }
   const lines = new THREE.LineSegments(mergeGeometries(lineGeos), new THREE.ShaderMaterial({ vertexShader: HOLO_LINE_V, fragmentShader: HOLO_LINE_F, uniforms: U, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
@@ -612,7 +690,7 @@ export async function createFilm(canvas, { width, height, voice = [] } = {}) {
   const doorPivot = new THREE.Group();
   doorPivot.position.set(dx0, ds.y0, 10.0);
   piece("furn", box(0, 0, -0.045, dx1 - dx0, ds.h, 0.045), { birth: 14.5, solid: 27.0, color: C.walnut, lines: false });
-  const doorMesh = new THREE.Mesh(kinds.furn.pop(), matFor.furn); doorPivot.add(doorMesh); scene.add(doorPivot);
+  const doorMesh = new THREE.Mesh(kinds.furn.pop(), matFor.furn); doorMesh.castShadow = true; doorMesh.customDepthMaterial = depthTwin(); doorPivot.add(doorMesh); scene.add(doorPivot);
   // The door's light strips and lock ring.
   const stripMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.45, 0.85, 1.0).multiplyScalar(2.2), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
   const strip = new THREE.Mesh(box(dx0 - 0.06, 0.05, 10.12, dx0 - 0.03, ds.h, 10.15), stripMat);
@@ -622,21 +700,45 @@ export async function createFilm(canvas, { width, height, voice = [] } = {}) {
   scene.add(strip, strip2, lockRing);
 
   // Environment: a projection table in the dark, which becomes the real site.
-  const envU = { uSite: { value: 0 }, uDusk: { value: 0 } };
+  const envU = { uSite: { value: 0 }, uDusk: { value: 0 }, uOp: { value: 1 } };
   const sky = new THREE.Mesh(new THREE.SphereGeometry(200, 32, 16), new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, uniforms: envU,
     vertexShader: "varying vec3 vD; void main(){ vD = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
-    fragmentShader: `uniform float uSite; uniform float uDusk; varying vec3 vD;
+    fragmentShader: `uniform float uSite; uniform float uDusk; uniform float uOp; varying vec3 vD;
       void main(){ float h = clamp(vD.y, -0.2, 1.0);
         vec3 studio = mix(vec3(0.012, 0.03, 0.06), vec3(0.0, 0.005, 0.015), clamp(h * 2.0, 0.0, 1.0));
         vec3 gold = mix(vec3(1.0, 0.72, 0.42), vec3(0.32, 0.55, 0.85), pow(clamp(h * 1.6, 0.0, 1.0), 0.6));
         vec3 dusk = mix(vec3(0.95, 0.48, 0.3), mix(vec3(0.24, 0.2, 0.42), vec3(0.03, 0.05, 0.14), clamp(h * 2.5, 0.0, 1.0)), pow(clamp(h * 3.0, 0.0, 1.0), 0.5));
         vec3 site = mix(gold, dusk, uDusk);
-        gl_FragColor = vec4(mix(studio, site, uSite), 1.0); }`,
+        gl_FragColor = vec4(mix(studio, site, uSite), uOp); }`,
   }));
+  sky.material.transparent = true; sky.renderOrder = -1;
   scene.add(sky);
-  const ground = new THREE.Mesh(new THREE.CircleGeometry(120, 64).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: new THREE.Color(...C.grass), roughness: 1 }));
-  ground.position.y = -0.07; scene.add(ground);
+  const realSky = new Sky(); realSky.scale.setScalar(4000); scene.add(realSky);
+  const skyU = realSky.material.uniforms;
+  skyU.turbidity.value = 6; skyU.rayleigh.value = 2.2; skyU.mieCoefficient.value = 0.006; skyU.mieDirectionalG.value = 0.8;
+  const sunDir = new THREE.Vector3();
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  let envKey = -1, envTex = null;
+  const setSun = (dusk) => {
+    const el = THREE.MathUtils.degToRad(lerp(11, -1.5, dusk)), az = THREE.MathUtils.degToRad(lerp(222, 262, dusk));
+    sunDir.setFromSphericalCoords(1, Math.PI / 2 - el, az);
+    skyU.sunPosition.value.copy(sunDir);
+    skyU.turbidity.value = lerp(6, 12, dusk); skyU.rayleigh.value = lerp(2.2, 0.6, dusk); skyU.mieCoefficient.value = lerp(0.006, 0.02, dusk);
+    // The environment (reflections in the glass, sky light on the walls) from the same sky, refreshed a few times through dusk.
+    const key = Math.round(dusk * 6);
+    if (key !== envKey) { envKey = key; envTex?.dispose(); envTex = pmrem.fromScene(realSky, 0.02).texture; scene.environment = envTex; }
+  };
+  const groundMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(...C.grass), roughness: 1, envMapIntensity: 0.3 });
+  groundMat.onBeforeCompile = (sh) => {
+    sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vW;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvW = (modelMatrix * vec4(transformed, 1.0)).xyz;");
+    sh.fragmentShader = sh.fragmentShader.replace("#include <common>", `#include <common>\nvarying vec3 vW; ${HASH}`)
+      .replace("vec4 diffuseColor = vec4( diffuse, opacity );", `float gn = fbm(vW * 0.9) * 0.5 + fbm(vW * 7.0) * 0.5; float dry = smoothstep(0.35, 0.65, fbm(vW * 0.15 + 3.0));
+        vec3 gcol = diffuse * (0.72 + 0.55 * gn) * mix(vec3(1.0), vec3(1.12, 1.05, 0.8), dry * 0.5);
+        vec4 diffuseColor = vec4(gcol, opacity);`);
+  };
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(120, 64).rotateX(-Math.PI / 2), groundMat);
+  ground.position.y = -0.07; ground.receiveShadow = true; scene.add(ground);
   const table = new THREE.Mesh(new THREE.CircleGeometry(16, 96).rotateX(-Math.PI / 2), new THREE.ShaderMaterial({
     uniforms: { uA: { value: 1 } }, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
     vertexShader: "varying vec2 vP; void main(){ vP = position.xz; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
@@ -668,9 +770,12 @@ export async function createFilm(canvas, { width, height, voice = [] } = {}) {
 
   // Light.
   const hemi = new THREE.HemisphereLight(0xbcd8ff, 0x3a3226, 0); scene.add(hemi);
-  const sun = new THREE.DirectionalLight(0xffc98a, 0); sun.position.set(-18, 12, 22); sun.target.position.set(8, 0, 5); scene.add(sun, sun.target);
+  const sun = new THREE.DirectionalLight(0xffc98a, 0); sun.target.position.set(8, 0, 5); scene.add(sun, sun.target);
+  sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.03; sun.shadow.radius = 3;
+  Object.assign(sun.shadow.camera, { left: -22, right: 22, top: 22, bottom: -22, near: 1, far: 90 });
   const fill = new THREE.DirectionalLight(0x8fb6ff, 0); fill.position.set(25, 18, -10); scene.add(fill);
   const lamps = [[12.5, 2.4, 7.2], [9.3, 2.2, 2.6], [14, 2.0, 2.3], [7.5, 2.5, 7.8]].map(([x, y, z]) => { const l = new THREE.PointLight(0xffb870, 0, 9, 1.6); l.position.set(x, y, z); scene.add(l); return l; });
+  lamps[0].castShadow = true; lamps[0].shadow.mapSize.set(512, 512); lamps[0].shadow.bias = -0.004;
 
   const guide = buildGuide(); scene.add(guide.root); scene.add(guide.points); guide.points.frustumCulled = false;
   const panel = buildPanel(); scene.add(panel.bezel, panel.screen);
@@ -681,6 +786,18 @@ export async function createFilm(canvas, { width, height, voice = [] } = {}) {
   const bloom = new UnrealBloomPass(new THREE.Vector2(width, height), 0.8, 0.45, 0.62);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
+  // A little film grain and a soft vignette: the last touch that stops flat surfaces looking flat.
+  const grain = new ShaderPass({
+    uniforms: { tDiffuse: { value: null }, uT: U.uT, uAmt: { value: 0.035 } },
+    vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+    fragmentShader: `uniform sampler2D tDiffuse; uniform float uT; uniform float uAmt; varying vec2 vUv;
+      float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7)) + uT * 7.0) * 43758.5453); }
+      void main(){ vec4 c = texture2D(tDiffuse, vUv);
+        float g = (h(vUv * 1000.0) - 0.5) * uAmt;
+        float v = smoothstep(1.25, 0.35, distance(vUv, vec2(0.5)) * 1.3);
+        gl_FragColor = vec4((c.rgb + g) * (0.82 + 0.18 * v), c.a); }`,
+  });
+  composer.addPass(grain);
   composer.setSize(width, height);
 
   const film = { renderer, composer, camera, labels, duration: DURATION };
@@ -691,22 +808,26 @@ export async function createFilm(canvas, { width, height, voice = [] } = {}) {
     // Environment and light by scene.
     const site = smooth(24.4, 27.5, t), dusk = smooth(43.5, 44.5, t);
     envU.uSite.value = site; envU.uDusk.value = dusk;
+    setSun(dusk);
+    envU.uOp.value = 1 - site; sky.visible = site < 0.999;
+    realSky.visible = site > 0.001;
+    sun.position.copy(sunDir).multiplyScalar(60).add(new THREE.Vector3(8, 0, 5));
     table.material.uniforms.uA.value = 1 - smooth(24, 26.5, t);
     table.visible = t < 27;
     ground.visible = site > 0.01;
     ground.material.color.setRGB(...lerp3(C.grass, [0.08, 0.11, 0.07], dusk));
-    hemi.intensity = site * lerp(1.1, 0.28, dusk);
-    sun.intensity = site * lerp(2.6, 0.25, dusk);
-    sun.color.setRGB(...lerp3([1.0, 0.8, 0.56], [0.55, 0.6, 1.0], dusk));
-    fill.intensity = site * lerp(0.5, 0.15, dusk);
+    hemi.intensity = site * lerp(0.35, 0.1, dusk);
+    sun.intensity = site * lerp(2.6, 0.12, dusk);
+    sun.color.setRGB(...lerp3([1.0, 0.78, 0.5], [0.5, 0.55, 0.95], dusk));
+    fill.intensity = site * lerp(0.25, 0.08, dusk);
     U.uLights.value = Math.max(smooth(41.8, 42.6, t) * (t < 44 ? 1 : 0), dusk);
-    for (const l of lamps) l.intensity = U.uLights.value * lerp(3.5, 3.0, dusk);
+    for (const l of lamps) l.intensity = U.uLights.value * lerp(5.5, 4.5, dusk);
     U.uCutY.value = t > 33 && t < 44 ? 2.96 : 99;
     U.uHolo.value = 1 - smooth(43, 44, t);
     U.uScan.value = t < 24 ? ((t - 13) % 3.6) * 2.2 - 0.5 : -10;
     bloom.strength = t < 24 ? 0.7 : t < 44 ? lerp(0.45, 0.35, smooth(26, 29, t)) : 0.45;
     bloom.threshold = t < 24 ? 0.12 : t < 27 ? 0.5 : 0.85;
-    renderer.toneMappingExposure = t < 27 ? 1.0 : lerp(1.0, 0.95, dusk);
+    renderer.toneMappingExposure = t < 24 ? 1.0 : lerp(lerp(1.0, 0.5, site), 0.62, dusk);
 
     // Plan drawing.
     const p = smooth(5.6, 11.8, t);
