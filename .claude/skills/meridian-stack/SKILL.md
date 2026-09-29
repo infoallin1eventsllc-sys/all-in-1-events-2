@@ -211,6 +211,12 @@ OAuth means claude.ai → Settings → Connectors → **Add custom connector** w
 same as Raylight and Higgsfield. Prefer the read-only endpoint unless he needs
 to publish components. Not in Anthropic's directory.
 
+**Connected 29 Sep 2026** (tools appear as `mcp__21st_dev__*`). `get_usage`
+reported: tier **free**, search unlimited, **2 component retrievals per day**,
+`aiGenerationEnabled: false`. So: search freely, spend the two daily
+`get_component` pulls only on components you will actually adapt, and never
+call generate — Magic Generate is the $20/mo tier and is not on.
+
 ## Framer Motion is a library, not a plugin
 
 It comes up because tutorials say "install the Framer Motion plugin." There is
