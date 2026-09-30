@@ -29,7 +29,7 @@ export async function scrollFilm({ canvas, track, segments, onFrame = () => {} }
   const draw = () => { const t = timeAt(cur); film.render(t); onFrame(cur, t); };
   const tick = () => {
     raf = 0;
-    cur = still.matches ? target : cur + (target - cur) * 0.16;
+    cur = still.matches ? target : cur + (target - cur) * 0.09;
     if (Math.abs(target - cur) < 0.0002) cur = target;
     draw();
     if (cur !== target) raf = requestAnimationFrame(tick);

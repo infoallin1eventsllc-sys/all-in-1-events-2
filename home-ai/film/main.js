@@ -27,7 +27,7 @@ const bump = (t, c, w) => clamp01(1 - Math.abs(t - c) / w);
 function overlays(film, t, stage) {
   const W = stage.clientWidth, H = stage.clientHeight;
   // Black between scenes.
-  const fade = Math.max(1 - smooth(4.9, 5.7, t), bump(t, 33, 0.45), bump(t, 44, 0.45), smooth(85.6, 86.3, t));
+  const fade = Math.max(1 - smooth(4.9, 5.7, t), smooth(85.6, 86.3, t));
   $("#fade").style.opacity = fade.toFixed(3);
   // Title and end cards.
   $("#title").style.opacity = (smooth(0.4, 1.4, t) * (1 - smooth(3.8, 4.6, t))).toFixed(3);

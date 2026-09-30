@@ -82,6 +82,14 @@ function piece(kind, geo, { birth, solid, color, paint = -1, lines = true, tex =
   geo.computeBoundingBox();
   const n = geo.attributes.position.count, base = geo.boundingBox.min.y;
   const fill = (v) => new THREE.Float32BufferAttribute(new Float32Array(n).fill(v), 1);
+  // Assembly: each piece arrives from above and slightly outward, on its own beat, and settles into place.
+  const bb = geo.boundingBox, cxp = (bb.min.x + bb.max.x) / 2, czp = (bb.min.z + bb.max.z) / 2;
+  const r = rng(Math.round(cxp * 131 + czp * 71 + base * 17 + birth * 13));
+  const ox = cxp - 8, oz = czp - 5, ol = Math.hypot(ox, oz) || 1;
+  const off = [ox / ol * (1.2 + r() * 1.5) + (r() - 0.5) * 0.8, 2.2 + r() * 2.5, oz / ol * (1.2 + r() * 1.5) + (r() - 0.5) * 0.8];
+  const offs = new Float32Array(n * 3); for (let i = 0; i < n; i++) offs.set(off, i * 3);
+  geo.setAttribute("aOff", new THREE.Float32BufferAttribute(offs, 3));
+  birth += r() * 0.35;
   geo.setAttribute("aBirth", fill(birth));
   geo.setAttribute("aSolid", fill(solid));
   geo.setAttribute("aBase", fill(base));
@@ -90,13 +98,15 @@ function piece(kind, geo, { birth, solid, color, paint = -1, lines = true, tex =
   const col = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) col.set(color, i * 3);
   geo.setAttribute("aColor", new THREE.Float32BufferAttribute(col, 3));
-  for (const k of Object.keys(geo.attributes)) if (!["position", "normal", "aBirth", "aSolid", "aBase", "aPaint", "aColor", "aTex"].includes(k)) geo.deleteAttribute(k);
+  for (const k of Object.keys(geo.attributes)) if (!["position", "normal", "aBirth", "aSolid", "aBase", "aPaint", "aColor", "aTex", "aOff"].includes(k)) geo.deleteAttribute(k);
   kinds[kind].push(geo);
   if (lines) {
     const e = new THREE.EdgesGeometry(geo, 25);
     const m = e.attributes.position.count;
     const f2 = (v) => new THREE.Float32BufferAttribute(new Float32Array(m).fill(v), 1);
     e.setAttribute("aBirth", f2(birth)); e.setAttribute("aSolid", f2(solid)); e.setAttribute("aBase", f2(base));
+    const eo = new Float32Array(m * 3); for (let i = 0; i < m; i++) eo.set(off, i * 3);
+    e.setAttribute("aOff", new THREE.Float32BufferAttribute(eo, 3));
     lineGeos.push(e);
   }
 }
@@ -351,8 +361,6 @@ function patch(mat, { planks = false, glow = false } = {}) {
         attribute float aBirth; attribute float aSolid; attribute float aBase; attribute float aPaint; attribute vec3 aColor; attribute float aTex;
         uniform float uT; varying float vSolid; varying float vPaint; varying vec3 vCol; varying vec3 vWorld; varying float vTex;`)
       .replace("#include <begin_vertex>", `#include <begin_vertex>
-        float rk = clamp((uT - aBirth) / 1.4, 0.0, 1.0); rk = rk * rk * (3.0 - 2.0 * rk);
-        transformed.y = aBase + (transformed.y - aBase) * max(rk, 0.0001);
         vSolid = aSolid; vPaint = aPaint; vCol = aColor; vTex = aTex;
         vWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
     sh.fragmentShader = sh.fragmentShader
@@ -396,8 +404,6 @@ function depthTwin() {
       .replace("#include <common>", `#include <common>
         attribute float aBirth; attribute float aSolid; attribute float aBase; uniform float uT; varying float vSolid; varying vec3 vWorld;`)
       .replace("#include <begin_vertex>", `#include <begin_vertex>
-        float rk = clamp((uT - aBirth) / 1.4, 0.0, 1.0); rk = rk * rk * (3.0 - 2.0 * rk);
-        transformed.y = aBase + (transformed.y - aBase) * max(rk, 0.0001);
         vSolid = aSolid; vWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
     sh.fragmentShader = sh.fragmentShader
       .replace("#include <common>", `#include <common>
@@ -410,33 +416,38 @@ function depthTwin() {
   return mat;
 }
 
-const HOLO_LINE_V = `attribute float aBirth; attribute float aSolid; attribute float aBase; uniform float uT;
-  varying float vA; varying float vY; varying float vD;
+const HOLO_LINE_V = `attribute float aBirth; attribute float aSolid; attribute float aBase; attribute vec3 aOff; uniform float uT;
+  varying float vA; varying float vY; varying float vD; varying float vFlash;
   void main(){
     vec3 p = position;
-    float rk = clamp((uT - aBirth) / 1.4, 0.0, 1.0); rk = rk * rk * (3.0 - 2.0 * rk);
-    p.y = aBase + (p.y - aBase) * max(rk, 0.0001);
+    float k = clamp((uT - aBirth) / 1.5, 0.0, 1.0);
+    float c1 = 1.70158, c3 = c1 + 1.0, km = k - 1.0;
+    float e = 1.0 + c3 * km * km * km + c1 * km * km;   // settles with a small overshoot
+    p += aOff * (1.0 - e);
     vec4 w = modelMatrix * vec4(p, 1.0);
     vY = w.y;
-    float appear = clamp((uT - aBirth) / 0.5, 0.0, 1.0);
+    float appear = clamp((uT - aBirth) / 0.45, 0.0, 1.0);
+    vFlash = exp(-pow((uT - aBirth - 1.4) / 0.22, 2.0));
     float prog = clamp((uT - aSolid - w.y * 0.22) / 0.9, 0.0, 1.0);
     vA = appear * (1.0 - prog * 0.93);
     vec4 mv = viewMatrix * w; vD = -mv.z;
     gl_Position = projectionMatrix * mv;
   }`;
-const HOLO_LINE_F = `uniform vec3 uHoloColor; uniform float uHolo; uniform float uScan; uniform float uCutY; uniform float uWarm; uniform float uGain; varying float vA; varying float vY; varying float vD;
-  void main(){ if (vY > uCutY || vA < 0.002) discard; float s = exp(-pow((vY - uScan) / 0.12, 2.0));
+const HOLO_LINE_F = `uniform vec3 uHoloColor; uniform float uHolo; uniform float uScan; uniform float uCutY; uniform float uWarm; uniform float uGain; varying float vA; varying float vY; varying float vD; varying float vFlash;
+  void main(){ if (vY > uCutY || vA < 0.002) discard; float s = exp(-pow((vY - uScan) / 0.12, 2.0)) + vFlash * 1.6;
     vec3 c = mix(uHoloColor, vec3(1.0, 0.72, 0.4), uWarm * smoothstep(3.4, 0.2, vY) * 0.7);
     float near = mix(1.0, 0.18 + 0.82 * smoothstep(0.3, 5.0, vD), 1.0 - uGain);
     gl_FragColor = vec4(c * (0.5 + s * 1.3) * vA * uHolo * near * mix(1.0, 0.55, 1.0 - uGain), 1.0); }`;
-const RIM_V = `attribute float aBirth; attribute float aSolid; attribute float aBase; uniform float uT;
+const RIM_V = `attribute float aBirth; attribute float aSolid; attribute float aBase; attribute vec3 aOff; uniform float uT;
   varying vec3 vN; varying vec3 vV; varying float vA; varying float vY; varying float vD;
   void main(){
     vec3 p = position;
-    float rk = clamp((uT - aBirth) / 1.4, 0.0, 1.0); rk = rk * rk * (3.0 - 2.0 * rk);
-    p.y = aBase + (p.y - aBase) * max(rk, 0.0001);
+    float k = clamp((uT - aBirth) / 1.5, 0.0, 1.0);
+    float c1 = 1.70158, c3 = c1 + 1.0, km = k - 1.0;
+    float e = 1.0 + c3 * km * km * km + c1 * km * km;   // settles with a small overshoot
+    p += aOff * (1.0 - e);
     vec4 w = modelMatrix * vec4(p, 1.0); vY = w.y;
-    float appear = clamp((uT - aBirth) / 0.5, 0.0, 1.0);
+    float appear = clamp((uT - aBirth) / 0.45, 0.0, 1.0);
     float prog = clamp((uT - aSolid - w.y * 0.22) / 0.9, 0.0, 1.0);
     vA = appear * (1.0 - prog);
     vN = normalize(normalMatrix * normal); vec4 mv = viewMatrix * w; vV = normalize(-mv.xyz); vD = -mv.z;
@@ -602,18 +613,17 @@ function shotCamera(t) {
   } else if (t < 24) {    // Structure: orbiting the rising hologram
     const k = ease(clamp01((t - 13) / 11)), a = lerp(0.55, 0.55 + Math.PI * 1.1, k), R = lerp(23, 21, k);
     pos.set(8 + Math.cos(a) * R, lerp(11, 7.5, k), 5 + Math.sin(a) * R); tgt.set(8, 2.6, 5);
-  } else if (t < 33) {    // Build: settling into a front three-quarter view and pulling back
-    const k0 = ease(clamp01((t - 24) / 2.2)), a0 = 0.55 + Math.PI * 1.1;
+  } else if (t < 33) {    // Detail: the orbit eases into a front three-quarter view, then keeps drifting
+    const a0 = 0.55 + Math.PI * 1.1;
     const orbitEnd = new THREE.Vector3(8 + Math.cos(a0) * 21, 7.5, 5 + Math.sin(a0) * 21);
-    const k = ease(clamp01((t - 25) / 8));
-    const front = new THREE.Vector3(lerp(23, 25, k), lerp(4.6, 5.2, k), lerp(26, 30, k));
-    pos.copy(orbitEnd).lerp(front, k0 < 1 ? k0 : 1).lerp(front, k); tgt.set(8.5, 2.6, 5);
-  } else if (t < 44) {    // Finish: a cutaway, looking down into the rooms
+    const k = ease(clamp01((t - 24) / 9));
+    pos.copy(orbitEnd).lerp(new THREE.Vector3(22, 9.5, 25), k); tgt.set(8.5, lerp(2.6, 2.0, k), 5);
+  } else if (t < 44) {    // Furnish: the same move continues up and in, looking down into the rooms
     const k = ease(clamp01((t - 33) / 11));
-    pos.set(lerp(18.5, 15.2, k), lerp(14.5, 9.8, k), lerp(18.5, 14.8, k)); tgt.set(lerp(10.5, 11, k), 0.6, lerp(4.8, 5.4, k));
-  } else if (t < 50) {    // The guide forms at the door, dusk
+    pos.set(lerp(22, 15.2, k), lerp(9.5, 9.8, k), lerp(25, 14.8, k)); tgt.set(lerp(8.5, 11, k), lerp(2.0, 0.6, k), lerp(5, 5.4, k));
+  } else if (t < 50) {    // ...and sweeps down to the front door as the guide forms
     const k = ease(clamp01((t - 44) / 6));
-    pos.set(lerp(10.5, 8.4, k), lerp(1.9, 1.65, k), lerp(18.5, 15.2, k)); tgt.set(7.6, 1.35, 10.6); fov = 36;
+    pos.set(lerp(15.2, 8.4, k), lerp(9.8, 1.65, k), lerp(14.8, 15.2, k)); tgt.set(lerp(11, 7.6, k), lerp(0.6, 1.35, k), lerp(5.4, 10.6, k)); fov = lerp(38, 36, k);
   } else if (t < 56) {    // The door opens and the client walks in (the camera is the client)
     const k = ease(clamp01((t - 52.8) / 3.2));
     pos.set(lerp(8.2, 7.5, k), 1.62 + Math.sin(k * Math.PI * 4) * 0.012, lerp(15.2, 8.9, k)); tgt.set(lerp(7.6, 9.8, k), 1.35, lerp(10.6, 7.6, smooth(0.5, 1, k)));
@@ -699,6 +709,9 @@ export async function createFilm(canvas, { width, height, voice = [] } = {}) {
   const doorGeo = kinds.furn.pop();
   const doorEdges = new THREE.EdgesGeometry(doorGeo, 25);
   for (const [name, v] of [["aBirth", 14.5], ["aSolid", NEVER], ["aBase", 0]]) doorEdges.setAttribute(name, new THREE.Float32BufferAttribute(new Float32Array(doorEdges.attributes.position.count).fill(v), 1));
+  { const o = doorGeo.attributes.aOff, m = doorEdges.attributes.position.count, eo = new Float32Array(m * 3);
+    for (let i = 0; i < m; i++) eo.set([o.getX(0), o.getY(0), o.getZ(0)], i * 3);
+    doorEdges.setAttribute("aOff", new THREE.Float32BufferAttribute(eo, 3)); }
   const doorRim = new THREE.Mesh(doorGeo, rimMat); doorRim.renderOrder = 3;
   const doorLines = new THREE.LineSegments(doorEdges, lines.material); doorLines.renderOrder = 4;
   doorPivot.add(doorRim, doorLines); scene.add(doorPivot);
@@ -825,12 +838,13 @@ export async function createFilm(canvas, { width, height, voice = [] } = {}) {
     U.uLights.value = Math.max(smooth(41.8, 42.6, t) * (t < 44 ? 1 : 0), dusk);
     U.uWarm.value = U.uLights.value;
     for (const l of lamps) l.intensity = U.uLights.value * 2.5;
-    U.uCutY.value = t > 33 && t < 44 ? 2.96 : 99;
+    // The cut-away plane sweeps down to open the house and back up to close it: no pop.
+    U.uCutY.value = t < 32.5 || t > 46 ? 99 : t < 34.5 ? lerp(8, 2.96, ease(clamp01((t - 32.5) / 2))) : t < 43.5 ? 2.96 : lerp(2.96, 8, ease(clamp01((t - 43.5) / 2.5)));
     U.uHolo.value = 1;
     // One scan sweep as each stage lands, and a slow idle sweep while the guide speaks.
     U.uScan.value = t < 24 ? ((t - 13) % 3.6) * 2.2 - 0.5 : t < 44 ? ((t - 24) % 5) * 1.6 - 0.5 : ((t - 44) % 9) * 0.9 - 0.5;
     // Inside the house the camera is among the surfaces: turn the glow down so the walls read as walls.
-    const inside = smooth(44, 46, t) * (1 - smooth(82.5, 85.5, t) * 0.45);
+    const inside = Math.max(smooth(31, 34, t) * 0.6, smooth(44, 46, t)) * (1 - smooth(82.5, 85.5, t) * 0.45);
     U.uGain.value = 1 - inside;
     bloom.strength = lerp(0.7, 0.3, inside); bloom.threshold = lerp(0.12, 0.5, inside);
     renderer.toneMappingExposure = 1.0;

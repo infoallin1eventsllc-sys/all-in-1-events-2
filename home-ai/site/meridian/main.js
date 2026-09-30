@@ -16,7 +16,7 @@ const SEGMENTS = [
   [0.81, 0.93, 63.0, 76.0], // the panel
   [0.93, 1.0, 79.5, 86.0],  // the handover and the pull back
 ];
-const CUTS = [0.43, 0.57];
+const CUTS = [];
 
 const sheets = [...document.querySelectorAll(".sheet")];
 const dots = $("#progress");
