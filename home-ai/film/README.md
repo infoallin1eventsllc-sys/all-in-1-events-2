@@ -2,6 +2,8 @@
 
 A 1:32 Meridian Interface film. An AI sketches a home as a hologram, builds it through to paint, floors and furniture, and then becomes a holographic guide. The guide welcomes the client in, walks them through the house and explains, at the control panel, how the home keeps them safe.
 
+The film is a hologram from start to finish: nothing in it is a solid render. (A solid, textured version of the house was tried and dropped; the renderer for it is still in `film.js` behind `NEVER`, in case a scene ever needs it.)
+
 It comes in two halves:
 
 1. **The hologram film (done).** Rendered from code in the same hologram style as Haven's panel, with the house laid out by Haven's any-home code (`web/building.js`). It plays live in a browser and renders to MP4.
@@ -26,9 +28,9 @@ Both need ffmpeg on PATH (or `FFMPEG=/path/to/ffmpeg`). The soundtrack also need
 | 0:00 | Title: *Meridian Interface presents* |
 | 0:05 | **01 Design.** The floor plan is drawn in light on a projection table, and room names appear. |
 | 0:13 | **02 Structure.** Walls, stairs, the upper floor and the roof rise as a wireframe hologram, and the camera orbits. |
-| 0:24 | **03 Build.** Foundation, frame, glass, siding and roof turn real at golden hour. The lawn, drive and trees appear. |
-| 0:33 | **04 Finish.** In a cutaway, a band of light paints each room, lays oak floors and brings in the furniture, and then the lights come on. |
-| 0:44 | **05 Welcome home.** At dusk, light gathers at the front door into the AI guide. |
+| 0:24 | **03 Detail.** Glass, frames, the terrace rail and the roof arrive, then the drive, path, planters and trees, all as light. |
+| 0:33 | **04 Furnish.** In a cutaway, the furniture arrives room by room as wireframe light; then the lights come on and the house glows warm. |
+| 0:44 | **05 Welcome home.** Light gathers at the front door into the AI guide. |
 | 0:50 | The door's light strip glows, a chime plays, the lock ring turns green and the door opens. *"Welcome home. Come on in."* |
 | 0:56 | The walkthrough. The guide leads the client into the living room while sensor lines light up in the walls. *"I was here from the first line of the sketch. I know every wall, every window, every pipe."* |
 | 1:03 | The panel. *"This is where we'll talk. I watch the doors, the water, the heat and the air, day and night. If something's wrong, I'll tell you right away. And I'll never unlock a door or open the garage unless you say so."* |

@@ -75,7 +75,9 @@ const kinds = { wall: [], clad: [], glass: [], floor: [], furn: [], glow: [] };
 const lineGeos = [];
 // Surface textures, drawn in the shader from world position: no image files.
 const TEX = { flat: 0, wood: 1, render: 2, stone: 3, concrete: 4, planks: 5, fabric: 6, foliage: 7, roof: 8, grass: 9 };
+const NEVER = 1e9;
 function piece(kind, geo, { birth, solid, color, paint = -1, lines = true, tex = "flat" }) {
+  if (kind !== "glow") solid = NEVER; // the house stays a hologram; only lamps become solid light
   geo = geo.index ? geo.toNonIndexed() : geo;
   geo.computeBoundingBox();
   const n = geo.attributes.position.count, base = geo.boundingBox.min.y;
@@ -315,7 +317,7 @@ function buildLandscape() {
 // ---------- shaders ----------
 const U = {
   uT: { value: 0 }, uPrimer: { value: new THREE.Color(...C.primer) }, uCutY: { value: 99 }, uHolo: { value: 1 },
-  uScan: { value: -10 }, uHoloColor: { value: new THREE.Color(0.36, 0.82, 1.0) }, uLights: { value: 0 },
+  uScan: { value: -10 }, uHoloColor: { value: new THREE.Color(0.36, 0.82, 1.0) }, uLights: { value: 0 }, uWarm: { value: 0 }, uGain: { value: 1 },
 };
 const HASH = `float hash3(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
   float vnoise(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -409,7 +411,7 @@ function depthTwin() {
 }
 
 const HOLO_LINE_V = `attribute float aBirth; attribute float aSolid; attribute float aBase; uniform float uT;
-  varying float vA; varying float vY;
+  varying float vA; varying float vY; varying float vD;
   void main(){
     vec3 p = position;
     float rk = clamp((uT - aBirth) / 1.4, 0.0, 1.0); rk = rk * rk * (3.0 - 2.0 * rk);
@@ -419,13 +421,16 @@ const HOLO_LINE_V = `attribute float aBirth; attribute float aSolid; attribute f
     float appear = clamp((uT - aBirth) / 0.5, 0.0, 1.0);
     float prog = clamp((uT - aSolid - w.y * 0.22) / 0.9, 0.0, 1.0);
     vA = appear * (1.0 - prog * 0.93);
-    gl_Position = projectionMatrix * viewMatrix * w;
+    vec4 mv = viewMatrix * w; vD = -mv.z;
+    gl_Position = projectionMatrix * mv;
   }`;
-const HOLO_LINE_F = `uniform vec3 uHoloColor; uniform float uHolo; uniform float uScan; uniform float uCutY; varying float vA; varying float vY;
+const HOLO_LINE_F = `uniform vec3 uHoloColor; uniform float uHolo; uniform float uScan; uniform float uCutY; uniform float uWarm; uniform float uGain; varying float vA; varying float vY; varying float vD;
   void main(){ if (vY > uCutY || vA < 0.002) discard; float s = exp(-pow((vY - uScan) / 0.12, 2.0));
-    gl_FragColor = vec4(uHoloColor * (0.5 + s * 1.3) * vA * uHolo, 1.0); }`;
+    vec3 c = mix(uHoloColor, vec3(1.0, 0.72, 0.4), uWarm * smoothstep(3.4, 0.2, vY) * 0.7);
+    float near = mix(1.0, 0.18 + 0.82 * smoothstep(0.3, 5.0, vD), 1.0 - uGain);
+    gl_FragColor = vec4(c * (0.5 + s * 1.3) * vA * uHolo * near * mix(1.0, 0.55, 1.0 - uGain), 1.0); }`;
 const RIM_V = `attribute float aBirth; attribute float aSolid; attribute float aBase; uniform float uT;
-  varying vec3 vN; varying vec3 vV; varying float vA; varying float vY;
+  varying vec3 vN; varying vec3 vV; varying float vA; varying float vY; varying float vD;
   void main(){
     vec3 p = position;
     float rk = clamp((uT - aBirth) / 1.4, 0.0, 1.0); rk = rk * rk * (3.0 - 2.0 * rk);
@@ -434,13 +439,15 @@ const RIM_V = `attribute float aBirth; attribute float aSolid; attribute float a
     float appear = clamp((uT - aBirth) / 0.5, 0.0, 1.0);
     float prog = clamp((uT - aSolid - w.y * 0.22) / 0.9, 0.0, 1.0);
     vA = appear * (1.0 - prog);
-    vN = normalize(normalMatrix * normal); vec4 mv = viewMatrix * w; vV = normalize(-mv.xyz);
+    vN = normalize(normalMatrix * normal); vec4 mv = viewMatrix * w; vV = normalize(-mv.xyz); vD = -mv.z;
     gl_Position = projectionMatrix * mv;
   }`;
-const RIM_F = `uniform vec3 uHoloColor; uniform float uHolo; uniform float uScan; uniform float uCutY; varying vec3 vN; varying vec3 vV; varying float vA; varying float vY;
+const RIM_F = `uniform vec3 uHoloColor; uniform float uHolo; uniform float uScan; uniform float uCutY; uniform float uWarm; uniform float uGain; varying vec3 vN; varying vec3 vV; varying float vA; varying float vY; varying float vD;
   void main(){ if (vY > uCutY || vA < 0.002) discard; float f = pow(1.0 - abs(dot(vN, vV)), 2.2);
     float s = exp(-pow((vY - uScan) / 0.25, 2.0));
-    gl_FragColor = vec4(uHoloColor * (f * 0.16 + 0.012 + s * 0.08) * vA * uHolo, 1.0); }`;
+    vec3 c = mix(uHoloColor, vec3(1.0, 0.72, 0.4), uWarm * smoothstep(3.4, 0.2, vY) * 0.7);
+    float near = mix(1.0, 0.1 + 0.9 * smoothstep(0.3, 6.0, vD), 1.0 - uGain);
+    gl_FragColor = vec4(c * (f * 0.16 + 0.012 + s * 0.08 + uWarm * 0.01) * vA * uHolo * near * mix(1.0, 0.4, 1.0 - uGain), 1.0); }`;
 
 // ---------- the AI guide ----------
 const GUIDE_V = `varying vec3 vN; varying vec3 vV; varying vec3 vW;
@@ -676,8 +683,7 @@ export async function createFilm(canvas, { width, height, voice = [] } = {}) {
   for (const [k, list] of Object.entries(kinds)) {
     if (!list.length) continue;
     const geo = mergeGeometries(list);
-    const m = new THREE.Mesh(geo, matFor[k]); if (k === "glass") m.renderOrder = 2; house.add(m);
-    if (k !== "glass") { m.castShadow = true; m.receiveShadow = true; m.customDepthMaterial = depthTwin(); }
+    if (k === "glow") house.add(new THREE.Mesh(geo, matFor.glow));
     if (k !== "glow") { const rim = new THREE.Mesh(geo, rimMat); rim.renderOrder = 3; house.add(rim); }
   }
   const lines = new THREE.LineSegments(mergeGeometries(lineGeos), new THREE.ShaderMaterial({ vertexShader: HOLO_LINE_V, fragmentShader: HOLO_LINE_F, uniforms: U, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
@@ -689,8 +695,13 @@ export async function createFilm(canvas, { width, height, voice = [] } = {}) {
   const dx0 = Math.min(dxA, dxB), dx1 = Math.max(dxA, dxB);
   const doorPivot = new THREE.Group();
   doorPivot.position.set(dx0, ds.y0, 10.0);
-  piece("furn", box(0, 0, -0.045, dx1 - dx0, ds.h, 0.045), { birth: 14.5, solid: 27.0, color: C.walnut, lines: false });
-  const doorMesh = new THREE.Mesh(kinds.furn.pop(), matFor.furn); doorMesh.castShadow = true; doorMesh.customDepthMaterial = depthTwin(); doorPivot.add(doorMesh); scene.add(doorPivot);
+  piece("furn", box(0, 0, -0.045, dx1 - dx0, ds.h, 0.045), { birth: 14.5, solid: NEVER, color: C.walnut, lines: false });
+  const doorGeo = kinds.furn.pop();
+  const doorEdges = new THREE.EdgesGeometry(doorGeo, 25);
+  for (const [name, v] of [["aBirth", 14.5], ["aSolid", NEVER], ["aBase", 0]]) doorEdges.setAttribute(name, new THREE.Float32BufferAttribute(new Float32Array(doorEdges.attributes.position.count).fill(v), 1));
+  const doorRim = new THREE.Mesh(doorGeo, rimMat); doorRim.renderOrder = 3;
+  const doorLines = new THREE.LineSegments(doorEdges, lines.material); doorLines.renderOrder = 4;
+  doorPivot.add(doorRim, doorLines); scene.add(doorPivot);
   // The door's light strips and lock ring.
   const stripMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.45, 0.85, 1.0).multiplyScalar(2.2), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
   const strip = new THREE.Mesh(box(dx0 - 0.06, 0.05, 10.12, dx0 - 0.03, ds.h, 10.15), stripMat);
@@ -805,29 +816,24 @@ export async function createFilm(canvas, { width, height, voice = [] } = {}) {
 
   film.render = (t) => {
     U.uT.value = t;
-    // Environment and light by scene.
-    const site = smooth(24.4, 27.5, t), dusk = smooth(43.5, 44.5, t);
-    envU.uSite.value = site; envU.uDusk.value = dusk;
-    setSun(dusk);
-    envU.uOp.value = 1 - site; sky.visible = site < 0.999;
-    realSky.visible = site > 0.001;
-    sun.position.copy(sunDir).multiplyScalar(60).add(new THREE.Vector3(8, 0, 5));
-    table.material.uniforms.uA.value = 1 - smooth(24, 26.5, t);
-    table.visible = t < 27;
-    ground.visible = site > 0.01;
-    ground.material.color.setRGB(...lerp3(C.grass, [0.08, 0.11, 0.07], dusk));
-    hemi.intensity = site * lerp(0.35, 0.1, dusk);
-    sun.intensity = site * lerp(2.6, 0.12, dusk);
-    sun.color.setRGB(...lerp3([1.0, 0.78, 0.5], [0.5, 0.55, 0.95], dusk));
-    fill.intensity = site * lerp(0.25, 0.08, dusk);
+    // The whole film is a hologram on the projection table: no site, no sun.
+    const dusk = smooth(43.5, 44.5, t);
+    envU.uSite.value = 0; envU.uDusk.value = 0; envU.uOp.value = 1;
+    realSky.visible = false; ground.visible = false; table.visible = true;
+    table.material.uniforms.uA.value = 1;
+    hemi.intensity = 0; sun.intensity = 0; fill.intensity = 0;
     U.uLights.value = Math.max(smooth(41.8, 42.6, t) * (t < 44 ? 1 : 0), dusk);
-    for (const l of lamps) l.intensity = U.uLights.value * lerp(5.5, 4.5, dusk);
+    U.uWarm.value = U.uLights.value;
+    for (const l of lamps) l.intensity = U.uLights.value * 2.5;
     U.uCutY.value = t > 33 && t < 44 ? 2.96 : 99;
-    U.uHolo.value = 1 - smooth(43, 44, t);
-    U.uScan.value = t < 24 ? ((t - 13) % 3.6) * 2.2 - 0.5 : -10;
-    bloom.strength = t < 24 ? 0.7 : t < 44 ? lerp(0.45, 0.35, smooth(26, 29, t)) : 0.45;
-    bloom.threshold = t < 24 ? 0.12 : t < 27 ? 0.5 : 0.85;
-    renderer.toneMappingExposure = t < 24 ? 1.0 : lerp(lerp(1.0, 0.5, site), 0.62, dusk);
+    U.uHolo.value = 1;
+    // One scan sweep as each stage lands, and a slow idle sweep while the guide speaks.
+    U.uScan.value = t < 24 ? ((t - 13) % 3.6) * 2.2 - 0.5 : t < 44 ? ((t - 24) % 5) * 1.6 - 0.5 : ((t - 44) % 9) * 0.9 - 0.5;
+    // Inside the house the camera is among the surfaces: turn the glow down so the walls read as walls.
+    const inside = smooth(44, 46, t) * (1 - smooth(82.5, 85.5, t) * 0.45);
+    U.uGain.value = 1 - inside;
+    bloom.strength = lerp(0.7, 0.3, inside); bloom.threshold = lerp(0.12, 0.5, inside);
+    renderer.toneMappingExposure = 1.0;
 
     // Plan drawing.
     const p = smooth(5.6, 11.8, t);

@@ -21,7 +21,7 @@ const CAPTIONS = [
   [69.25, 71.65, "If something’s wrong, I’ll tell you right away."], [71.9, 75.2, "And I’ll never unlock a door or open the garage unless you say so."],
   [76.3, 77.85, "You’re not just living in a house."], [78.0, 80.2, "You’re living with something that looks out for you."], [80.4, 81.5, "Welcome home."],
 ];
-const CHAPTERS = [[5.4, 9.2, "01", "Design"], [13.4, 17.2, "02", "Structure"], [24.4, 28.2, "03", "Build"], [33.4, 37.2, "04", "Finish"], [44.4, 48.2, "05", "Welcome home"]];
+const CHAPTERS = [[5.4, 9.2, "01", "Design"], [13.4, 17.2, "02", "Structure"], [24.4, 28.2, "03", "Detail"], [33.4, 37.2, "04", "Furnish"], [44.4, 48.2, "05", "Welcome home"]];
 const bump = (t, c, w) => clamp01(1 - Math.abs(t - c) / w);
 
 function overlays(film, t, stage) {
