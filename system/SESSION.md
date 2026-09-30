@@ -4,6 +4,54 @@ Compact record of what was built and the current state, so work can resume later
 
 ---
 
+## Sep 30 (evening) — security system: two-step sign-in and security agents
+
+Otis asked for "an agent security system ... that would alert me if someone
+is trying to hack into the website". Built in two layers.
+
+**Layer 1, the locks (owner portal).** Two-step sign-in (TOTP, RFC 6238,
+`_shared/totp.ts`, no dependency, all six RFC SHA-1 vectors pass); session
+epochs so "sign out every device" revokes every token on owner, leads, pay and
+site-images (`_shared/ownertoken.ts` now issues AND verifies; owner's copy is
+gone); a lockout across all callers at 40 wrong sign-ins an hour; alert emails
+for new-device sign-ins, lockouts and security changes (`_shared/security.ts`).
+Portal Security tab (website e80613f, e2988b2). Migration 0039 applied.
+
+**Layer 2, the agents (`security-agent` function).** watch every 15 min,
+audit daily 13:05 UTC. Fixed rules decide the findings and severity; Claude
+only writes the email, from counts and names. No attacker-typed text reaches
+the model (security_signals returns counts). Template email if no key.
+Findings go to system_alerts (component security, visible in System Health),
+emailed when opened, on escalation to critical, then daily while critical or
+weekly while a warning. It also emails the older owner_login_bruteforce alert
+from watch_owner_login(), which only ever posted to System Health before.
+Migration 0040 applied: security_signals(), security_audit(), both cron jobs
+(harmless 404s until deploy), RLS on backup.snapshots, and all 308 anon /
+authenticated grants on public tables revoked plus default privileges, since
+nothing reads tables with the anon key (planner uses it only to call intake).
+
+Live audit at build time: no tables without RLS, no public grants, no exposed
+privileged functions, backup fresh, only finding "two-step off".
+
+Tests: 32 end-to-end checks on the owner function and 21 on the agents, each
+run under Deno 2.9 (installed from npm into the scratchpad) against an
+in-memory stand-in for supabase-js; `deno check` on owner, leads, pay,
+site-images, security-agent and claude.ts.
+
+Correction to the Sep 30 audit: backups DO exist. `crm-snapshot` (0028)
+copies the CRM nightly into backup.snapshots and keeps 30 days. What is
+missing is an OFF-SITE copy; those snapshots vanish with the project.
+
+**DEPLOY (Otis, from the repo on the Mac):**
+    supabase functions deploy owner leads pay site-images security-agent orchestrator runner report planner
+The last four pick up the 90 s Claude deadline. Nobody is signed out by the
+deploy (old tokens are epoch 0). After it, the agents start on their own.
+
+**Lost phone with two-step on:** Supabase SQL editor,
+    update owner_security set totp_enabled = false, totp_secret = null;
+
+---
+
 ## Sep 30 — launch-checklist audit, Claude call deadline
 
 Otis sent four launch-checklist TikToks (80 items). Audited the site and

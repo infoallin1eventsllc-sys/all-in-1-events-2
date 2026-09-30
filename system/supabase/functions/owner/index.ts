@@ -306,18 +306,25 @@ Deno.serve(async (req) => {
       const here = await clientHash(req);
       const monthAgo = new Date(Date.now() - 30 * 86_400_000).toISOString();
       const dayAgo = new Date(Date.now() - 86_400_000).toISOString();
-      const [events, failures] = await Promise.all([
+      const [events, failures, agents, openAlerts] = await Promise.all([
         sb.from("security_events").select("kind, client_hash, created_at")
           .not("kind", "like", "alert_%").gte("created_at", monthAgo)
           .order("created_at", { ascending: false }).limit(60),
         sb.from("owner_login_attempts").select("id", { count: "exact", head: true })
           .eq("succeeded", false).gte("attempted_at", dayAgo),
+        sb.from("settings").select("value").eq("key", "security_agent").maybeSingle(),
+        sb.from("system_alerts").select("code, severity, title, detail, first_seen, last_seen")
+          .is("resolved_at", null).in("component", ["security", "owner"])
+          .order("last_seen", { ascending: false }),
       ]);
       return json({
         ok: true,
         twoStep: sec.totp_enabled,
         thisDevice: deviceLabel(here),
         failedSignInsLast24h: failures.count ?? 0,
+        // What the watch and audit agents last found (security-agent function).
+        agents: agents.data?.value ?? {},
+        openAlerts: openAlerts.data ?? [],
         // Labels, never the raw hash: the portal has no use for it.
         events: (events.data ?? []).map((e) => ({
           kind: e.kind,

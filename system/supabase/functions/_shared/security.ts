@@ -74,10 +74,13 @@ export async function alertOwner(
   lines: string[],
   everyMinutes = 60,
 ): Promise<boolean> {
-  const since = new Date(Date.now() - everyMinutes * 60_000).toISOString();
-  const { count } = await sb.from("security_events").select("id", { count: "exact", head: true })
-    .eq("kind", `alert_${kind}`).gte("created_at", since);
-  if ((count ?? 0) > 0) return false;
+  // 0 means no cap: the caller has already decided this alert is due.
+  if (everyMinutes > 0) {
+    const since = new Date(Date.now() - everyMinutes * 60_000).toISOString();
+    const { count } = await sb.from("security_events").select("id", { count: "exact", head: true })
+      .eq("kind", `alert_${kind}`).gte("created_at", since);
+    if ((count ?? 0) > 0) return false;
+  }
 
   const s = await getSetting<{ email?: string }>(sb, "owner_notify", {});
   const to = (s.email ?? "").trim() || DEFAULT_OWNER_EMAIL;
