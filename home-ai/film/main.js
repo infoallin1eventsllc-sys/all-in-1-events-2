@@ -80,6 +80,8 @@ async function main() {
 
   if (RENDER) {
     window.filmFrame = (t) => { draw(t); return true; };
+    // A still of one room, for the sites: hides the overlays and points the camera at it.
+    window.filmRoom = (t, view) => { film.render(t, view); document.querySelectorAll(".layer").forEach((l) => { l.style.display = "none"; }); return true; };
     window.filmReady = true;
     return;
   }

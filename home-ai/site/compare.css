@@ -1,0 +1,24 @@
+/* Before / after, room by room (site/compare.js). Colours come from the page's own tokens. */
+.compare { padding-inline: 0; }
+.compare-head { padding: clamp(56px, 9vw, 110px) var(--gutter) 28px; }
+.compare-track { position: relative; }
+.compare-stage { position: sticky; top: 0; height: 100vh; height: 100dvh; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; overflow: hidden; }
+.pane { position: relative; margin: 0; overflow: hidden; background: #050a12; }
+.pane img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; will-change: transform, opacity; }
+.pane figcaption { position: absolute; left: 20px; top: calc(72px + env(safe-area-inset-top, 0px)); padding: 8px 12px; border-radius: 999px; font: 500 11px/1 var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: #dff3ff; background: rgba(5, 8, 14, 0.62); border: 1px solid rgba(90, 210, 255, 0.35); backdrop-filter: blur(6px); }
+.pane.after figcaption { border-color: rgba(255, 179, 92, 0.55); color: #ffe2bd; }
+.compare-rooms { position: absolute; left: 50%; bottom: clamp(24px, 6vh, 64px); transform: translateX(-50%); width: min(560px, calc(100% - 2 * var(--gutter))); text-align: center; pointer-events: none; }
+.compare-room { position: absolute; left: 0; right: 0; bottom: 0; opacity: 0; display: grid; gap: 6px; padding: 16px 22px; border-radius: 14px; background: rgba(5, 8, 14, 0.72); border: 1px solid rgba(90, 210, 255, 0.22); backdrop-filter: blur(8px); color: #eaf6ff; }
+.compare-room b { font: 300 clamp(24px, 3vw, 38px)/1.05 var(--display); }
+.compare-room span { font: 400 14px/1.5 var(--body); color: #b9cbd8; }
+.compare-dots { position: absolute; right: var(--gutter); top: 50%; transform: translateY(-50%); display: grid; gap: 10px; }
+.compare-dots button { width: 28px; height: 28px; padding: 0; border: 0; background: none; cursor: pointer; display: grid; place-items: center; }
+.compare-dots button::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: rgba(233, 240, 245, 0.3); transition: transform 0.2s, background 0.2s; }
+.compare-dots button[aria-current="step"]::before { background: #5ad2ff; transform: scale(1.5); box-shadow: 0 0 10px #5ad2ff; }
+@media (max-width: 760px) {
+  .compare-stage { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+  .compare-rooms { bottom: 14px; }
+  .pane.after figcaption { top: 16px; }
+  .compare-room b { font-size: 22px; }
+  .compare-dots { right: 6px; }
+}

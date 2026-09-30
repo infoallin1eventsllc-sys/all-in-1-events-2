@@ -827,7 +827,8 @@ export async function createFilm(canvas, { width, height, voice = [] } = {}) {
   const film = { renderer, composer, camera, labels, duration: DURATION };
   film.resize = (w, h) => { renderer.setSize(w, h, false); composer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); };
 
-  film.render = (t) => {
+  // `view` overrides the shot camera: { pos:[x,y,z], tgt:[x,y,z], fov } (the sites' room stills use it).
+  film.render = (t, view = null) => {
     U.uT.value = t;
     // The whole film is a hologram on the projection table: no site, no sun.
     const dusk = smooth(43.5, 44.5, t);
@@ -845,8 +846,9 @@ export async function createFilm(canvas, { width, height, voice = [] } = {}) {
     U.uScan.value = t < 24 ? ((t - 13) % 3.6) * 2.2 - 0.5 : t < 44 ? ((t - 24) % 5) * 1.6 - 0.5 : ((t - 44) % 9) * 0.9 - 0.5;
     // Inside the house the camera is among the surfaces: turn the glow down so the walls read as walls.
     const inside = Math.max(smooth(31, 34, t) * 0.6, smooth(44, 46, t)) * (1 - smooth(82.5, 85.5, t) * 0.45);
-    U.uGain.value = 1 - inside;
-    bloom.strength = lerp(0.7, 0.3, inside); bloom.threshold = lerp(0.12, 0.5, inside);
+    U.uGain.value = view && view.gain != null ? view.gain : 1 - inside;
+    const soft = view && view.gain != null ? 1 - view.gain : inside;
+    bloom.strength = lerp(0.7, 0.3, soft); bloom.threshold = lerp(0.12, 0.5, soft);
     renderer.toneMappingExposure = 1.0;
 
     // Plan drawing.
@@ -905,7 +907,7 @@ export async function createFilm(canvas, { width, height, voice = [] } = {}) {
     panel.mat.color.setScalar(t < 42 ? 0.15 : 1 + smooth(80.4, 81.4, t) * 0.6);
 
     // Camera.
-    const cam = shotCamera(t);
+    const cam = view ? { pos: new THREE.Vector3(...view.pos), tgt: new THREE.Vector3(...view.tgt), fov: view.fov || 40 } : shotCamera(t);
     camera.position.copy(cam.pos); camera.lookAt(cam.tgt);
     // On a tall screen (a phone held upright) widen the view so the house still fits; at the film's 16:9 nothing changes.
     const fov = cam.fov * (camera.aspect < 1.3 ? Math.min(1.9, Math.pow(1.3 / camera.aspect, 0.7)) : 1);

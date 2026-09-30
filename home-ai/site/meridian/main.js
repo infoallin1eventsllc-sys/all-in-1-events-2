@@ -1,6 +1,7 @@
 // Meridian Interface: scrolling builds the home (film/film.js), and each
 // chapter's drawing sheet fades in over its stretch of the scroll.
 import { scrollFilm } from "../scrollfilm.js";
+import { setupCompare } from "../compare.js";
 
 const $ = (s) => document.querySelector(s);
 const clamp01 = (x) => Math.min(1, Math.max(0, x));
@@ -45,3 +46,5 @@ function overlay(p) {
 scrollFilm({ canvas: $("#canvas"), track: $("#track"), segments: SEGMENTS, onFrame: overlay })
   .then((a) => { api = a; $("#loading").hidden = true; })
   .catch((err) => { $("#loading").textContent = "This page needs WebGL to draw the house."; console.error(err); });
+
+setupCompare(document.querySelector("#compare"));
