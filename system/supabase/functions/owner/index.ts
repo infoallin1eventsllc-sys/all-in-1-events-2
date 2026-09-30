@@ -18,8 +18,12 @@ import { serviceClient } from "../_shared/supabase.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
 import { allow, callerKey } from "../_shared/ratelimit.ts";
 import { unsubToken } from "../_shared/unsub.ts";
+import {
+  SESSION_TTL_SECONDS, currentEpoch, issueOwnerToken, ownerTokenValid, tokenFrom,
+} from "../_shared/ownertoken.ts";
+import { alertOwner, clientHash, deviceLabel, isNewDevice, logEvent } from "../_shared/security.ts";
+import { matchStep, newSecret, otpauthUri } from "../_shared/totp.ts";
 
-const SESSION_TTL_SECONDS = 60 * 60 * 8; // one working day
 const MAX_FAILURES = 8;
 /** Calls of any kind allowed per caller per hour, on top of the login throttle.
  *  A working portal session makes a few hundred requests across a day, so this
@@ -28,60 +32,24 @@ const MAX_FAILURES = 8;
 const MAX_CALLS_PER_HOUR = 600;
 const THROTTLE_WINDOW_MINUTES = 15;
 
+/** Wrong sign-ins allowed per hour across EVERY caller together.
+ *
+ *  The per-caller throttle above counts by address, and an attacker rotating
+ *  addresses never trips it. This one counts all failures, so a spread-out
+ *  guessing run closes sign-in for everyone until it stops. The owner is shut
+ *  out too while it lasts; that is the trade, and the alert email says so.
+ *  The owner's own mistyping sits far below it: a busy week in September
+ *  had four wrong passcodes in a day. */
+const GLOBAL_MAX_FAILURES_PER_HOUR = 40;
+
+/** How long a two-step setup code stays valid before it must be started again. */
+const TWOSTEP_SETUP_MINUTES = 15;
+
 /* ---------------------------------------------------------------- crypto -- */
 
-/**
- * Signing key for session tokens. A dedicated OWNER_SESSION_SECRET is
- * preferred; otherwise derive from the service-role key, which is always
- * present in the edge runtime and never reaches a browser. Deriving rather than
- * using it directly means a leaked token cannot be reversed into the key.
- */
-async function signingKey(): Promise<CryptoKey> {
-  const material =
-    Deno.env.get("OWNER_SESSION_SECRET") ??
-    `owner-session|${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""}`;
-  return await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(material),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign", "verify"],
-  );
-}
-
-const b64url = (bytes: Uint8Array) =>
-  btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-
-const unb64url = (s: string) => {
-  const pad = s.replace(/-/g, "+").replace(/_/g, "/");
-  const bin = atob(pad + "=".repeat((4 - (pad.length % 4)) % 4));
-  return Uint8Array.from(bin, (c) => c.charCodeAt(0));
-};
-
-async function issueToken(): Promise<string> {
-  const payload = JSON.stringify({ exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS });
-  const body = b64url(new TextEncoder().encode(payload));
-  const sig = await crypto.subtle.sign("HMAC", await signingKey(), new TextEncoder().encode(body));
-  return `${body}.${b64url(new Uint8Array(sig))}`;
-}
-
-async function tokenValid(token: string | undefined): Promise<boolean> {
-  if (!token || !token.includes(".")) return false;
-  const [body, sig] = token.split(".");
-  try {
-    const ok = await crypto.subtle.verify(
-      "HMAC",
-      await signingKey(),
-      unb64url(sig),
-      new TextEncoder().encode(body),
-    );
-    if (!ok) return false;
-    const { exp } = JSON.parse(new TextDecoder().decode(unb64url(body)));
-    return typeof exp === "number" && exp > Math.floor(Date.now() / 1000);
-  } catch {
-    return false;
-  }
-}
+// Session tokens are issued and verified in _shared/ownertoken.ts, and the
+// address hash lives in _shared/security.ts. This file carried its own copies
+// until 30 Sep, and the two had to be kept byte-identical by hand.
 
 /** Compare without leaking how much of the passcode matched via timing. */
 function constantTimeEqual(a: string, b: string): boolean {
@@ -94,12 +62,51 @@ function constantTimeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-/** Salted hash of the caller IP — enough to throttle, not a visitor log. */
-async function clientHash(req: Request): Promise<string> {
-  const ip = (req.headers.get("x-forwarded-for") ?? "unknown").split(",")[0].trim();
-  const salt = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "salt";
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${salt}|${ip}`));
-  return b64url(new Uint8Array(digest)).slice(0, 32);
+type SecurityRow = {
+  totp_secret: string | null;
+  totp_pending: string | null;
+  totp_pending_at: string | null;
+  totp_enabled: boolean;
+  totp_last_step: number;
+  session_epoch: number;
+};
+
+async function securityRow(sb: SupabaseClient): Promise<SecurityRow | null> {
+  const { data, error } = await sb.from("owner_security")
+    .select("totp_secret, totp_pending, totp_pending_at, totp_enabled, totp_last_step, session_epoch")
+    .eq("id", true).maybeSingle();
+  if (error || !data) return null;
+  return { ...data, totp_last_step: Number(data.totp_last_step), session_epoch: Number(data.session_epoch) } as SecurityRow;
+}
+
+/**
+ * Accept a two-step code exactly once. The step must move forward, and the
+ * update only lands if nobody else moved it first, so the same code cannot
+ * sign in twice even from two requests racing each other.
+ */
+async function consumeCode(sb: SupabaseClient, secret: string, code: unknown, lastStep: number): Promise<boolean> {
+  const step = await matchStep(secret, String(code ?? ""), Math.floor(Date.now() / 1000));
+  if (step === null || step <= lastStep) return false;
+  const { data } = await sb.from("owner_security")
+    .update({ totp_last_step: step, updated_at: new Date().toISOString() })
+    .eq("id", true).lt("totp_last_step", step).select("id");
+  return (data?.length ?? 0) === 1;
+}
+
+/**
+ * Raise the session epoch, which signs out every device, and hand back a fresh
+ * token so the device that asked stays signed in. Optimistic: the update only
+ * lands against the epoch we read, so two at once cannot both "succeed" and
+ * leave one caller holding a token for an epoch that never existed.
+ */
+async function bumpEpoch(sb: SupabaseClient, extra: Record<string, unknown> = {}): Promise<string | null> {
+  const epoch = await currentEpoch();
+  if (epoch === null) return null;
+  const { data } = await sb.from("owner_security")
+    .update({ ...extra, session_epoch: epoch + 1, updated_at: new Date().toISOString() })
+    .eq("id", true).eq("session_epoch", epoch).select("id");
+  if ((data?.length ?? 0) !== 1) return null;
+  return await issueOwnerToken(epoch + 1);
 }
 
 /* ------------------------------------------------------------- mapping --- */
@@ -146,7 +153,7 @@ const invoiceToRow = (i: any) => ({
 
 /* --------------------------------------------------------------- login --- */
 
-async function handleLogin(sb: SupabaseClient, req: Request, passcode: unknown) {
+async function handleLogin(sb: SupabaseClient, req: Request, passcode: unknown, code: unknown) {
   // Trim the stored secret. Supabase's secret Value field is a multi-line
   // textarea, so a trailing newline is easy to save by accident — and since the
   // submitted passcode is trimmed, an untrimmed secret could never match. That
@@ -162,25 +169,78 @@ async function handleLogin(sb: SupabaseClient, req: Request, passcode: unknown) 
 
   const hash = await clientHash(req);
   const since = new Date(Date.now() - THROTTLE_WINDOW_MINUTES * 60_000).toISOString();
-  const { count } = await sb
-    .from("owner_login_attempts")
-    .select("id", { count: "exact", head: true })
-    .eq("client_hash", hash)
-    .eq("succeeded", false)
-    .gte("attempted_at", since);
+  const hourAgo = new Date(Date.now() - 60 * 60_000).toISOString();
+  const [mine, everyone] = await Promise.all([
+    sb.from("owner_login_attempts").select("id", { count: "exact", head: true })
+      .eq("client_hash", hash).eq("succeeded", false).gte("attempted_at", since),
+    sb.from("owner_login_attempts").select("id", { count: "exact", head: true })
+      .eq("succeeded", false).gte("attempted_at", hourAgo),
+  ]);
+  const count = mine.count ?? 0;
 
-  if ((count ?? 0) >= MAX_FAILURES) {
+  if (count >= MAX_FAILURES) {
     return json({ ok: false, error: "too_many_attempts", retryAfterMinutes: THROTTLE_WINDOW_MINUTES }, 429);
   }
+  if ((everyone.count ?? 0) >= GLOBAL_MAX_FAILURES_PER_HOUR) {
+    // Logged at most every ten minutes: during an attack this branch runs on
+    // every request, and the log should show the lockout, not be flooded by it.
+    const tenAgo = new Date(Date.now() - 10 * 60_000).toISOString();
+    const { count: recent } = await sb.from("security_events").select("id", { count: "exact", head: true })
+      .eq("kind", "locked_global").gte("created_at", tenAgo);
+    if ((recent ?? 0) === 0) await logEvent(sb, "locked_global", hash, { failures_last_hour: everyone.count });
+    await alertOwner(sb, "locked_global", "Portal sign-in closed after repeated wrong passcodes", [
+      `There have been ${everyone.count} wrong sign-ins to your owner portal in the last hour, from more than one device.`,
+      "That pattern looks like someone guessing, so sign-in is closed for everyone, you included, until an hour passes without it.",
+      "Your client records were not reached: nothing is readable without signing in.",
+    ]);
+    return json({ ok: false, error: "locked", retryAfterMinutes: 60 }, 429);
+  }
+
+  const sec = await securityRow(sb);
+  if (!sec) return json({ ok: false, error: "unavailable" }, 503);
 
   const submitted = typeof passcode === "string" ? passcode.trim() : "";
-  const ok = submitted.length > 0 && constantTimeEqual(submitted, expected);
+  const passOk = submitted.length > 0 && constantTimeEqual(submitted, expected);
+  // The code is only spent when the passcode was right: a wrong passcode must
+  // not burn the owner's current code for them.
+  const codeOk = !sec.totp_enabled ||
+    (passOk && !!sec.totp_secret && await consumeCode(sb, sec.totp_secret, code, sec.totp_last_step));
+  const ok = passOk && codeOk;
+  // Asked BEFORE this attempt is recorded: once the success row exists, every
+  // device looks like one that has signed in before.
+  const fresh = ok ? await isNewDevice(sb, hash) : false;
   await sb.from("owner_login_attempts").insert({ client_hash: hash, succeeded: ok });
 
   if (!ok) {
-    return json({ ok: false, error: "invalid_passcode", remaining: MAX_FAILURES - (count ?? 0) - 1 }, 401);
+    await logEvent(sb, "login_failed", hash, { twoStep: sec.totp_enabled });
+    if (count + 1 >= MAX_FAILURES) {
+      await logEvent(sb, "locked_caller", hash, {});
+      await alertOwner(sb, "locked_caller", "A device was locked out of your portal", [
+        `${deviceLabel(hash)} got the sign-in wrong ${MAX_FAILURES} times in ${THROTTLE_WINDOW_MINUTES} minutes and is locked out for ${THROTTLE_WINDOW_MINUTES} minutes.`,
+        "If that was you mistyping, there is nothing to do.",
+      ]);
+    }
+    // One answer for a wrong passcode and a wrong code, so a guesser never
+    // learns which half they got right.
+    return json({
+      ok: false,
+      error: sec.totp_enabled ? "invalid_credentials" : "invalid_passcode",
+      remaining: MAX_FAILURES - count - 1,
+    }, 401);
   }
-  return json({ ok: true, token: await issueToken(), expiresIn: SESSION_TTL_SECONDS });
+
+  await logEvent(sb, "login_ok", hash, { newDevice: fresh, twoStep: sec.totp_enabled });
+  if (fresh) {
+    await logEvent(sb, "new_device", hash, {});
+    await alertOwner(sb, `new_device_${hash}`, "New sign-in to your owner portal", [
+      `Someone signed in to your owner portal from ${deviceLabel(hash)}, which has not signed in during the last 30 days.`,
+      sec.totp_enabled
+        ? "They used your passcode and a two-step code from your authenticator app."
+        : "They used your passcode. Two-step sign-in is OFF, so the passcode alone was enough.",
+      "If this was you on a new phone, computer or network, there is nothing to do.",
+    ], 24 * 60);
+  }
+  return json({ ok: true, token: await issueOwnerToken(sec.session_epoch), expiresIn: SESSION_TTL_SECONDS });
 }
 
 /* ---------------------------------------------------------------- serve --- */
@@ -207,11 +267,15 @@ Deno.serve(async (req) => {
 
   const action = String(body.action ?? "");
 
-  if (action === "login") return await handleLogin(sb, req, body.passcode);
+  if (action === "login") return await handleLogin(sb, req, body.passcode, body.code);
 
   if (action === "status") {
     const secret = Deno.env.get("OWNER_PASSCODE")?.trim();
-    return json({ ok: true, configured: !!secret });
+    // Whether to show the code box. Public on purpose: it says a second factor
+    // exists, which tells a guesser nothing useful except that guessing the
+    // passcode alone will not be enough.
+    const sec = await securityRow(sb);
+    return json({ ok: true, configured: !!secret, twoStep: !!sec?.totp_enabled });
   }
 
   // `selfcheck` was removed on 8 Sep 2026. It sat here, ABOVE the token gate,
@@ -228,13 +292,112 @@ Deno.serve(async (req) => {
   // and if that is not enough, re-set the secret. Do not reintroduce this.
 
   // Everything past this point needs a valid session.
-  const token = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "") ||
-    String(body.token ?? "");
-  if (!(await tokenValid(token))) {
+  if (!(await ownerTokenValid(tokenFrom(req, body)))) {
     return json({ ok: false, error: "unauthorized" }, 401);
   }
 
   switch (action) {
+    /* ---------------------------------------------------------- security --
+       The portal's Security tab. Everything here needs a signed-in session
+       (the gate above), and every change is logged and emailed. */
+    case "security_status": {
+      const sec = await securityRow(sb);
+      if (!sec) return json({ ok: false, error: "unavailable" }, 503);
+      const here = await clientHash(req);
+      const monthAgo = new Date(Date.now() - 30 * 86_400_000).toISOString();
+      const dayAgo = new Date(Date.now() - 86_400_000).toISOString();
+      const [events, failures] = await Promise.all([
+        sb.from("security_events").select("kind, client_hash, created_at")
+          .not("kind", "like", "alert_%").gte("created_at", monthAgo)
+          .order("created_at", { ascending: false }).limit(60),
+        sb.from("owner_login_attempts").select("id", { count: "exact", head: true })
+          .eq("succeeded", false).gte("attempted_at", dayAgo),
+      ]);
+      return json({
+        ok: true,
+        twoStep: sec.totp_enabled,
+        thisDevice: deviceLabel(here),
+        failedSignInsLast24h: failures.count ?? 0,
+        // Labels, never the raw hash: the portal has no use for it.
+        events: (events.data ?? []).map((e) => ({
+          kind: e.kind,
+          device: deviceLabel(e.client_hash),
+          thisDevice: e.client_hash === here,
+          at: e.created_at,
+        })),
+      });
+    }
+
+    case "twostep_begin": {
+      const sec = await securityRow(sb);
+      if (!sec) return json({ ok: false, error: "unavailable" }, 503);
+      if (sec.totp_enabled) return json({ ok: false, error: "already_on" }, 409);
+      // The secret leaves the server exactly once, here, to the signed-in
+      // owner, so it can be put into an authenticator app. It is never logged.
+      const secret = newSecret();
+      await sb.from("owner_security").update({
+        totp_pending: secret, totp_pending_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      }).eq("id", true);
+      return json({ ok: true, secret, uri: otpauthUri(secret), expiresInMinutes: TWOSTEP_SETUP_MINUTES });
+    }
+
+    case "twostep_confirm": {
+      const sec = await securityRow(sb);
+      if (!sec) return json({ ok: false, error: "unavailable" }, 503);
+      if (sec.totp_enabled) return json({ ok: false, error: "already_on" }, 409);
+      const started = sec.totp_pending_at ? Date.parse(sec.totp_pending_at) : 0;
+      if (!sec.totp_pending || Date.now() - started > TWOSTEP_SETUP_MINUTES * 60_000) {
+        return json({ ok: false, error: "setup_expired" }, 410);
+      }
+      const step = await matchStep(sec.totp_pending, String(body.code ?? ""), Math.floor(Date.now() / 1000));
+      if (step === null) return json({ ok: false, error: "invalid_code" }, 400);
+      // Turning it on signs out every other device: a session opened with the
+      // passcode alone should not outlive the switch to passcode-plus-code.
+      const token = await bumpEpoch(sb, {
+        totp_secret: sec.totp_pending, totp_enabled: true, totp_last_step: step,
+        totp_pending: null, totp_pending_at: null,
+      });
+      if (!token) return json({ ok: false, error: "unavailable" }, 503);
+      const here = await clientHash(req);
+      await logEvent(sb, "twostep_on", here, {});
+      await alertOwner(sb, "twostep_on", "Two-step sign-in is now on", [
+        `Two-step sign-in was turned on from ${deviceLabel(here)}. Signing in now needs your passcode and a code from your authenticator app.`,
+        "Every other device was signed out.",
+      ], 1);
+      return json({ ok: true, token, expiresIn: SESSION_TTL_SECONDS });
+    }
+
+    case "twostep_off": {
+      const sec = await securityRow(sb);
+      if (!sec) return json({ ok: false, error: "unavailable" }, 503);
+      if (!sec.totp_enabled || !sec.totp_secret) return json({ ok: false, error: "already_off" }, 409);
+      // A stolen session must not be able to strip the second factor, so this
+      // asks for a current code as well.
+      if (!(await consumeCode(sb, sec.totp_secret, body.code, sec.totp_last_step))) {
+        return json({ ok: false, error: "invalid_code" }, 400);
+      }
+      const token = await bumpEpoch(sb, { totp_secret: null, totp_enabled: false });
+      if (!token) return json({ ok: false, error: "unavailable" }, 503);
+      const here = await clientHash(req);
+      await logEvent(sb, "twostep_off", here, {});
+      await alertOwner(sb, "twostep_off", "Two-step sign-in was turned OFF", [
+        `Two-step sign-in was turned off from ${deviceLabel(here)}. Your passcode alone now opens the portal.`,
+        "Every other device was signed out.",
+      ], 1);
+      return json({ ok: true, token, expiresIn: SESSION_TTL_SECONDS });
+    }
+
+    case "signout_all": {
+      const token = await bumpEpoch(sb);
+      if (!token) return json({ ok: false, error: "unavailable" }, 503);
+      const here = await clientHash(req);
+      await logEvent(sb, "signout_all", here, {});
+      await alertOwner(sb, "signout_all", "Every other device was signed out", [
+        `${deviceLabel(here)} signed out every other device from your owner portal.`,
+      ], 1);
+      return json({ ok: true, token, expiresIn: SESSION_TTL_SECONDS });
+    }
+
     case "health": {
       // What the machinery is doing, and what is wrong with it.
       //
