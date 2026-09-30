@@ -83,6 +83,35 @@ function estimateTokens(opts: CallOpts): number {
   return Math.max(1, Math.ceil(chars / 4) + (opts.maxTokens ?? 4000));
 }
 
+/**
+ * How long one callClaude() may take, all attempts included.
+ *
+ * Edge functions on the free plan are killed at 150 s of wall clock, and a
+ * killed function never reaches the mock fallback below: the task is left
+ * half-run and nothing records why. The SDK's own default is 10 minutes per
+ * attempt with two retries, so a hung request always lost that race.
+ *
+ * 90 s is measured, not guessed: orchestrator runs over the 30 days to
+ * 30 Sep took 26 s at the median and 49 s at worst, Claude call included.
+ * The budget is shared by Key Router and the direct call, and leaves about
+ * a minute for the rest of the function once it runs out.
+ */
+const CALL_BUDGET_MS = 90_000;
+
+/** Below this, a second transport cannot finish; stop rather than start it. */
+const MIN_ATTEMPT_MS = 5_000;
+
+/**
+ * True when our deadline, not the API, ended the attempt. fetch() throws a
+ * DOMException named TimeoutError; the SDK throws APIUserAbortError, whose
+ * `name` is plain "Error" (checked against 0.68.0), so it needs instanceof.
+ */
+function timedOut(err: unknown): boolean {
+  if (err instanceof Anthropic.APIUserAbortError) return true;
+  const name = (err as { name?: string } | null)?.name ?? "";
+  return name === "TimeoutError" || name === "AbortError";
+}
+
 /** Shape the Anthropic Messages body once, for either transport. */
 function buildBody(opts: CallOpts, model: string): Record<string, unknown> {
   const body: Record<string, unknown> = {
@@ -100,7 +129,7 @@ function buildBody(opts: CallOpts, model: string): Record<string, unknown> {
  * needs one; we send the request body as `payload` and it returns Anthropic's
  * reply untouched under `response`.
  */
-async function viaKeyRouter(opts: CallOpts, model: string): Promise<ClaudeResult> {
+async function viaKeyRouter(opts: CallOpts, model: string, signal: AbortSignal): Promise<ClaudeResult> {
   const base = Deno.env.get("KEYROUTER_URL")!.replace(/\/$/, "");
   const token = Deno.env.get("KEYROUTER_AUTH_TOKEN");
 
@@ -114,6 +143,7 @@ async function viaKeyRouter(opts: CallOpts, model: string): Promise<ClaudeResult
       tokens: estimateTokens(opts),
       payload: buildBody(opts, model),
     }),
+    signal,
   });
 
   const j = await res.json().catch(() => ({}));
@@ -140,11 +170,16 @@ export async function callClaude(opts: CallOpts): Promise<ClaudeResult> {
     return { text: mockFor(opts.prompt), mocked: true };
   }
 
+  // One deadline for the whole call, so a slow router cannot leave the direct
+  // attempt less time than it needs without anyone noticing.
+  const deadline = Date.now() + CALL_BUDGET_MS;
+  const timeoutReason = `Claude did not answer within ${CALL_BUDGET_MS / 1000}s`;
+
   if (routerUrl) {
     try {
-      return await viaKeyRouter(opts, model);
+      return await viaKeyRouter(opts, model, AbortSignal.timeout(CALL_BUDGET_MS));
     } catch (err) {
-      const reason = err instanceof Error ? err.message : String(err);
+      const reason = timedOut(err) ? timeoutReason : err instanceof Error ? err.message : String(err);
       // Key Router being down must not take marketing down with it: fall back
       // to a direct call when we still hold a key, otherwise to mock.
       if (!key) return { text: mockFor(opts.prompt), mocked: true, error: reason };
@@ -155,12 +190,17 @@ export async function callClaude(opts: CallOpts): Promise<ClaudeResult> {
   // no key), but it keeps `key` provably defined for the SDK call below.
   if (!key) return { text: mockFor(opts.prompt), mocked: true };
 
+  const remaining = deadline - Date.now();
+  if (remaining < MIN_ATTEMPT_MS) return { text: mockFor(opts.prompt), mocked: true, error: timeoutReason };
+
   const client = new Anthropic({ apiKey: key });
   const body = buildBody(opts, model);
 
   try {
+    // The signal caps every attempt together; the SDK's own retries for a
+    // quick 429 or 529 still happen inside it.
     // deno-lint-ignore no-explicit-any
-    const resp: any = await client.messages.create(body as any);
+    const resp: any = await client.messages.create(body as any, { signal: AbortSignal.timeout(remaining) });
     const text = (resp.content ?? [])
       .filter((b: { type: string }) => b.type === "text")
       .map((b: { text: string }) => b.text)
@@ -170,7 +210,7 @@ export async function callClaude(opts: CallOpts): Promise<ClaudeResult> {
   } catch (err) {
     // Key missing/invalid/rate-limited → degrade to mock so the pipeline keeps
     // running. Surface the reason so the dashboard/logs can show it.
-    const reason = err instanceof Error ? err.message : String(err);
+    const reason = timedOut(err) ? timeoutReason : err instanceof Error ? err.message : String(err);
     return { text: mockFor(opts.prompt), mocked: true, error: reason };
   }
 }
