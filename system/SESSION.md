@@ -4,6 +4,37 @@ Compact record of what was built and the current state, so work can resume later
 
 ---
 
+## Sep 30 — launch-checklist audit, Claude call deadline
+
+Otis sent four launch-checklist TikToks (80 items). Audited the site and
+backend against all of them; most were already in place. Fixed four:
+
+- **Claude calls now have a 90 s deadline** (`_shared/claude.ts`, commit
+  fcfadd0). Before, the SDK default (10 min per attempt, 2 retries) always
+  lost to the 150 s free-plan wall clock, so a hung request killed the
+  function before the mock fallback could run. 90 s is from `agent_runs`:
+  26 s median, 49 s worst over 30 days. Shared by Key Router and the direct
+  call; a timeout degrades to mock with "Claude did not answer within 90s".
+  Verified against SDK 0.68.0 with a server that never answers: the SDK
+  throws `APIUserAbortError`, whose `name` is plain "Error", hence the
+  `instanceof` check. **NOT DEPLOYED.** orchestrator, runner, report and
+  planner import this file; deploy them from a terminal with
+  `supabase functions deploy`. Same reason as the runner note in the skill:
+  re-sending 122 KB of runner source through a web session is how a silent
+  transcription error reaches production.
+- Website (meridian-interface-website 7475b35, live): per-section tab
+  titles, a five-question FAQ, "we reply within one business day", long
+  dashes removed from all visitor copy, and the `<noscript>` crawler
+  fallback brought back in line with the 25 Sep hero (it was stale).
+
+Open from the audit, needing Otis:
+- **No database backups.** Free plan; Supabase's docs say free projects
+  should export their own (`supabase db dump`). Pro ($25/mo) keeps 7 days.
+- **No refund or cancellation policy**, needed before Stripe goes live.
+- Anthropic console spend limit; an external uptime monitor.
+
+---
+
 ## Sep 6 — motion graphics: two clips, a reel, a still, and the hosting wall
 
 Otis asked whether the tech stack could make short social videos from the
