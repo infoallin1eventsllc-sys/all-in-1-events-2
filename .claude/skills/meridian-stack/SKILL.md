@@ -217,6 +217,23 @@ reported: tier **free**, search unlimited, **2 component retrievals per day**,
 `get_component` pulls only on components you will actually adapt, and never
 call generate — Magic Generate is the $20/mo tier and is not on.
 
+## Lovable, Base44, Manus — app builders, not connected
+
+Checked 30 Sep 2026 on each vendor's own docs (through Composio's sandbox).
+None is connected. Each is an AI builder that hosts what it makes; Claude Code
+writes code he owns in his repos, under his skills and security gate.
+
+| | What it is | Can Claude drive it? |
+|---|---|---|
+| **Lovable** | Prompt → React + Supabase app, hosted by Lovable, GitHub sync | **Yes.** Official MCP server `https://mcp.lovable.dev`, OAuth, **all plans**; Claude and claude.ai listed as supported clients. Each build spends his Lovable credits |
+| **Base44** (Wix) | Prompt → app with backend hosted on Base44 | **Yes, paid.** `https://app.base44.com/mcp`, OAuth, **Builder plan or higher** |
+| **Manus** | General autonomous agent (research, decks, sites) | **No MCP server for Claude.** Manus *consumes* MCP; it offers a REST API with a key instead |
+
+Position given to Otis: none replaces Claude Code for client production work.
+Lovable is the only one worth trying — for throwaway prototypes to show a
+client fast, then rebuild the keeper in his own stack. Base44's hosted backend
+is lock-in; Manus overlaps with Claude itself.
+
 ## Framer Motion is a library, not a plugin
 
 It comes up because tutorials say "install the Framer Motion plugin." There is
