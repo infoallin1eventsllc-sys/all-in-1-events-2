@@ -42,7 +42,10 @@ const EXT: Record<string, string> = {
 };
 
 async function sha256(bytes: Uint8Array): Promise<string> {
-  const d = await crypto.subtle.digest("SHA-256", bytes);
+  // Copied to a plain ArrayBuffer: current TypeScript refuses a Uint8Array
+  // whose buffer could be shared, and `deno check` failed on this line.
+  const plain = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  const d = await crypto.subtle.digest("SHA-256", plain);
   return Array.from(new Uint8Array(d)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 

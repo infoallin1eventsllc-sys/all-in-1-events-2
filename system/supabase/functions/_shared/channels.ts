@@ -117,6 +117,7 @@ export type ChannelConfig = {
       Preferred over Shotstack when both are set. See _shared/clipkit.ts. */
   clipkit_api_key?: string;
   clipkit_music_url?: string; // a track already hosted for Clipkit (its own asset store, or any public MP3/WAV)
+  clipkit_music_seconds?: number | string; // that track's length, so clipkit.ts can tile it across a longer reel
 };
 
 // deno-lint-ignore no-explicit-any

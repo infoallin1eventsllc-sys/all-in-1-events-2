@@ -29,8 +29,10 @@
 // Never returns the API key or any part of it. The From address is not a
 // secret and is shown in full, because reading it back is half the diagnosis.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { serviceClient } from "./_shared/supabase.ts";
-import { json, corsHeaders } from "./_shared/cors.ts";
+// "../_shared", like every other function. This file shipped with "./_shared",
+// the flattened layout a dashboard upload uses, so a CLI deploy of it failed.
+import { serviceClient } from "../_shared/supabase.ts";
+import { json, corsHeaders } from "../_shared/cors.ts";
 
 const SG = "https://api.sendgrid.com/v3";
 const TIMEOUT = 10_000;
