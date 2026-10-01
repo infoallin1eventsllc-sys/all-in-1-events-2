@@ -113,3 +113,34 @@ triples. Nothing else to change.
 8. When a custom domain exists: one find-and-replace of
    `https://allin1-events.netlify.app` in `robots.txt`, `sitemap.xml` and the
    `og:` tags of each page head.
+
+---
+
+## 5 · Feature debug — same day, after the audit
+
+Every feature was then exercised rather than read: the functions called
+directly with Stripe and the CRM stubbed, the pages driven in Chromium.
+Found and fixed, in order of damage:
+
+| Found | Where | Fix |
+|---|---|---|
+| **Checkout refused 15 of 16 products.** The function's price list was the retired eight-piece line; only `haze-snapback` overlapped, at $40 against the shop's $48. Every Pay on the current line would have failed with "Unknown product" — after the customer had typed an address. | `netlify/functions/create-checkout-session.js` | Price list regenerated from `products.js` (16 ids, prices in cents, shop names on the Stripe receipt). `check-refs` now fails on any id, price, name, threshold or country the two disagree on; proved red five ways. |
+| Stripe collected Canadian addresses while the shipping page says United States only, at a domestic flat rate. | same | `allowed_countries: ["US"]`, checked against `POLICY.shipsTo`. |
+| Drops page sold the retired line: a countdown to a date that had passed (so it read "Drop is live" for a drop that never existed), a "Smoke Signal Pack", a "Harvest Capsule", and a PRE-ORDER THE WINDBREAKER button that opened a hoodie. | `drops.html` | Archive V.24 live; next drop honestly undated. The countdown reads its date from `data-drop-at` and says "Date TBA" when empty instead of counting to nothing; the timer stops when it reaches zero. |
+| Homepage hero and ticker said VIBRANT SERIES. | `index.html` | ARCHIVE V.24. A flow test now sweeps every customer page for retired-collection copy. |
+| Shop heading stayed on the old category after a pill or rail click, and the URL did not change, so a reload lost the filter. | `shop.html` | Heading and `?cat=` follow the click. |
+| The owner portal's sample orders were retired products at old prices. | `netlify/functions/owner-orders.js` | Current products at current prices, generated from the catalogue. |
+| The request throttle keyed on address alone, so under one process (`netlify dev`, tests) a burst at one function counted against every other. | `netlify/shared/throttle.js` | Keyed by function and address. No change on Netlify, where each function is its own bundle. |
+
+Verified sound, no change needed: add-to-bag (size required, quantities merge,
+badge), bag maths and the free-shipping line at $100, checkout totals and the
+paid return, the idempotency nonce across a retry, favorites, shop search /
+filter / sort, both forms in every outcome, the 404 search box, owner
+passcode exchange and token verification, lead validation and every CRM
+failure shape, health. The two new suites (`scripts/functions.mjs`,
+`scripts/flows.mjs`) are in `npm test` and CI; see `scripts/README.md`.
+
+What this still cannot prove: that Stripe takes a real card. Stripe is a
+recorder in these tests. The sandbox walk-through in PAYMENTS-SETUP.md with
+`pk_test_` / `sk_test_` keys and card 4242… remains the only proof of that,
+and needs Otis's Stripe account.

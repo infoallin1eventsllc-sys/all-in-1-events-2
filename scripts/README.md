@@ -1,14 +1,16 @@
 # Safety net
 
 ```
-npm test          # all three, ~40s
-npm run test:refs # static only, instant
+npm test               # refs, functions, smoke, flows, media — a few minutes
+npm run test:refs      # static only, instant
+npm run test:functions # the Netlify functions, no network, ~5s
 npm run test:smoke
+npm run test:flows
 npm run test:media
-npm run test:a11y   # not in `npm test`: ~2 min, run before a launch
+npm run test:a11y      # not in `npm test`: ~2 min, run before a launch
 ```
 
-Four scripts, no test framework, no config file. They exist to catch the
+Six scripts, no test framework, no config file. They exist to catch the
 specific ways this repo has actually broken — not to chase coverage.
 
 ## What each one is for
@@ -23,6 +25,53 @@ specific ways this repo has actually broken — not to chase coverage.
 - Every external host in the markup is allowed by the CSP in `netlify.toml`.
 - Both compiled Tailwind files are current — it rebuilds each to a temp file
   and compares. Set `SKIP_TAILWIND_CHECK=1` to skip (it needs `npx`).
+- The checkout function sells what the shop shows. `create-checkout-session.js`
+  carries its own price list because the browser must not send prices; this
+  evaluates both and fails on an id either side lacks, a price or name that
+  disagrees, a free-shipping threshold or flat rate that differs from
+  `policy.js`, `payments.js` or the bag page, and a Stripe country list that
+  does not match `POLICY.shipsTo`. The catalogue was replaced once and the
+  function kept the eight retired products: every purchase of the new line
+  failed with "Unknown product", and no page was red.
+
+**`functions.mjs`** — the Netlify functions, called directly, no network.
+
+- `create-checkout-session`: every catalogue product prices at the shop's
+  figure under its name; retired ids, bad quantities, prices sent by the
+  browser, nonsense nonces are refused or ignored; shipping flips at the
+  threshold; US-only address collection; the nonce becomes a Stripe
+  idempotency key; a Stripe error returns Stripe's own message; the throttle
+  trips on the 16th call. The `stripe` package is replaced in the require
+  cache with a recorder.
+- `owner-auth` + `owner-session`: missing / short / wrong / right passcode;
+  the error names the deploy context (preview, branch, production); tokens
+  verify, fail under a changed passcode, and survive whitespace in the
+  variable; the throttle trips on the 11th guess.
+- `lead`: honeypot, validation, cleaning and lowercasing, the secret header,
+  and every upstream failure shape (rejected, non-JSON, unreachable, timed
+  out) as the 502 the page knows how to show. `fetch` is stubbed.
+- `throttle`: limit, per-address and per-function isolation, window expiry,
+  header fallbacks. `health`: booleans only.
+
+**`flows.mjs`** — what a customer does, in Chromium, with the functions
+stubbed at the network edge.
+
+- Product: no size, no bag; add twice makes one line at quantity 2 with the
+  badge to match; the phone bar presses the same button; favorite toggles and
+  survives a reload; title, description, og: tags and Product JSON-LD follow
+  the product; an unknown id gets the not-found state.
+- Bag: free shipping at and above the threshold, the "$X from free shipping"
+  line below it, `+` crossing the line, `−` to zero removing the line, remove
+  on one of two lines, CHECKOUT navigating.
+- Checkout: flat vs free shipping in the totals, "not connected" while keys
+  are blank, the function receives ids/sizes/quantities and a nonce but no
+  prices, an error is shown and the button restored, the same nonce is sent
+  on a retry and a new one after the bag changes, a paid return empties the
+  bag and shows the confirmation.
+- Favorites, shop (count, `?cat=`, `?q=`, no-results, sort both ways, pill
+  click updating grid, heading and URL), both forms (delivered / undeployed /
+  rejected, with what was sent), the drops page's undated state, the 404
+  search box, and a sweep for retired-collection copy on every customer page.
 
 **`media.mjs`** — the playlist and film wiring, which fails invisibly.
 
@@ -68,25 +117,33 @@ Each one is a bug that already shipped here:
 | CSP hosts | A host missing from `img-src` blocks images with **no error at all** — just a hole where the photo should be. |
 | Stale Tailwind | Tailwind is compiled, not CDN. A class added without a rebuild does nothing, silently. |
 | Player loads unasked | Inlining a Spotify or YouTube iframe instead of a click-to-load facade tracks every visitor. The page looks the same, so nothing else catches it. |
+| Checkout price drift | The catalogue was replaced; the function kept the retired products. Fifteen of sixteen pieces failed at Pay with "Unknown product", the sixteenth at the wrong price. Every page rendered. |
+| Stale heading on filter | Clicking a category pill changed the grid and left the heading on the previous category, with the URL unchanged, so reload lost the filter. |
 
 Each was verified by deliberately reintroducing the fault and confirming the
 suite goes red — the blank product page, the sideways scroll, a drifted
-Tailwind build, an off-site film URL, and a Spotify iframe inlined into the
-shop.
+Tailwind build, an off-site film URL, a Spotify iframe inlined into the
+shop, and in the checkout function a wrong price, a missing product, a
+retired product left in, Canada added back and a moved shipping threshold.
 
 ## What this does NOT cover
 
-Say this out loud before trusting it. The net covers **pages**. It does not
-cover **code that handles money or data**:
+Say this out loud before trusting it:
 
-- The 8 Netlify Functions have no tests — including `create-checkout-session`.
-- PayPal and Stripe are exercised only as far as the page rendering.
+- Stripe itself is a recorder here. A green run proves the function sends
+  Stripe the right session; it does not prove the account is live, the
+  methods are enabled or the webhook exists. The sandbox walk-through in
+  PAYMENTS-SETUP.md is still the only proof of a real payment.
+- PayPal is exercised only as far as the page rendering; its SDK loads only
+  with a client id, which is blank.
+- `chat`, `media`, `media-file`, `media-public` and `owner-orders` have no
+  direct tests. The media functions sit on Netlify Blobs; the smoke run
+  confirms the pages that call them degrade.
 - Meridian's 6 Supabase Edge Functions, 5 migrations and the CLI are untested.
-- `owner-auth` is untested; the smoke run only confirms the gate renders.
 - There is no linter.
 
-A green run means the storefront is not visibly broken. It does not mean a
-checkout succeeds.
+A green run means the storefront works end to end against a stand-in for the
+payment and CRM services. It does not mean money has moved.
 
 ## Two deliberate blind spots
 
@@ -116,7 +173,7 @@ and a green run after is the cheapest proof the move did not cost anything.
 
 ## Chromium
 
-`smoke.mjs` prefers the browser already installed at `PLAYWRIGHT_BROWSERS_PATH`
+`smoke.mjs`, `flows.mjs`, `media.mjs` and `a11y.mjs` prefer the browser already installed at `PLAYWRIGHT_BROWSERS_PATH`
 (`/opt/pw-browsers` in the cloud sandbox, where the bundled version and the one
 Playwright expects do not match) and falls back to Playwright's own download on
 a normal machine. If it cannot find either, run `npx playwright install chromium`.

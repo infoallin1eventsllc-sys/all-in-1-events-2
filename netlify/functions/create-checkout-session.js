@@ -15,17 +15,28 @@
  * Netlify environment and the `stripe` package installed.
  */
 
-// Server-side price list, in cents. Must stay in step with
-// 420-friendly/assets/products.js — that file is display only.
+// Server-side price list, in cents — the Archive V.24 line, in the order the
+// shop shows it. Must stay in step with 420-friendly/assets/products.js, which
+// is display only. `node scripts/check-refs.mjs` reads both and fails on any
+// id or price that disagrees, because the last time the catalogue changed this
+// list kept the retired products and every purchase failed as "Unknown product".
 const CATALOG = {
-  "vibrant-hoodie":       { name: "Vibrant Series Hoodie", cents: 12000 },
-  "vibrant-tee":          { name: "Vibrant Logo Tee", cents: 4500 },
-  "smoke-signal-crew":    { name: "Smoke Signal Crewneck", cents: 9500 },
-  "blazed-beanie":        { name: "Blazed Beanie", cents: 3500 },
-  "terpene-joggers":      { name: "Terpene Joggers", cents: 8500 },
-  "haze-snapback":        { name: "Haze Snapback", cents: 4000 },
-  "sesh-socks":           { name: "Sesh Socks (2-Pack)", cents: 1800 },
-  "midnight-windbreaker": { name: "Midnight Windbreaker", cents: 14000 }
+  "emerald-triangle-hoodie-black": { name: "Emerald Triangle Master Hoodie", cents: 14800 },
+  "navy-hoodie":                   { name: "Deep Navy Heavyweight Hoodie", cents: 13800 },
+  "heather-grey-hoodie":           { name: "Heather Grey Archive Hoodie", cents: 13500 },
+  "crimson-hoodie":                { name: "Crimson Red Haze Hoodie", cents: 13800 },
+  "navy-sweatpants":               { name: "Navy Blue Sativa Bottoms", cents: 11500 },
+  "black-sweatpants":              { name: "Black Emerald Triangle Sweatpants", cents: 11800 },
+  "grey-sweatpants":               { name: "Grey Emerald Triangle Pants", cents: 11500 },
+  "white-sweatpants":              { name: "White Hybrid Tour Bottoms", cents: 11500 },
+  "black-tee":                     { name: "Black Archive Graphic Tee", cents: 5800 },
+  "white-tee":                     { name: "White Clean Spec Tee", cents: 5800 },
+  "black-snapback":                { name: "Black 420 Haze Snapback", cents: 4800 },
+  "haze-snapback":                 { name: "Heather Grey Haze Snapback", cents: 4800 },
+  "crimson-snapback":              { name: "Crimson Red Haze Snapback", cents: 4800 },
+  "black-bucket-hat":              { name: "Black Haze Bucket Hat", cents: 5200 },
+  "crimson-bucket-hat":            { name: "Crimson Red Haze Bucket Hat", cents: 5200 },
+  "grey-beanie":                   { name: "Heather Grey Haze Beanie", cents: 4400 }
 };
 
 const FREE_SHIPPING_OVER_CENTS = 10000;
@@ -125,7 +136,9 @@ exports.handler = async (event) => {
               display_name: "Free shipping"
             }
           }],
-      shipping_address_collection: { allowed_countries: ["US", "CA"] },
+      // US only — the shipping page (POLICY.shipsTo) promises nothing else, and
+      // the flat rate above is a domestic rate.
+      shipping_address_collection: { allowed_countries: ["US"] },
       success_url: origin + "/420-friendly/checkout.html?paid=1&session_id={CHECKOUT_SESSION_ID}",
       cancel_url: origin + "/420-friendly/cart.html?canceled=1"
     }, nonce ? { idempotencyKey: "checkout-" + nonce } : undefined);

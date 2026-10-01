@@ -17,35 +17,36 @@
 
 // Sample orders live server-side on purpose. They were previously in a public
 // JS file; once real customer names and emails replace them, that file would
-// have been readable by anyone. Same shape as before.
+// have been readable by anyone. Names and prices are the Archive V.24 line, so
+// the portal's sample looks like the shop it fronts.
 const SAMPLE_ORDERS = [
-  { id: "420-1041", date: "2026-08-24", customer: "Marcus Webb", email: "m.webb@example.com",
-    items: [{ name: "Vibrant Series Hoodie", size: "L", qty: 1, price: 120 },
-            { name: "Sesh Socks (2-Pack)", size: "L/XL", qty: 1, price: 18 }],
-    shipping: 0, status: "paid", invoice: "INV-1041", invoiceStatus: "paid", due: "2026-08-24" },
-  { id: "420-1040", date: "2026-08-23", customer: "Dana Ruiz", email: "dana.ruiz@example.com",
-    items: [{ name: "Terpene Joggers", size: "M", qty: 1, price: 85 }],
-    shipping: 8, status: "paid", invoice: "INV-1040", invoiceStatus: "paid", due: "2026-08-23" },
-  { id: "420-1039", date: "2026-08-22", customer: "Priya Raman", email: "p.raman@example.com",
-    items: [{ name: "Midnight Windbreaker", size: "M", qty: 1, price: 140 }],
-    shipping: 0, status: "pending", invoice: "INV-1039", invoiceStatus: "open", due: "2026-09-05" },
-  { id: "420-1038", date: "2026-08-21", customer: "Alex Chen", email: "alex.chen@example.com",
-    items: [{ name: "Vibrant Logo Tee", size: "M", qty: 2, price: 45 },
-            { name: "Blazed Beanie", size: "ONE SIZE", qty: 1, price: 35 }],
-    shipping: 0, status: "paid", invoice: "INV-1038", invoiceStatus: "paid", due: "2026-08-21" },
-  { id: "420-1037", date: "2026-08-20", customer: "Jordan Blake", email: "j.blake@example.com",
-    items: [{ name: "Smoke Signal Crewneck", size: "XL", qty: 1, price: 95 }],
-    shipping: 8, status: "refunded", invoice: "INV-1037", invoiceStatus: "void", due: "2026-08-20" },
-  { id: "420-1036", date: "2026-08-19", customer: "Sam Okafor", email: "s.okafor@example.com",
-    items: [{ name: "Haze Snapback", size: "ONE SIZE", qty: 2, price: 40 }],
-    shipping: 8, status: "paid", invoice: "INV-1036", invoiceStatus: "paid", due: "2026-08-19" },
-  { id: "420-1035", date: "2026-08-18", customer: "Nina Alvarez", email: "nina.a@example.com",
-    items: [{ name: "Vibrant Series Hoodie", size: "M", qty: 1, price: 120 },
-            { name: "Terpene Joggers", size: "M", qty: 1, price: 85 }],
-    shipping: 0, status: "paid", invoice: "INV-1035", invoiceStatus: "paid", due: "2026-08-18" },
-  { id: "420-1034", date: "2026-08-16", customer: "Tomas Lind", email: "t.lind@example.com",
-    items: [{ name: "Vibrant Logo Tee", size: "L", qty: 1, price: 45 }],
-    shipping: 8, status: "pending", invoice: "INV-1034", invoiceStatus: "overdue", due: "2026-08-23" }
+  { id: "420-1041", date: "2026-09-24", customer: "Marcus Webb", email: "m.webb@example.com",
+    items: [{ name: "Emerald Triangle Master Hoodie", size: "L", qty: 1, price: 148 },
+            { name: "Heather Grey Haze Beanie", size: "ONE SIZE", qty: 1, price: 44 }],
+    shipping: 0, status: "paid", invoice: "INV-1041", invoiceStatus: "paid", due: "2026-09-24" },
+  { id: "420-1040", date: "2026-09-23", customer: "Dana Ruiz", email: "dana.ruiz@example.com",
+    items: [{ name: "Black Archive Graphic Tee", size: "M", qty: 1, price: 58 }],
+    shipping: 8, status: "paid", invoice: "INV-1040", invoiceStatus: "paid", due: "2026-09-23" },
+  { id: "420-1039", date: "2026-09-22", customer: "Priya Raman", email: "p.raman@example.com",
+    items: [{ name: "Crimson Red Haze Hoodie", size: "M", qty: 1, price: 138 }],
+    shipping: 0, status: "pending", invoice: "INV-1039", invoiceStatus: "open", due: "2026-10-05" },
+  { id: "420-1038", date: "2026-09-21", customer: "Alex Chen", email: "alex.chen@example.com",
+    items: [{ name: "White Clean Spec Tee", size: "M", qty: 2, price: 58 },
+            { name: "Black 420 Haze Snapback", size: "ONE SIZE", qty: 1, price: 48 }],
+    shipping: 0, status: "paid", invoice: "INV-1038", invoiceStatus: "paid", due: "2026-09-21" },
+  { id: "420-1037", date: "2026-09-20", customer: "Jordan Blake", email: "j.blake@example.com",
+    items: [{ name: "Navy Blue Sativa Bottoms", size: "XL", qty: 1, price: 115 }],
+    shipping: 0, status: "refunded", invoice: "INV-1037", invoiceStatus: "void", due: "2026-09-20" },
+  { id: "420-1036", date: "2026-09-19", customer: "Sam Okafor", email: "s.okafor@example.com",
+    items: [{ name: "Heather Grey Haze Snapback", size: "ONE SIZE", qty: 2, price: 48 }],
+    shipping: 8, status: "paid", invoice: "INV-1036", invoiceStatus: "paid", due: "2026-09-19" },
+  { id: "420-1035", date: "2026-09-18", customer: "Nina Alvarez", email: "nina.a@example.com",
+    items: [{ name: "Heather Grey Archive Hoodie", size: "M", qty: 1, price: 135 },
+            { name: "Grey Emerald Triangle Pants", size: "M", qty: 1, price: 115 }],
+    shipping: 0, status: "paid", invoice: "INV-1035", invoiceStatus: "paid", due: "2026-09-18" },
+  { id: "420-1034", date: "2026-09-16", customer: "Tomas Lind", email: "t.lind@example.com",
+    items: [{ name: "Crimson Red Haze Bucket Hat", size: "ONE SIZE", qty: 1, price: 52 }],
+    shipping: 8, status: "pending", invoice: "INV-1034", invoiceStatus: "overdue", due: "2026-09-23" }
 ];
 
 const REQUIRED_ROLE = process.env.OWNER_ROLE || "owner";

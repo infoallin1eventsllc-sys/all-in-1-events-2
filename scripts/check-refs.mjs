@@ -10,6 +10,9 @@
 //   3. An external host used in the markup but missing from the CSP. The
 //      browser then blocks it **silently** — no error, just a hole where the
 //      image should be.
+//   4. The checkout function's price list disagreeing with the shop. The
+//      catalogue was replaced once and the function kept the old one: every
+//      purchase failed with "Unknown product", and nothing on the page was red.
 //
 //   node scripts/check-refs.mjs
 
@@ -35,14 +38,30 @@ const HTML = ALL.filter((f) => f.endsWith(".html") && !f.endsWith(".artifact.htm
 const JS = ALL.filter((f) => /\.(js|mjs)$/.test(f) && !f.includes("/scripts/"));
 
 /* ---------- the catalogue, evaluated rather than regexed ---------- */
+let CATALOG = null;
 let CATALOG_IDS = null;
 const productsFile = path.join(ROOT, "420-friendly/assets/products.js");
 if (fs.existsSync(productsFile)) {
   try {
     const src = fs.readFileSync(productsFile, "utf8");
-    CATALOG_IDS = new Set(new Function(`${src}\nreturn CATALOG.map(p => p.id);`)());
+    CATALOG = new Function(`${src}\nreturn CATALOG;`)();
+    CATALOG_IDS = new Set(CATALOG.map((p) => p.id));
   } catch (err) {
     console.error(`! could not read the catalogue: ${err.message}`);
+  }
+}
+
+// Evaluate a browser config file (policy.js, payments.js) and return one of
+// its top-level constants. Returns null, with a note, if the file cannot run
+// outside a browser — the check then skips rather than failing on itself.
+function browserConst(relFile, name) {
+  const file = path.join(ROOT, relFile);
+  if (!fs.existsSync(file)) return null;
+  try {
+    return new Function(`${fs.readFileSync(file, "utf8")}\nreturn ${name};`)();
+  } catch (err) {
+    console.error(`! could not read ${name} from ${relFile}: ${err.message}`);
+    return null;
   }
 }
 
@@ -174,6 +193,66 @@ for (const file of HTML) {
   if (!noindex && !hasDesc) add(file, "seo", "no meta description, and not marked noindex");
 }
 
+/* ---------- the checkout function sells the same catalogue ----------
+   The shop shows products.js; the Netlify function prices from its own list,
+   because the browser is untrusted and must not send prices. Two lists, so
+   they drift: when the catalogue was replaced the function kept the eight
+   retired products, and every purchase of the new line failed with "Unknown
+   product" — a 200 everywhere a link checker looks. This reads both and
+   fails on an id either side lacks, a price that disagrees, or a shipping
+   rule that differs from what the policy and bag pages promise. */
+const checkoutFile = path.join(ROOT, "netlify/functions/create-checkout-session.js");
+if (CATALOG && fs.existsSync(checkoutFile)) {
+  const src = fs.readFileSync(checkoutFile, "utf8");
+  const m = src.match(/const CATALOG = (\{[\s\S]*?\n\});/);
+  let server = null;
+  try { server = m && new Function(`return ${m[1]};`)(); }
+  catch (err) { console.error(`! could not read the checkout price list: ${err.message}`); }
+
+  if (!server) {
+    add(checkoutFile, "price", "could not find `const CATALOG = {…};` — the price check is switched off");
+  } else {
+    for (const p of CATALOG) {
+      const s = server[p.id];
+      if (!s) add(checkoutFile, "price", `${p.id} is in the shop but not in the checkout function — every purchase of it fails`);
+      else if (s.cents !== Math.round(p.price * 100)) add(checkoutFile, "price", `${p.id}: the shop shows $${p.price}, checkout charges $${(s.cents / 100).toFixed(2)}`);
+      else if (s.name !== p.name) add(checkoutFile, "price", `${p.id}: named "${p.name}" in the shop, "${s.name}" on the Stripe receipt`);
+    }
+    for (const id of Object.keys(server)) {
+      if (!CATALOG_IDS.has(id)) add(checkoutFile, "price", `${id} is in the checkout function but no longer in the shop`);
+    }
+  }
+
+  // Shipping: one rule, promised in four places. The function is authoritative.
+  const free = Number((src.match(/FREE_SHIPPING_OVER_CENTS = (\d+)/) || [])[1]);
+  const flat = Number((src.match(/FLAT_SHIPPING_CENTS = (\d+)/) || [])[1]);
+  const policy = browserConst("420-friendly/assets/policy.js", "POLICY");
+  const payments = browserConst("420-friendly/assets/payments.js", "PAYMENTS");
+  const cartSrc = fs.readFileSync(path.join(ROOT, "420-friendly/cart.html"), "utf8");
+  const cartFree = Number((cartSrc.match(/FREE_SHIP_AT = (\d+)/) || [])[1]);
+  const promised = [
+    ["420-friendly/assets/policy.js  POLICY.freeShippingOver", policy && policy.freeShippingOver],
+    ["420-friendly/assets/payments.js  PAYMENTS.freeShippingOver", payments && payments.freeShippingOver],
+    ["420-friendly/cart.html  FREE_SHIP_AT", cartFree],
+  ];
+  for (const [where, dollars] of promised) {
+    if (typeof dollars === "number" && dollars * 100 !== free) {
+      add(checkoutFile, "price", `free shipping from $${free / 100} here, but ${where} says $${dollars}`);
+    }
+  }
+  if (payments && typeof payments.flatShipping === "number" && payments.flatShipping * 100 !== flat) {
+    add(checkoutFile, "price", `flat shipping $${flat / 100} here, but PAYMENTS.flatShipping says $${payments.flatShipping}`);
+  }
+  if (policy && typeof policy.shipsTo === "string") {
+    const countries = (src.match(/allowed_countries: \[([^\]]*)\]/) || [])[1] || "";
+    const list = [...countries.matchAll(/"([A-Z]{2})"/g)].map((x) => x[1]);
+    const usOnly = /^united states$/i.test(policy.shipsTo.trim()) || /^us$/i.test(policy.shipsTo.trim());
+    if (usOnly && (list.length !== 1 || list[0] !== "US")) {
+      add(checkoutFile, "price", `Stripe collects addresses for ${list.join(", ") || "nothing"}, but POLICY.shipsTo says "${policy.shipsTo}"`);
+    }
+  }
+}
+
 /* ---------- external asset hosts referenced from JS ---------- */
 for (const file of JS) {
   const src = fs.readFileSync(file, "utf8");
@@ -231,6 +310,7 @@ const LABEL = {
   tailwind: "Stale Tailwind build — new classes silently do nothing",
   missing: "Broken reference — the file is not there",
   product: "Dead product id — nothing in the catalogue matches",
+  price: "Checkout disagrees with the shop — purchases fail or charge the wrong amount",
   csp: "Blocked by CSP — the browser will drop this silently",
 };
 
@@ -241,7 +321,7 @@ if (!problems.length) {
   console.log("  no broken references\n");
   process.exit(0);
 }
-for (const kind of ["tailwind", "missing", "product", "csp", "seo"]) {
+for (const kind of ["price", "tailwind", "missing", "product", "csp", "seo"]) {
   const group = problems.filter((p) => p.kind === kind);
   if (!group.length) continue;
   console.log(`  ${LABEL[kind]}  (${group.length})`);

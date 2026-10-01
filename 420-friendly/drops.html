@@ -34,22 +34,27 @@
     </h1>
   </section>
 
-  <!-- Next drop countdown -->
+  <!-- Next drop.
+       To announce a date, put it in data-drop-at as an ISO timestamp WITH its
+       UTC offset, e.g. "2026-11-20T16:20:00-08:00" — the countdown then runs
+       in every visitor's local time and flips to "Drop is live" at zero. Left
+       empty, the panel says the date is to be announced rather than inventing
+       one. Put the drop's name in data-drop-name. -->
   <section class="reveal ambient-glow rounded-2xl bg-surface-container-low/80 panel panel--quiet md:p-10 mt-4">
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-8">
       <div>
-        <p class="font-label-caps text-label-caps text-secondary mb-3">NEXT DROP — SMOKE SIGNAL PACK</p>
+        <p class="font-label-caps text-label-caps text-secondary mb-3">NEXT DROP</p>
         <p class="font-body-md text-body-md text-on-surface-variant max-w-md">
-          The Midnight Windbreaker ships alongside restock-proof colorways of the Smoke Signal Crewneck. Pre-order the windbreaker now — everything else goes live at the timer.
+          Archive V.24 is live now. The next release has no date yet &mdash; when it does, it appears here first, and the list hears 24 hours before anyone else.
         </p>
       </div>
-      <div id="countdown" class="grid grid-cols-4 gap-3 md:gap-4" data-drop-at="2026-09-18T16:20:00-07:00">
+      <div id="countdown" class="grid grid-cols-4 gap-3 md:gap-4" data-drop-at="" data-drop-name="">
         <!-- filled by script -->
       </div>
     </div>
-    <a href="product.html?id=emerald-triangle-hoodie-black" class="inline-flex items-center gap-2 mt-8 rounded-full bg-primary text-on-primary py-4 px-8 font-label-caps text-label-caps hover:bg-inverse-surface transition-all duration-300">
-      PRE-ORDER THE WINDBREAKER
-      <span class="material-symbols-outlined text-[16px]">bolt</span>
+    <a href="shop.html" class="inline-flex items-center gap-2 mt-8 rounded-full bg-primary text-on-primary py-4 px-8 font-label-caps text-label-caps hover:bg-inverse-surface transition-all duration-300">
+      SHOP THE ARCHIVE
+      <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
     </a>
   </section>
 
@@ -59,8 +64,8 @@
     <div class="divide-y divide-outline-variant/50 border-y border-outline-variant/50">
       <div class="py-6 flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <p class="font-label-caps text-label-caps text-on-surface">VIBRANT SERIES</p>
-          <p class="font-body-md text-body-md text-on-surface-variant mt-1">Hoodie, tee, joggers, snapback — the launch drop.</p>
+          <p class="font-label-caps text-label-caps text-on-surface">ARCHIVE V.24</p>
+          <p class="font-body-md text-body-md text-on-surface-variant mt-1">Sixteen pieces &mdash; four hoodies, four sweatpants, two tees, six pieces of headwear. Small runs, no restocks.</p>
         </div>
         <span class="font-label-caps text-label-caps text-tertiary flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>LIVE NOW
@@ -68,21 +73,14 @@
       </div>
       <div class="py-6 flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <p class="font-label-caps text-label-caps text-on-surface">SMOKE SIGNAL PACK</p>
-          <p class="font-body-md text-body-md text-on-surface-variant mt-1">Windbreaker + crewneck colorways. Pre-orders open.</p>
+          <p class="font-label-caps text-label-caps text-on-surface">NEXT DROP</p>
+          <p class="font-body-md text-body-md text-on-surface-variant mt-1">Details go to the list first.</p>
         </div>
-        <span class="font-label-caps text-label-caps text-secondary">SEP 18 — 4:20 PM PT</span>
-      </div>
-      <div class="py-6 flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div>
-          <p class="font-label-caps text-label-caps text-on-surface">HARVEST CAPSULE</p>
-          <p class="font-body-md text-body-md text-on-surface-variant mt-1">Fall weights. Details go to the list first.</p>
-        </div>
-        <span class="font-label-caps text-label-caps text-outline">OCT — TBA</span>
+        <span class="font-label-caps text-label-caps text-outline">DATE TBA</span>
       </div>
     </div>
     <p class="font-body-md text-body-md text-on-surface-variant mt-8">
-      Want first access? <a href="members.html" class="text-secondary underline decoration-1 underline-offset-4 hover:text-tertiary transition-colors">Join the list</a> — members see every drop 24 hours early.
+      Want first access? <a href="members.html" class="text-secondary underline decoration-1 underline-offset-4 hover:text-tertiary transition-colors">Join the list</a> &mdash; members see every drop 24 hours early.
     </p>
   </section>
 </main>
@@ -97,7 +95,9 @@
   renderChrome("DROPS");
 
   const countdownEl = document.getElementById("countdown");
-  const dropAt = new Date(countdownEl.dataset.dropAt).getTime();
+  const dropAtRaw = (countdownEl.dataset.dropAt || "").trim();
+  const dropAt = dropAtRaw ? new Date(dropAtRaw).getTime() : NaN;
+  const dropName = (countdownEl.dataset.dropName || "").trim();
 
   function cell(value, label) {
     return (
@@ -107,12 +107,27 @@
     );
   }
 
+  function banner(headline, note) {
+    return (
+      '<div class="col-span-4">' +
+      '<div class="font-headline-md text-headline-md text-tertiary uppercase">' + esc(headline) + "</div>" +
+      (note ? '<p class="font-body-md text-[13px] text-on-surface-variant mt-2">' + esc(note) + "</p>" : "") +
+      "</div>"
+    );
+  }
+
+  // Returns true while there is still something to count down to.
   function tick() {
+    if (!Number.isFinite(dropAt)) {
+      // No date set (or an unreadable one): say so, rather than a countdown
+      // frozen at NaN or a timer to a date nobody chose.
+      countdownEl.innerHTML = banner("Date TBA", "Members hear first.");
+      return false;
+    }
     const diff = dropAt - Date.now();
     if (diff <= 0) {
-      countdownEl.innerHTML =
-        '<div class="col-span-4 font-headline-md text-headline-md text-tertiary uppercase">Drop is live.</div>';
-      return;
+      countdownEl.innerHTML = banner(dropName ? dropName + " is live." : "Drop is live.");
+      return false;
     }
     const d = Math.floor(diff / 86400000);
     const h = Math.floor((diff % 86400000) / 3600000);
@@ -121,10 +136,12 @@
     const pad = (n) => String(n).padStart(2, "0");
     countdownEl.innerHTML =
       cell(pad(d), "DAYS") + cell(pad(h), "HRS") + cell(pad(m), "MIN") + cell(pad(s), "SEC");
+    return true;
   }
 
-  tick();
-  setInterval(tick, 1000);
+  if (tick()) {
+    const timer = setInterval(() => { if (!tick()) clearInterval(timer); }, 1000);
+  }
 </script>
 </body>
 </html>

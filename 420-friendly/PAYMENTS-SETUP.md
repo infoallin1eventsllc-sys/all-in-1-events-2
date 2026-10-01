@@ -66,8 +66,12 @@ any CVC. Place a full order end to end before switching to live keys.
 - **Prices are duplicated.** `netlify/functions/create-checkout-session.js`
   holds its own price list, deliberately: the browser is untrusted, and if the
   client sent prices a customer could edit them to $0. It means changing a price
-  requires editing **both** that function and `assets/products.js`. Wire both to
-  one source when there's a real backend.
+  requires editing **both** that function and `assets/products.js`. Forgetting
+  the function is not silent any more: `npm run test:refs` fails on any id or
+  price the two disagree on, and `npm run test:functions` buys every product
+  through the function against a stand-in Stripe. (Both caught the last drift,
+  which had every purchase failing as "Unknown product".) Wire both to one
+  source when there's a real backend.
 - **Orders don't reach the owner portal.** The portal reads sample data. Real
   orders arrive via a Stripe webhook, which needs somewhere to store them.
 - **Stock isn't tracked.** Nothing decrements on sale, so a limited drop can

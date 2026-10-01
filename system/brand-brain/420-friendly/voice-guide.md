@@ -25,8 +25,8 @@ Avoid: "elevate", "curated", "premium", "luxury", "must-have", "game-changer",
 
 Lead with the thing. Explain after, if at all.
 
-- Good: "Vibrant Series is live. 450gsm fleece, four pieces, no restock."
-- Bad: "We're so excited to finally announce that our brand new Vibrant Series
+- Good: "Archive V.24 is live. 450gsm fleece, sixteen pieces, no restock."
+- Bad: "We're so excited to finally announce that our brand new Archive V.24
   collection has officially dropped!"
 
 Exclamation marks: essentially never. The brand does not shout.

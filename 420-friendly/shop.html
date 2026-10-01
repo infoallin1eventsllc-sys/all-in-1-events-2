@@ -90,11 +90,17 @@
     sort: "featured"
   };
 
-  if (query) {
-    document.getElementById("plp-title").textContent = 'Results for "' + query + '"';
-  } else if (state.cat !== "ALL") {
-    document.getElementById("plp-title").textContent = state.cat;
+  // The heading follows the filter. It used to be set once from the URL, so a
+  // pill or rail click changed the grid and left the heading on the old
+  // category; the URL is kept in step too, so reload and back land here.
+  const titleEl = document.getElementById("plp-title");
+  const defaultTitle = titleEl.textContent;
+  function syncTitle() {
+    titleEl.textContent = query
+      ? 'Results for "' + query + '"'
+      : state.cat === "ALL" ? defaultTitle : state.cat;
   }
+  syncTitle();
 
   function visibleProducts() {
     let items = state.cat === "ALL" ? [...CATALOG] : CATALOG.filter((p) => p.category === state.cat);
@@ -120,6 +126,11 @@
     document.querySelectorAll("[data-cat]").forEach((btn) =>
       btn.addEventListener("click", () => {
         state.cat = btn.dataset.cat;
+        const url = new URL(location.href);
+        if (state.cat === "ALL") url.searchParams.delete("cat");
+        else url.searchParams.set("cat", state.cat);
+        history.replaceState(null, "", url);
+        syncTitle();
         renderCats();
         renderGrid();
       })

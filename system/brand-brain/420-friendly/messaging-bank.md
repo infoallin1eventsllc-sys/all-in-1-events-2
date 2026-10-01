@@ -18,7 +18,7 @@ same thing — repetition is what makes a brand voice recognisable.
 
 ## Drops
 
-- Vibrant Series — live now.
+- Archive V.24 — live now.
 - Next drop: [name]. [date] at 4:20 PM PT.
 - Pre-order open. Ships with the drop.
 

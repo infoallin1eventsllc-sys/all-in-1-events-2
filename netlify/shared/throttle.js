@@ -42,10 +42,15 @@ function throttled(event, { limit, windowMs, name }) {
   const ip = clientIp(event);
   const now = Date.now();
 
-  let b = buckets.get(ip);
+  // Keyed by function AND address. On Netlify each function is its own bundle
+  // with its own copy of this map, so the name changes nothing there; under
+  // `netlify dev` and in the test harness every function shares one process,
+  // and without it ten lead submissions would count against the checkout limit.
+  const key = name + "|" + ip;
+  let b = buckets.get(key);
   if (!b || now > b.reset) {
     b = { count: 0, reset: now + windowMs };
-    buckets.set(ip, b);
+    buckets.set(key, b);
   }
   b.count += 1;
 

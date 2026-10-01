@@ -23,6 +23,14 @@ jobs:
       - name: References
         run: node scripts/check-refs.mjs
 
+      # The Netlify functions, called directly with Stripe and the CRM stubbed.
+      - name: Functions
+        run: node scripts/functions.mjs
+
       - run: npx playwright install --with-deps chromium
       - name: Smoke
         run: node scripts/smoke.mjs
+      - name: Flows
+        run: node scripts/flows.mjs
+      - name: Media
+        run: node scripts/media.mjs

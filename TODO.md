@@ -21,6 +21,24 @@ values, Netlify firewall rate limiting, an Anthropic spend cap, an uptime
 monitor, Supabase backups, the processors' acceptable-use pages, and the
 analytics decision (the privacy page promises no trackers).
 
+## Feature debug — 1 Oct, after the audit
+
+Every feature exercised, not read. The big one: **checkout could not sell
+the current line** — the function's price list was still the retired eight
+products, so 15 of 16 pieces failed at Pay with "Unknown product" and the
+sixteenth was priced wrong. Fixed, plus: Canada removed from Stripe's
+address list (policy says US only), the drops page rewritten off the retired
+collection with an honestly undated next drop, VIBRANT SERIES → ARCHIVE V.24
+on the homepage, the shop heading and URL following category clicks, the
+portal's sample orders on current products, the throttle keyed per function.
+Section 5 of `420-friendly/LAUNCH-AUDIT.md` has the table.
+
+Two new suites in `npm test` and CI: `scripts/functions.mjs` (the Netlify
+functions, Stripe and CRM stubbed, 39 checks) and `scripts/flows.mjs` (the
+customer paths in Chromium, 30 checks). `check-refs` now fails when the
+checkout function and `products.js` disagree on anything. Still unproven,
+because it needs Otis's account: a real Stripe test payment.
+
 ## The one thing blocking everything
 
 **PR #3 has never been merged.** `main` has none of it — not the storefront,
@@ -136,7 +154,10 @@ is not visibly broken. It does not mean a checkout succeeds.
 - `vercel.json` points at a `vercel/api/` directory that does not exist, next to
   a live `netlify.toml`. Delete it or fill it in.
 - No linter. The fake `lint` script was removed rather than replaced.
-- Stock tracking; retail order storage; rate-limit the chat endpoint.
+- Stock tracking; retail order storage. (Chat is throttled at 20/min per
+  address; the hard ceiling is Netlify's firewall, which is Otis's.)
+- Direct tests for `chat`, the three `media*` functions and `owner-orders`;
+  the other four functions and the throttle are covered by `functions.mjs`.
 - Port `photos.html`; recover `owner` / `analyze` / `cardspike`.
 - Clear 15 junk drafts.
 - Split the repo per-business **after** the merge. Run `npm test` before and
