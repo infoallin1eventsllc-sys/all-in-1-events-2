@@ -156,10 +156,17 @@ Adjust cadence with `cron.schedule('marketing-orchestrator', '<cron>', ...)`.
 ## Redeploying functions
 
 Functions were deployed via the Supabase MCP tools. To redeploy from source with
-the Supabase CLI:
+the Supabase CLI, run it **from this `system/` folder**:
 
 ```bash
+cd system
 supabase functions deploy orchestrator runner intake report --project-ref glzodwhyavexpuusbqjy
 ```
+
+`supabase/config.toml` pins `verify_jwt` for every function to what is live.
+Run from anywhere else and the CLI cannot see it, so it deploys every function
+with `verify_jwt = true`, and the public ones (intake, owner, leads, pay,
+pay-webhook, site-images, unsubscribe, planner, dashboard) start refusing the
+website. Adding a function means adding its `[functions.<name>]` block there.
 
 (The `_shared/` folder is imported by each function via `../_shared/...`.)

@@ -4,6 +4,60 @@ Compact record of what was built and the current state, so work can resume later
 
 ---
 
+## Oct 1 — full debug pass ("make sure every feature is working")
+
+Checked everything; found and fixed eight things. Nothing found was broken
+for clients in a way that lost data.
+
+**Static.** `deno check` on all 18 functions: three failed and are fixed
+(backend 5a74f57). mailcheck imported `./_shared` (does not exist; it could
+not be redeployed from the repo), media's sha256 was rejected by newer
+TypeScript, ChannelConfig lacked `clipkit_music_seconds` the runner reads.
+`deno lint`: nothing real (one deliberate control-character regex in intake).
+Website: tsc clean; there is no ESLint config in that repo.
+
+**Deploy safety.** Added `system/supabase/config.toml` (5a74f57) pinning
+verify_jwt per function to what is live. Without it the CLI deploys every
+function with verify_jwt on, which would have broken intake, owner, leads,
+pay, pay-webhook, site-images, unsubscribe, planner and dashboard on the
+first `supabase functions deploy`. Deploy from `system/`. README updated.
+
+**Live backend.** 13 cron jobs, 0 failures in 24 h. ~1,700 function calls,
+no 5xx. The 404s are security-watch calling the not-yet-deployed
+security-agent (expected). One pg_net 5 s timeout was the runner finishing in
+5.9 s with a 200, harmless. Open alert: only `approval_backlog` (10 drafts
+waiting since Sep 02). The two prune jobs are not duplicates (one prunes
+owner_login_attempts at 30 days, the other security_events at 90). Security
+advisor: 25 "RLS on, no policy" notes, which is the deny-by-default design.
+Performance advisor: 5 unindexed foreign keys, fixed by migration
+**0041_fk_indexes (applied)**.
+
+**Website (7a9d293, live).** Playwright over every tab, footer link, hero
+frame, FAQ item, search, all 10 portfolio concepts and all 10 demos, desktop
+and phone; axe WCAG A/AA on every main page.
+- All three booking forms defaulted to **5 Aug 2026** (already past). Now the
+  next weekday, with past days blocked. Dates use the local calendar
+  (`src/lib/dates.ts`); `toISOString()` gave tomorrow's date every Houston
+  evening, which also skewed invoice issue/due dates.
+- The studio portal said "Set a passcode" whenever the server was
+  unreachable, which would send Otis changing a secret that works. Now it
+  says it can't reach the server, with Try again.
+- Owner portal is lazy-loaded: main bundle 623 KB -> 445 KB for visitors.
+- One contrast failure on the portal gate, fixed. Big Boy Subs and Fog City
+  demos now declare an icon (each visit 404'd on /favicon.ico).
+- Note: the sandbox browser cannot reach meridianinterface.com, so the sweep
+  ran on a local production build of the same commit.
+
+**For Otis to decide (not changed):**
+- Booking time slots are labelled "EST". The studio is in Houston (Central),
+  and in October Eastern is EDT. Pick "CT" or "ET" and they'll be relabelled.
+- Orphan functions `keycheck` and `cardspike` are live but not in the repo:
+  `supabase functions delete keycheck cardspike --project-ref glzodwhyavexpuusbqjy`.
+- 10 marketing drafts waiting on approval since Sep 02.
+- Still waiting: the deploy above, two-step on, off-site backup.
+
+---
+
 ## Sep 30 (evening) — security system: two-step sign-in and security agents
 
 Otis asked for "an agent security system ... that would alert me if someone
@@ -42,8 +96,9 @@ Correction to the Sep 30 audit: backups DO exist. `crm-snapshot` (0028)
 copies the CRM nightly into backup.snapshots and keeps 30 days. What is
 missing is an OFF-SITE copy; those snapshots vanish with the project.
 
-**DEPLOY (Otis, from the repo on the Mac):**
-    supabase functions deploy owner leads pay site-images security-agent orchestrator runner report planner
+**DEPLOY (Otis, from the repo on the Mac, inside `system/`):**
+    cd system
+    supabase functions deploy owner leads pay site-images security-agent orchestrator runner report planner --project-ref glzodwhyavexpuusbqjy
 The last four pick up the 90 s Claude deadline. Nobody is signed out by the
 deploy (old tokens are epoch 0). After it, the agents start on their own.
 
