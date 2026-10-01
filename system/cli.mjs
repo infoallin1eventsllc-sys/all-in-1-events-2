@@ -55,8 +55,11 @@ async function patch(pathq, body) {
   if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
   return r.json();
 }
-async function post(pathq, body) {
-  const r = await fetch(rest(pathq), { method: "POST", headers: { ...authHeaders, Prefer: "return=representation" }, body: JSON.stringify(body) });
+async function post(pathq, body, extraHeaders = {}) {
+  // extraHeaders exists for PostgREST's `Prefer: resolution=merge-duplicates`,
+  // which is what turns an insert into an upsert. Without it, re-syncing the
+  // brand brain would fail on the primary key rather than update in place.
+  const r = await fetch(rest(pathq), { method: "POST", headers: { ...authHeaders, Prefer: "return=representation", ...extraHeaders }, body: JSON.stringify(body) });
   if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
   return r.json();
 }
@@ -165,6 +168,96 @@ const cmds = {
     console.log(`✓ queued ${msg.channel} for send: ${id}  (run \`node cli.mjs run\` to dispatch)`);
   },
 
+
+  /* Push system/brand-brain/<brand>/*.md into the brand_brain table.
+   *
+   * The edge functions run in Supabase and cannot read this repo, so the
+   * database is the live copy and these files are only the authoring source.
+   * Editing Markdown changes nothing until this runs — the single most
+   * confusing thing about the setup, so it is stated in the output too. */
+  async ["brand-sync"](args) {
+    const root = path.join(here, "brand-brain");
+    const only = args.find((a) => !a.startsWith("-"));
+    const DOCS = ["voice-guide", "positioning", "messaging-bank", "tone-rules"];
+
+    if (!fs.existsSync(root)) return console.error(`no brand-brain/ at ${root}`);
+
+    const brands = fs.readdirSync(root, { withFileTypes: true })
+      .filter((d) => d.isDirectory() && !d.name.startsWith("_"))
+      .map((d) => d.name)
+      .filter((b) => !only || b === only);
+
+    if (!brands.length) return console.error(only ? `no brand "${only}"` : "no brands found");
+
+    heading("Brand sync");
+    for (const brand of brands) {
+      for (const doc of DOCS) {
+        const file = path.join(root, brand, `${doc}.md`);
+        if (!fs.existsSync(file)) { console.log(`  –  ${brand}/${doc}  (no file)`); continue; }
+        const content = fs.readFileSync(file, "utf8").trim();
+        if (!content) { console.log(`  –  ${brand}/${doc}  (empty)`); continue; }
+        // Upsert on the composite key so re-running is safe and idempotent.
+        // updated_at is sent explicitly — there is no trigger on this table, so
+        // an upsert that only changed `content` would keep a stale timestamp.
+        await post("brand_brain?on_conflict=brand,doc",
+                   { brand, doc, content, updated_at: new Date().toISOString() },
+                   { Prefer: "resolution=merge-duplicates,return=minimal" });
+        console.log(`  ✓  ${brand}/${doc}  ${content.length} chars`);
+      }
+    }
+    const [profile] = await get("settings?select=value&key=eq.business_profile");
+    const active = profile?.value?.brand ?? "(none set)";
+    console.log(`\nActive brand: ${active}`);
+    console.log("Drafts use this from the next run — nothing to redeploy.");
+  },
+
+  /* Show what the agent is actually writing from right now. Reads the database,
+   * not the files, because that is what the functions see. */
+  async brand() {
+    const [profile] = await get("settings?select=value&key=eq.business_profile");
+    const active = profile?.value?.brand ?? "";
+    heading("Brand brain (live, from the database)");
+    if (!active) {
+      console.log("No active brand set on settings.business_profile.brand.");
+      console.log("Drafts fall back to the old one-line voice hint.");
+      return;
+    }
+    const rows = await get(`brand_brain?select=doc,content,updated_at&brand=eq.${encodeURIComponent(active)}`);
+    console.log(`Active brand: ${active}`);
+    if (!rows.length) {
+      console.log("Nothing synced yet — run `node cli.mjs brand-sync`.");
+      return;
+    }
+    for (const r of rows) {
+      const first = (r.content || "").split("\n").find((l) => l.trim() && !l.startsWith("#")) ?? "";
+      console.log(`\n  ${r.doc}  (${r.content.length} chars, updated ${String(r.updated_at).slice(0, 10)})`);
+      console.log(`    ${first.slice(0, 90)}`);
+    }
+  },
+
+  /* The department inventory: what each part of the operation is covered by,
+   * and what a gap would cost to close. */
+  async departments() {
+    const [depts, channels] = await Promise.all([
+      get("departments?select=key,label,purpose&order=sort_order"),
+      get("channels?select=key,label,department,status,cost_note"),
+    ]);
+    heading("Departments");
+    for (const d of depts) {
+      const mine = channels.filter((c) => c.department === d.key);
+      const live = mine.filter((c) => c.status === "live").length;
+      console.log(`\n${d.label}  —  ${live}/${mine.length} live`);
+      console.log(`  ${d.purpose}`);
+      for (const c of mine) {
+        const mark = c.status === "live" ? "✓" : "·";
+        const cost = c.cost_note ? `  [${c.cost_note}]` : "";
+        console.log(`   ${mark} ${c.label}${cost}`);
+      }
+    }
+    const orphan = channels.filter((c) => !c.department);
+    if (orphan.length) console.log(`\nUnassigned: ${orphan.map((c) => c.key).join(", ")}`);
+  },
+
   async report() {
     heading("Weekly owner summary");
     const { json } = await invoke("report");
@@ -185,6 +278,7 @@ function tally(rows, key) {
 const [, , cmd, ...rest_args] = process.argv;
 if (!cmd || !cmds[cmd]) {
   console.log("Commands: status | lead | plan | run | loop | content | approve | messages | send | report");
+  console.log("          brand | brand-sync [brand] | departments");
   process.exit(cmd ? 1 : 0);
 }
 cmds[cmd](rest_args).catch((e) => { console.error("Error:", e.message); process.exit(1); });

@@ -7,61 +7,23 @@
   <title>All in 1 Events | Services & Products</title>
 
   <!-- Tailwind CSS (CDN, production uses purged build) -->
-  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600&family=Sora:wght@600;700&display=swap" rel="stylesheet"/>
-
-  <!-- Tailwind config (inline for simplicity; can be extracted to tailwind.config.js for larger projects) -->
-  <script id="tailwind-config">
-    tailwind.config = {
-      darkMode: "class",
-      theme: {
-        extend: {
-          colors: {
-            "surface-container": "#1e2024",
-            "surface-container-highest": "#333539",
-            "tertiary": "#ffb1c3",
-            "surface-bright": "#37393e",
-            "primary": "#ecb2ff",
-            "secondary-container": "#00eefc",
-            "surface-container-low": "#1a1c20",
-            "on-primary": "#520071",
-            "on-surface-variant": "#d4c0d7",
-            "on-surface": "#e2e2e8",
-            "primary-container": "#bd00ff",
-            "secondary-fixed": "#7df4ff",
-            "outline": "#9d8ba0",
-            "outline-variant": "#514255",
-            "error": "#ffb4ab",
-            "background": "#111317",
-            "on-background": "#e2e2e8",
-            "surface": "#111317",
-            "secondary": "#d3fbff",
-            "surface-container-high": "#282a2e",
-            "surface-container-lowest": "#0c0e12",
-            "tertiary-container": "#e7006e"
-          },
-          borderRadius: { DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px" },
-          spacing: { "margin-mobile": "16px", "gutter": "24px", "margin-desktop": "64px", "container-max-width": "1280px" },
-          fontFamily: { "body-md": ["Plus Jakarta Sans"], "headline-lg": ["Sora"], "headline-xl": ["Sora"], "label-sm": ["Plus Jakarta Sans"] },
-          fontSize: {
-            "body-md": ["16px", { lineHeight: "24px", fontWeight: "400" }],
-            "headline-lg": ["32px", { lineHeight: "40px", fontWeight: "600" }],
-            "headline-xl": ["48px", { lineHeight: "56px", letterSpacing: "-0.02em", fontWeight: "700" }],
-            "label-sm": ["12px", { lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "600" }]
-          }
-        }
-      }
-    };
-  </script>
+  <!-- Compiled Tailwind. Was the CDN build, which compiles in the browser on
+       every page load: Tailwind's own docs call that development-only, and it
+       meant the page shipped unstyled until a third-party script downloaded and
+       ran — raw HTML for anyone on a network that blocks the CDN. The theme is
+       unchanged; it now lives in tailwind.events.config.js.
+       Rebuild after any class change:  npm run build:events  -->
+  <link rel="stylesheet" href="css/tailwind.css"/>
 
   <!-- Global styles (animations, theme adjustments) -->
   <link rel="stylesheet" href="css/styles.css"/>
 </head>
 
-<body class="font-body-md text-body-md">
+<!-- bg-background/text-on-background are required, not decorative: the theme
+     is dark (#111317 with #e2e2e8 text), and <body> set neither, so the page
+     rendered light-grey and pale-purple type on white. Present on the CDN
+     build too — this was never a styling regression, just never set. -->
+<body class="font-body-md text-body-md bg-background text-on-background min-h-screen">
 
 <!-- ===== HEADER / NAV ===== -->
 <header class="bg-background/80 backdrop-blur-xl border-b border-white/10 top-0 sticky z-40 shadow-xl shadow-primary/5">

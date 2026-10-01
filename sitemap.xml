@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Host is the Netlify primary URL until a custom domain exists. When one
+     does, replace the host here, in robots.txt, and in the og: tags in each
+     420-friendly page head (one find-and-replace). -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://allin1-events.netlify.app/</loc></url>
+  <url><loc>https://allin1-events.netlify.app/420-friendly/</loc><priority>1.0</priority></url>
+  <url><loc>https://allin1-events.netlify.app/420-friendly/shop.html</loc><priority>0.9</priority></url>
+  <url><loc>https://allin1-events.netlify.app/420-friendly/shop.html?cat=HOODIES</loc></url>
+  <url><loc>https://allin1-events.netlify.app/420-friendly/shop.html?cat=BOTTOMS</loc></url>
+  <url><loc>https://allin1-events.netlify.app/420-friendly/shop.html?cat=TEES</loc></url>
+  <url><loc>https://allin1-events.netlify.app/420-friendly/shop.html?cat=HEADWEAR</loc></url>
+  <url><loc>https://allin1-events.netlify.app/420-friendly/drops.html</loc></url>
+  <url><loc>https://allin1-events.netlify.app/420-friendly/playlist.html</loc></url>
+  <url><loc>https://allin1-events.netlify.app/420-friendly/members.html</loc></url>
+  <url><loc>https://allin1-events.netlify.app/420-friendly/faq.html</loc></url>
+  <url><loc>https://allin1-events.netlify.app/420-friendly/sizing.html</loc></url>
+  <url><loc>https://allin1-events.netlify.app/420-friendly/shipping.html</loc></url>
+  <url><loc>https://allin1-events.netlify.app/420-friendly/returns.html</loc></url>
+  <url><loc>https://allin1-events.netlify.app/420-friendly/contact.html</loc></url>
+  <url><loc>https://allin1-events.netlify.app/420-friendly/privacy.html</loc></url>
+  <url><loc>https://allin1-events.netlify.app/420-friendly/terms.html</loc></url>
+</urlset>

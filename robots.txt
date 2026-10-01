@@ -1,0 +1,31 @@
+# 420 Friendly / All in 1 Events
+#
+# Everything a customer can reach is crawlable. The lines below keep crawlers
+# out of pages that are either private tools or carry no content worth
+# indexing on their own (a bag, a checkout, a favourites list).
+#
+# The sitemap's host is the Netlify primary URL until a custom domain exists;
+# change it in sitemap.xml when that happens.
+
+User-agent: *
+Allow: /
+
+# Owner tools. They render a passcode gate to anyone else, which is not a page.
+Disallow: /420-friendly/owner.html
+Disallow: /420-friendly/portal.html
+Disallow: /420-friendly/photos.html
+Disallow: /420-friendly/media.html
+Disallow: /marketing-system.html
+
+# Per-visitor state, not content.
+Disallow: /420-friendly/cart.html
+Disallow: /420-friendly/checkout.html
+Disallow: /420-friendly/favorites.html
+
+# A stale snapshot of an old catalogue, kept for reference only.
+Disallow: /420-friendly/preview.html
+
+# Serverless endpoints.
+Disallow: /.netlify/
+
+Sitemap: https://allin1-events.netlify.app/sitemap.xml
