@@ -1,9 +1,25 @@
 # To do — next session
 
-Updated 2026-09-19. Branch `claude/420-friendly-hoodie-page-yl8ho9`, PR #3,
+Updated 2026-10-01. Branch `claude/420-friendly-hoodie-page-yl8ho9`, PR #3,
 **unmerged**. Working tree clean, everything pushed.
 
 ---
+
+## Launch audit — 1 Oct
+
+Otis sent four pre-launch checklists (80 items). Every one is answered in
+`420-friendly/LAUNCH-AUDIT.md` as done / fixed / needs Otis / not applicable.
+Fixed in that commit: custom 404s, robots.txt, sitemap, meta descriptions and
+share image on every page, structured data, a mobile buy bar, a usable order
+confirmation, policy breadcrumbs, a cookies section, per-address throttling
+and timeouts on the sensitive functions, Stripe idempotency, a health
+endpoint for uptime monitoring, media caching, and three accessibility
+findings. `npm run test:a11y` now runs axe over the storefront.
+
+**What only Otis can do** is the last section of that file — the policy.js
+values, Netlify firewall rate limiting, an Anthropic spend cap, an uptime
+monitor, Supabase backups, the processors' acceptable-use pages, and the
+analytics decision (the privacy page promises no trackers).
 
 ## The one thing blocking everything
 

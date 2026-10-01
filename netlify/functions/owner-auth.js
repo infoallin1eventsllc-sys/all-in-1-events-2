@@ -10,6 +10,11 @@
 
 const { issueToken, checkPasscode, normalizePasscode, SESSION_MS, MIN_PASSCODE_LENGTH } =
   require("../shared/owner-session");
+const { throttled } = require("../shared/throttle");
+
+// Ten tries a minute per address, on top of the fixed delay below. The owner
+// mistyping twice never meets this; a dictionary does.
+const LIMIT = { limit: 10, windowMs: 60_000, name: "owner-auth" };
 
 // Netlify functions are stateless, so there is no reliable place to keep a
 // lockout counter across invocations. A fixed delay on every failure is what
@@ -56,6 +61,8 @@ exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return json(405, { ok: false, error: "POST only" });
   }
+  const limited = throttled(event, LIMIT);
+  if (limited) return limited;
 
   const expected = normalizePasscode(process.env.OWNER_PASSCODE);
 

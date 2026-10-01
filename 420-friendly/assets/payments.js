@@ -63,6 +63,27 @@ function cartForCheckout() {
   return getCart().map((l) => ({ id: l.id, size: l.size, qty: l.qty }));
 }
 
+/* One nonce per checkout attempt. Kept for as long as the bag is unchanged, so
+ * pressing Pay again after a dropped connection sends the same nonce and the
+ * server (via Stripe's idempotency keys) hands back the session it already
+ * created rather than opening a second one. A new bag gets a new nonce; a
+ * paid bag is emptied, which retires the old one. */
+const CHECKOUT_NONCE_KEY = "420f:checkout-nonce";
+function checkoutNonce(cart) {
+  const sig = JSON.stringify(cart);
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(CHECKOUT_NONCE_KEY) || "null");
+    if (saved && saved.sig === sig && saved.nonce) return saved.nonce;
+    const nonce = window.crypto && crypto.randomUUID
+      ? crypto.randomUUID()
+      : Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 12);
+    sessionStorage.setItem(CHECKOUT_NONCE_KEY, JSON.stringify({ sig, nonce }));
+    return nonce;
+  } catch {
+    return undefined; // private window with storage blocked: no retry protection, still works
+  }
+}
+
 async function startStripeCheckout() {
   const cart = cartForCheckout();
   if (!cart.length) throw new Error("Your bag is empty");
@@ -70,7 +91,7 @@ async function startStripeCheckout() {
   const res = await fetch(PAYMENTS.checkoutEndpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ cart })
+    body: JSON.stringify({ cart, nonce: checkoutNonce(cart) })
   });
 
   let data = {};

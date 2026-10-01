@@ -4,6 +4,14 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>420 FRIENDLY — Contact</title>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="420 FRIENDLY"/>
+<meta property="og:title" content="420 FRIENDLY — Contact"/>
+<meta property="og:description" content="Get in touch with 420 Friendly. A person answers."/>
+<meta property="og:image" content="https://allin1-events.netlify.app/420-friendly/assets/og-image.jpg"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta name="twitter:card" content="summary_large_image"/>
 <meta name="description" content="Get in touch with 420 Friendly. A person answers."/>
 <link href="assets/tailwind.css" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
@@ -118,7 +126,7 @@
         'hover:text-secondary transition-colors underline decoration-1 underline-offset-4">' +
         esc(POLICY.contactEmail) + "</a>"
       : policyMissing("CONTACT EMAIL")) +
-    '<p class="font-body-md text-body-md text-on-surface-variant mt-3">We aim to reply within one business day.</p>';
+    '<p class="font-body-md text-body-md text-on-surface-variant mt-3">We reply within ' + esc(POLICY.replyWithin) + ".</p>";
 
   const form = document.getElementById("contact-form");
   const statusEl = document.getElementById("c-status");

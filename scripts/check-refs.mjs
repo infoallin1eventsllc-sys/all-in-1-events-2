@@ -153,6 +153,25 @@ for (const file of HTML) {
       add(file, "product", `?id=${id} is not in the catalogue`);
     }
   }
+
+  // The share image is an absolute URL (crawlers insist), so strip the host
+  // and check the file is really there — a dead og:image is a blank card on
+  // every share, with no error anywhere.
+  const og = html.match(/<meta[^>]+property\s*=\s*["']og:image["'][^>]*content\s*=\s*["']([^"']+)["']/i);
+  if (og) {
+    let p = og[1];
+    try { p = new URL(p).pathname; } catch { /* already a path */ }
+    if (p.startsWith("/") && !fs.existsSync(path.join(ROOT, p))) {
+      add(file, "missing", `og:image ${og[1]}  ->  ${p}`);
+    }
+  }
+
+  // Every page a search engine may list needs a description; the ones that
+  // should not be listed say so. Anything else is a gap search fills with
+  // whatever text it finds first.
+  const noindex = /<meta[^>]+name\s*=\s*["']robots["'][^>]*noindex/i.test(html);
+  const hasDesc = /<meta[^>]+name\s*=\s*["']description["']/i.test(html);
+  if (!noindex && !hasDesc) add(file, "seo", "no meta description, and not marked noindex");
 }
 
 /* ---------- external asset hosts referenced from JS ---------- */
@@ -208,6 +227,7 @@ if (!process.env.SKIP_TAILWIND_CHECK) {
 
 /* ---------- report ---------- */
 const LABEL = {
+  seo: "Indexable page with no description — search will improvise one",
   tailwind: "Stale Tailwind build — new classes silently do nothing",
   missing: "Broken reference — the file is not there",
   product: "Dead product id — nothing in the catalogue matches",
@@ -221,7 +241,7 @@ if (!problems.length) {
   console.log("  no broken references\n");
   process.exit(0);
 }
-for (const kind of ["tailwind", "missing", "product", "csp"]) {
+for (const kind of ["tailwind", "missing", "product", "csp", "seo"]) {
   const group = problems.filter((p) => p.kind === kind);
   if (!group.length) continue;
   console.log(`  ${LABEL[kind]}  (${group.length})`);

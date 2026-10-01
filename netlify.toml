@@ -45,12 +45,42 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
+# ===== CACHING =====
+# Netlify's default for static files is revalidate-every-time (max-age=0 plus
+# an ETag). That is right for the HTML, CSS and JS here, because none of them
+# carry a content hash in the filename: a day-old products.js after a price
+# change would be a real problem, and a 304 is cheap. Media is different - a
+# new cut gets a new filename, so what is there never changes in place and can
+# sit in the browser for a week.
+[[headers]]
+  for = "/420-friendly/assets/video/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/420-friendly/assets/products/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/420-friendly/assets/brand/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/420-friendly/assets/social/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
 # ===== REDIRECTS =====
-# No redirects needed for this static site, but here's an example:
-# [[redirects]]
-#   from = "/api/*"
-#   to = "/.netlify/functions/:splat"
-#   status = 200
+# A missing path under the shop gets the shop's own 404, in the brand chrome.
+# Netlify applies a rule like this only when no file matches (there is no
+# `force`), so it cannot shadow a real page. Anything else that is missing
+# falls through to /404.html at the root.
+[[redirects]]
+  from = "/420-friendly/*"
+  to = "/420-friendly/404.html"
+  status = 404
 
 # ===== ENVIRONMENT VARIABLES =====
 # Set ANTHROPIC_API_KEY in the Netlify dashboard:

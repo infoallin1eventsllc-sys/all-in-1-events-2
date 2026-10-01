@@ -300,6 +300,21 @@ function whenPhotosReady(render) {
   }
 }
 
+/* Structured data for search engines, added by the page that knows the facts
+ * (a product page knows its product; the FAQ knows its questions). Google
+ * reads JSON-LD that scripts insert, so this does not have to be static. */
+function setMeta(selector, content) {
+  const el = document.querySelector(selector);
+  if (el) el.setAttribute("content", content);
+}
+
+function injectJsonLd(data) {
+  const s = document.createElement("script");
+  s.type = "application/ld+json";
+  s.textContent = JSON.stringify(data);
+  document.head.appendChild(s);
+}
+
 /* ===== Shared chrome ===== */
 
 function renderChrome(activeLabel) {
@@ -309,13 +324,15 @@ function renderChrome(activeLabel) {
 
   if (headerMount) {
     // Utility bar — Nike keeps secondary links in a thin strip above the masthead.
+    // A <nav>, not a <div>: it was the one strip of links on every page that
+    // sat outside any landmark, so screen-reader region navigation skipped it.
     const utilityBar =
-      '<div class="hidden md:flex justify-end items-center gap-4 h-9 px-margin-desktop bg-surface-container-lowest border-b border-outline-variant/40">' +
+      '<nav aria-label="Account and info" class="hidden md:flex justify-end items-center gap-4 h-9 px-margin-desktop bg-surface-container-lowest border-b border-outline-variant/40">' +
       UTILITY_NAV.map((item, i) =>
         (i > 0 ? '<span class="text-outline" aria-hidden="true">|</span>' : "") +
         '<a href="' + item.href + '" class="font-body-md text-[13px] text-on-surface-variant hover:text-secondary transition-colors">' + item.label + "</a>"
       ).join("") +
-      "</div>";
+      "</nav>";
 
     const primaryLinks = PRIMARY_NAV.map((item) => {
       const active = item.label.toUpperCase() === String(activeLabel).toUpperCase();

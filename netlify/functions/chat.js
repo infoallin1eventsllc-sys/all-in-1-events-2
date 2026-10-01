@@ -13,6 +13,13 @@
  */
 
 const Anthropic = require("@anthropic-ai/sdk");
+const { throttled } = require("../shared/throttle");
+
+// Per address. A person asking questions does not get near this; a script does.
+const LIMIT = { limit: 20, windowMs: 60_000, name: "chat" };
+// A reply that has not started in this long is not coming. Without a bound
+// the function sits until Netlify kills it, and the visitor sees nothing.
+const UPSTREAM_TIMEOUT_MS = 25_000;
 
 const MODEL = "claude-opus-5";
 const MAX_TOKENS = 2048;      // a cap, not a target — the prompt asks for brevity
@@ -38,6 +45,8 @@ exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return json(405, { error: "POST only" });
   }
+  const limited = throttled(event, LIMIT);
+  if (limited) return limited;
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -80,7 +89,7 @@ exports.handler = async (event) => {
       ? history
       : [...history, { role: "user", content: message }];
 
-  const client = new Anthropic({ apiKey });
+  const client = new Anthropic({ apiKey, timeout: UPSTREAM_TIMEOUT_MS, maxRetries: 1 });
 
   try {
     const response = await client.beta.messages.create({
@@ -120,6 +129,9 @@ exports.handler = async (event) => {
     // Surface the provider's own message — "invalid x-api-key" tells whoever is
     // setting this up exactly what is wrong, where "chat failed" does not.
     const status = err && err.status;
+    // Netlify keeps function logs; without this line a failing concierge is
+    // invisible until a visitor complains.
+    console.error("[chat]", status || (err && err.name) || "error", err && err.message);
     if (status === 401) {
       return json(502, {
         error: "auth",

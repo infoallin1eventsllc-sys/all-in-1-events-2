@@ -5,9 +5,10 @@ npm test          # all three, ~40s
 npm run test:refs # static only, instant
 npm run test:smoke
 npm run test:media
+npm run test:a11y   # not in `npm test`: ~2 min, run before a launch
 ```
 
-Three scripts, no test framework, no config file. They exist to catch the
+Four scripts, no test framework, no config file. They exist to catch the
 specific ways this repo has actually broken — not to chase coverage.
 
 ## What each one is for
@@ -41,7 +42,13 @@ specific ways this repo has actually broken — not to chase coverage.
   this one.
 - With nothing configured the shop renders nothing, rather than an empty box.
 
-**`smoke.mjs`** — loads all 24 pages in Chromium at 1280px and 390px,
+**`a11y.mjs`** — axe-core over the seventeen customer-facing storefront
+pages at both widths; WCAG A/AA plus best practice. Slow, so it is its own
+command rather than part of `npm test`. Its first run found a strip of links
+outside any landmark, a heading that jumped h1→h3, and a brand colour 0.13
+short of AA contrast — none of which any other script can see.
+
+**`smoke.mjs`** — loads all 26 pages in Chromium at 1280px and 390px,
 including checkout and every owner-gated surface.
 
 - No uncaught exceptions or console errors.

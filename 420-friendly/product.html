@@ -4,6 +4,15 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>420 FRIENDLY — Product</title>
+<meta name="description" content="Heavyweight fleece hoodies, sweatpants, tees and headwear from the 420 Friendly Archive. Small runs, no restocks."/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="420 FRIENDLY"/>
+<meta property="og:title" content="420 FRIENDLY — Product"/>
+<meta property="og:description" content="Heavyweight fleece hoodies, sweatpants, tees and headwear from the 420 Friendly Archive. Small runs, no restocks."/>
+<meta property="og:image" content="https://allin1-events.netlify.app/420-friendly/assets/og-image.jpg"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta name="twitter:card" content="summary_large_image"/>
 <link href="assets/tailwind.css" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
@@ -11,7 +20,7 @@
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png"/>
 <link href="assets/styles.css" rel="stylesheet"/>
 </head>
-<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-48 md:pb-0">
 <div id="site-header"></div>
 
 <main class="pt-20 md:pt-[116px] max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
@@ -69,6 +78,45 @@
   function renderProduct() {
     document.title = "420 FRIENDLY — " + product.name;
     selectedSize = product.sizes.length === 1 ? product.sizes[0] : null;
+
+    // What a shared link shows and what search reads: this product, not the
+    // generic fallback in the static head.
+    const summary = product.subtitle + " — " + product.blurb;
+    setMeta('meta[name="description"]', summary);
+    setMeta('meta[property="og:title"]', document.title);
+    setMeta('meta[property="og:description"]', summary);
+    if (product.image) setMeta('meta[property="og:image"]', product.image);
+    injectJsonLd({
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Product",
+          name: product.name,
+          description: product.blurb,
+          sku: product.id,
+          image: product.image ? [product.image] : undefined,
+          brand: { "@type": "Brand", name: "420 Friendly" },
+          offers: {
+            "@type": "Offer",
+            priceCurrency: "USD",
+            price: product.price,
+            availability: product.badge === "PRE-ORDER"
+              ? "https://schema.org/PreOrder"
+              : "https://schema.org/InStock",
+            url: location.href
+          }
+        },
+        {
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Shop", item: new URL("shop.html", location.href).href },
+            { "@type": "ListItem", position: 2, name: product.category,
+              item: new URL("shop.html?cat=" + encodeURIComponent(product.category), location.href).href },
+            { "@type": "ListItem", position: 3, name: product.name }
+          ]
+        }
+      ]
+    });
 
     const detailsBody =
       "<p>" + esc(product.blurb) + "</p>" +
@@ -130,9 +178,23 @@
       "</div>" +
       "</div></div></div>";
 
+    // On a phone the buy button scrolls away under the gallery. This bar sits
+    // above the bottom nav and presses the same button, so there is one code
+    // path for adding to the bag. The body carries pb-48 to leave room for it.
+    root.insertAdjacentHTML("beforeend",
+      '<div class="md:hidden fixed bottom-20 left-0 w-full z-40 px-margin-mobile pt-2 pb-3 ' +
+      'bg-background/95 backdrop-blur-md border-t border-outline-variant">' +
+      '<button id="add-to-bag-mobile" type="button" ' +
+      'class="w-full rounded-full bg-primary text-on-primary py-4 px-6 font-label-caps text-label-caps ' +
+      'flex items-center justify-between active:scale-[0.99] transition-transform">' +
+      "<span>" + (product.badge === "PRE-ORDER" ? "PRE-ORDER" : "ADD TO BAG") + "</span>" +
+      '<span class="tabular-nums">' + esc(money(product.price)) + "</span></button></div>");
+
     renderSizes();
     syncFav();
 
+    document.getElementById("add-to-bag-mobile").addEventListener("click", () =>
+      document.getElementById("add-to-bag").click());
     document.getElementById("add-to-bag").addEventListener("click", () => {
       if (!selectedSize) {
         toast("PICK A SIZE FIRST");

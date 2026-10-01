@@ -20,6 +20,12 @@
 
 const MAX_FIELD = 2000;
 
+const { throttled } = require("../shared/throttle");
+const LIMIT = { limit: 10, windowMs: 60_000, name: "lead" };
+// The CRM is a Supabase edge function; if it has not answered in this long it
+// is down, and the visitor should hear that rather than wait out the platform.
+const CRM_TIMEOUT_MS = 8_000;
+
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return json(405, { ok: false, error: "POST only" });
@@ -35,6 +41,9 @@ exports.handler = async (event) => {
         "Environment variables, then redeploy. See system/README.md."
     });
   }
+
+  const limited = throttled(event, LIMIT);
+  if (limited) return limited;
 
   let body;
   try {
@@ -77,11 +86,14 @@ exports.handler = async (event) => {
     headers["x-webhook-secret"] = process.env.MERIDIAN_WEBHOOK_SECRET;
   }
 
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), CRM_TIMEOUT_MS);
   try {
     const res = await fetch(intakeUrl, {
       method: "POST",
       headers,
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: abort.signal
     });
 
     const text = await res.text();
@@ -108,11 +120,17 @@ exports.handler = async (event) => {
 
     return json(200, { ok: true });
   } catch (err) {
+    const timedOut = err && err.name === "AbortError";
+    console.error("[lead]", timedOut ? "CRM timed out" : "CRM unreachable", err && err.message);
     return json(502, {
       ok: false,
-      error: "unreachable",
-      message: "Could not reach the CRM: " + err.message
+      error: timedOut ? "timeout" : "unreachable",
+      message: timedOut
+        ? "The CRM did not answer in time."
+        : "Could not reach the CRM: " + err.message
     });
+  } finally {
+    clearTimeout(timer);
   }
 };
 

@@ -13,7 +13,7 @@ module.exports = {
       colors: {
         "surface-container-lowest": "#ffffff",
         "on-error-container": "#410004",
-        "secondary": "#8a6a05",
+        "secondary": "#7f6204",
         "secondary-fixed": "#f6e7ab",
         "surface-dim": "#e7e5df",
         "on-primary-fixed-variant": "#33453a",

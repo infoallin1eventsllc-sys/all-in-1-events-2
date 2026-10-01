@@ -27,6 +27,11 @@ const POLICY = {
   returnsAddress: NEEDS_OTIS,     // where a physical return is posted
   jurisdiction: NEEDS_OTIS,       // state whose law governs, e.g. "Texas"
 
+  /* ---- Service. The contact page states this as a promise, so it is a
+     policy value and not loose copy: change it here and it changes there. It
+     was already live on the contact page before it moved here. ---- */
+  replyWithin: "one business day",
+
   /* ---- Shipping. These figures were already stated on the product page and
      in the sample orders, so they are treated as the operative policy. ---- */
   freeShippingOver: 100,
@@ -85,7 +90,11 @@ function money0(n) {
 function renderPolicyPage(opts) {
   const root = document.getElementById("policy-root");
   root.innerHTML =
-    '<section class="pt-12 md:pt-16 pb-8 max-w-3xl">' +
+    '<nav class="pt-6 font-label-caps text-label-caps text-on-surface-variant" aria-label="Breadcrumb">' +
+    '<a href="index.html" class="hover:text-secondary transition-colors">HOME</a>' +
+    '<span class="mx-2 text-outline">/</span>' +
+    '<span class="text-on-surface">' + esc(opts.kicker) + "</span></nav>" +
+    '<section class="pt-8 md:pt-12 pb-8 max-w-3xl">' +
     '<p class="font-label-caps text-label-caps text-tertiary mb-4">' + esc(opts.kicker) + "</p>" +
     '<h1 class="font-headline-xl-mobile text-headline-xl-mobile md:font-headline-xl ' +
     'md:text-headline-xl text-on-surface uppercase tracking-tighter">' + esc(opts.title) + "</h1>" +

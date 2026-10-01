@@ -64,6 +64,10 @@ const PAGES = [
   "/420-friendly/photos.html",
   "/420-friendly-hoodie.html",
   "/marketing-system.html",
+  // The custom 404s. Netlify serves them for missing paths; here they are
+  // loaded directly, which is enough to catch a broken stylesheet or script.
+  "/404.html",
+  "/420-friendly/404.html",
   // preview.html is deliberately absent: it is a stale snapshot of the old
   // eight-product catalogue, already flagged for regeneration or deletion.
 ].filter(Boolean);

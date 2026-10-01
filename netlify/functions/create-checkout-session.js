@@ -32,6 +32,9 @@ const FREE_SHIPPING_OVER_CENTS = 10000;
 const FLAT_SHIPPING_CENTS = 800;
 const MAX_QTY_PER_LINE = 10;
 
+const { throttled } = require("../shared/throttle");
+const LIMIT = { limit: 15, windowMs: 60_000, name: "checkout" };
+
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return json(405, { error: "Method not allowed" });
@@ -48,9 +51,21 @@ exports.handler = async (event) => {
     });
   }
 
-  let cart;
+  const limited = throttled(event, LIMIT);
+  if (limited) return limited;
+
+  let cart, nonce;
   try {
-    cart = JSON.parse(event.body || "{}").cart;
+    const body = JSON.parse(event.body || "{}");
+    cart = body.cart;
+    // One nonce per checkout attempt, minted by the browser and kept until
+    // the bag changes or the payment lands. Passed to Stripe as an idempotency
+    // key, so a retry after a dropped connection returns the session it
+    // already made instead of a second one. Validated so only our own shape
+    // reaches Stripe.
+    nonce = typeof body.nonce === "string" && /^[A-Za-z0-9-]{8,64}$/.test(body.nonce)
+      ? body.nonce
+      : undefined;
   } catch {
     return json(400, { error: "Malformed request body" });
   }
@@ -113,10 +128,11 @@ exports.handler = async (event) => {
       shipping_address_collection: { allowed_countries: ["US", "CA"] },
       success_url: origin + "/420-friendly/checkout.html?paid=1&session_id={CHECKOUT_SESSION_ID}",
       cancel_url: origin + "/420-friendly/cart.html?canceled=1"
-    });
+    }, nonce ? { idempotencyKey: "checkout-" + nonce } : undefined);
 
     return json(200, { url: session.url });
   } catch (err) {
+    console.error("[checkout]", err && err.type, err && err.message);
     // Surface Stripe's own message: "Cash App Pay is not enabled" is far more
     // useful to whoever is setting this up than "payment failed".
     return json(502, { error: "stripe_error", message: err.message });

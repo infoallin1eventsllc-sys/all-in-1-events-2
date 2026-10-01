@@ -4,6 +4,7 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>420 FRIENDLY — Bag</title>
+<meta name="robots" content="noindex"/>
 <link href="assets/tailwind.css" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
@@ -75,7 +76,7 @@
 
     const subtotal = cartSubtotal();
     const shipMsg = subtotal >= FREE_SHIP_AT
-      ? '<p class="font-body-md text-[13px] text-tertiary mt-4">Free US shipping unlocked.</p>'
+      ? '<p class="font-body-md text-[13px] text-tertiary mt-4">Free US shipping applied.</p>'
       : '<p class="font-body-md text-[13px] text-on-surface-variant mt-4">You\'re ' + esc(money(FREE_SHIP_AT - subtotal)) + " from free US shipping.</p>";
 
     root.innerHTML =
