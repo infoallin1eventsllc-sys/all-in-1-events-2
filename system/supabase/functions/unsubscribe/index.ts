@@ -110,6 +110,6 @@ Deno.serve(async (req) => {
     unsubscribed: true,
     already: !contact.consent_email,
     message:
-      "Done. You will not receive marketing email from Meridian Interface. Messages about work in progress — a booking confirmation or an invoice — are not affected.",
+      "Done. You will not receive marketing email from Meridian Interface. Messages about work in progress, such as a booking confirmation or an invoice, are not affected.",
   });
 });

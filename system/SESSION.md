@@ -4,6 +4,68 @@ Compact record of what was built and the current state, so work can resume later
 
 ---
 
+## Oct 2 — deep troubleshoot of site, demos, servers and security
+
+Website be0afe8 (live). Every demo crawled under the production CSP (read
+from vercel.json and applied to a local build, because the sandbox cannot
+reach the live domain); every page, modal and form driven on desktop,
+tablet and phone; axe WCAG A/AA clean everywhere.
+
+**Real problems found and fixed (website)**
+- The Frame Shop is a real shop (Spring TX, @_theframeshop). Our hosted copy
+  told customers "Paul has received your request" and "Paul will call" while
+  sending nothing. Booking and contact now say it is a demonstration and give
+  the shop's phone. `frame-shop/src/utils/demoCopy.ts` (BASE_URL under
+  /demos/) switches the wording, so a real deploy of the same source keeps
+  its normal copy.
+- Same honesty fix in Big Boy Subs (order + tracker), Fog City (no "SMS sent",
+  no "Total charged") and Modern Street ("confirmation dispatched" was false).
+  Big Boy Subs looks fictional, but its name is close to the Big Boy
+  restaurant chain: worth a thought before showing it to a client.
+- Frame Shop's Google Maps iframe was blocked by frame-src 'self' (empty box
+  live); replaced by a location card that links to directions.
+- `explore` icon was missing from the Material Symbols subset, so two buttons
+  printed "ExPLORE". Check new icon names against the subset (fontTools).
+- Booking, search and phone menu did not close on Escape.
+- Portfolio cards: content inside a stretched <button> was vertically
+  centred, pushing covers up to 40px down. Pinned to the top.
+- Covers: demo bar trimmed from 15 images; new Big Boy Subs cover (three
+  phones); Modern Street cover is its hero; reel poster replaced; Logo card
+  now shows Fog City (rendered scene removed).
+- When rebuilding a demo, compare the fresh build's bundle name with the
+  hosted one first; all four sources matched. Big Boy Subs/Fog City favicons
+  had been added to built HTML only and a rebuild dropped them; now in source.
+
+**Backend (this commit)**
+- dashboard: link now meridianinterface.com; unsubscribe: no long dash in the
+  success message. Both need the CLI deploy to go live.
+- Migration 0042_storage_no_listing (drop the two "public read" policies that
+  let anyone list file names in site-images and social-videos; files still
+  load by URL). **NOT APPLIED**: the apply timed out and the follow-up was
+  blocked by the permission system, so it is left for Otis. It is two lines,
+  safe to run in the SQL editor.
+
+**Checked and fine:** 13 cron jobs, 0 failures; no function 5xx; RLS on every
+table, no anon/authenticated grants; uploads only via service role; public
+functions all rate-limited and capped; no secrets in the built site or either
+git history (the CRM demo ships a Firebase *web* key for project
+meridian-interface-crm, which is public by design, but lock that project's
+Firestore rules and restrict the key to your domains in Google Cloud).
+
+**Still for Otis**
+- Deploy functions from `system/` (see Sep 30 entry). Until then the live
+  owner function is v40 without two-step sign-in, and security-agent is not
+  deployed (its 15-minute cron gets 404s, 93 a day).
+- Apply 0042 (above). `shop-videos` bucket is public, empty and unused by any
+  code here; delete it or give it size/type limits.
+- xlsx 0.18.5 (Frame Shop, CarePulse) has known flaws reading crafted files;
+  the fix is only on cdn.sheetjs.com, which the sandbox cannot reach:
+  `npm i https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz` from the Mac.
+  Frame Shop only writes spreadsheets, so it is not reachable there.
+- Analytics Hub has no source in either repo (built output only).
+
+---
+
 ## Oct 1 — full debug pass ("make sure every feature is working")
 
 Checked everything; found and fixed eight things. Nothing found was broken

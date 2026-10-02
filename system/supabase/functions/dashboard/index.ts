@@ -20,7 +20,7 @@
 // serving data with a passcode someone might still have.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-const PORTAL = "https://meridian-interface-website.vercel.app";
+const PORTAL = "https://meridianinterface.com";
 
 Deno.serve(() =>
   new Response(
