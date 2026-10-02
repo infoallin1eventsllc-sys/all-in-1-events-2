@@ -99,7 +99,7 @@ export const HoloAirframe: React.FC<Props> = ({ motors, frame, findings, flying 
     const placeholder = { ...droneMaterials(), ...variantMaterials() };
     const blurTex = radialTexture();
     const pick = frame.kind === 'QUAD' ? null : frame.kind === 'HEXA' ? 'cinema' : frame.kind === 'PLANE' || frame.kind === 'VTOL' ? 'vtol' : 'generic';
-    const air = pick === null ? buildDrone(placeholder, blurTex) : pick === 'generic' ? genericFrame(motors) : VARIANTS.find(v => v.id === pick)!.build(placeholder, blurTex);
+    const air = pick === null ? buildDrone(placeholder, blurTex, { merge: false }) : pick === 'generic' ? genericFrame(motors) : VARIANTS.find(v => v.id === pick)!.build(placeholder, blurTex);
     Object.values(placeholder).forEach(m => m.dispose());
     air.blur.forEach(b => { b.visible = false; });
     const model = air.group;
