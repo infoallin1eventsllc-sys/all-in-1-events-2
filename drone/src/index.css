@@ -246,3 +246,7 @@ input[type="range"] { accent-color: var(--color-accent); }
 .holo-tag-body b { color: #dbe7f5; }
 .holo-scanline { background: linear-gradient(90deg, transparent, rgba(90, 210, 255, 0.55), transparent); height: 1px; }
 .dial-needle { transition: transform 0.4s ease; }
+
+/* ---- The aircraft studio: a seamless photographer's backdrop behind a transparent 3D canvas ---- */
+.studio-backdrop { background: radial-gradient(120% 90% at 50% 38%, #ffffff 0%, #f1f3f5 48%, #dfe3e8 100%); }
+[data-theme="dark"] .studio-backdrop { background: radial-gradient(120% 90% at 50% 38%, #3a3f47 0%, #262a31 52%, #16191e 100%); }

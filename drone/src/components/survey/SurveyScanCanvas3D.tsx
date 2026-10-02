@@ -11,7 +11,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RotateCcw } from 'lucide-react';
 import { PARKED_CARS, SITE, TREES, WORLD_M, heightAt, siteImagery, structureAt } from '../../survey/site';
 import { GOOD_VIEWS, type CoverageGrid, type Leg, type SurveyPlan } from '../../survey/plan';
-import { buildDrone, droneMaterials, radialTexture } from '../hero/droneModel';
+import { aimGimbal, buildDrone, droneMaterials, radialTexture } from '../hero/droneModel';
 import { FrameGovernor } from '../../lib/quality';
 import { release3d } from '../../lib/release3d';
 import type { Photo, SurveyAircraft, Phase } from '../../hooks/useSurveyMission';
@@ -502,7 +502,8 @@ export const SurveyScanCanvas3D: React.FC<Props> = (props) => {
 
     // ---- aircraft: the Mavic-class model, banking through turns, shadow on the ground ----
     const mats = droneMaterials();
-    const { group: acModel, props: acProps } = buildDrone(mats, radialTexture());
+    const { group: acModel, props: acProps, blur: acBlur, blades: acBlades, gimbal: acGimbal } = buildDrone(mats, radialTexture());
+    let camTilt = -0.35;   // the gimbal: straight down while photographing a line, looking ahead between lines
     const ac = new THREE.Group(); ac.add(acModel);
     const lamp = (c: THREE.Color, x: number, y: number, z: number) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color: c, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); s.position.set(x, y, z); s.scale.setScalar(0.3); ac.add(s); return s; };
     lamp(new THREE.Color(3, 0.2, 0.15), -0.62, -0.07, 0.6); lamp(new THREE.Color(0.2, 3, 0.4), -0.62, -0.07, -0.6);
@@ -613,6 +614,9 @@ export const SurveyScanCanvas3D: React.FC<Props> = (props) => {
       ac.position.set(a.x, acY, a.y);
       ac.rotation.set(pitch, Math.PI / 2 - hRad, roll, 'YXZ');
       for (const pr of acProps) pr.rotation.y += dt * (flying ? 58 : 0) * ((acProps.indexOf(pr) % 2) ? -1 : 1);
+      acBlur.forEach(b => { b.visible = flying; }); acBlades.forEach(b => { b.visible = !flying; });
+      camTilt += ((capturing ? -Math.PI / 2 : -0.35) - camTilt) * Math.min(1, dt * 2.5);
+      aimGimbal(acGimbal, { tilt: camTilt });
       (strobe.material as THREE.SpriteMaterial).opacity = flying && (t % 1200) < 90 ? 1 : 0;
       shadow.position.set(a.x, groundY + 0.35, a.y); const sh = 3.5 + a.altM * 0.06; shadow.scale.set(sh, sh, 1);
       (shadow.material as THREE.MeshBasicMaterial).opacity = flying ? 0.42 * Math.max(0, 1 - a.altM / 140) : 0;

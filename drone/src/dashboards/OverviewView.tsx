@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Sparkles, ScanLine, Eye, HeartPulse, BarChart3, Archive, Radio, Smartphone, ShieldCheck, Cpu, ArrowRight, Gamepad2 } from 'lucide-react';
 import { MERIDIAN_BOOK_URL } from './MeridianCredit';
 import { ScrollHero } from './hero/ScrollHero';
+import { AircraftStudio } from './hero/AircraftStudio';
 import { BRAND } from '../brand';
 
 /**
@@ -35,7 +36,7 @@ const PROOF: { icon: React.ReactNode; title: string; body: string }[] = [
   { icon: <Radio />, title: 'Flies real aircraft', body: 'Speaks MAVLink to ArduPilot and PX4 flight controllers over Bluetooth, a USB radio or the network. The protocol is checked byte for byte against the reference implementation.' },
   { icon: <Smartphone />, title: 'Phone, tablet or laptop', body: 'Installs to the home screen and reopens offline at a venue with no signal. iPhone and iPad connect through a small bridge on the aircraft.' },
   { icon: <ShieldCheck />, title: 'Safety is built in', body: 'Pre-flight gates hold the arm button, a fault in the air reaches whatever screen is open, and every command is on the record.' },
-  { icon: <Cpu />, title: 'Tested like flight software', body: 'Twelve automated test suites and end-to-end runs against a stand-in autopilot through the real bridge, on every change.' },
+  { icon: <Cpu />, title: 'Tested like flight software', body: 'More than twenty automated test suites and end-to-end runs against a stand-in autopilot through the real bridge, on every change.' },
 ];
 
 /** The hero: the actual show renderer, cycling formations. */
@@ -77,6 +78,9 @@ export const OverviewView: React.FC<Props> = ({ onOpen, onTour }) => (
         ))}
       </div>
     </section>
+
+    {/* The aircraft on a studio set, rendered live: the gimbal camera holds the horizon as it moves. */}
+    <AircraftStudio />
 
     {/* Inside */}
     <section aria-labelledby="ov-inside">

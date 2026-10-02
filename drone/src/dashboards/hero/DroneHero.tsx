@@ -7,7 +7,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js';
-import { buildDrone, buildEmber, droneMaterials, emberMaterials, radialTexture } from '../../components/hero/droneModel';
+import { aimGimbal, buildDrone, buildEmber, droneMaterials, emberMaterials, radialTexture, type Gimbal } from '../../components/hero/droneModel';
 import { FrameGovernor } from '../../lib/quality';
 import { release3d } from '../../lib/release3d';
 
@@ -55,6 +55,10 @@ interface Drone {
   group: THREE.Group;
   props: THREE.Group[];
   blur: THREE.Mesh[];
+  /** Blades of each prop: hidden while the props are at speed, when only the blur discs show (classic look). */
+  blades: THREE.Object3D[];
+  /** The camera gimbal (classic look): holds the horizon while the aircraft banks, and looks around. */
+  gimbal?: Gimbal;
   trail: THREE.Line;
   history: THREE.Vector3[];
   prev: THREE.Vector3;
@@ -135,7 +139,10 @@ export const DroneHero: React.FC<{ className?: string; progress?: { current: num
     const rnd = seeded(7);
     for (let i = 0; i < n; i++) {
       const ledColor = look === 'ember' ? new THREE.Color(0.3, 0.65, 2.2) : new THREE.Color(0.45, 0.8, 1.6);
-      const { group, props, blur } = look === 'ember' ? buildEmber(mats, blurTex) : buildDrone(mats, blurTex);
+      const air = look === 'ember' ? { ...buildEmber(mats, blurTex), blades: [] as THREE.Object3D[], gimbal: undefined } : buildDrone(mats, blurTex);
+      const { group, props, blur } = air;
+      // In flight a camera sees spinning props as blur discs, not blades.
+      if (look !== 'ember' && !reduced) { air.blur.forEach(b => { b.visible = true; }); air.blades.forEach(b => { b.visible = false; }); }
       group.position.set(...(reduced ? K1[i] : K0[i]));
       group.scale.setScalar(1.35);
       scene.add(group);
@@ -146,7 +153,7 @@ export const DroneHero: React.FC<{ className?: string; progress?: { current: num
       const trail = new THREE.Line(tg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
       trail.frustumCulled = false; scene.add(trail);
       const nav = group.children.filter((c): c is THREE.Mesh => (c as THREE.Mesh).isMesh && ((c as THREE.Mesh).material === mats.ledGreen || (c as THREE.Mesh).material === mats.ledRed)).map(m => { m.material = (m.material as THREE.Material).clone(); return m; });
-      drones.push({ group, props, blur, trail, history: Array.from({ length: pts }, () => group.position.clone()), prev: group.position.clone(), phase: rnd() * Math.PI * 2, stagger: i / n, ledColor, roll: 0, pitch: 0, yaw: 0, wander: new THREE.Vector3(), wanderGoal: new THREE.Vector3(), nextPick: rnd() * 3, nav });
+      drones.push({ group, props, blur, blades: air.blades, gimbal: air.gimbal, trail, history: Array.from({ length: pts }, () => group.position.clone()), prev: group.position.clone(), phase: rnd() * Math.PI * 2, stagger: i / n, ledColor, roll: 0, pitch: 0, yaw: 0, wander: new THREE.Vector3(), wanderGoal: new THREE.Vector3(), nextPick: rnd() * 3, nav });
     }
 
     const composer = new EffectComposer(renderer);
@@ -230,6 +237,8 @@ export const DroneHero: React.FC<{ className?: string; progress?: { current: num
         const yaw = vel.length() > 0.8 ? Math.atan2(vel.x, -vel.z) * 0.35 : d.yaw;
         d.roll += (roll - d.roll) * (1 - Math.exp(-dt * 3)); d.pitch += (pitch - d.pitch) * (1 - Math.exp(-dt * 3)); d.yaw += (yaw - d.yaw) * (1 - Math.exp(-dt * 1.5));
         d.group.rotation.set(d.pitch - 0.08, d.yaw - Math.PI * 0.5 + 0.55 + Math.sin(d.phase) * 0.3, d.roll, 'YXZ');
+        // The gimbal holds the horizon through the bank and slowly looks around, as a camera operator would.
+        if (d.gimbal) aimGimbal(d.gimbal, { pan: Math.sin(t * 0.27 + d.phase) * 0.36, tilt: -0.2 + Math.sin(t * 0.19 + d.phase * 1.7) * 0.14 });
         nearest = Math.min(nearest, d.group.position.distanceTo(cam.position));
         const spin = dt * (62 + vel.length() * 6);
         d.props.forEach((pr, k) => { pr.rotation.y += spin * (k % 2 ? -1 : 1); });
@@ -257,7 +266,7 @@ export const DroneHero: React.FC<{ className?: string; progress?: { current: num
     };
 
     if (reduced) {
-      drones.forEach((d, i) => { place(d, i, 0.5, 0); d.group.rotation.y = -Math.PI * 0.5 + 0.55; d.props.forEach(pr => { pr.rotation.y = i; }); d.blur.forEach(b => { b.visible = false; }); });
+      drones.forEach((d, i) => { place(d, i, 0.5, 0); d.group.rotation.y = -Math.PI * 0.5 + 0.55; d.props.forEach(pr => { pr.rotation.y = i; }); d.blur.forEach(b => { b.visible = false; }); if (d.gimbal) aimGimbal(d.gimbal, { pan: 0.2, tilt: -0.2 }); });
       cam.position.set(0, 6.2, 18); cam.lookAt(0, 1.0, 0); if (sized) composer.render();
     } else {
       raf = requestAnimationFrame(frame);
