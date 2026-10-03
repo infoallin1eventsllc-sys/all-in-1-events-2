@@ -39,7 +39,7 @@ export default defineConfig({
   build: {
     rolldownOptions: {
       // three.js in its own file: it rarely changes, so browsers keep it cached across deploys.
-      output: { advancedChunks: { groups: [{ name: 'three', test: /node_modules[\\/]three[\\/]/ }] } },
+      output: { codeSplitting: { groups: [{ name: 'three', test: /node_modules[\\/]three[\\/]/ }] } },
     },
     chunkSizeWarningLimit: 900,     // three.js alone is about 700 kB minified
   },

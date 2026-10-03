@@ -130,7 +130,7 @@ export const DroneHero: React.FC<{ className?: string; progress?: { current: num
 
     // Materials: anodised metal, dark glass, LEDs bright enough to bloom.
     const mats = look === 'ember' ? emberMaterials() : droneMaterials();
-    // Props finished as on the light-show fleet: glossy black blades that catch the light, white tip stripes.
+    // The light-show fleet's props: its blade finish and stripe paint (the stripe paint also tells buildDrone to fit that prop).
     if (look !== 'ember') { mats.blade.dispose(); Object.assign(mats, showPropMaterials()); }
     const blurTex = radialTexture();
     const n = phone ? 7 : 12;
@@ -141,8 +141,8 @@ export const DroneHero: React.FC<{ className?: string; progress?: { current: num
       const ledColor = look === 'ember' ? new THREE.Color(0.3, 0.65, 2.2) : new THREE.Color(0.45, 0.8, 1.6);
       const air = look === 'ember' ? { ...buildEmber(mats, blurTex), gimbal: undefined } : buildDrone(mats, blurTex);
       const { group, props, blur } = air;
-      // Spinning props, as the light show draws them: crisp blades turning under a faint blur disc (no smears).
-      air.blur.forEach(b => { b.clear(); const m = b.material as THREE.MeshBasicMaterial; m.color.set(0x9aa4b0); m.opacity = 0.1; if (!reduced) b.visible = true; });
+      // Spinning props (the light-show prop, from the stripe paint above): crisp blades turning under a faint blur disc.
+      if (!reduced) air.blur.forEach(b => { b.visible = true; });
       group.position.set(...(reduced ? K1[i] : K0[i]));
       group.scale.setScalar(1.35);
       scene.add(group);

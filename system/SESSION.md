@@ -4,9 +4,9 @@ Compact record of what was built and the current state, so work can resume later
 
 ## Who / what
 - **Owner:** Otis Williams — **Meridian Interface** (web/software studio). otis@meridianinterface.com · (281) 882-9198.
-- **Repo:** `infoallin1eventsllc-sys/all-in-1-events-2`, working branch **`claude/marketing-system-tech-stack-uds0mp`**.
+- **Repo:** `infoallin1eventsllc-sys/all-in-1-events-2`. Current working branch **`claude/ecstatic-turing-1k9bjs`** (PR #4; the drone app and everything since Sep 25). The marketing system was first built on `claude/marketing-system-tech-stack-uds0mp`.
 - The repo also holds the "All in 1 Events" client site (`index.html`). The marketing system + portfolio page are Meridian Interface's own portfolio/product work.
-- **Brand:** slate-on-ivory. `#3E4C63`/`#5B6472` slate, `#4F6D8C` steel, `#3E7C86` teal, ivory `#F5F4EF`, ink `#23262B`. Fonts: Sora (headings) + Inter (body). Logo = "M" monogram (rendered as inline SVG; real PNG goes at `assets/meridian-logo.png` and the header/footer auto-swap to it).
+- **Brand:** slate-on-ivory. `#3E4C63`/`#5B6472` slate, `#4F6D8C` steel, `#3E7C86` teal, ivory `#F5F4EF`, ink `#23262B`. Fonts: Sora (headings) + Inter (body). Logo = the Meridian "M" mark: `assets/meridian-logo.png` (added Oct 3, copied from the Meridian site's `public/brand/meridian-mark.png`); the inline SVG monogram remains as the fallback.
 
 ## Deliverables (all committed to the branch)
 1. **`marketing-system.html`** — portfolio page: the tech-stack architecture in Meridian brand. Uses Tailwind CDN.
@@ -161,6 +161,51 @@ Compact record of what was built and the current state, so work can resume later
   (intended deny-by-default). 6 failed tasks are benign (3 follow-ups for
   deleted contacts, 3 superseded video jobs).
 
+## Diagnostic (Oct 3) — whole repo, end of day
+Checked and clean:
+- **Drone app** (`drone/`): typecheck, all 22 test suites, production build; a
+  crawl of all 10 views in desktop light, desktop dark and phone (page errors,
+  console errors, failed requests, overflow, broken images, unnamed buttons):
+  **0 issues**. Survey, health and hologram views rendered and checked.
+- **Edge functions** (repo copy): all five typecheck with Deno. Run the check as
+  `deno check --node-modules-dir=none <file>`; without the flag Deno trips over
+  the repo-root `node_modules` (a tooling quirk, not a code fault).
+- **Live Supabase:** all 13 cron jobs succeeded over the last 24 h; advisor shows
+  only the intended INFO "RLS enabled, no policy"; autonomy is `draft`, 0 tasks
+  stuck running; the 6 failed tasks are the old benign ones (Sep 7 and 17).
+- **Root site** (`npm run build` → `_site/`) assembles; every local link resolves.
+- **Meridian website:** typecheck and build clean; production is on main
+  `46f7c26` (PR #37), Vercel deploy succeeded.
+Fixed:
+- `marketing-system.html` requested a missing `assets/meridian-logo.png` on every
+  visit (a 404 behind the SVG fallback). The real Meridian mark is now there.
+- Drone build warned that rolldown's `advancedChunks` is deprecated: switched to
+  `codeSplitting` in `drone/vite.config.ts` (same output: the three.js chunk hash
+  is unchanged).
+- Drone 3D model: the two propeller variants are now separate builders in
+  `droneModel.ts` (`makeFoldingRotor` for the aircraft's own folding props with
+  blade smears, `makeShowRotor` for the light-show prop the hero flies), chosen
+  by the material set (a `stripe` paint means the light-show prop). The hero no
+  longer builds smears only to delete them or recolours discs after the fact.
+  Renders identical before and after.
+Environment notes (not bugs): this sandbox blocks fonts.googleapis.com and
+meridianinterface.com, and the Vercel connector lacks scope; deploys are verified
+through the GitHub commit-status API instead.
+
+## Drone Command: where it stands (Oct 3)
+- Hero (Overview): 12 sculpted folding camera drones; the props are the
+  light-show fleet's (glossy blades, white tip stripes, faint disc, 62 rad/s).
+  Owner asked for exactly that look; do not swap them back.
+- Camera head restyled after the DJI Mini 4 Pro photos the owner shared (original
+  design, no DJI marks); the gimbal is live (`aimGimbal`, tested).
+- "The aircraft, up close" studio, survey and health keep the folding props, with
+  blade smears at `ROTOR_SPIN` (30 rad/s).
+- Meridian copy at `/demos/drone-command/` is rebuilt from this branch: build
+  with `DEMO_BASE=/demos/drone-command/ DEMO_URL=https://meridianinterface.com/demos/drone-command/`,
+  copy to the site's `public/demos/drone-command`, restore `brand/meridian-mark.png`,
+  run `node tools/brand-demos.mjs`, build, PR from `claude/drone-command-demo`
+  (reset from main each time), wait for Vercel, merge.
+
 ## Open next steps (not done)
 - **Before autonomy = auto:** port the runner send-path fixes above into the live runner.
 - Wire dashboard into the deployed website so real photos render + it's live.
@@ -169,4 +214,3 @@ Compact record of what was built and the current state, so work can resume later
 - Vercel preview deploy of the Meridian website (Otis's step; main is ready).
 - key-router PR #1 is OPEN and unmerged: https://github.com/infoallin1eventsllc-sys/key-router/pull/1
 - Self-host the Unsplash photography on the Meridian site.
-- Swap the SVG monogram for the real logo PNG once provided.

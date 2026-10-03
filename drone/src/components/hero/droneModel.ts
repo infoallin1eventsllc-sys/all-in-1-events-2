@@ -142,7 +142,8 @@ const follow = <T extends THREE.Object3D>(root: THREE.Object3D, path: number[]) 
  *   cooling intakes on the flanks;
  * - flat folding arms to motor pods, outrunner motors (copper stator showing through
  *   the bell), folding black props with a cambered airfoil, twist and swept tips (the
- *   marked diagonal pair as on the real props); front landing legs, rear feet,
+ *   marked diagonal pair as on the real props), or the light-show prop when the
+ *   materials carry a stripe paint (see makeShowRotor); front landing legs, rear feet,
  *   red/green navigation lights;
  * - a black camera head on a three-axis gimbal (pan, roll, tilt) hung under the nose,
  *   returned as `gimbal` so a view can stabilise it and point it.
@@ -244,6 +245,61 @@ const _lens = new THREE.Vector3(), _up = new THREE.Vector3(), _a = new THREE.Vec
 export const LIMIT = { tilt: [-2.356, 1.396] as const, roll: [-2.356, 0.785] as const, pan: 0.524 };
 const _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _q3 = new THREE.Quaternion(), _v = new THREE.Vector3(), _e = new THREE.Euler();
 
+/**
+ * The two props sculptDrone can fit, each building into a prop group: its turning blade set (returned as
+ * `set`) and its blur disc (returned as `disc`, hidden until a view spins the props).
+ * - foldingRotor: the aircraft's own folding props: black blades on pivot bosses off a centre bar, a lock cap
+ *   (silver, with marks on the blades, on one diagonal pair as on the real props), and a smear trailing each
+ *   blade while it turns (children of the disc, so a view shows and hides them together).
+ * - showRotor: the light-show fleet's prop (Ember's), chosen when the material set carries the stripe paint
+ *   (the hero's): longer glossy blades straight off a hub with a silver cap, white tip stripes, a faint disc.
+ */
+interface Rotor { build(prop: THREE.Group, hand: 1 | -1, marked: boolean): { set: THREE.Group; disc: THREE.Mesh } }
+type RotorKit = { M: Record<string, THREE.Material>; blurTex: THREE.Texture; add: (geo: THREE.BufferGeometry, m: THREE.Material, x?: number, y?: number, z?: number, rx?: number, ry?: number, rz?: number, parent?: THREE.Object3D) => THREE.Mesh };
+const perHand = (f: (hand: 1 | -1) => THREE.BufferGeometry) => ({ [1]: f(1), [-1]: f(-1) }) as Record<number, THREE.BufferGeometry>;
+function blurDisc(prop: THREE.Group, geo: THREE.BufferGeometry, blurTex: THREE.Texture, color: number, opacity: number) {
+  const disc = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: blurTex, color, transparent: true, opacity, depthWrite: false }));
+  disc.rotation.x = -Math.PI / 2; disc.position.y = 0.006; disc.visible = false; prop.add(disc);
+  return disc;
+}
+function makeFoldingRotor({ M, blurTex, add }: RotorKit): Rotor {
+  const blade = perHand(h => bladeGeometry(PROP_R, 0.042, h, 22, 9)), smear = perHand(h => smearGeometry(PROP_R, 0.05, h));
+  const discGeo = new THREE.CircleGeometry(PROP_R + 0.012, 64);
+  return { build(prop, hand, marked) {
+    add(new THREE.CylinderGeometry(0.018, 0.021, 0.012, 24), marked ? M.metal : M.graphite, 0, 0.008, 0, 0, 0, 0, prop);    // lock cap
+    const cap = add(new THREE.SphereGeometry(0.016, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), marked ? M.metal : M.graphite, 0, 0.014, 0, 0, 0, 0, prop); cap.scale.y = 0.45;
+    const set = new THREE.Group(); prop.add(set);
+    add(new RoundedBoxGeometry(0.11, 0.008, 0.03, 2, 0.004), M.blade, 0, 0.001, 0, 0, 0, 0, set);
+    for (let b = 0; b < 2; b++) {
+      const arm = new THREE.Group(); arm.rotation.y = b * Math.PI; set.add(arm);
+      add(blade[hand], M.blade, 0, 0.002, 0, 0, 0, 0, arm);
+      add(new THREE.CylinderGeometry(0.012, 0.012, 0.012, 20), M.graphite, 0.045, 0.004, 0, 0, 0, 0, arm);    // pivot boss
+      add(new THREE.CylinderGeometry(0.005, 0.005, 0.002, 10), M.metal, 0.045, 0.0105, 0, 0, 0, 0, arm);      // pivot screw
+      if (marked) add(new THREE.BoxGeometry(0.03, 0.0012, 0.004), M.mark, 0.085, 0.012, 0, 0, 0, 0, arm);
+    }
+    const disc = blurDisc(prop, discGeo, blurTex, 0x8c949e, 0.12);
+    for (let b = 0; b < 2; b++) { const s = new THREE.Mesh(smear[hand], M.smear); s.rotation.set(Math.PI / 2, b * Math.PI, 0); s.position.z = 0.0005; s.renderOrder = 1; disc.add(s); }
+    return { set, disc };
+  } };
+}
+const SHOW_R = 0.4;
+function makeShowRotor({ M, blurTex, add }: RotorKit): Rotor {
+  const band = { from: 0.8, to: 0.87, inflate: 0.0006 };
+  const blade = perHand(h => bladeGeometry(SHOW_R, 0.03, h, 22, 9)), stripe = perHand(h => bladeGeometry(SHOW_R, 0.03, h, 3, 9, band));
+  const discGeo = new THREE.CircleGeometry(SHOW_R + 0.01, 48);
+  return { build(prop, hand) {
+    const set = new THREE.Group(); prop.add(set);
+    for (let b = 0; b < 2; b++) {
+      const arm = new THREE.Group(); arm.rotation.y = b * Math.PI; set.add(arm);
+      add(blade[hand], M.blade, 0, 0.004, 0, 0, 0, 0, arm);
+      add(stripe[hand], M.stripe, 0, 0.004, 0, 0, 0, 0, arm);
+    }
+    add(new THREE.CylinderGeometry(0.03, 0.034, 0.014, 24), M.graphite, 0, 0.004, 0, 0, 0, 0, prop);              // hub
+    const cap = add(new THREE.SphereGeometry(0.02, 16, 10), M.metal, 0, 0.012, 0, 0, 0, 0, prop); cap.scale.y = 0.6;
+    return { set, disc: blurDisc(prop, discGeo, blurTex, 0x9aa4b0, 0.1) };
+  } };
+}
+
 function sculptDrone(mats: Record<string, THREE.Material>, blurTex: THREE.Texture, merge: boolean): Built {
   const M = mats;
   const g = new THREE.Group();
@@ -307,18 +363,8 @@ function sculptDrone(mats: Record<string, THREE.Material>, blurTex: THREE.Textur
 
   // --- Arms, motors, legs and props.
   const props: THREE.Group[] = [], blur: THREE.Mesh[] = [], blades: THREE.Object3D[] = [];
-  const bladeGeo = { [1]: bladeGeometry(PROP_R, 0.042, 1, 22, 9), [-1]: bladeGeometry(PROP_R, 0.042, -1, 22, 9) } as Record<number, THREE.BufferGeometry>;
   const podGeo = new THREE.LatheGeometry([[0, -0.028], [0.04, -0.028], [0.054, -0.023], [0.06, -0.01], [0.061, 0.008], [0.058, 0.018], [0.05, 0.023], [0, 0.023]].map(([r, y]) => new THREE.Vector2(r, y)), 32);
-  const discGeo = new THREE.CircleGeometry(PROP_R + 0.012, 64);
-  const smearGeo = { [1]: smearGeometry(PROP_R, 0.05, 1), [-1]: smearGeometry(PROP_R, 0.05, -1) } as Record<number, THREE.BufferGeometry>;
-  // A material set with a stripe paint asks for the light-show prop (the hero uses it): Ember's longer blades
-  // straight off a hub with a silver cap, white tip stripes, instead of the folding props with pivot bosses.
-  const SHOW_R = 0.4, band = { from: 0.8, to: 0.87, inflate: 0.0006 };
-  const show = M.stripe ? {
-    blade: { [1]: bladeGeometry(SHOW_R, 0.03, 1, 22, 9), [-1]: bladeGeometry(SHOW_R, 0.03, -1, 22, 9) } as Record<number, THREE.BufferGeometry>,
-    stripe: { [1]: bladeGeometry(SHOW_R, 0.03, 1, 3, 9, band), [-1]: bladeGeometry(SHOW_R, 0.03, -1, 3, 9, band) } as Record<number, THREE.BufferGeometry>,
-    disc: new THREE.CircleGeometry(SHOW_R + 0.01, 48),
-  } : null;
+  const rotor = (M.stripe ? makeShowRotor : makeFoldingRotor)({ M, blurTex, add });
   ARMS.forEach(({ root, tip, front }, k) => {
     const dir = tip.clone().sub(root), L = dir.length() - 0.05; dir.normalize();
     const up = V(0, 1, 0).addScaledVector(dir, -dir.y).normalize(), side = new THREE.Vector3().crossVectors(dir, up);
@@ -345,42 +391,14 @@ function sculptDrone(mats: Record<string, THREE.Material>, blurTex: THREE.Textur
       add(new THREE.SphereGeometry(0.0095, 14, 10), tip.z > 0 ? M.ledGreen : M.ledRed, tip.x - 0.028, tip.y - 0.014, tip.z + Math.sign(tip.z) * 0.043);
     }
 
-    // The rotating parts: the bell (copper stator showing between its spokes), the lock cap, and two folding
-    // black blades; one diagonal pair carries the marks and a silver cap, as on the real props.
+    // The rotating parts: the bell (copper stator showing between its spokes), then the prop and its blur disc.
     const hand = k % 2 ? -1 : 1;
     const prop = new THREE.Group(); prop.position.set(tip.x, tip.y + 0.074, tip.z);
     add(new THREE.CylinderGeometry(0.041, 0.041, 0.032, 20), M.copper, 0, -0.025, 0, 0, 0, 0, prop);
     for (let r = 0; r < 9; r++) { const a = (r / 9) * Math.PI * 2; add(new THREE.BoxGeometry(0.021, 0.032, 0.006), M.bell, Math.cos(a) * 0.046, -0.025, Math.sin(a) * 0.046, 0, -a + Math.PI / 2, 0, prop); }
     add(new THREE.CylinderGeometry(0.049, 0.049, 0.007, 28), M.bell, 0, -0.043, 0, 0, 0, 0, prop);
     add(new THREE.CylinderGeometry(0.044, 0.049, 0.009, 28), M.bell, 0, -0.008, 0, 0, 0, 0, prop);
-    const marked = k === 1 || k === 3;
-    const set = new THREE.Group(); prop.add(set);
-    if (show) {
-      // The light-show prop: two blades off a hub, a silver cap.
-      for (let b = 0; b < 2; b++) {
-        const blade = new THREE.Group(); blade.rotation.y = b * Math.PI; set.add(blade);
-        add(show.blade[hand], M.blade, 0, 0.004, 0, 0, 0, 0, blade);
-        add(show.stripe[hand], M.stripe, 0, 0.004, 0, 0, 0, 0, blade);
-      }
-      add(new THREE.CylinderGeometry(0.03, 0.034, 0.014, 24), M.graphite, 0, 0.004, 0, 0, 0, 0, prop);
-      const cap = add(new THREE.SphereGeometry(0.02, 16, 10), M.metal, 0, 0.012, 0, 0, 0, 0, prop); cap.scale.y = 0.6;
-    } else {
-      add(new THREE.CylinderGeometry(0.018, 0.021, 0.012, 24), marked ? M.metal : M.graphite, 0, 0.008, 0, 0, 0, 0, prop);    // lock cap
-      const cap = add(new THREE.SphereGeometry(0.016, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), marked ? M.metal : M.graphite, 0, 0.014, 0, 0, 0, 0, prop); cap.scale.y = 0.45;
-      add(new RoundedBoxGeometry(0.11, 0.008, 0.03, 2, 0.004), M.blade, 0, 0.001, 0, 0, 0, 0, set);
-      for (let b = 0; b < 2; b++) {
-        const blade = new THREE.Group(); blade.rotation.y = b * Math.PI; set.add(blade);
-        add(bladeGeo[hand], M.blade, 0, 0.002, 0, 0, 0, 0, blade);
-        add(new THREE.CylinderGeometry(0.012, 0.012, 0.012, 20), M.graphite, 0.045, 0.004, 0, 0, 0, 0, blade);    // pivot boss
-        add(new THREE.CylinderGeometry(0.005, 0.005, 0.002, 10), M.metal, 0.045, 0.0105, 0, 0, 0, 0, blade);      // pivot screw
-        if (marked) add(new THREE.BoxGeometry(0.03, 0.0012, 0.004), M.mark, 0.085, 0.012, 0, 0, 0, 0, blade);
-      }
-    }
-    // While the props turn: a faint blur disc over the rotor, and a smear trailing each blade
-    // (children of the disc, so a view shows and hides them together).
-    const disc = new THREE.Mesh(show ? show.disc : discGeo, new THREE.MeshBasicMaterial({ map: blurTex, color: 0x8c949e, transparent: true, opacity: 0.12, depthWrite: false }));
-    disc.rotation.x = -Math.PI / 2; disc.position.y = 0.006; disc.visible = false; prop.add(disc);
-    for (let b = 0; b < 2; b++) { const s = new THREE.Mesh(smearGeo[hand], M.smear); s.rotation.set(Math.PI / 2, b * Math.PI, 0); s.position.z = 0.0005; s.renderOrder = 1; disc.add(s); }
+    const { set, disc } = rotor.build(prop, hand, k === 1 || k === 3);
     g.add(prop); props.push(prop); blur.push(disc); blades.push(set);
   });
 
