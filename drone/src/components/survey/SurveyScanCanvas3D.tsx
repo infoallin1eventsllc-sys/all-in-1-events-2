@@ -11,7 +11,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RotateCcw } from 'lucide-react';
 import { PARKED_CARS, SITE, TREES, WORLD_M, heightAt, siteImagery, structureAt } from '../../survey/site';
 import { GOOD_VIEWS, type CoverageGrid, type Leg, type SurveyPlan } from '../../survey/plan';
-import { aimGimbal, buildDrone, droneMaterials, radialTexture } from '../hero/droneModel';
+import { aimGimbal, buildDrone, droneMaterials, radialTexture, ROTOR_SPIN } from '../hero/droneModel';
 import { FrameGovernor } from '../../lib/quality';
 import { release3d } from '../../lib/release3d';
 import type { Photo, SurveyAircraft, Phase } from '../../hooks/useSurveyMission';
@@ -613,7 +613,7 @@ export const SurveyScanCanvas3D: React.FC<Props> = (props) => {
       pitch += ((flying && a.speedMps > 1.5 ? -0.14 : 0) - pitch) * Math.min(1, dt * 3);
       ac.position.set(a.x, acY, a.y);
       ac.rotation.set(pitch, Math.PI / 2 - hRad, roll, 'YXZ');
-      for (const pr of acProps) pr.rotation.y += dt * (flying ? 58 : 0) * ((acProps.indexOf(pr) % 2) ? -1 : 1);
+      for (const pr of acProps) pr.rotation.y += dt * (flying ? ROTOR_SPIN : 0) * ((acProps.indexOf(pr) % 2) ? -1 : 1);
       acBlur.forEach(b => { b.visible = flying; });
       camTilt += ((capturing ? -Math.PI / 2 : -0.35) - camTilt) * Math.min(1, dt * 2.5);
       aimGimbal(acGimbal, { tilt: camTilt });

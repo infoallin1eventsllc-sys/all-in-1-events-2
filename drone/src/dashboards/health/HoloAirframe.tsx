@@ -101,7 +101,7 @@ export const HoloAirframe: React.FC<Props> = ({ motors, frame, findings, flying 
     const pick = frame.kind === 'QUAD' ? null : frame.kind === 'HEXA' ? 'cinema' : frame.kind === 'PLANE' || frame.kind === 'VTOL' ? 'vtol' : 'generic';
     const air = pick === null ? buildDrone(placeholder, blurTex, { merge: false }) : pick === 'generic' ? genericFrame(motors) : VARIANTS.find(v => v.id === pick)!.build(placeholder, blurTex);
     Object.values(placeholder).forEach(m => m.dispose());
-    air.blur.forEach(b => { b.visible = false; });
+    air.blur.forEach(b => b.removeFromParent());   // the blur discs and blade smears are for spinning props, not the hologram
     const model = air.group;
     const box0 = new THREE.Box3().setFromObject(model), dim = box0.getSize(new THREE.Vector3());
     const k = 2.4 / Math.max(dim.x, dim.z);

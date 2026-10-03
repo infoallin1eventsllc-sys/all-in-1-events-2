@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { aimGimbal, buildDrone, droneMaterials, radialTexture, type Built } from './droneModel';
+import { aimGimbal, buildDrone, droneMaterials, radialTexture, ROTOR_SPIN, type Built } from './droneModel';
 
 /**
  * The aircraft on a photographer's set: soft-box lighting, a soft shadow on a
@@ -91,7 +91,7 @@ export class AircraftStage {
     const rim = new THREE.DirectionalLight(0xffffff, 1.1); rim.position.set(-1.5, 2.6, -4.5); this.scene.add(rim);
 
     this.built = buildDrone(this.mats, this.blur);
-    this.built.group.traverse(o => { const m = o as THREE.Mesh; if (m.isMesh) { m.castShadow = !this.built.blur.includes(m); m.receiveShadow = false; } });
+    this.built.group.traverse(o => { const m = o as THREE.Mesh; if (m.isMesh) { m.castShadow = !(m.material as THREE.Material).transparent; m.receiveShadow = false; } });
     this.body.add(this.built.group); this.scene.add(this.body);
     this.groundY = new THREE.Box3().setFromObject(this.built.group).min.y;
 
@@ -159,8 +159,8 @@ export class AircraftStage {
 
   private applyProps(dt: number) {
     const fast = this.spin > 0.3;
-    this.built.props.forEach((p, k) => { p.rotation.y += dt * 70 * this.spin * (k % 2 ? -1 : 1); });
-    this.built.blur.forEach(b => { b.visible = fast; });          // the blades keep turning under a faint blur disc
+    this.built.props.forEach((p, k) => { p.rotation.y += dt * ROTOR_SPIN * this.spin * (k % 2 ? -1 : 1); });
+    this.built.blur.forEach(b => { b.visible = fast; });          // the blades turn under a faint disc, each trailing its smear
   }
 
   /** The airframe's own motion, then the gimbal holding the camera against it. */

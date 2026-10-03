@@ -19,6 +19,43 @@ export function radialTexture(): THREE.Texture {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 
+/**
+ * The motion smear behind a spinning blade: a sector of the rotor disc trailing the
+ * blade (on +z·hand, the side a prop turning by `hand` sweeps away from), densest at
+ * the blade and fading over `arc` radians, strongest toward the tip where the blade
+ * moves fastest. Alpha is in the vertex colours, so one material serves every rotor.
+ * Local axes as the prop: in the x-z plane, blade along +x.
+ */
+export function smearGeometry(R: number, r0: number, hand: 1 | -1, arc = 2, around = 30, rings = 8): THREE.BufferGeometry {
+  const pos: number[] = [], col: number[] = [], idx: number[] = [];
+  const smooth = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  for (let i = 0; i <= rings; i++) {
+    const s = i / rings, r = r0 + (R - r0) * s;
+    const radial = smooth(0, 0.3, s) * (1 - smooth(0.9, 1, s)) * (0.4 + 0.6 * s);
+    for (let j = 0; j <= around; j++) {
+      const t = j / around, phi = -0.06 + arc * t;
+      pos.push(r * Math.cos(phi), 0, hand * r * Math.sin(phi));
+      col.push(1, 1, 1, 0.8 * radial * Math.pow(1 - t, 1.7));
+    }
+  }
+  for (let i = 0; i < rings; i++) for (let j = 0; j < around; j++) {
+    const a = i * (around + 1) + j, b = a + around + 1;
+    idx.push(a, b, a + 1, a + 1, b, b + 1);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 4));
+  g.setIndex(idx);
+  return g;
+}
+
+/**
+ * Rotor speed as drawn, radians a second. A real prop turns at 100-250 rev/s, which at
+ * 60 frames a second strobes into a still or backward-turning disc; this is fast enough
+ * to read as spinning, slow enough that the eye can follow each blade and its smear.
+ */
+export const ROTOR_SPIN = 30;
+
 
 const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 
@@ -273,6 +310,7 @@ function sculptDrone(mats: Record<string, THREE.Material>, blurTex: THREE.Textur
   const bladeGeo = { [1]: bladeGeometry(PROP_R, 0.042, 1, 22, 9), [-1]: bladeGeometry(PROP_R, 0.042, -1, 22, 9) } as Record<number, THREE.BufferGeometry>;
   const podGeo = new THREE.LatheGeometry([[0, -0.028], [0.04, -0.028], [0.054, -0.023], [0.06, -0.01], [0.061, 0.008], [0.058, 0.018], [0.05, 0.023], [0, 0.023]].map(([r, y]) => new THREE.Vector2(r, y)), 32);
   const discGeo = new THREE.CircleGeometry(PROP_R + 0.012, 64);
+  const smearGeo = { [1]: smearGeometry(PROP_R, 0.05, 1), [-1]: smearGeometry(PROP_R, 0.05, -1) } as Record<number, THREE.BufferGeometry>;
   ARMS.forEach(({ root, tip, front }, k) => {
     const dir = tip.clone().sub(root), L = dir.length() - 0.05; dir.normalize();
     const up = V(0, 1, 0).addScaledVector(dir, -dir.y).normalize(), side = new THREE.Vector3().crossVectors(dir, up);
@@ -319,35 +357,44 @@ function sculptDrone(mats: Record<string, THREE.Material>, blurTex: THREE.Textur
       add(new THREE.CylinderGeometry(0.005, 0.005, 0.002, 10), M.metal, 0.045, 0.0105, 0, 0, 0, 0, blade);      // pivot screw
       if (marked) add(new THREE.BoxGeometry(0.03, 0.0012, 0.004), M.mark, 0.085, 0.012, 0, 0, 0, 0, blade);
     }
-    // A faint blur disc over the spinning blades (shown while the props turn).
-    const disc = new THREE.Mesh(discGeo, new THREE.MeshBasicMaterial({ map: blurTex, color: 0x8c949e, transparent: true, opacity: 0.2, depthWrite: false }));
+    // While the props turn: a faint blur disc over the rotor, and a smear trailing each blade
+    // (children of the disc, so a view shows and hides them together).
+    const disc = new THREE.Mesh(discGeo, new THREE.MeshBasicMaterial({ map: blurTex, color: 0x8c949e, transparent: true, opacity: 0.12, depthWrite: false }));
     disc.rotation.x = -Math.PI / 2; disc.position.y = 0.006; disc.visible = false; prop.add(disc);
+    for (let b = 0; b < 2; b++) { const s = new THREE.Mesh(smearGeo[hand], M.smear); s.rotation.set(Math.PI / 2, b * Math.PI, 0); s.position.z = 0.0005; s.renderOrder = 1; disc.add(s); }
     g.add(prop); props.push(prop); blur.push(disc); blades.push(set);
   });
 
-  // --- Gimbal under the nose: yaw motor on the mount, a yoke down to the roll motor behind the camera,
-  //     a bracket round to the pitch motor on its left flank, and the black camera head.
-  const yawJ = new THREE.Group(); yawJ.position.set(0.385, -0.004, 0); yawJ.scale.setScalar(1.25); g.add(yawJ);
+  // --- Gimbal under the nose, in the compact-drone idiom: a dark yaw arm down behind the camera to the
+  //     roll motor, a cradle from it under the head and up both flanks (pitch motor on one, a bearing
+  //     cap on the other), and a black camera head with cooling fins and a square hood round a big lens.
+  const yawJ = new THREE.Group(); yawJ.position.set(0.385, -0.004, 0); yawJ.scale.setScalar(1.3); g.add(yawJ);
   add(new THREE.CylinderGeometry(0.03, 0.03, 0.006, 28), M.graphite, -0.005, 0.006, 0, 0, 0, 0, yawJ);                  // mount plate on the chin
-  add(new THREE.CylinderGeometry(0.02, 0.02, 0.016, 28), M.graphite, 0, -0.006, 0, 0, 0, 0, yawJ);                      // yaw motor
-  add(new THREE.TorusGeometry(0.02, 0.0016, 8, 28), M.metal, 0, -0.014, 0, Math.PI / 2, 0, 0, yawJ);
-  add(new RoundedBoxGeometry(0.024, 0.048, 0.03, 3, 0.009), M.white, 0.006, -0.034, 0, 0, 0, 0, yawJ);                  // yoke down the back
-  add(new THREE.CylinderGeometry(0.018, 0.018, 0.016, 28), M.graphite, 0.012, -0.058, 0, 0, 0, Math.PI / 2, yawJ);      // roll motor
-  add(new THREE.CylinderGeometry(0.012, 0.012, 0.002, 20), M.metal, 0.003, -0.058, 0, 0, 0, Math.PI / 2, yawJ);
-  const rollJ = new THREE.Group(); rollJ.position.set(0.062, -0.058, 0); yawJ.add(rollJ);
-  add(new RoundedBoxGeometry(0.014, 0.018, 0.05, 2, 0.006), M.white, -0.042, 0, -0.022, 0, 0, 0, rollJ);                // bracket round the side
-  add(new RoundedBoxGeometry(0.044, 0.018, 0.012, 2, 0.006), M.white, -0.022, 0, -0.045, 0, 0, 0, rollJ);
-  add(new THREE.CylinderGeometry(0.016, 0.016, 0.011, 28), M.graphite, 0, 0, -0.043, Math.PI / 2, 0, 0, rollJ);         // pitch motor
-  add(new THREE.CylinderGeometry(0.011, 0.011, 0.002, 20), M.metal, 0, 0, -0.0495, Math.PI / 2, 0, 0, rollJ);
+  add(new THREE.CylinderGeometry(0.02, 0.02, 0.016, 28), M.gimbalArm, 0, -0.006, 0, 0, 0, 0, yawJ);                     // yaw motor
+  add(new THREE.TorusGeometry(0.02, 0.0012, 8, 28), M.metal, 0, -0.014, 0, Math.PI / 2, 0, 0, yawJ);
+  add(new RoundedBoxGeometry(0.02, 0.036, 0.026, 3, 0.008), M.gimbalArm, 0.006, -0.026, 0, 0, 0, 0, yawJ);              // yaw arm down the back
+  add(new THREE.CylinderGeometry(0.017, 0.017, 0.016, 28), M.gimbalArm, 0.014, -0.044, 0, 0, 0, Math.PI / 2, yawJ);     // roll motor
+  add(new THREE.CylinderGeometry(0.0115, 0.0115, 0.002, 20), M.graphite, 0.005, -0.044, 0, 0, 0, Math.PI / 2, yawJ);
+  const rollJ = new THREE.Group(); rollJ.position.set(0.058, -0.044, 0); yawJ.add(rollJ);
+  add(new RoundedBoxGeometry(0.014, 0.034, 0.024, 2, 0.006), M.gimbalArm, -0.04, -0.016, 0, 0, 0, 0.35, rollJ);          // cradle: down from the roll motor,
+  add(new RoundedBoxGeometry(0.046, 0.009, 0.024, 2, 0.004), M.gimbalArm, -0.012, -0.034, 0, 0, 0, 0, rollJ);           // forward under the head,
+  add(new RoundedBoxGeometry(0.022, 0.009, 0.098, 2, 0.004), M.gimbalArm, 0.002, -0.036, 0, 0, 0, 0, rollJ);            // across,
+  for (const s of [-1, 1]) add(new RoundedBoxGeometry(0.02, 0.04, 0.008, 2, 0.0035), M.gimbalArm, 0.002, -0.017, s * 0.045, 0, 0, 0, rollJ);   // and up each flank
+  add(new THREE.CylinderGeometry(0.017, 0.017, 0.012, 28), M.gimbalArm, 0, 0, -0.045, Math.PI / 2, 0, 0, rollJ);        // pitch motor
+  add(new THREE.CylinderGeometry(0.0115, 0.0115, 0.002, 24), M.graphite, 0, 0, -0.0515, Math.PI / 2, 0, 0, rollJ);
+  add(new THREE.CylinderGeometry(0.013, 0.013, 0.01, 24), M.gimbalArm, 0, 0, 0.044, Math.PI / 2, 0, 0, rollJ);          // bearing cap
   const pitchJ = new THREE.Group(); rollJ.add(pitchJ);
-  add(new RoundedBoxGeometry(0.06, 0.054, 0.068, 4, 0.014), M.camHead, 0, 0, 0, 0, 0, 0, pitchJ);
-  add(new RoundedBoxGeometry(0.004, 0.046, 0.058, 2, 0.003), M.seam, 0.029, 0, 0, 0, 0, 0, pitchJ);                    // front plate line
-  add(new THREE.CylinderGeometry(0.0225, 0.025, 0.014, 36), M.camHead, 0.034, 0, 0, 0, 0, -Math.PI / 2, pitchJ);        // lens barrel
-  add(new THREE.TorusGeometry(0.0215, 0.0022, 10, 40), M.metal, 0.0415, 0, 0, 0, Math.PI / 2, 0, pitchJ);               // bright bezel
-  add(new THREE.CylinderGeometry(0.0195, 0.0195, 0.003, 36), M.graphite, 0.0405, 0, 0, 0, 0, -Math.PI / 2, pitchJ);
-  const glass = add(new THREE.SphereGeometry(0.0175, 32, 16, 0, Math.PI * 2, 0, 0.8).rotateZ(-Math.PI / 2), M.lens, 0.0418 - 0.0175 * Math.cos(0.8), 0, 0, 0, 0, 0, pitchJ); glass.scale.x = 0.8;
-  add(new THREE.TorusGeometry(0.009, 0.0009, 6, 28), M.coating, 0.0428, 0, 0, 0, Math.PI / 2, 0, pitchJ);              // coating glint in the glass
-  add(new RoundedBoxGeometry(0.03, 0.04, 0.004, 2, 0.002), M.graphite, 0, 0, 0.034, 0, 0, 0, pitchJ);                   // side cap
+  add(new RoundedBoxGeometry(0.058, 0.056, 0.07, 4, 0.012), M.camHead, 0, 0, 0, 0, 0, 0, pitchJ);
+  for (let k = 0; k < 7; k++) add(new THREE.BoxGeometry(0.03, 0.004, 0.0034), M.hood, -0.011, 0.0285, -0.024 + k * 0.008, 0, 0, 0, pitchJ);   // cooling fins over the back
+  add(new RoundedBoxGeometry(0.012, 0.052, 0.058, 3, 0.01), M.hood, 0.031, 0, 0, 0, 0, 0, pitchJ);                     // square hood round the lens
+  add(new RoundedBoxGeometry(0.002, 0.043, 0.049, 2, 0.008), M.camHead, 0.0372, 0, 0, 0, 0, 0, pitchJ);                // its dark face
+  add(new THREE.CylinderGeometry(0.0212, 0.0218, 0.006, 40), M.camHead, 0.0395, 0, 0, 0, 0, -Math.PI / 2, pitchJ);       // lens barrel, proud of the face
+  add(new THREE.TorusGeometry(0.0201, 0.0011, 8, 48), M.metal, 0.0425, 0, 0, 0, Math.PI / 2, 0, pitchJ);               // thin silver ring
+  add(new THREE.CylinderGeometry(0.0192, 0.0192, 0.002, 40), M.seam, 0.0422, 0, 0, 0, 0, -Math.PI / 2, pitchJ);
+  const glass = add(new THREE.SphereGeometry(0.0172, 36, 16, 0, Math.PI * 2, 0, 0.85).rotateZ(-Math.PI / 2), M.lens, 0.0438 - 0.0172 * Math.cos(0.85), 0, 0, 0, 0, 0, pitchJ); glass.scale.x = 0.7;
+  add(new THREE.TorusGeometry(0.0125, 0.0008, 6, 36), M.coating, 0.0439, 0, 0, 0, Math.PI / 2, 0, pitchJ);             // coating rings deep in the glass
+  add(new THREE.CircleGeometry(0.0055, 24).rotateY(Math.PI / 2), M.coatingDeep, 0.0444, 0, 0, 0, 0, 0, pitchJ);
+  for (const [y, w] of [[-0.0168, 0.0042], [-0.0196, 0.0048]]) add(new THREE.BoxGeometry(0.0004, 0.0016, w), M.mark, 0.0383, y, 0.0192, 0, 0, 0, pitchJ);   // printed spec in the hood's corner
   const gimbal = { yaw: yawJ, roll: rollJ, pitch: pitchJ };
   pitchJ.rotation.z = -0.25;
 
@@ -376,6 +423,12 @@ export function droneMaterials(): Record<string, THREE.Material> {
     sensor: new THREE.MeshPhysicalMaterial({ color: 0x050608, metalness: 0.2, roughness: 0.06, clearcoat: 1, clearcoatRoughness: 0.03, envMapIntensity: 1.8 }),
     lens: new THREE.MeshPhysicalMaterial({ color: 0x04070d, metalness: 0.1, roughness: 0.02, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 2.6, iridescence: 0.6, iridescenceIOR: 1.35, iridescenceThicknessRange: [180, 420] }),
     coating: new THREE.MeshBasicMaterial({ color: new THREE.Color(0.24, 0.3, 0.62), transparent: true, opacity: 0.45, toneMapped: false }),
+    coatingDeep: new THREE.MeshBasicMaterial({ color: new THREE.Color(0.18, 0.42, 0.34), transparent: true, opacity: 0.5, toneMapped: false }),
+    // The camera cradle and the hood round the lens: dark grey satin, a step lighter than the head.
+    gimbalArm: new THREE.MeshPhysicalMaterial({ color: 0x3a3d42, metalness: 0.05, roughness: 0.62, clearcoat: 0.15, clearcoatRoughness: 0.4 }),
+    hood: new THREE.MeshPhysicalMaterial({ color: 0x2c2f34, metalness: 0.1, roughness: 0.5, clearcoat: 0.3, clearcoatRoughness: 0.3 }),
+    // Blade smears: a dark smoke on a light set; a view on a dark backdrop lightens the colour.
+    smear: new THREE.MeshBasicMaterial({ color: 0x4c525a, vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide }),
     blade: new THREE.MeshPhysicalMaterial({ color: 0x16181b, metalness: 0, roughness: 0.55, clearcoat: 0.12, clearcoatRoughness: 0.4, side: THREE.DoubleSide }),
     bell: new THREE.MeshStandardMaterial({ color: 0x24272c, metalness: 0.75, roughness: 0.32 }),
     copper: new THREE.MeshStandardMaterial({ color: 0x5a3a20, metalness: 1, roughness: 0.55 }),
