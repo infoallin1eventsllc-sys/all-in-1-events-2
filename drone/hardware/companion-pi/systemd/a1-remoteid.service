@@ -1,0 +1,15 @@
+[Unit]
+Description=All in 1 Drone Command — Remote ID receiver
+After=bluetooth.target network-online.target
+Wants=bluetooth.target
+
+[Service]
+User=a1
+AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+WorkingDirectory=/opt/a1/remoteid
+ExecStart=/opt/a1/venv/bin/python3 /opt/a1/remoteid/receiver.py --port 8765
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

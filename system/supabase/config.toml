@@ -1,0 +1,20 @@
+# Supabase CLI config for the marketing system's edge functions.
+# `supabase functions deploy` reads verify_jwt from here: intake (the website
+# form) and dashboard (passcode-gated) are called without a Supabase JWT, so
+# deploying them with the default verify_jwt = true would answer 401.
+project_id = "glzodwhyavexpuusbqjy"
+
+[functions.intake]
+verify_jwt = false
+
+[functions.dashboard]
+verify_jwt = false
+
+[functions.orchestrator]
+verify_jwt = true
+
+[functions.runner]
+verify_jwt = true
+
+[functions.report]
+verify_jwt = true

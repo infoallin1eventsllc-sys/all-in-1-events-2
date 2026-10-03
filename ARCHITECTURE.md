@@ -161,7 +161,7 @@ const apiKey = process.env.ANTHROPIC_API_KEY;  // ✅ Server-side only
 
 ---
 
-### `vercel/api/chat.js`
+### `api/chat.js`
 **Purpose:** Serverless function for Vercel (same logic as Netlify)  
 **Key features:**
 - Identical security to Netlify version

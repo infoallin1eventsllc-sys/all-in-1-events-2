@@ -5,8 +5,22 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+// The page is XHTML, so a character XML forbids (control characters, lone
+// surrogates, U+FFFE/FFFF) anywhere in the data would make the whole page a
+// parse error. Drop them before escaping.
 const esc = (s: unknown) =>
-  String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+  String(s ?? "")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "")
+    .replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+
+/** Compare without leaking how many leading characters matched. */
+async function sameSecret(a: string, b: string): Promise<boolean> {
+  const h = async (x: string) => new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x)));
+  const [x, y] = await Promise.all([h(a), h(b)]);
+  let d = 0;
+  for (let i = 0; i < x.length; i++) d |= x[i] ^ y[i];
+  return d === 0;
+}
 
 Deno.serve(async (req) => {
   const url = new URL(req.url);
@@ -17,16 +31,23 @@ Deno.serve(async (req) => {
   // --- passcode gate ---
   const { data: cfg } = await sb.from("settings").select("value").eq("key", "dashboard").maybeSingle();
   const passcode = (cfg?.value as { passcode?: string } | null)?.passcode;
-  if (!passcode || url.searchParams.get("key") !== passcode) {
+  if (!passcode || !(await sameSecret(url.searchParams.get("key") ?? "", passcode))) {
     return html(page(`<div class="gate"><div class="mono">${MONO}</div>
       <h1>Meridian Dashboard</h1><p>Add <code>?key=YOUR_PASSCODE</code> to the URL to view.</p></div>`), 401);
   }
 
   // --- gather data ---
-  const [contacts, deals, tasks, content, messages, runs, report, media] = await Promise.all([
+  // KPI counts come from count queries, not from the short lists shown below.
+  const n = (q: PromiseLike<{ count: number | null }>) => q.then((r) => r.count ?? 0);
+  const [leads, pendingContent, draftMsgs, pendingTasks] = await Promise.all([
+    n(sb.from("contacts").select("id", { count: "exact", head: true }).eq("lifecycle_stage", "lead")),
+    n(sb.from("content_items").select("id", { count: "exact", head: true }).eq("status", "pending_approval")),
+    n(sb.from("messages").select("id", { count: "exact", head: true }).eq("status", "draft")),
+    n(sb.from("tasks").select("id", { count: "exact", head: true }).eq("status", "pending")),
+  ]);
+  const [contacts, deals, content, messages, runs, report, media] = await Promise.all([
     sb.from("contacts").select("full_name,email,source,lifecycle_stage,created_at").order("created_at", { ascending: false }).limit(8),
     sb.from("deals").select("stage,amount"),
-    sb.from("tasks").select("status"),
     sb.from("content_items").select("channel,kind,title,body,image_url,status,meta,created_at").order("created_at", { ascending: false }).limit(12),
     sb.from("messages").select("channel,to_addr,subject,body,status,meta,created_at").order("created_at", { ascending: false }).limit(6),
     sb.from("agent_runs").select("status,summary,tasks_created,started_at").order("started_at", { ascending: false }).limit(5),
@@ -34,12 +55,8 @@ Deno.serve(async (req) => {
     sb.from("media_assets").select("id"),
   ]);
 
-  const C = contacts.data ?? [], D = deals.data ?? [], T = tasks.data ?? [], CO = content.data ?? [], M = messages.data ?? [];
-  const leads = C.filter((c) => c.lifecycle_stage === "lead").length;
+  const C = contacts.data ?? [], D = deals.data ?? [], CO = content.data ?? [], M = messages.data ?? [];
   const pipeline = D.filter((d) => ["new", "quoted"].includes(d.stage)).reduce((s, d) => s + Number(d.amount ?? 0), 0);
-  const pendingContent = CO.filter((c) => c.status === "pending_approval").length;
-  const draftMsgs = M.filter((m) => m.status === "draft").length;
-  const pendingTasks = T.filter((t) => t.status === "pending").length;
   // "Live AI" only if real (non-mock) output actually exists — not merely a key present.
   const liveAI = [...CO, ...M].some((x) => (x.meta as { mocked?: boolean } | null)?.mocked === false);
 

@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<mavlink>
+  <version>3</version>
+  <messages>
+    <message id="291" name="ESC_STATUS">
+      <description>ESC information for higher rate streaming (PX4). Copied from MAVLink common.xml, which this pymavlink build does not include.</description>
+      <field type="uint8_t" name="index">Index of the first ESC in this message.</field>
+      <field type="uint64_t" name="time_usec" units="us">Timestamp</field>
+      <field type="int32_t[4]" name="rpm" units="rpm">Reported motor RPM</field>
+      <field type="float[4]" name="voltage" units="V">Voltage</field>
+      <field type="float[4]" name="current" units="A">Current</field>
+    </message>
+  </messages>
+</mavlink>

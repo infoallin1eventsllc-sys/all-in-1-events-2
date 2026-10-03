@@ -4,14 +4,14 @@ Compact record of what was built and the current state, so work can resume later
 
 ## Who / what
 - **Owner:** Otis Williams — **Meridian Interface** (web/software studio). otis@meridianinterface.com · (281) 882-9198.
-- **Repo:** `infoallin1eventsllc-sys/all-in-1-events-2`, working branch **`claude/marketing-system-tech-stack-uds0mp`**.
+- **Repo:** `infoallin1eventsllc-sys/all-in-1-events-2`. Current working branch **`claude/ecstatic-turing-1k9bjs`** (PR #4; the drone app and everything since Sep 25). The marketing system was first built on `claude/marketing-system-tech-stack-uds0mp`.
 - The repo also holds the "All in 1 Events" client site (`index.html`). The marketing system + portfolio page are Meridian Interface's own portfolio/product work.
-- **Brand:** slate-on-ivory. `#3E4C63`/`#5B6472` slate, `#4F6D8C` steel, `#3E7C86` teal, ivory `#F5F4EF`, ink `#23262B`. Fonts: Sora (headings) + Inter (body). Logo = "M" monogram (rendered as inline SVG; real PNG goes at `assets/meridian-logo.png` and the header/footer auto-swap to it).
+- **Brand:** slate-on-ivory. `#3E4C63`/`#5B6472` slate, `#4F6D8C` steel, `#3E7C86` teal, ivory `#F5F4EF`, ink `#23262B`. Fonts: Sora (headings) + Inter (body). Logo = the Meridian "M" mark: `assets/meridian-logo.png` (added Oct 3, copied from the Meridian site's `public/brand/meridian-mark.png`); the inline SVG monogram remains as the fallback.
 
 ## Deliverables (all committed to the branch)
 1. **`marketing-system.html`** — portfolio page: the tech-stack architecture in Meridian brand. Uses Tailwind CDN.
    - **`system/marketing-system.artifact.html`** — self-contained build (Tailwind compiled to inline CSS). Published artifact: https://claude.ai/code/artifact/72505b31-cf3b-475a-a635-a9fd7cf53f66
-   - Linked from `index.html` nav + footer.
+   - Not linked from `index.html` (checked Sep 25); reachable at `/marketing-system.html`.
 2. **Working backend** on Supabase (see below).
 3. **`system/cli.mjs`** — operator CLI (status/lead/plan/run/loop/content/approve/messages/send/report). Needs Node 18+ and `system/.env` (SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY).
 4. **Dashboard** — Meridian-branded. Published snapshot artifact: https://claude.ai/code/artifact/31148180-2fe1-49f1-bc19-dfbe2d483031
@@ -135,11 +135,106 @@ Compact record of what was built and the current state, so work can resume later
   instead of a summary, because the report prompt matches the mock's content
   branch. Disappears with a real key; metrics in the same report are correct.
 
+## Diagnostic (Sep 25) — repo snapshot vs live
+- **The repo's `system/supabase/functions` is a stale snapshot.** Live has 19
+  functions and a much larger runner (29 KB vs 9 KB here) and intake (v39). Live
+  also has tables not in the migrations (rate_buckets, payments, owner_*,
+  planner_requests, system_alerts, brand_brain, departments), cron jobs beyond
+  the three documented ones, and `invoke_edge` sends `x-run-secret`.
+  **Never redeploy from this folder.** Port changes into the live source instead.
+- Hardened in the repo copy (reference for porting): runner reclaims tasks
+  stuck "running" >15 min and claims 3 per run; **auto mode never sends or
+  approves mock text, a reply cut off at max_tokens, or unparsed JSON**
+  (`isComplete` in `_shared/claude.ts`); web-form leads stay drafts unless
+  `settings.agent.auto_send_web_leads = true`; sends are claimed atomically
+  (send-once); content insert errors fail the task. Intake: size caps, email
+  check, honeypot, per-IP rate limit, never overwrites an existing contact,
+  follow-up dedupe per contact per day. Dashboard: strips XML-invalid chars,
+  constant-time passcode check, KPI counts via count queries. CLI: send/approve
+  guards, sends `x-webhook-secret`. `supabase/config.toml` added.
+- **Live runner still has the three send-path bugs**: `shouldSend` ignores
+  `mocked`/`stop_reason`; claim limit 10 with no stale-lock reclaim; sends not
+  idempotent. **Latent while `settings.agent.autonomy = 'draft'`** (checked: 0
+  tasks running, 0 mock messages sent). **Port the fixes before switching to
+  `auto`.**
+- Live check: security advisor shows only INFO "RLS enabled, no policy"
+  (intended deny-by-default). 6 failed tasks are benign (3 follow-ups for
+  deleted contacts, 3 superseded video jobs).
+
+## Diagnostic (Oct 3) — whole repo, end of day
+Checked and clean:
+- **Drone app** (`drone/`): typecheck, all 22 test suites, production build; a
+  crawl of all 10 views in desktop light, desktop dark and phone (page errors,
+  console errors, failed requests, overflow, broken images, unnamed buttons):
+  **0 issues**. Survey, health and hologram views rendered and checked.
+- **Edge functions** (repo copy): all five typecheck with Deno. Run the check as
+  `deno check --node-modules-dir=none <file>`; without the flag Deno trips over
+  the repo-root `node_modules` (a tooling quirk, not a code fault).
+- **Live Supabase:** all 13 cron jobs succeeded over the last 24 h; advisor shows
+  only the intended INFO "RLS enabled, no policy"; autonomy is `draft`, 0 tasks
+  stuck running; the 6 failed tasks are the old benign ones (Sep 7 and 17).
+- **Root site** (`npm run build` → `_site/`) assembles; every local link resolves.
+- **Meridian website:** typecheck and build clean; production is on main
+  `46f7c26` (PR #37), Vercel deploy succeeded.
+Fixed:
+- `marketing-system.html` requested a missing `assets/meridian-logo.png` on every
+  visit (a 404 behind the SVG fallback). The real Meridian mark is now there.
+- Drone build warned that rolldown's `advancedChunks` is deprecated: switched to
+  `codeSplitting` in `drone/vite.config.ts` (same output: the three.js chunk hash
+  is unchanged).
+- Drone 3D model: the two propeller variants are now separate builders in
+  `droneModel.ts` (`makeFoldingRotor` for the aircraft's own folding props with
+  blade smears, `makeShowRotor` for the light-show prop the hero flies), chosen
+  by the material set (a `stripe` paint means the light-show prop). The hero no
+  longer builds smears only to delete them or recolours discs after the fact.
+  Renders identical before and after.
+Environment notes (not bugs): this sandbox blocks fonts.googleapis.com and
+meridianinterface.com, and the Vercel connector lacks scope; deploys are verified
+through the GitHub commit-status API instead.
+
+## Drone Command: where it stands (Oct 3)
+- Hero (Overview): 12 sculpted folding camera drones; the props are the
+  light-show fleet's (glossy blades, white tip stripes, faint disc, 62 rad/s).
+  Owner asked for exactly that look; do not swap them back.
+- Camera head restyled after the DJI Mini 4 Pro photos the owner shared (original
+  design, no DJI marks); the gimbal is live (`aimGimbal`, tested).
+- "The aircraft, up close" studio, survey and health keep the folding props, with
+  blade smears at `ROTOR_SPIN` (30 rad/s).
+- Meridian copy at `/demos/drone-command/` is rebuilt from this branch: build
+  with `DEMO_BASE=/demos/drone-command/ DEMO_URL=https://meridianinterface.com/demos/drone-command/`,
+  copy to the site's `public/demos/drone-command`, restore `brand/meridian-mark.png`,
+  run `node tools/brand-demos.mjs`, build, PR from `claude/drone-command-demo`
+  (reset from main each time), wait for Vercel, merge.
+
+## Site survey redesign (Oct 3): Holographic Site
+- The owner asked for a whole new direction for the survey graphics. Five concepts were drawn from
+  the real venue and plan (`drone/lab/survey-concepts.html?c=sheet|model|lightbox|relief|holo`),
+  backed by research into DroneDeploy, Pix4D, Propeller, Wingtra, DJI, Esri, Trimble and map
+  conventions; concept board: https://claude.ai/artifact/U7FWqQepFb2fyZtyTM2uSC (private).
+- **Chosen: E · Holographic Site** (from the owner's reference images: a drone projecting a blue
+  scan beam onto a job site, a glowing boundary on real terrain, floating info cards).
+- Built: `components/survey/SurveyHoloStage.tsx` replaced the old dark stage (deleted) with the
+  same props; `survey/blueprint.ts` draws the plan; `sitePhoto` in `survey/site.ts` is the
+  daylight ground for the stage, the results viewer and the lab. Survey accent is now blue on the
+  page, Overview card and hero slide; the Analytics series stays orange (no blue passes the
+  colour-blind check against the light show's indigo). See `drone/DESIGN.md`.
+- Overview card image `drone/public/demo/survey.jpg` re-shot from the new stage.
+
+## Surveillance: map removed (Oct 3)
+- The owner found the patrol map meaningless (procedural noise "terrain", unrelated to the city
+  camera footage). Four redesign concepts were drawn on the survey venue (board:
+  https://claude.ai/artifact/9Ri2i7jpRc8p5S7qFmgr3Y), then the owner chose to **remove the map**.
+- Done: `SurveillanceMapCanvas.tsx` and the concept lab deleted; the camera fills the stage alone
+  (no picture-in-picture); waypoint commands stay in the Route tab. `dashboards/terrain.ts` keeps
+  only the value noise the survey venue uses. The patrol sim still keeps positions in its own map
+  pixels (`MAP_W`, `METERS_PER_PX`) for detections, range and live-GPS mapping.
+- Re-shot `drone/public/demo/patrol.jpg` and `drone/portfolio/gallery/patrol.jpg` without the map.
+
 ## Open next steps (not done)
+- **Before autonomy = auto:** port the runner send-path fixes above into the live runner.
 - Wire dashboard into the deployed website so real photos render + it's live.
 - Phase 2 channels: Meta/Google Business Profile/Google Ads/WordPress publishing (OAuth per platform).
 - Optional hardening: `RUN_SECRET` header on orchestrator/runner/report (currently callable by anyone with the public anon key; only burns idempotent work / would spend tokens once a real key is set).
 - Vercel preview deploy of the Meridian website (Otis's step; main is ready).
 - key-router PR #1 is OPEN and unmerged: https://github.com/infoallin1eventsllc-sys/key-router/pull/1
 - Self-host the Unsplash photography on the Meridian site.
-- Swap the SVG monogram for the real logo PNG once provided.

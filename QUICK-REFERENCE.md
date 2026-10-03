@@ -34,7 +34,7 @@ Value: sk-ant-your-key-from-anthropic-console
 | `js/app.js` | Chat logic | Yes |
 | `js/api.js` | API client | Yes |
 | `netlify/functions/chat.js` | API proxy | Yes |
-| `vercel/api/chat.js` | API proxy | Yes |
+| `api/chat.js` | API proxy | Yes |
 | `netlify.toml` | Config | Yes |
 | `vercel.json` | Config | Yes |
 | `.env.example` | Template | Yes |

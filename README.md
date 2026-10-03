@@ -12,16 +12,35 @@ all-in-1-events/
 ├── js/
 │   ├── app.js              # Core app logic: chat, inquiry, UI state
 │   └── api.js              # Abstracted API client (local or serverless)
+├── lib/
+│   └── concierge.js        # Concierge logic shared by both functions (prompt, limits, API call)
 ├── netlify/
 │   └── functions/
 │       └── chat.js         # Serverless function (Netlify)
-├── vercel/
-│   └── api/
-│       └── chat.js         # Serverless function (Vercel)
-├── .env.example            # Template for environment variables
-├── netlify.toml            # Netlify config: headers, functions, redirects
-└── vercel.json             # Vercel config: headers, env vars
+├── api/
+│   └── chat.js             # Serverless function (Vercel)
+├── scripts/
+│   └── build-site.mjs      # Assembles _site/ (these pages + the built drone app at /drone/)
+├── drone/                  # Drone command app (Vite), published at /drone/
+├── system/                 # Meridian marketing system (Supabase), not published
+├── netlify.toml            # Netlify config: build, headers, redirects
+└── vercel.json             # Vercel config: build, headers, rewrites
 ```
+
+## Drone Command (`drone/`)
+
+Operator dashboards for the All in 1 drone platform — **Light Show**, **Site
+survey** (mapping, 3D models, inspection) and **Surveillance** — plus the fleet-coordination engineering views
+behind them, and a Bluetooth / USB-radio link to real PX4 / ArduPilot aircraft over
+MAVLink. It is a separate Vite/React app that deploys under `/drone/` on this site.
+
+```bash
+npm run dev:drone     # local: http://localhost:3000/drone/
+npm run build:drone   # what Netlify / Vercel run on deploy
+```
+
+See [`drone/README.md`](drone/README.md) and [`drone/docs/COMPLETION.md`](drone/docs/COMPLETION.md)
+for the hardware kit, the bill of materials and what remains.
 
 ## Quick Start (Local Demo)
 
@@ -97,7 +116,7 @@ Response returned to frontend, rendered safely via textContent
 **Never put your API key in the browser.** This project enforces it:
 
 - `index.html`, `js/app.js`, `js/api.js` contain **no secrets**
-- `netlify/functions/chat.js` and `vercel/api/chat.js` read the key from `process.env`
+- `netlify/functions/chat.js` and `api/chat.js` read the key from `process.env`
 - Environment variables are set in the host dashboard, never committed to git
 - The `.env.example` file shows the format for local development (copy to `.env`, don't commit)
 
@@ -109,7 +128,7 @@ Response returned to frontend, rendered safely via textContent
 **Deployment security:**
 - HTTPS enforced automatically (Netlify / Vercel)
 - Security headers configured in `netlify.toml` / `vercel.json`
-- Rate limiting recommended on the serverless function (see `DEPLOY-and-SECURITY.md`)
+- Rate limiting recommended on the serverless function (see `SECURITY-and-DEPLOYMENT.md`)
 
 ## Code Quality
 
@@ -165,7 +184,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 ## Support & Docs
 
-- **Security:** see `DEPLOY-and-SECURITY.md`
+- **Security:** see `SECURITY-and-DEPLOYMENT.md`
 - **API docs:** [Anthropic Messages API](https://docs.anthropic.com/en/api/messages)
 - **Netlify functions:** [docs](https://docs.netlify.com/functions/overview)
 - **Vercel serverless:** [docs](https://vercel.com/docs/functions/quickstart)

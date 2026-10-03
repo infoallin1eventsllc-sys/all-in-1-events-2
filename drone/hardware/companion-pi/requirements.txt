@@ -1,0 +1,7 @@
+aiortc>=1.9
+aiohttp>=3.9
+bleak>=0.22
+websockets>=13
+pyserial>=3.5
+# bench and tests only (bridge/fake_vehicle.py, relay/test_relay.py); the aircraft does not need it
+pymavlink>=2.4

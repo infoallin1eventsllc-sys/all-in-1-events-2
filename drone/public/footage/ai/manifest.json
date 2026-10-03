@@ -1,0 +1,208 @@
+{
+  "about": "AI-generated aerial plates of San Francisco for the patrol feed, cut like a 4K drone tour. `planned` is the edit; `npm run plates` copies every planned shot whose file is present in this folder into `shots`, which is what the app plays. Moves are [centre x, centre y, zoom] at the start and end of the shot (0..1 of the still, y up; zoom 1 = the whole frame).",
+  "shots": [],
+  "planned": [
+    {
+      "file": "01-golden-gate-fog.jpg",
+      "canva": "MAHWDL-3pQM",
+      "title": "Golden Gate through the fog",
+      "dur": 7,
+      "mood": "GOLDEN",
+      "move": {
+        "from": [
+          0.46,
+          0.5,
+          0.92
+        ],
+        "to": [
+          0.5,
+          0.5,
+          0.72
+        ]
+      },
+      "sun": [
+        0.06,
+        0.66
+      ]
+    },
+    {
+      "file": "02-downtown-fog.jpg",
+      "canva": "MAHWDHhXTSs",
+      "title": "Downtown under the marine layer",
+      "dur": 7,
+      "mood": "DAY",
+      "move": {
+        "from": [
+          0.5,
+          0.52,
+          1
+        ],
+        "to": [
+          0.46,
+          0.56,
+          0.78
+        ]
+      }
+    },
+    {
+      "file": "03-north-beach.jpg",
+      "canva": "MAHWDOLW8kw",
+      "title": "North Beach and Coit Tower",
+      "dur": 6,
+      "mood": "DAY",
+      "move": {
+        "from": [
+          0.4,
+          0.5,
+          0.82
+        ],
+        "to": [
+          0.56,
+          0.55,
+          0.76
+        ]
+      }
+    },
+    {
+      "file": "04-lombard.jpg",
+      "canva": "MAHWDOqLTV8",
+      "title": "Lombard Street",
+      "dur": 5,
+      "mood": "DAY",
+      "move": {
+        "from": [
+          0.5,
+          0.5,
+          0.86
+        ],
+        "to": [
+          0.5,
+          0.5,
+          0.66
+        ],
+        "roll": [
+          0,
+          0.14
+        ]
+      }
+    },
+    {
+      "file": "05-downtown-canyon.jpg",
+      "canva": "MAHWDFpmSSE",
+      "title": "The Financial District canyon",
+      "dur": 6,
+      "mood": "DAY",
+      "move": {
+        "from": [
+          0.5,
+          0.62,
+          0.86
+        ],
+        "to": [
+          0.5,
+          0.46,
+          0.72
+        ]
+      }
+    },
+    {
+      "file": "06-bay-bridge.jpg",
+      "canva": "MAHWDLw8Mpc",
+      "title": "Along the Bay Bridge",
+      "dur": 7,
+      "mood": "DAY",
+      "move": {
+        "from": [
+          0.4,
+          0.5,
+          0.8
+        ],
+        "to": [
+          0.6,
+          0.5,
+          0.8
+        ]
+      }
+    },
+    {
+      "file": "07-container-ship.jpg",
+      "canva": "MAHWDDXvyNE",
+      "title": "A container ship under the Gate",
+      "dur": 8,
+      "mood": "GOLDEN",
+      "move": {
+        "from": [
+          0.36,
+          0.42,
+          0.76
+        ],
+        "to": [
+          0.5,
+          0.4,
+          0.7
+        ]
+      }
+    },
+    {
+      "file": "08-golden-gate-deck.jpg",
+      "canva": "MAHWDK8cIzk",
+      "title": "Straight down over the lanes",
+      "dur": 5,
+      "mood": "GOLDEN",
+      "move": {
+        "from": [
+          0.3,
+          0.5,
+          0.7
+        ],
+        "to": [
+          0.7,
+          0.5,
+          0.7
+        ]
+      }
+    },
+    {
+      "file": "09-marin-sunset.jpg",
+      "canva": "MAHWDF_f2PQ",
+      "title": "The Marin coast at sunset",
+      "dur": 7,
+      "mood": "GOLDEN",
+      "move": {
+        "from": [
+          0.6,
+          0.5,
+          0.86
+        ],
+        "to": [
+          0.42,
+          0.5,
+          0.8
+        ]
+      },
+      "sun": [
+        0.55,
+        0.62
+      ]
+    },
+    {
+      "file": "10-golden-gate-blue-hour.jpg",
+      "canva": "MAHWDDk27mU",
+      "title": "Blue hour at the north tower",
+      "dur": 9,
+      "mood": "BLUE",
+      "move": {
+        "from": [
+          0.5,
+          0.5,
+          1
+        ],
+        "to": [
+          0.42,
+          0.5,
+          0.76
+        ]
+      }
+    }
+  ]
+}
