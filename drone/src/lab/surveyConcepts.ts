@@ -11,8 +11,10 @@ import { studioEnvironment } from '../components/hero/stage';
  *  - sheet:    the screen is a surveyor's drawing: ink on paper, contours, the flight inked in as flown.
  *  - model:    the venue as a white architect's model on a plinth; the flight path is red thread above it.
  *  - lightbox: the map assembles from the aerial photos themselves, laid down frame by frame.
+ *  - relief:   Swiss-style shaded relief and brown contours; land colours in as it is photographed,
+ *              with the current line's altitude profile underneath (after Imhof, USGS topo, Wingtra).
  */
-const C = (new URLSearchParams(location.search).get('c') ?? 'sheet') as 'sheet' | 'model' | 'lightbox';
+const C = (new URLSearchParams(location.search).get('c') ?? 'sheet') as 'sheet' | 'model' | 'lightbox' | 'relief';
 
 // ---- the survey, frozen mid-flight ----------------------------------------------------------------
 const plan = planSurvey(SITE.boundary, SITE.home, DEFAULT_PARAMS);
@@ -520,5 +522,144 @@ function lightbox() {
   done();
 }
 
+// ================================================================================================
+// D. RELIEF PLATE
+// ================================================================================================
+function relief() {
+  css(`:root{--bg:#ece9e1;--chrome:#f8f6f1;--seg:#e4e0d6;--line:#d8d2c5;--ink:#1d1d1b;--ink2:#55534d;--ink3:#8d887c;--acc:#c2311f}
+  .head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:14px}
+  .head h1{font-size:24px;font-weight:600;letter-spacing:-.01em}.head p{color:var(--ink2);margin-top:3px}
+  .chip{display:inline-flex;align-items:center;gap:6px;margin-left:12px;font-size:12px;font-weight:500;color:var(--acc);vertical-align:4px}.chip:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--acc)}
+  .reads{display:flex;gap:30px}.reads small{display:block;font-size:11px;color:var(--ink3)}.reads b{font-size:22px;font-weight:600}
+  .wrap{display:grid;grid-template-columns:1fr 316px;gap:16px;height:640px}
+  .plate{display:flex;flex-direction:column;border-radius:14px;overflow:hidden;background:#f3efe4;box-shadow:0 0 0 1px var(--line)}
+  .map{position:relative;flex:1}.map canvas,.prof canvas{position:absolute;inset:0}
+  .prof{position:relative;height:128px;border-top:1px solid var(--line);background:#f8f5ed}
+  .views{position:absolute;top:12px;right:12px;display:flex;gap:2px;padding:3px;border-radius:10px;background:rgba(248,246,241,.9);box-shadow:0 0 0 1px var(--line)}
+  .views span{padding:5px 10px;border-radius:7px;font-size:12px;color:var(--ink2)}.views span.on{background:var(--ink);color:#fff}
+  .panel{background:var(--chrome);border-radius:14px;padding:16px 18px;box-shadow:0 0 0 1px var(--line);display:flex;flex-direction:column;gap:14px}
+  .panel h3{font-size:12px;font-weight:600;margin-bottom:7px}
+  .sum{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .sum div{padding:8px 9px;border-left:1px solid var(--line)}.sum div:first-child{border:0}.sum small{display:block;font-size:10.5px;color:var(--ink3)}.sum b{font-size:16px;font-weight:600}
+  .qa{display:grid;grid-template-columns:auto 1fr auto;gap:7px 9px;align-items:center;font-size:12px}
+  .qa i{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:10px;font-weight:700;color:#fff}
+  .ok{background:#2f7d4f}.wn{background:#b7791f}.qa span{color:var(--ink2)}.qa b{font-weight:500}
+  .key{display:grid;grid-template-columns:28px 1fr;gap:6px 9px;font-size:11.5px;color:var(--ink2);align-items:center}
+  .key em{display:block;height:12px;border-radius:2px}
+  .crs{margin-top:auto;font-size:11px;color:var(--ink3);line-height:1.5;border-top:1px solid var(--line);padding-top:10px}
+  .acts{display:flex;gap:8px;align-items:center;margin-top:12px}
+  .btn{height:36px;padding:0 14px;border-radius:10px;box-shadow:0 0 0 1px var(--line);display:inline-flex;align-items:center;font-weight:500;background:var(--chrome)}
+  .btn.p{background:var(--ink);color:#fff;box-shadow:none}.btn.d{color:#b42318}.sp{flex:1}
+  .seg{display:inline-flex;padding:3px;border-radius:10px;background:var(--seg)}.seg span{padding:5px 10px;border-radius:7px;font-size:12px;color:var(--ink2)}.seg span.on{background:var(--chrome);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+  `);
+  root.innerHTML = `${appBar()}<main>
+  <div class="head"><div><h1>Site survey<span class="chip">Capturing · line ${CUR + 1} of ${NL}</span></h1><p>Festival grounds · ${(plan.areaM2 / 1e4).toFixed(1)} ha · orthomosaic at ${plan.params.altitudeM} m</p></div>
+  <div class="reads"><div><small>Photographed</small><b class="num">${pct}%</b></div><div><small>Photos</small><b class="num">${SHOT.length}</b></div><div><small>Ground detail</small><b class="num">${plan.gsdCm.toFixed(1)} cm/px</b></div><div><small>Time left</small><b class="num">${timeLeft}</b></div></div></div>
+  <div class="wrap"><div class="plate"><div class="map" id="mp"><canvas id="cv"></canvas><div class="views"><span class="on">Relief</span><span>Imagery</span><span>3D</span></div></div><div class="prof" id="pf"><canvas id="pc"></canvas></div></div>
+   <div class="panel">
+    <div><h3>Plan</h3><div class="sum"><div><small>Minutes</small><b class="num">${Math.round(plan.durationS / 60)}</b></div><div><small>Hectares</small><b class="num">${(plan.areaM2 / 1e4).toFixed(1)}</b></div><div><small>Photos</small><b class="num">~${PTS.length}</b></div><div><small>Batteries</small><b class="num">${plan.batteries}</b></div></div></div>
+    <div><h3>Quality so far</h3><div class="qa">
+      <i class="ok">✓</i><span>Ground detail</span><b class="num">${plan.gsdCm.toFixed(1)} cm/px</b>
+      <i class="ok">✓</i><span>Views per point, flown ground</span><b class="num">≥ 5</b>
+      <i class="ok">✓</i><span>Height above ground</span><b class="num">58–61 m</b>
+      <i class="wn">!</i><span>Wind at 60 m</span><b class="num">6.8 m/s</b></div></div>
+    <div><h3>Key</h3><div class="key">
+      <em style="background:linear-gradient(90deg,#9aa0c4,#efe6c8)"></em><span>Relief, lit from the north-west</span>
+      <em style="background:linear-gradient(90deg,#cfcbc2,#cfcbc2 50%,#e9dfbd 50%)"></em><span>Grey: still to photograph. Colour: photographed</span>
+      <em style="height:2px;background:#9c6b3a"></em><span>Contours 0.5 m, index 2.5 m</span>
+      <em style="height:2px;background:#c2311f"></em><span>Flight line, flying now</span>
+      <em style="height:2px;background:#1d1d1b"></em><span>Flight line, flown</span></div></div>
+    <div class="crs">WGS 84 / UTM zone 11N · heights to site datum 11.4 m · Long Beach, CA · 3 Oct 2026</div>
+   </div></div>
+  <div class="acts"><span class="seg"><span class="on">Flight</span><span>Results</span></span><span class="btn p">Pause</span><span class="btn">Re-fly weak patches</span><span class="seg"><span>1×</span><span class="on">4×</span><span>16×</span></span><span class="sp"></span><span class="btn">Export package</span><span class="btn d">Return home</span></div>
+  </main>`;
+
+  const host = document.getElementById('mp')!, cv = document.getElementById('cv') as HTMLCanvasElement;
+  const w = host.clientWidth, h = host.clientHeight, dpr = 2;
+  cv.width = w * dpr; cv.height = h * dpr; cv.style.width = `${w}px`; cv.style.height = `${h}px`;
+  const g = cv.getContext('2d')!;
+  const cx = 6, cy = -2, sc = Math.min((w - 40) / 520, (h - 30) / 365);
+  const X = (x: number) => w / 2 + (x - cx) * sc, Y = (y: number) => h / 2 + (y - cy) * sc;
+  const wx = (px: number) => cx + (px - w / 2) / sc, wy = (py: number) => cy + (py - h / 2) / sc;
+  // Photographed mask: every footprint so far, at screen resolution.
+  const mk = document.createElement('canvas'); mk.width = w; mk.height = h; const m2 = mk.getContext('2d')!;
+  m2.fillStyle = '#fff'; for (const p of SHOT) { const q = footprintCorners(p.p, p.headingRad); m2.beginPath(); q.forEach((c, i) => (i ? m2.lineTo(X(c.x), Y(c.y)) : m2.moveTo(X(c.x), Y(c.y)))); m2.closePath(); m2.fill(); }
+  const mask = m2.getImageData(0, 0, w, h).data;
+  // Relief: heights at half-pixel steps, hillshade from the north-west, hypsometric tint, then grey where not yet photographed.
+  const R = 2, gw = Math.ceil(w * R), gh = Math.ceil(h * R), Hs = new Float32Array(gw * gh);
+  for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) Hs[j * gw + i] = heightAt(wx(i / R), wy(j / R));
+  const img = g.createImageData(gw, gh), d = img.data, cell = 1 / (sc * R), Z = 3.2;
+  const L = [-0.62, -0.62, 0.48]; const ln = Math.hypot(...L); L[0] /= ln; L[1] /= ln; L[2] /= ln;
+  for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) {
+    const k = j * gw + i, hc = Hs[k];
+    const hx = (Hs[j * gw + Math.min(gw - 1, i + 1)] - Hs[j * gw + Math.max(0, i - 1)]) / (2 * cell) * Z;
+    const hy = (Hs[Math.min(gh - 1, j + 1) * gw + i] - Hs[Math.max(0, j - 1) * gw + i]) / (2 * cell) * Z;
+    const nl = Math.hypot(hx, hy, 1), dot = (-hx * L[0] - hy * L[1] + L[2]) / nl;
+    const t = Math.min(1, Math.max(0, hc / 45));
+    // tint: venue meadow (pale green-cream) to dry hills (straw)
+    let r = 210 + 26 * t, gg = 224 - 10 * t, b = 170 - 14 * t;
+    const sh = Math.min(1, Math.max(-1, (dot - 0.48 / 1) * 2.2));
+    if (sh >= 0) { r += 18 * sh; gg += 12 * sh; b -= 6 * sh; } else { r += 70 * sh; gg += 62 * sh; b += 6 * sh; }
+    const mi = (Math.floor(j / R) * w + Math.floor(i / R)) * 4, cov = mask[mi + 3] / 255;
+    const lum = 0.3 * r + 0.59 * gg + 0.11 * b, grey = 0.55 * lum + 0.45 * 214;
+    const o = k * 4; d[o] = grey + (r - grey) * cov; d[o + 1] = grey + (gg - grey) * cov; d[o + 2] = grey * 0.985 + (b - grey * 0.985) * cov; d[o + 3] = 255;
+  }
+  const tmp = document.createElement('canvas'); tmp.width = gw; tmp.height = gh; tmp.getContext('2d')!.putImageData(img, 0, 0);
+  g.imageSmoothingEnabled = true; g.drawImage(tmp, 0, 0, cv.width, cv.height); g.scale(dpr, dpr);
+  // Contours, labelled on the index lines.
+  const lv: number[] = []; for (let L2 = -4; L2 < 5; L2 += 0.5) lv.push(L2); for (let L2 = 5; L2 <= 90; L2 += 2.5) lv.push(L2);
+  const segs = contours(wx(0), wy(0), wx(w), wy(h), 3, lv); const labelled = new Set<number>(); const placed: [number, number][] = [];
+  for (const { level, seg } of segs) {
+    const index = Math.abs(level / 2.5 - Math.round(level / 2.5)) < 1e-6;
+    g.strokeStyle = index ? 'rgba(140,90,46,.75)' : 'rgba(140,90,46,.35)'; g.lineWidth = index ? 0.9 : 0.5;
+    g.beginPath(); g.moveTo(X(seg[0].x), Y(seg[0].y)); g.lineTo(X(seg[1].x), Y(seg[1].y)); g.stroke();
+    const mx = (X(seg[0].x) + X(seg[1].x)) / 2, my = Y(seg[0].y); if (index && level >= 5 && !labelled.has(level) && mx > 30 && mx < w - 60 && my > 70 && my < h - 40 && placed.every(([px, py]) => Math.hypot(px - mx, py - my) > 90)) { placed.push([mx, my]); labelled.add(level); g.font = '500 9px Inter'; g.fillStyle = 'rgba(140,90,46,.95)'; g.fillText(`${Math.round(level + 11.4)}`, X(seg[0].x) + 2, Y(seg[0].y) - 2); }
+  }
+  // Vegetation, paths, buildings (USGS conventions: green, brown, black).
+  for (const t of TREES) { g.fillStyle = 'rgba(96,140,78,.7)'; g.beginPath(); g.arc(X(t.x), Y(t.y), Math.max(1.4, t.r * sc * 0.75), 0, Math.PI * 2); g.fill(); }
+  for (const p of PATHS) { g.strokeStyle = 'rgba(139,90,43,.75)'; g.lineWidth = 1.2; g.setLineDash([5, 3]); g.beginPath(); p.forEach(([x, y], i) => (i ? g.lineTo(X(x), Y(y)) : g.moveTo(X(x), Y(y)))); g.stroke(); g.setLineDash([]); }
+  const PK = SITE.parking; g.strokeStyle = 'rgba(29,29,27,.55)'; g.lineWidth = 0.8; g.strokeRect(X(PK.x0), Y(PK.y0), (PK.x1 - PK.x0) * sc, (PK.y1 - PK.y0) * sc);
+  for (const s of STRUCTS) { g.fillStyle = '#1d1d1b'; g.fillRect(X(s.x - s.w / 2), Y(s.y - s.d / 2), s.w * sc, s.d * sc); }
+  // Boundary.
+  g.strokeStyle = 'rgba(29,29,27,.8)'; g.lineWidth = 1.6; g.setLineDash([10, 3, 2, 3]); g.beginPath(); SITE.boundary.forEach((p, i) => (i ? g.lineTo(X(p.x), Y(p.y)) : g.moveTo(X(p.x), Y(p.y)))); g.closePath(); g.stroke(); g.setLineDash([]);
+  // Flight lines.
+  for (const l of capLegs) {
+    if (l.line < CUR) { g.strokeStyle = '#1d1d1b'; g.lineWidth = 1; g.beginPath(); g.moveTo(X(l.a.x), Y(l.a.y)); g.lineTo(X(l.b.x), Y(l.b.y)); g.stroke(); }
+    else if (l.line === CUR) { g.strokeStyle = '#c2311f'; g.lineWidth = 2.4; g.beginPath(); g.moveTo(X(l.a.x), Y(l.a.y)); g.lineTo(X(AT.p.x), Y(AT.p.y)); g.stroke(); g.setLineDash([5, 4]); g.lineWidth = 1.5; g.beginPath(); g.moveTo(X(AT.p.x), Y(AT.p.y)); g.lineTo(X(l.b.x), Y(l.b.y)); g.stroke(); g.setLineDash([]); }
+    else { g.strokeStyle = 'rgba(29,29,27,.38)'; g.lineWidth = 0.9; g.setLineDash([2, 4]); g.beginPath(); g.moveTo(X(l.a.x), Y(l.a.y)); g.lineTo(X(l.b.x), Y(l.b.y)); g.stroke(); g.setLineDash([]); }
+  }
+  g.fillStyle = '#1d1d1b'; for (const p of SHOT) { g.beginPath(); g.arc(X(p.p.x), Y(p.p.y), 0.9, 0, Math.PI * 2); g.fill(); }
+  // Aircraft and home.
+  { const px = X(AT.p.x), py = Y(AT.p.y), hd = AT.headingRad; g.fillStyle = '#c2311f'; g.strokeStyle = '#fff'; g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(px + Math.cos(hd) * 11, py + Math.sin(hd) * 11); g.lineTo(px + Math.cos(hd + 2.5) * 8, py + Math.sin(hd + 2.5) * 8); g.lineTo(px + Math.cos(hd - 2.5) * 8, py + Math.sin(hd - 2.5) * 8); g.closePath(); g.fill(); g.stroke(); }
+  { const hx = X(SITE.home.x), hy = Y(SITE.home.y); g.fillStyle = '#fff'; g.strokeStyle = '#1d1d1b'; g.lineWidth = 1.4; g.beginPath(); g.arc(hx, hy, 5, 0, Math.PI * 2); g.fill(); g.stroke(); g.fillStyle = '#1d1d1b'; g.font = '600 10.5px Inter'; g.fillText('Home', hx + 9, hy + 4); }
+  const tag = (t: string, x: number, y: number) => { g.font = '500 10.5px Inter'; g.fillStyle = '#1d1d1b'; g.fillText(t, x, y); };
+  const S = (id: string) => STRUCTS.find(s => s.id === id)!;
+  tag('Main stage', X(S('stage').x + S('stage').w / 2) + 5, Y(S('stage').y) + 4); tag('Exhibition hall', X(S('hall').x - S('hall').w / 2), Y(S('hall').y + S('hall').d / 2) + 13);
+  // Scale and north.
+  { const bx = 18, by = h - 18, m = 100 * sc; g.fillStyle = '#1d1d1b'; g.fillRect(bx, by - 3, m / 2, 3); g.strokeStyle = '#1d1d1b'; g.lineWidth = 1; g.strokeRect(bx + m / 2, by - 3, m / 2, 3); g.font = '500 9px Inter'; g.fillText('0', bx - 2, by + 11); g.fillText('50', bx + m / 2 - 5, by + 11); g.fillText('100 m', bx + m - 8, by + 11);
+    g.beginPath(); g.moveTo(w - 30, 58); g.lineTo(w - 24, 76); g.lineTo(w - 30, 72); g.lineTo(w - 36, 76); g.closePath(); g.fill(); g.font = '600 10px Inter'; g.fillText('N', w - 33.5, 52); }
+
+  // Altitude profile along the line being flown (after Wingtra's profile strip).
+  const ph = document.getElementById('pf')!, pc = document.getElementById('pc') as HTMLCanvasElement;
+  const pw = ph.clientWidth, phh = ph.clientHeight; pc.width = pw * dpr; pc.height = phh * dpr; pc.style.width = `${pw}px`; pc.style.height = `${phh}px`;
+  const q = pc.getContext('2d')!; q.scale(dpr, dpr);
+  const leg = capLegs.find(l => l.line === CUR)!, len = Math.hypot(leg.b.x - leg.a.x, leg.b.y - leg.a.y), homeH = heightAt(SITE.home.x, SITE.home.y);
+  const N = 240, prof = Array.from({ length: N + 1 }, (_, i) => { const t = i / N; return heightAt(leg.a.x + (leg.b.x - leg.a.x) * t, leg.a.y + (leg.b.y - leg.a.y) * t); });
+  const L0 = 110, R0 = pw - 24, T0 = 24, B0 = phh - 26, hMin = Math.min(...prof) - 2, hMax = homeH + plan.params.altitudeM + 6;
+  const PX = (t: number) => L0 + (R0 - L0) * t, PY = (v: number) => B0 - ((v - hMin) / (hMax - hMin)) * (B0 - T0);
+  q.font = '600 11.5px Inter'; q.fillStyle = '#1d1d1b'; q.fillText(`Line ${CUR + 1} profile`, 16, 30); q.font = '400 11px Inter'; q.fillStyle = '#55534d';
+  q.fillText(`${Math.round(len)} m long`, 16, 47); q.fillText(`${Math.round(plan.params.altitudeM)} m above take-off`, 16, 63); q.fillText('Clearance 58 m min.', 16, 79);
+  q.fillStyle = '#e9dfbd'; q.beginPath(); q.moveTo(PX(0), B0); prof.forEach((v, i) => q.lineTo(PX(i / N), PY(v))); q.lineTo(PX(1), B0); q.closePath(); q.fill();
+  q.strokeStyle = '#8c5a2e'; q.lineWidth = 1.2; q.beginPath(); prof.forEach((v, i) => (i ? q.lineTo(PX(i / N), PY(v)) : q.moveTo(PX(0), PY(v)))); q.stroke();
+  const fly = PY(homeH + plan.params.altitudeM), at = Math.hypot(AT.p.x - leg.a.x, AT.p.y - leg.a.y) / len;
+  q.strokeStyle = '#c2311f'; q.lineWidth = 2; q.beginPath(); q.moveTo(PX(0), fly); q.lineTo(PX(at), fly); q.stroke(); q.setLineDash([5, 4]); q.lineWidth = 1.3; q.beginPath(); q.moveTo(PX(at), fly); q.lineTo(PX(1), fly); q.stroke(); q.setLineDash([]);
+  q.strokeStyle = 'rgba(194,49,31,.35)'; q.lineWidth = 1; q.setLineDash([2, 3]); q.beginPath(); q.moveTo(PX(at), fly); q.lineTo(PX(at), PY(prof[Math.round(at * N)])); q.stroke(); q.setLineDash([]);
+  q.fillStyle = '#c2311f'; q.beginPath(); q.arc(PX(at), fly, 4.5, 0, Math.PI * 2); q.fill();
+  q.font = '500 10px Inter'; q.fillStyle = '#8d887c'; q.fillText('0 m', PX(0) - 4, B0 + 15); q.fillText(`${Math.round(len)} m`, PX(1) - 26, B0 + 15); q.fillText('ground', PX(0.02), PY(prof[4]) - 5);
+  q.fillStyle = '#c2311f'; q.fillText(`60 m · photo ${SHOT.length}`, PX(at) + 9, fly - 7);
+  done();
+}
+
 // Canvas text needs the faces loaded first (the page links Inter; the stills harness injects it).
-Promise.all(['400 10px Inter', '500 10px Inter', '600 10px Inter', '500 10px "JetBrains Mono"'].map(f => document.fonts.load(f))).catch(() => undefined).then(() => ({ sheet, model, lightbox })[C]());
+Promise.all(['400 10px Inter', '500 10px Inter', '600 10px Inter', '500 10px "JetBrains Mono"'].map(f => document.fonts.load(f))).catch(() => undefined).then(() => ({ sheet, model, lightbox, relief })[C]());
