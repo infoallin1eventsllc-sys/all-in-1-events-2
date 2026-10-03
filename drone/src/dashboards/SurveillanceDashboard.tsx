@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Crosshair, Sun, Moon, Flame, UserSearch, Home, Camera, ChevronUp, ChevronDown, ZoomIn, ZoomOut, Map as MapIcon, Video, Maximize2, Clock3, SunMedium, MoonStar, Upload, Cable, Cpu, Globe, Film,
+  Crosshair, Sun, Moon, Flame, UserSearch, Home, Camera, ChevronUp, ChevronDown, ZoomIn, ZoomOut, Clock3, SunMedium, MoonStar, Upload, Cable, Cpu, Globe, Film,
 } from 'lucide-react';
 import { useSurveillanceSimulation, WAYPOINTS, SITE, type PatrolDrone, type Detection, type SensorMode } from '../hooks/useSurveillanceSimulation';
-import { SurveillanceMapCanvas } from './SurveillanceMapCanvas';
 import { DroneFeedCanvas } from './DroneFeedCanvas';
 import { useAircraftLink } from '../link/useAircraftLink';
 import { useVideoSource, TURN_KEY, type VideoSource, type TurnConfig } from '../link/useVideoSource';
@@ -30,7 +29,6 @@ export const SurveillanceDashboard: React.FC = () => {
   const rootRef = useRef<HTMLDivElement>(null);
   const accent = useAccentHex(rootRef, '#0f766e');
   const [rail, setRail] = useState<RailTab>('AIRCRAFT');
-  const [hero, setHero] = useState<'CAMERA' | 'MAP'>('CAMERA');
 
   // Real aircraft: every vehicle heard on the link takes over an aircraft slot, primary first.
   const link = useAircraftLink();
@@ -152,13 +150,6 @@ export const SurveillanceDashboard: React.FC = () => {
   const feed = (
     <DroneFeedCanvas key={d.id} drone={d} isNight={isNight} footage={placeFor(drones.findIndex(x => x.id === d.id) - Math.max(0, drones.findIndex(x => x.id === selectedDroneId)))} world={simWorld} onSetSensorMode={payload.sensor} onSetZoom={payload.zoom} lockedReason={canFly ? undefined : viewOnly} className="w-full h-full" videoStream={video.stream} videoLabel={videoLabel} />
   );
-  // In the picture-in-picture the camera is compact (no controls of its own): a click there only swaps the views.
-  const feedPip = (
-    <DroneFeedCanvas key={`${d.id}-pip`} drone={d} isNight={isNight} footage={placeFor(drones.findIndex(x => x.id === d.id) - Math.max(0, drones.findIndex(x => x.id === selectedDroneId)))} world={simWorld} videoStream={video.stream} videoLabel={videoLabel} compact />
-  );
-  const map = (
-    <SurveillanceMapCanvas drones={drones} detections={detections} selectedDroneId={selectedDroneId} onSelectDrone={setSelectedDroneId} onSelectWaypoint={canFly ? sendToWaypoint : () => {}} />
-  );
 
   return (
     <div ref={rootRef} data-accent="surveillance" id="surveillance-dashboard" className="space-y-5">
@@ -201,21 +192,9 @@ export const SurveillanceDashboard: React.FC = () => {
             })}
           </div>
 
-          {/* Hero: camera with the map picture-in-picture, or swapped */}
+          {/* Hero: the selected aircraft's camera */}
           <div className="relative rounded-[var(--radius-card)] overflow-hidden bg-imagery border border-line" style={{ aspectRatio: '16 / 9' }}>
-            <div className="absolute inset-0 [&>canvas]:w-full [&>canvas]:h-full [&>canvas]:object-cover">{hero === 'CAMERA' ? feed : map}</div>
-            <button
-              onClick={() => setHero(h => (h === 'CAMERA' ? 'MAP' : 'CAMERA'))}
-              title={hero === 'CAMERA' ? 'Show map full size' : 'Show camera full size'}
-              className="hidden md:block absolute bottom-14 right-3 w-[26%] min-w-[180px] rounded-lg overflow-hidden border border-white/25 shadow-xl bg-imagery group"
-              style={{ aspectRatio: hero === 'CAMERA' ? '5 / 3' : '16 / 9' }}
-            >
-              <div className="absolute inset-0 pointer-events-none [&>canvas]:w-full [&>canvas]:h-full [&>canvas]:object-cover">{hero === 'CAMERA' ? map : feedPip}</div>
-              <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                {hero === 'CAMERA' ? <><MapIcon className="w-3 h-3" />Map</> : <><Video className="w-3 h-3" />Camera</>}
-              </span>
-              <span className="absolute top-1.5 right-1.5 rounded bg-black/60 p-1 text-white opacity-0 group-hover:opacity-100 transition-opacity"><Maximize2 className="w-3 h-3" /></span>
-            </button>
+            <div className="absolute inset-0 [&>canvas]:w-full [&>canvas]:h-full [&>canvas]:object-cover">{feed}</div>
           </div>
 
           {/* Action bar: payload and flight commands for the selected aircraft */}

@@ -8,7 +8,7 @@ one build:
 | **Light Show** | `src/dashboards/LightShowDashboard.tsx` | Three.js 3D stage, show timeline with cue markers, formation rack, fleet sync / timecode jitter, airfield wind, pre-flight gates (battery, RTK, clock lock, wind, deviation) that gate the ARM button, watch list of highest-deviation airframes, ABORT. |
 | **Site survey** | `src/dashboards/SurveyDashboard.tsx` | Mapping and inspection of a venue. Pick the product — **Map** (orthomosaic, nadir grid), **3D model** (crosshatch, camera tilted 25°) or **Inspection** (36-angle orbit of one structure) — and the plan follows from the camera maths: ground detail (cm/px), line spacing, photo spacing, speed limit, flight time and batteries. A **holographic 3D stage** (`components/survey/SurveyHoloStage.tsx`) shows the venue in daylight with the survey laid over it: the camera's blue scan beam on the ground it is photographing, the boundary and flight lines glowing on the terrain, and the site's digital plan (structures with their sizes, paths, parking, a 10 m grid; `survey/blueprint.ts`) lighting up wherever photos have covered it, with floating cards for the aircraft, the latest photo and the main structures. Cameras: **Chase**, **Site** (drag and scroll) and **Top-down**; the **Overlap** layer is the in-flight quality report (5+ photos per point is good). Plan view picture-in-picture, gusts that blur photos, automatic battery-swap-and-resume, **Re-fly weak patches**, and a **survey package** export. |
 | **Health** | `src/dashboards/HealthView.tsx` | What is wrong with the aircraft, which part, and what to do, live in flight and after landing. See [Aircraft health](#aircraft-health). |
-| **Surveillance** | `src/dashboards/SurveillanceDashboard.tsx` | **Live gimbal video feed** from the selected airframe (`DroneFeedCanvas.tsx`: EO / IR white-hot / IR ironbow / night vision, moving heat targets with temperature readout, auto-track lock, DVR) with a strip of the other airframes' feeds; **night protocol** (AUTO / DAY / NIGHT) flips every airborne payload to thermal at night. Patrol map (5-waypoint loop, airframes with sensor footprint and altitude tether, detections), fleet list, live telemetry sparklines, power system, flight control (auto-track, illumination, night vision, thermal scan, survivor detect, RTH, gimbal, zoom, autopilot), navigation route-progress chart, detections queue with dispatch, mission map, event log. |
+| **Surveillance** | `src/dashboards/SurveillanceDashboard.tsx` | **Live gimbal video feed** from the selected airframe (`DroneFeedCanvas.tsx`: EO / IR white-hot / IR ironbow / night vision, moving heat targets with temperature readout, auto-track lock, DVR) with a strip of the other airframes' feeds; **night protocol** (AUTO / DAY / NIGHT) flips every airborne payload to thermal at night. The camera fills the stage (no map); the 5-waypoint patrol loop is driven from the **Route** tab. Fleet list, live telemetry sparklines, power system, flight control (auto-track, illumination, night vision, thermal scan, survivor detect, RTH, gimbal, zoom, autopilot), navigation route-progress chart, detections queue with dispatch, event log. |
 
 **How it works** (`src/dashboards/PlatformView.tsx`) is the client-readable front for
 everything technical: the three products in one line each, the nine architecture
@@ -482,10 +482,10 @@ subscriber and the dashboard above it does not change.
 
 Design system: see [`DESIGN.md`](DESIGN.md). Light chrome by default (client-facing),
 dark for night operations (toggle in the app bar, persisted). Every screen is the same
-shape: headline → hero (camera / map / 3D, with picture-in-picture) → action bar →
+shape: headline → hero (camera / map / 3D; the survey adds a picture-in-picture) → action bar →
 one tabbed inspector rail. Tokens live in `src/index.css`, components in
-`src/dashboards/ui.tsx`. Map backdrops are procedural (`src/dashboards/terrain.ts`),
-rendered once and cached.
+`src/dashboards/ui.tsx`. The survey venue's ground is procedural (value noise in
+`src/dashboards/terrain.ts`), the same on every load.
 
 ## Run
 

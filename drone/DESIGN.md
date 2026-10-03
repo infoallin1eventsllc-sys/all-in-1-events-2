@@ -8,7 +8,7 @@ Voice: calm, precise, premium. Anti-references: the "hacker console" (neon on bl
 
 1. **App bar** — brand, three vertical tabs, theme toggle, Engineering. Nothing else.
 2. **Headline** — title, one status chip, one line of context, four numbers, at most three actions.
-3. **Stage** (left, ~⅔) — the hero: camera / map / 3D. Secondary view as a picture-in-picture with swap. Telemetry lives *on* the imagery (HUD), not in cards beside it.
+3. **Stage** (left, ~⅔) — the hero: camera / map / 3D. Where a page has a second view (the survey), it sits as a picture-in-picture with swap; Surveillance shows the camera alone. Telemetry lives *on* the imagery (HUD), not in cards beside it.
 4. **Action bar** — one card under the hero holding every command for the selected thing. One `primary`, one `danger`, the rest ghost.
 5. **Inspector rail** (right, 336px, sticky) — one card, tabbed. Only one tab's content is visible.
 

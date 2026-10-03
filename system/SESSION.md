@@ -220,6 +220,16 @@ through the GitHub commit-status API instead.
   colour-blind check against the light show's indigo). See `drone/DESIGN.md`.
 - Overview card image `drone/public/demo/survey.jpg` re-shot from the new stage.
 
+## Surveillance: map removed (Oct 3)
+- The owner found the patrol map meaningless (procedural noise "terrain", unrelated to the city
+  camera footage). Four redesign concepts were drawn on the survey venue (board:
+  https://claude.ai/artifact/9Ri2i7jpRc8p5S7qFmgr3Y), then the owner chose to **remove the map**.
+- Done: `SurveillanceMapCanvas.tsx` and the concept lab deleted; the camera fills the stage alone
+  (no picture-in-picture); waypoint commands stay in the Route tab. `dashboards/terrain.ts` keeps
+  only the value noise the survey venue uses. The patrol sim still keeps positions in its own map
+  pixels (`MAP_W`, `METERS_PER_PX`) for detections, range and live-GPS mapping.
+- Re-shot `drone/public/demo/patrol.jpg` and `drone/portfolio/gallery/patrol.jpg` without the map.
+
 ## Open next steps (not done)
 - **Before autonomy = auto:** port the runner send-path fixes above into the live runner.
 - Wire dashboard into the deployed website so real photos render + it's live.
