@@ -84,9 +84,9 @@ export interface Built {
   group: THREE.Group;
   /** Groups that spin about their local y axis. */
   props: THREE.Group[];
-  /** Motion-blur discs, one per prop: show them, and hide `blades`, while the props are at speed. */
+  /** Faint blur discs, one per prop: show them while the props turn. */
   blur: THREE.Mesh[];
-  /** The blades of each prop (hubs and motor bells stay visible at speed). */
+  /** The blades of each prop. */
   blades: THREE.Object3D[];
   /** The camera gimbal: drive it with aimGimbal, or set the joints directly. */
   gimbal: Gimbal;
@@ -104,8 +104,9 @@ const follow = <T extends THREE.Object3D>(root: THREE.Object3D, path: number[]) 
  *   rearward pair, a downward pair, a time-of-flight window and a landing light, and
  *   cooling intakes on the flanks;
  * - flat folding arms to motor pods, outrunner motors (copper stator showing through
- *   the bell), folding props with a cambered airfoil, twist, swept tips and orange
- *   tip bands; front landing legs, rear feet, red/green navigation lights;
+ *   the bell), folding black props with a cambered airfoil, twist and swept tips (the
+ *   marked diagonal pair as on the real props); front landing legs, rear feet,
+ *   red/green navigation lights;
  * - a black camera head on a three-axis gimbal (pan, roll, tilt) hung under the nose,
  *   returned as `gimbal` so a view can stabilise it and point it.
  * Static parts are merged per material, so a fleet draws in few calls; pass
@@ -114,12 +115,11 @@ const follow = <T extends THREE.Object3D>(root: THREE.Object3D, path: number[]) 
  * tail, 1.9 across the props.
  */
 export function buildDrone(mats: Record<string, THREE.Material>, blurTex: THREE.Texture, opts: { merge?: boolean } = {}): Built {
-  if (opts.merge === false) return sculptDrone(mats, false);
+  if (opts.merge === false) return sculptDrone(mats, blurTex, false);
   // A fleet shares one sculpted template per material set: every aircraft after the first is a cheap copy sharing its geometry.
   let t = templates.get(mats);
-  if (!t) { t = sculptDrone(mats, true); templates.set(mats, t); }
-  void blurTex;   // the props carry their own motion-blur texture (rotorBlurTexture)
-  const src = t, group = src.group.clone(true);
+  if (!t || t.blurTex !== blurTex) { t = { built: sculptDrone(mats, blurTex, true), blurTex }; templates.set(mats, t); }
+  const src = t.built, group = src.group.clone(true);
   const find = <T extends THREE.Object3D>(o: THREE.Object3D) => follow<T>(group, pathTo(src.group, o));
   return {
     group,
@@ -129,7 +129,7 @@ export function buildDrone(mats: Record<string, THREE.Material>, blurTex: THREE.
     gimbal: { yaw: find<THREE.Group>(src.gimbal.yaw), roll: find<THREE.Group>(src.gimbal.roll), pitch: find<THREE.Group>(src.gimbal.pitch) },
   };
 }
-const templates = new WeakMap<Record<string, THREE.Material>, Built>();
+const templates = new WeakMap<Record<string, THREE.Material>, { built: Built; blurTex: THREE.Texture }>();
 
 /**
  * Point the camera like a real stabilised gimbal: hold the horizon whatever the
@@ -207,36 +207,7 @@ const _lens = new THREE.Vector3(), _up = new THREE.Vector3(), _a = new THREE.Vec
 export const LIMIT = { tilt: [-2.356, 1.396] as const, roll: [-2.356, 0.785] as const, pan: 0.524 };
 const _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _q3 = new THREE.Quaternion(), _v = new THREE.Vector3(), _e = new THREE.Euler();
 
-/**
- * Motion blur of a two-blade prop at a few thousand rpm, as a camera sees it: a
- * clear hub, a darker band where the blades are broadest, a fainter outer disc,
- * and a warm ring where the orange tips sweep. Fine streaks follow the rotation.
- */
-let blurCache: THREE.Texture | null = null;
-export function rotorBlurTexture(): THREE.Texture {
-  if (blurCache) return blurCache;
-  const N = 512, c = document.createElement('canvas'); c.width = c.height = N;
-  const g = c.getContext('2d')!, img = g.createImageData(N, N);
-  let seed = 11; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-  const streak = Array.from({ length: 160 }, () => rnd());
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-    const dx = (x + 0.5) / N * 2 - 1, dy = (y + 0.5) / N * 2 - 1, r = Math.hypot(dx, dy), o = (y * N + x) * 4;
-    if (r > 1) { img.data[o + 3] = 0; continue; }
-    const band = Math.exp(-(((r - 0.36) / 0.16) ** 2));                       // where the blades are broadest
-    let a = r < 0.11 ? 0 : Math.min(1, (r - 0.11) / 0.06) * (0.12 + 0.2 * band) * (1 - Math.max(0, (r - 0.93) / 0.07));
-    a *= 0.85 + 0.3 * streak[Math.floor(r * 159)];
-    const tip = Math.exp(-(((r - 0.955) / 0.03) ** 2));                        // the orange tips
-    const shade = 120 - 50 * band;
-    img.data[o] = Math.round(shade + tip * 70); img.data[o + 1] = Math.round(shade + tip * 18); img.data[o + 2] = Math.round(shade - tip * 14);
-    img.data[o + 3] = Math.round(Math.min(1, a + tip * 0.12) * 255);
-  }
-  g.putImageData(img, 0, 0);
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
-  blurCache = t;
-  return t;
-}
-
-function sculptDrone(mats: Record<string, THREE.Material>, merge: boolean): Built {
+function sculptDrone(mats: Record<string, THREE.Material>, blurTex: THREE.Texture, merge: boolean): Built {
   const M = mats;
   const g = new THREE.Group();
   const add = (geo: THREE.BufferGeometry, m: THREE.Material, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, parent: THREE.Object3D = g) => {
@@ -299,10 +270,7 @@ function sculptDrone(mats: Record<string, THREE.Material>, merge: boolean): Buil
 
   // --- Arms, motors, legs and props.
   const props: THREE.Group[] = [], blur: THREE.Mesh[] = [], blades: THREE.Object3D[] = [];
-  const blurMat = new THREE.MeshBasicMaterial({ map: rotorBlurTexture(), transparent: true, depthWrite: false, side: THREE.DoubleSide });
-  const tipBand = { from: 0.86, to: 1, inflate: 0.0006 };
   const bladeGeo = { [1]: bladeGeometry(PROP_R, 0.042, 1, 22, 9), [-1]: bladeGeometry(PROP_R, 0.042, -1, 22, 9) } as Record<number, THREE.BufferGeometry>;
-  const tipGeo = { [1]: bladeGeometry(PROP_R, 0.042, 1, 6, 9, tipBand), [-1]: bladeGeometry(PROP_R, 0.042, -1, 6, 9, tipBand) } as Record<number, THREE.BufferGeometry>;
   const podGeo = new THREE.LatheGeometry([[0, -0.028], [0.04, -0.028], [0.054, -0.023], [0.06, -0.01], [0.061, 0.008], [0.058, 0.018], [0.05, 0.023], [0, 0.023]].map(([r, y]) => new THREE.Vector2(r, y)), 32);
   const discGeo = new THREE.CircleGeometry(PROP_R + 0.012, 64);
   ARMS.forEach(({ root, tip, front }, k) => {
@@ -331,25 +299,29 @@ function sculptDrone(mats: Record<string, THREE.Material>, merge: boolean): Buil
       add(new THREE.SphereGeometry(0.0095, 14, 10), tip.z > 0 ? M.ledGreen : M.ledRed, tip.x - 0.028, tip.y - 0.014, tip.z + Math.sign(tip.z) * 0.043);
     }
 
-    // The rotating parts: the bell (copper stator showing between its spokes), a silver cap, and the folding blades.
+    // The rotating parts: the bell (copper stator showing between its spokes), the lock cap, and two folding
+    // black blades; one diagonal pair carries the marks and a silver cap, as on the real props.
     const hand = k % 2 ? -1 : 1;
     const prop = new THREE.Group(); prop.position.set(tip.x, tip.y + 0.074, tip.z);
     add(new THREE.CylinderGeometry(0.041, 0.041, 0.032, 20), M.copper, 0, -0.025, 0, 0, 0, 0, prop);
     for (let r = 0; r < 9; r++) { const a = (r / 9) * Math.PI * 2; add(new THREE.BoxGeometry(0.021, 0.032, 0.006), M.bell, Math.cos(a) * 0.046, -0.025, Math.sin(a) * 0.046, 0, -a + Math.PI / 2, 0, prop); }
     add(new THREE.CylinderGeometry(0.049, 0.049, 0.007, 28), M.bell, 0, -0.043, 0, 0, 0, 0, prop);
     add(new THREE.CylinderGeometry(0.044, 0.049, 0.009, 28), M.bell, 0, -0.008, 0, 0, 0, 0, prop);
-    add(new THREE.CylinderGeometry(0.02, 0.023, 0.012, 24), M.metal, 0, 0.008, 0, 0, 0, 0, prop);                   // brushed lock cap
-    const cap = add(new THREE.SphereGeometry(0.017, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), M.metal, 0, 0.014, 0, 0, 0, 0, prop); cap.scale.y = 0.42;
+    const marked = k === 1 || k === 3;
+    add(new THREE.CylinderGeometry(0.018, 0.021, 0.012, 24), marked ? M.metal : M.graphite, 0, 0.008, 0, 0, 0, 0, prop);    // lock cap
+    const cap = add(new THREE.SphereGeometry(0.016, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), marked ? M.metal : M.graphite, 0, 0.014, 0, 0, 0, 0, prop); cap.scale.y = 0.45;
     const set = new THREE.Group(); prop.add(set);
-    add(new RoundedBoxGeometry(0.104, 0.008, 0.028, 2, 0.004), M.blade, 0, 0.001, 0, 0, 0, 0, set);
+    add(new RoundedBoxGeometry(0.11, 0.008, 0.03, 2, 0.004), M.blade, 0, 0.001, 0, 0, 0, 0, set);
     for (let b = 0; b < 2; b++) {
       const blade = new THREE.Group(); blade.rotation.y = b * Math.PI; set.add(blade);
       add(bladeGeo[hand], M.blade, 0, 0.002, 0, 0, 0, 0, blade);
-      add(tipGeo[hand], M.tip, 0, 0.002, 0, 0, 0, 0, blade);
-      add(new THREE.CylinderGeometry(0.011, 0.011, 0.012, 20), M.graphite, 0.044, 0.004, 0, 0, 0, 0, blade);    // pivot boss
-      add(new THREE.CylinderGeometry(0.0045, 0.0045, 0.002, 10), M.metal, 0.044, 0.0105, 0, 0, 0, 0, blade);   // pivot screw
+      add(new THREE.CylinderGeometry(0.012, 0.012, 0.012, 20), M.graphite, 0.045, 0.004, 0, 0, 0, 0, blade);    // pivot boss
+      add(new THREE.CylinderGeometry(0.005, 0.005, 0.002, 10), M.metal, 0.045, 0.0105, 0, 0, 0, 0, blade);      // pivot screw
+      if (marked) add(new THREE.BoxGeometry(0.03, 0.0012, 0.004), M.mark, 0.085, 0.012, 0, 0, 0, 0, blade);
     }
-    const disc = new THREE.Mesh(discGeo, blurMat); disc.rotation.x = -Math.PI / 2; disc.position.y = 0.004; disc.renderOrder = 2; disc.visible = false; prop.add(disc);
+    // A faint blur disc over the spinning blades (shown while the props turn).
+    const disc = new THREE.Mesh(discGeo, new THREE.MeshBasicMaterial({ map: blurTex, color: 0x8c949e, transparent: true, opacity: 0.2, depthWrite: false }));
+    disc.rotation.x = -Math.PI / 2; disc.position.y = 0.006; disc.visible = false; prop.add(disc);
     g.add(prop); props.push(prop); blur.push(disc); blades.push(set);
   });
 
@@ -404,8 +376,7 @@ export function droneMaterials(): Record<string, THREE.Material> {
     sensor: new THREE.MeshPhysicalMaterial({ color: 0x050608, metalness: 0.2, roughness: 0.06, clearcoat: 1, clearcoatRoughness: 0.03, envMapIntensity: 1.8 }),
     lens: new THREE.MeshPhysicalMaterial({ color: 0x04070d, metalness: 0.1, roughness: 0.02, clearcoat: 1, clearcoatRoughness: 0.02, envMapIntensity: 2.6, iridescence: 0.6, iridescenceIOR: 1.35, iridescenceThicknessRange: [180, 420] }),
     coating: new THREE.MeshBasicMaterial({ color: new THREE.Color(0.24, 0.3, 0.62), transparent: true, opacity: 0.45, toneMapped: false }),
-    blade: new THREE.MeshPhysicalMaterial({ color: 0x2a2c30, metalness: 0, roughness: 0.6, clearcoat: 0.1, clearcoatRoughness: 0.4, side: THREE.DoubleSide }),
-    tip: new THREE.MeshStandardMaterial({ color: 0xe66a1f, metalness: 0, roughness: 0.55, side: THREE.DoubleSide }),
+    blade: new THREE.MeshPhysicalMaterial({ color: 0x16181b, metalness: 0, roughness: 0.55, clearcoat: 0.12, clearcoatRoughness: 0.4, side: THREE.DoubleSide }),
     bell: new THREE.MeshStandardMaterial({ color: 0x24272c, metalness: 0.75, roughness: 0.32 }),
     copper: new THREE.MeshStandardMaterial({ color: 0x5a3a20, metalness: 1, roughness: 0.55 }),
     bezel: new THREE.MeshStandardMaterial({ color: 0x3b3f46, metalness: 0.85, roughness: 0.35 }),

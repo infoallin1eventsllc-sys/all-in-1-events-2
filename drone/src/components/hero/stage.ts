@@ -158,10 +158,9 @@ export class AircraftStage {
   }
 
   private applyProps(dt: number) {
-    const fast = this.spin > 0.55;
+    const fast = this.spin > 0.3;
     this.built.props.forEach((p, k) => { p.rotation.y += dt * 70 * this.spin * (k % 2 ? -1 : 1); });
-    this.built.blur.forEach(b => { b.visible = fast; });
-    this.built.blades.forEach(b => { b.visible = !fast; });
+    this.built.blur.forEach(b => { b.visible = fast; });          // the blades keep turning under a faint blur disc
   }
 
   /** The airframe's own motion, then the gimbal holding the camera against it. */
@@ -189,7 +188,7 @@ export class AircraftStage {
     this.stop();
     this.scene.traverse(o => { const m = o as THREE.Mesh; if (m.isMesh) m.geometry.dispose(); });
     Object.values(this.mats).forEach(m => m.dispose());
-    this.built.blur[0]?.material && (this.built.blur[0].material as THREE.Material).dispose();
+    this.built.blur.forEach(b => (b.material as THREE.Material).dispose());
     [this.env, this.blur, (this.blob.material as THREE.MeshBasicMaterial).map].forEach(t => t?.dispose());
     (this.blob.material as THREE.Material).dispose(); (this.ground.material as THREE.Material).dispose();
     this.renderer.dispose(); this.renderer.forceContextLoss();

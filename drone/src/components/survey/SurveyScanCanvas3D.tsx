@@ -502,7 +502,7 @@ export const SurveyScanCanvas3D: React.FC<Props> = (props) => {
 
     // ---- aircraft: the Mavic-class model, banking through turns, shadow on the ground ----
     const mats = droneMaterials();
-    const { group: acModel, props: acProps, blur: acBlur, blades: acBlades, gimbal: acGimbal } = buildDrone(mats, radialTexture());
+    const { group: acModel, props: acProps, blur: acBlur, gimbal: acGimbal } = buildDrone(mats, radialTexture());
     let camTilt = -0.35;   // the gimbal: straight down while photographing a line, looking ahead between lines
     const ac = new THREE.Group(); ac.add(acModel);
     const lamp = (c: THREE.Color, x: number, y: number, z: number) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color: c, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); s.position.set(x, y, z); s.scale.setScalar(0.3); ac.add(s); return s; };
@@ -614,7 +614,7 @@ export const SurveyScanCanvas3D: React.FC<Props> = (props) => {
       ac.position.set(a.x, acY, a.y);
       ac.rotation.set(pitch, Math.PI / 2 - hRad, roll, 'YXZ');
       for (const pr of acProps) pr.rotation.y += dt * (flying ? 58 : 0) * ((acProps.indexOf(pr) % 2) ? -1 : 1);
-      acBlur.forEach(b => { b.visible = flying; }); acBlades.forEach(b => { b.visible = !flying; });
+      acBlur.forEach(b => { b.visible = flying; });
       camTilt += ((capturing ? -Math.PI / 2 : -0.35) - camTilt) * Math.min(1, dt * 2.5);
       aimGimbal(acGimbal, { tilt: camTilt });
       (strobe.material as THREE.SpriteMaterial).opacity = flying && (t % 1200) < 90 ? 1 : 0;

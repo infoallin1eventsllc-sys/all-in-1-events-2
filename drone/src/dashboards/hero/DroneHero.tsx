@@ -55,8 +55,6 @@ interface Drone {
   group: THREE.Group;
   props: THREE.Group[];
   blur: THREE.Mesh[];
-  /** Blades of each prop: hidden while the props are at speed, when only the blur discs show (classic look). */
-  blades: THREE.Object3D[];
   /** The camera gimbal (classic look): holds the horizon while the aircraft banks, and looks around. */
   gimbal?: Gimbal;
   trail: THREE.Line;
@@ -139,10 +137,10 @@ export const DroneHero: React.FC<{ className?: string; progress?: { current: num
     const rnd = seeded(7);
     for (let i = 0; i < n; i++) {
       const ledColor = look === 'ember' ? new THREE.Color(0.3, 0.65, 2.2) : new THREE.Color(0.45, 0.8, 1.6);
-      const air = look === 'ember' ? { ...buildEmber(mats, blurTex), blades: [] as THREE.Object3D[], gimbal: undefined } : buildDrone(mats, blurTex);
+      const air = look === 'ember' ? { ...buildEmber(mats, blurTex), gimbal: undefined } : buildDrone(mats, blurTex);
       const { group, props, blur } = air;
-      // In flight a camera sees spinning props as blur discs, not blades.
-      if (look !== 'ember' && !reduced) { air.blur.forEach(b => { b.visible = true; }); air.blades.forEach(b => { b.visible = false; }); }
+      // Spinning props: the blades turn under a faint blur disc.
+      if (!reduced) air.blur.forEach(b => { b.visible = true; });
       group.position.set(...(reduced ? K1[i] : K0[i]));
       group.scale.setScalar(1.35);
       scene.add(group);
@@ -153,7 +151,7 @@ export const DroneHero: React.FC<{ className?: string; progress?: { current: num
       const trail = new THREE.Line(tg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
       trail.frustumCulled = false; scene.add(trail);
       const nav = group.children.filter((c): c is THREE.Mesh => (c as THREE.Mesh).isMesh && ((c as THREE.Mesh).material === mats.ledGreen || (c as THREE.Mesh).material === mats.ledRed)).map(m => { m.material = (m.material as THREE.Material).clone(); return m; });
-      drones.push({ group, props, blur, blades: air.blades, gimbal: air.gimbal, trail, history: Array.from({ length: pts }, () => group.position.clone()), prev: group.position.clone(), phase: rnd() * Math.PI * 2, stagger: i / n, ledColor, roll: 0, pitch: 0, yaw: 0, wander: new THREE.Vector3(), wanderGoal: new THREE.Vector3(), nextPick: rnd() * 3, nav });
+      drones.push({ group, props, blur, gimbal: air.gimbal, trail, history: Array.from({ length: pts }, () => group.position.clone()), prev: group.position.clone(), phase: rnd() * Math.PI * 2, stagger: i / n, ledColor, roll: 0, pitch: 0, yaw: 0, wander: new THREE.Vector3(), wanderGoal: new THREE.Vector3(), nextPick: rnd() * 3, nav });
     }
 
     const composer = new EffectComposer(renderer);
