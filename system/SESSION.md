@@ -206,6 +206,20 @@ through the GitHub commit-status API instead.
   run `node tools/brand-demos.mjs`, build, PR from `claude/drone-command-demo`
   (reset from main each time), wait for Vercel, merge.
 
+## Site survey redesign (Oct 3): Holographic Site
+- The owner asked for a whole new direction for the survey graphics. Five concepts were drawn from
+  the real venue and plan (`drone/lab/survey-concepts.html?c=sheet|model|lightbox|relief|holo`),
+  backed by research into DroneDeploy, Pix4D, Propeller, Wingtra, DJI, Esri, Trimble and map
+  conventions; concept board: https://claude.ai/artifact/U7FWqQepFb2fyZtyTM2uSC (private).
+- **Chosen: E · Holographic Site** (from the owner's reference images: a drone projecting a blue
+  scan beam onto a job site, a glowing boundary on real terrain, floating info cards).
+- Built: `components/survey/SurveyHoloStage.tsx` replaced the old dark stage (deleted) with the
+  same props; `survey/blueprint.ts` draws the plan; `sitePhoto` in `survey/site.ts` is the
+  daylight ground for the stage, the results viewer and the lab. Survey accent is now blue on the
+  page, Overview card and hero slide; the Analytics series stays orange (no blue passes the
+  colour-blind check against the light show's indigo). See `drone/DESIGN.md`.
+- Overview card image `drone/public/demo/survey.jpg` re-shot from the new stage.
+
 ## Open next steps (not done)
 - **Before autonomy = auto:** port the runner send-path fixes above into the live runner.
 - Wire dashboard into the deployed website so real photos render + it's live.
