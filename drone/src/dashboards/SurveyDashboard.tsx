@@ -14,7 +14,7 @@ import { gapShare } from '../survey/processed';
 import { buildSurveyFiles } from '../survey/exportSurvey';
 import { polygonArea as areaOf } from '../survey/plan';
 import { useSurveyMission, type Phase } from '../hooks/useSurveyMission';
-import { SurveyScanCanvas3D, type SurveyLayer } from '../components/survey/SurveyScanCanvas3D';
+import { SurveyHoloStage, type SurveyLayer } from '../components/survey/SurveyHoloStage';
 import { SurveyMapCanvas } from '../components/survey/SurveyMapCanvas';
 import { SITE } from '../survey/site';
 import { CAMERAS, GOOD_VIEWS, ORBIT_PHOTOS, toLatLon, fromLatLon, type CameraId, type Pattern, type Pt } from '../survey/plan';
@@ -80,7 +80,7 @@ export const SurveyDashboard: React.FC = () => {
   const { plan, phase, aircraft: ac, stats } = sim;
   const P = plan.params;
   const rootRef = useRef<HTMLDivElement>(null);
-  const accent = useAccentHex(rootRef, '#c2410c');
+  const accent = useAccentHex(rootRef, '#1f6fd1');
   const [rail, setRail] = useState<RailTab>('PLAN');
   const [hero, setHero] = useState<'3D' | 'MAP' | 'RESULTS'>('3D');
   // ---- results viewer: the processed model and the crew's measurements ----
@@ -179,9 +179,9 @@ export const SurveyDashboard: React.FC = () => {
 
   const setPattern = (p: Pattern) => sim.setParams({ pattern: p, altitudeM: PATTERNS[p].altitude });
   const stage = (
-    <SurveyScanCanvas3D plan={plan} legs={sim.legs} legIndex={sim.legIndex} legProgressM={sim.legProgressM} aircraft={ac}
+    <SurveyHoloStage plan={plan} legs={sim.legs} legIndex={sim.legIndex} legProgressM={sim.legProgressM} aircraft={ac}
       photosRef={sim.photosRef} photoCount={sim.photoCount} grid={sim.grid} gridVersion={sim.gridVersion} phase={phase}
-      layer={layer} onLayerChange={setLayer} coveredPct={stats.coveredPct} progressLabel={progressLabel} compact={hero !== '3D'}
+      layer={layer} onLayerChange={setLayer} coveredPct={stats.coveredPct} progressLabel={progressLabel} compact={hero !== '3D'} boundary={sim.site.boundary}
       lines={orbit ? { done: angles, total: ORBIT_PHOTOS, current: null, angles } : { done: sim.linesDone, total: plan.lines.length, current: phase === 'CAPTURING' || phase === 'TRANSIT' ? sim.currentLine : null }} />
   );
   const map = (

@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
-import { SITE, TREES, WORLD_M, heightAt, siteImagery } from '../../survey/site';
+import { SITE, TREES, WORLD_M, heightAt, sitePhoto } from '../../survey/site';
 import { toLatLon, pointInPolygon, type Pt } from '../../survey/plan';
 import type { Annotation, AreaMeasure, LineMeasure } from '../../survey/measure';
 import type { ResultsModel } from '../../survey/processed';
@@ -52,7 +52,7 @@ interface Props {
 
 const ELEV_RAMP = ['#104281', '#1c5cab', '#2a78d6', '#5598e7', '#9ec5f4', '#cde2fb'];
 const CUT = ['#b3342b', '#e0604f', '#f0a79a'], FILL = ['#1c5cab', '#3987e5', '#86b6ef'], MID = '#383835';
-const ACCENT = '#fb923c';
+const ACCENT = '#4aa8ff';   // holographic blue, as on the survey stage
 const CELL = 1.5;
 
 const hex = (h: string) => new THREE.Color(h);
@@ -112,7 +112,9 @@ export const SurveyResultsViewer: React.FC<Props> = (props) => {
     el.appendChild(renderer.domElement);
     renderer.domElement.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none';
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#0b0f14');
+    // Daylight, like the survey stage: a sky from the horizon up, haze into the distance.
+    const skyC = document.createElement('canvas'); skyC.width = 4; skyC.height = 256; { const g = skyC.getContext('2d')!, gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, '#8fb3d6'); gr.addColorStop(0.55, '#d9dfe2'); gr.addColorStop(0.8, '#efdcc4'); gr.addColorStop(1, '#f3d9b8'); g.fillStyle = gr; g.fillRect(0, 0, 4, 256); }
+    const skyTex = new THREE.CanvasTexture(skyC); skyTex.colorSpace = THREE.SRGBColorSpace; scene.background = skyTex;
 
     // ---- terrain: the demo site plus a margin at 1.5 m, or the processed DSM's display mesh ----
     let x0: number, x1: number, y0: number, y1: number, geo: THREE.BufferGeometry, map: THREE.Texture;
@@ -151,7 +153,7 @@ export const SurveyResultsViewer: React.FC<Props> = (props) => {
         pos.setY(i, z); uv.setXY(i, (x + WORLD_M / 2) / WORLD_M, 1 - (y + WORLD_M / 2) / WORLD_M);
         if (pointInPolygon({ x, y }, SITE.boundary)) inside.push(z);
       }
-      map = new THREE.CanvasTexture(siteImagery(2048));
+      map = new THREE.CanvasTexture(sitePhoto(2048));
     }
     map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 8; map.needsUpdate = true;
     // The ramp spans the site's own ground (2nd–98th percentile), so its relief reads; hills and roofs beyond clamp to the ends.
@@ -161,10 +163,10 @@ export const SurveyResultsViewer: React.FC<Props> = (props) => {
     setRange([zmin + M.zOffset, zmax + M.zOffset]);
     // Distances scale with the model: the demo venue frames at 520 m.
     const span = Math.max(x1 - x0, y1 - y0), far = Math.max(1400, span * 2.4);
-    scene.fog = new THREE.Fog('#0b0f14', far / 2, far);
+    scene.fog = new THREE.Fog('#e8dccb', far / 2, far);
     const cam = new THREE.PerspectiveCamera(40, 16 / 9, Math.max(0.2, span / 3000), far * 2.2);
-    scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x2a2f24, 1.1));
-    const sun = new THREE.DirectionalLight(0xfff4e2, 1.6); sun.position.set(-300, 400, -200); scene.add(sun);
+    scene.add(new THREE.HemisphereLight(0xcfe0f2, 0x8a7a60, 1.0));
+    const sun = new THREE.DirectionalLight(0xffe2bc, 2.0); sun.position.set(-300, 400, -200); scene.add(sun);
     const uniforms = {
       uMap: { value: map }, uMode: { value: 0 }, uContours: { value: 0 }, uInterval: { value: 0.5 }, uZoff: { value: M.zOffset }, uHasMap: { value: P0 && !P0.ortho ? 0 : 1 },
       uZmin: { value: zmin }, uZmax: { value: zmax }, uRamp: { value: ELEV_RAMP.map(h => hex(h)) },
@@ -422,7 +424,7 @@ export const SurveyResultsViewer: React.FC<Props> = (props) => {
         .rv-label { position:absolute; left:0; top:0; white-space:nowrap; font: 500 11px Inter, system-ui, sans-serif; color:#fff; background:rgba(8,11,16,0.72); padding:2px 7px; border-radius:6px; }
         .rv-grade { position:absolute; left:0; top:0; white-space:nowrap; font: 600 12px Inter, system-ui, sans-serif; color:#fff; background:rgba(8,11,16,0.8); padding:2px 6px; border-radius:5px; border:1px solid rgba(255,255,255,0.25); }
         .rv-over { border-color:#fab219; color:#ffe2a8; }
-        .rv-sel { outline: 1px solid rgba(251,146,60,0.9); }
+        .rv-sel { outline: 1px solid rgba(74,168,255,0.95); }
       `}</style>
     </div>
   );

@@ -6,7 +6,7 @@ import { GOOD_VIEWS, toLatLon, type CoverageGrid, type Leg, type SurveyPlan, typ
 import { basemapSettings, subscribeBasemap, activeBasemap, basemapTiles, tilesCovering, tileRectLocal, tileUrl, zoomForScale } from '../../survey/tiles';
 import type { Clearance, Terrain } from '../../survey/terrain';
 import type { Photo, SurveyAircraft, useSurveyMission } from '../../hooks/useSurveyMission';
-import type { SurveyLayer } from './SurveyScanCanvas3D';
+import type { SurveyLayer } from './SurveyHoloStage';
 
 /**
  * Plan view of the survey: the orthophoto revealed where photographed (on the
@@ -45,7 +45,7 @@ interface Props {
 }
 
 export const MAP_W = 1280, MAP_H = 720;
-const ACCENT = '#fb923c';
+const ACCENT = '#5fb4ff';   // holographic blue, as on the survey stage
 const MARGIN_M = 55;
 const FONT = 'Inter, system-ui, sans-serif';
 
@@ -269,8 +269,8 @@ export const SurveyMapCanvas: React.FC<Props> = (props) => {
         else if (pl.gimbalPitchDeg > -85) { const off = a.altM * Math.tan(((90 + pl.gimbalPitchDeg) * Math.PI) / 180); cx += Math.cos(h) * off; cy += Math.sin(h) * off; }
         ctx.save(); ctx.translate(X(cx), Y(cy)); ctx.rotate(h);
         const hw = (pl.footprint.alongM * k * s) / 2, hh = (pl.footprint.acrossM * k * s) / 2;
-        ctx.fillStyle = 'rgba(251,146,60,0.12)'; ctx.fillRect(-hw, -hh, hw * 2, hh * 2);
-        ctx.strokeStyle = 'rgba(251,146,60,0.85)'; ctx.lineWidth = 1; ctx.strokeRect(-hw, -hh, hw * 2, hh * 2);
+        ctx.fillStyle = 'rgba(95,180,255,0.12)'; ctx.fillRect(-hw, -hh, hw * 2, hh * 2);
+        ctx.strokeStyle = 'rgba(95,180,255,0.85)'; ctx.lineWidth = 1; ctx.strokeRect(-hw, -hh, hw * 2, hh * 2);
         ctx.restore();
       }
       ctx.save(); ctx.translate(X(a.x), Y(a.y)); ctx.rotate((a.headingDeg * Math.PI) / 180);
@@ -285,7 +285,7 @@ export const SurveyMapCanvas: React.FC<Props> = (props) => {
         // Handles keep a usable size when the canvas is shown small (a phone shows it at a third).
         const hs = Math.max(1, Math.min(2.5, (MAP_W / (cv.clientWidth || MAP_W)) * 0.6));
         edgeMidpoints(B).forEach(m => {
-          ctx.beginPath(); ctx.arc(X(m.x), Y(m.y), 6 * hs, 0, Math.PI * 2); ctx.fillStyle = 'rgba(11,15,20,0.7)'; ctx.fill(); ctx.strokeStyle = 'rgba(251,146,60,0.9)'; ctx.lineWidth = 1; ctx.stroke();
+          ctx.beginPath(); ctx.arc(X(m.x), Y(m.y), 6 * hs, 0, Math.PI * 2); ctx.fillStyle = 'rgba(11,15,20,0.7)'; ctx.fill(); ctx.strokeStyle = 'rgba(95,180,255,0.9)'; ctx.lineWidth = 1; ctx.stroke();
           ctx.fillStyle = ACCENT; ctx.fillRect(X(m.x) - 3.5 * hs, Y(m.y) - 0.75 * hs, 7 * hs, 1.5 * hs); ctx.fillRect(X(m.x) - 0.75 * hs, Y(m.y) - 3.5 * hs, 1.5 * hs, 7 * hs);
         });
         B.forEach((p, i) => {

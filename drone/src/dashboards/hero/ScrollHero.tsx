@@ -20,7 +20,7 @@ import { BRAND } from '../../brand';
 
 const STAGES = [
   { eyebrow: 'Light show', accent: '#8b8bff', line: 'A sky full of light,', sub: 'conducted from front of house.' },
-  { eyebrow: 'Site survey', accent: '#fb923c', line: 'The venue mapped', sub: 'before the first truck arrives.' },
+  { eyebrow: 'Site survey', accent: '#5fb4ff', line: 'The venue mapped', sub: 'before the first truck arrives.' },
   { eyebrow: 'Security patrol', accent: '#2dd4bf', line: 'Eyes on the grounds', sub: 'all night, in thermal.' },
 ];
 const IN = [0.3, 0.49, 0.68], LEN = 0.19;         // where each stage starts, and how long it holds the screen

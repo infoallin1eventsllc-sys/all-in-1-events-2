@@ -24,9 +24,21 @@ Nothing else on the page. Logs go in an *Activity* tab; labs and deep tools go b
 | `ink` / `ink-2` / `ink-3` | #111827 / #4b5563 / #8a94a6 | #eef1f6 / #aab3c2 / #6f7a8c | text: primary / secondary / muted |
 | `accent` | per vertical | per vertical | active state, the one primary action, chart line |
 | `ok` / `warn` / `bad` | 700-weight greens/ambers/reds | 400-weight | status only, always with a dot or label |
-| `imagery` | #0b0f14 | same | behind video, maps, 3D — always dark |
+| `imagery` | #0b0f14 | same | behind video, maps, 3D — dark, except the site survey's daylight stage (below) |
 
-Vertical accents: light show `#5b5bd6`, site survey `#c2410c`, surveillance `#0f766e` (set via `data-accent` on the dashboard root; dark variants in the same file). Status colours are never reused for series or decoration.
+Vertical accents: light show `#5b5bd6`, site survey `#1f6fd1` (holographic blue; its chart series stays `#c2410c`, because no blue can be told apart from the light show's indigo in a chart), surveillance `#0f766e` (set via `data-accent` on the dashboard root; dark variants in the same file). Status colours are never reused for series or decoration.
+
+### Site survey: Holographic Site
+
+The survey stage is the one daylight scene: the venue in late-afternoon sun with a holographic
+survey over it (`components/survey/SurveyHoloStage.tsx`). Light from the overlays, never from the
+chrome: the camera's scan beam onto its footprint, the boundary glowing on the terrain with corner
+nodes, flight lines on the ground (flown bright, current brightest, the rest faint), and the site
+plan (`survey/blueprint.ts`) revealed by the coverage grid. Overlay colours are >1 so only they
+bloom. Floating cards (white, blue icon tile) label the aircraft, the latest photo and the main
+structures, never overlapping (priority order), and none on a phone-sized stage. The stage chips
+are light (white, ink text) because the scene is light. Chosen by the owner from five concepts
+(`lab/survey-concepts.html`), after their reference images of drone survey marketing.
 
 ## Type
 

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PARKED_CARS, SITE, STOCKPILE, TREES, heightAt, siteImagery, WORLD_M } from '../survey/site';
+import { PARKED_CARS, SITE, SITE_PATHS, STOCKPILE, TREES, heightAt, sitePhoto, WORLD_M } from '../survey/site';
 import { capturePoints, planSurvey, type Pt } from '../survey/plan';
 import { DEFAULT_PARAMS } from '../hooks/useSurveyMission';
 import { buildDrone, droneMaterials, radialTexture } from '../components/hero/droneModel';
@@ -61,7 +61,7 @@ const done = () => requestAnimationFrame(() => requestAnimationFrame(() => Objec
 
 // ---- shared geometry helpers ----------------------------------------------------------------------
 const STRUCTS = SITE.structures;
-const PATHS: [number, number][][] = [[[-150, 120], [-100, 80], [-20, 30], [60, -40]], [[-20, 30], [-110, -20]], [[-20, 30], [120, 60], [150, 100]]];
+const PATHS = SITE_PATHS;
 function footprintCorners(p: Pt, heading: number): Pt[] {
   const { acrossM: a, alongM: b } = plan.footprint, c = Math.cos(heading), s = Math.sin(heading);
   return [[-b / 2, -a / 2], [b / 2, -a / 2], [b / 2, a / 2], [-b / 2, a / 2]].map(([u, v]) => ({ x: p.x + u * c - v * s, y: p.y + u * s + v * c }));
@@ -413,32 +413,8 @@ function model() {
 // ================================================================================================
 // C. LIGHTBOX
 // ================================================================================================
-/** A richer orthophoto for the lightbox: the venue imagery with grain, mowing stripes and tree relief. */
-function photo(size = 2048): HTMLCanvasElement {
-  const base = siteImagery(size), c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d')!;
-  g.drawImage(base, 0, 0); const s = size / WORLD_M, X = (x: number) => (x + WORLD_M / 2) * s, Y = (y: number) => (y + WORLD_M / 2) * s;
-  // Mowing stripes inside the venue.
-  g.save(); g.beginPath(); SITE.boundary.forEach((p, i) => (i ? g.lineTo(X(p.x), Y(p.y)) : g.moveTo(X(p.x), Y(p.y)))); g.closePath(); g.clip();
-  for (let x = -260; x < 260; x += 12) { g.fillStyle = 'rgba(255,255,230,.045)'; g.fillRect(X(x), 0, 6 * s, size); }
-  g.restore();
-  // Tree crowns with light from the north-west and a cast shadow.
-  for (const t of TREES) {
-    g.fillStyle = 'rgba(10,20,8,.35)'; g.beginPath(); g.arc(X(t.x + t.r * 0.5), Y(t.y + t.r * 0.5), t.r * s, 0, Math.PI * 2); g.fill();
-    const gr = g.createRadialGradient(X(t.x - t.r * 0.35), Y(t.y - t.r * 0.35), 0, X(t.x), Y(t.y), t.r * s);
-    gr.addColorStop(0, `rgb(${70 + t.shade * 30},${100 + t.shade * 30},${48})`); gr.addColorStop(1, `rgb(${26 + t.shade * 14},${50 + t.shade * 16},${24})`);
-    g.fillStyle = gr; g.beginPath(); g.arc(X(t.x), Y(t.y), t.r * s, 0, Math.PI * 2); g.fill();
-  }
-  // Roofs: a lit edge and a shaded edge.
-  for (const st of SITE.structures) {
-    g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(X(st.x - st.w / 2), Y(st.y - st.d / 2), st.w * s, Math.max(1, st.d * s * 0.12));
-    g.fillStyle = 'rgba(0,0,0,.12)'; g.fillRect(X(st.x - st.w / 2), Y(st.y + st.d / 2) - st.d * s * 0.12, st.w * s, st.d * s * 0.12);
-  }
-  // Sensor grain.
-  const id = g.getImageData(0, 0, size, size), d = id.data;
-  for (let i = 0; i < d.length; i += 4) { const n = (Math.random() - 0.5) * 18; d[i] += n; d[i + 1] += n; d[i + 2] += n; }
-  g.putImageData(id, 0, 0);
-  return c;
-}
+/** The venue photographed in daylight (shared with the survey stage). */
+const photo = sitePhoto;
 function lightbox() {
   css(`:root{--bg:#e9e7e2;--chrome:#f7f6f3;--seg:#e1ded7;--line:#d8d4cc;--ink:#18191b;--ink2:#56575c;--ink3:#8b8983;--acc:#c2620a}
   .head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:14px}

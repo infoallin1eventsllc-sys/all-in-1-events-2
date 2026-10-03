@@ -104,6 +104,13 @@ export const PARKED_CARS: { x: number; y: number; color: string }[] = (() => {
   return out;
 })();
 
+/** Worn gravel paths linking the entrance, the stage, the hall and the parking (map metres). */
+export const SITE_PATHS: [number, number][][] = [
+  [[-150, 120], [-100, 80], [-20, 30], [60, -40]],
+  [[-20, 30], [-110, -20]],
+  [[-20, 30], [120, 60], [150, 100]],
+];
+
 /**
  * A procedural orthophoto of the venue: what the finished map will look like.
  * Drawn once to a canvas covering WORLD_M × WORLD_M, centred on the origin.
@@ -135,10 +142,7 @@ export function siteImagery(size = 1024): HTMLCanvasElement {
 
   // Worn gravel paths linking entrance, stage, hall and parking.
   ctx.strokeStyle = 'rgba(176,160,128,0.9)'; ctx.lineCap = 'round'; ctx.lineWidth = 6 * s;
-  const path = (pts: [number, number][]) => { ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y)))); ctx.stroke(); };
-  path([[-150, 120], [-100, 80], [-20, 30], [60, -40]]);
-  path([[-20, 30], [-110, -20]]);
-  path([[-20, 30], [120, 60], [150, 100]]);
+  for (const pts of SITE_PATHS) { ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y)))); ctx.stroke(); }
   // Crowd field in front of the stage: trampled grass.
   ctx.fillStyle = 'rgba(150,140,96,0.35)'; ctx.beginPath(); ctx.ellipse(X(60), Y(-20), 70 * s, 40 * s, 0, 0, Math.PI * 2); ctx.fill();
 
@@ -166,5 +170,37 @@ export function siteImagery(size = 1024): HTMLCanvasElement {
   }
 
   imageryCache = c;
+  return c;
+}
+
+/**
+ * The venue photographed in daylight, for the survey stage: the orthophoto with mowing stripes inside
+ * the boundary, tree crowns lit from the north-west with their shadows, lit and shaded roof edges, and
+ * sensor grain. Cached per size.
+ */
+const photoCache = new Map<number, HTMLCanvasElement>();
+export function sitePhoto(size = 2048): HTMLCanvasElement {
+  const hit = photoCache.get(size); if (hit) return hit;
+  const c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d')!;
+  g.drawImage(siteImagery(size), 0, 0);
+  const s = size / WORLD_M, X = (x: number) => (x + WORLD_M / 2) * s, Y = (y: number) => (y + WORLD_M / 2) * s;
+  g.save(); g.beginPath(); SITE.boundary.forEach((p, i) => (i ? g.lineTo(X(p.x), Y(p.y)) : g.moveTo(X(p.x), Y(p.y)))); g.closePath(); g.clip();
+  for (let x = -260; x < 260; x += 12) { g.fillStyle = 'rgba(255,255,230,.045)'; g.fillRect(X(x), 0, 6 * s, size); }
+  g.restore();
+  for (const t of TREES) {
+    g.fillStyle = 'rgba(10,20,8,.35)'; g.beginPath(); g.arc(X(t.x + t.r * 0.5), Y(t.y + t.r * 0.5), t.r * s, 0, Math.PI * 2); g.fill();
+    const gr = g.createRadialGradient(X(t.x - t.r * 0.35), Y(t.y - t.r * 0.35), 0, X(t.x), Y(t.y), t.r * s);
+    gr.addColorStop(0, `rgb(${70 + t.shade * 30},${100 + t.shade * 30},48)`); gr.addColorStop(1, `rgb(${26 + t.shade * 14},${50 + t.shade * 16},24)`);
+    g.fillStyle = gr; g.beginPath(); g.arc(X(t.x), Y(t.y), t.r * s, 0, Math.PI * 2); g.fill();
+  }
+  for (const st of SITE.structures) {
+    g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(X(st.x - st.w / 2), Y(st.y - st.d / 2), st.w * s, Math.max(1, st.d * s * 0.12));
+    g.fillStyle = 'rgba(0,0,0,.12)'; g.fillRect(X(st.x - st.w / 2), Y(st.y + st.d / 2) - st.d * s * 0.12, st.w * s, st.d * s * 0.12);
+  }
+  // Sensor grain, seeded so every load looks the same.
+  const id = g.getImageData(0, 0, size, size), d = id.data; let seed = 9;
+  for (let i = 0; i < d.length; i += 4) { seed = (seed * 16807) % 2147483647; const n = (seed / 2147483647 - 0.5) * 18; d[i] += n; d[i + 1] += n; d[i + 2] += n; }
+  g.putImageData(id, 0, 0);
+  photoCache.set(size, c);
   return c;
 }
