@@ -4,6 +4,10 @@ import { capturePoints, planSurvey, type Pt } from '../survey/plan';
 import { DEFAULT_PARAMS } from '../hooks/useSurveyMission';
 import { buildDrone, droneMaterials, radialTexture } from '../components/hero/droneModel';
 import { studioEnvironment } from '../components/hero/stage';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 
 /**
  * Site survey design concepts, drawn from the real demo venue and the real flight plan, frozen
@@ -13,8 +17,10 @@ import { studioEnvironment } from '../components/hero/stage';
  *  - lightbox: the map assembles from the aerial photos themselves, laid down frame by frame.
  *  - relief:   Swiss-style shaded relief and brown contours; land colours in as it is photographed,
  *              with the current line's altitude profile underneath (after Imhof, USGS topo, Wingtra).
+ *  - holo:     the real site in daylight with a holographic survey over it: the camera's scan beam, a glowing
+ *              boundary and flight lines, and the site's digital blueprint lit up where it has been scanned.
  */
-const C = (new URLSearchParams(location.search).get('c') ?? 'sheet') as 'sheet' | 'model' | 'lightbox' | 'relief';
+const C = (new URLSearchParams(location.search).get('c') ?? 'sheet') as 'sheet' | 'model' | 'lightbox' | 'relief' | 'holo';
 
 // ---- the survey, frozen mid-flight ----------------------------------------------------------------
 const plan = planSurvey(SITE.boundary, SITE.home, DEFAULT_PARAMS);
@@ -661,5 +667,176 @@ function relief() {
   done();
 }
 
+// ================================================================================================
+// E. HOLOGRAPHIC SITE
+// ================================================================================================
+function holo() {
+  css(`:root{--bg:#eef0f3;--chrome:#fbfcfd;--seg:#e4e8ee;--line:#dce1e8;--ink:#0f1720;--ink2:#4d5866;--ink3:#8a94a3;--acc:#1f7ae0}
+  .head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:14px}
+  .head h1{font-size:24px;font-weight:600;letter-spacing:-.01em}.head p{color:var(--ink2);margin-top:3px}
+  .chip{display:inline-flex;align-items:center;gap:6px;margin-left:12px;font-size:12px;font-weight:500;color:var(--acc);vertical-align:4px}.chip:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--acc)}
+  .reads{display:flex;gap:30px}.reads small{display:block;font-size:11px;color:var(--ink3)}.reads b{font-size:22px;font-weight:600}
+  .wrap{display:grid;grid-template-columns:1fr 316px;gap:16px;height:640px}
+  .stage{position:relative;border-radius:16px;overflow:hidden;background:#cfd8e0}
+  .stage canvas{position:absolute;inset:0}
+  .card{position:absolute;display:flex;gap:9px;align-items:center;padding:8px 11px 8px 9px;border-radius:10px;background:rgba(255,255,255,.86);box-shadow:0 6px 22px rgba(10,40,80,.18),0 0 0 1px rgba(80,160,255,.45);font-size:12px;color:#0f1720;white-space:nowrap}
+  .card i{width:26px;height:26px;border-radius:7px;background:linear-gradient(160deg,#4aa8ff,#1f6fe0);display:grid;place-items:center;color:#fff;font-style:normal;font-size:12px;font-weight:700}
+  .card small{display:block;color:#5b6676;font-size:10.5px}
+  .card:after{content:"";position:absolute;left:var(--lx,50%);top:100%;width:1.5px;height:var(--lh,40px);background:linear-gradient(#5fb4ff,rgba(95,180,255,0))}
+  .views{position:absolute;top:14px;right:14px;display:flex;gap:2px;padding:3px;border-radius:10px;background:rgba(255,255,255,.88);box-shadow:0 0 0 1px var(--line)}
+  .views span{padding:5px 10px;border-radius:7px;font-size:12px;color:var(--ink2)}.views span.on{background:var(--ink);color:#fff}
+  .lines{position:absolute;left:16px;bottom:14px;display:flex;align-items:center;gap:3px;padding:7px 10px;border-radius:10px;background:rgba(255,255,255,.88);font-size:12px;color:var(--ink2)}
+  .lines i{width:16px;height:4px;border-radius:2px;background:#cdd5df}.lines i.d{background:#1f7ae0}.lines i.c{background:#5fb4ff;box-shadow:0 0 6px #5fb4ff}.lines span{margin-left:8px}
+  .rail{background:var(--chrome);border-radius:16px;padding:18px;box-shadow:0 0 0 1px var(--line);display:flex;flex-direction:column;gap:16px}
+  .rail h3{font-size:13px;font-weight:600;margin-bottom:8px}
+  .big{font-size:40px;font-weight:600;letter-spacing:-.02em;line-height:1}.meter{height:6px;border-radius:3px;background:#e3e8ee;margin-top:10px;overflow:hidden}.meter i{display:block;height:100%;background:linear-gradient(90deg,#1f7ae0,#5fb4ff)}
+  .row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line)}.row span{color:var(--ink2)}
+  .acts{display:flex;gap:8px;align-items:center;margin-top:12px}
+  .btn{height:36px;padding:0 14px;border-radius:10px;box-shadow:0 0 0 1px var(--line);display:inline-flex;align-items:center;font-weight:500;background:var(--chrome)}
+  .btn.p{background:var(--ink);color:#fff;box-shadow:none}.btn.d{color:#b42318}.sp{flex:1}
+  .seg{display:inline-flex;padding:3px;border-radius:10px;background:var(--seg)}.seg span{padding:5px 10px;border-radius:7px;font-size:12px;color:var(--ink2)}.seg span.on{background:var(--chrome);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+  `);
+  root.innerHTML = `${appBar()}<main>
+  <div class="head"><div><h1>Site survey<span class="chip">Scanning · line ${CUR + 1} of ${NL}</span></h1><p>Festival grounds · ${(plan.areaM2 / 1e4).toFixed(1)} ha · orthomosaic at ${plan.params.altitudeM} m</p></div>
+  <div class="reads"><div><small>Scanned</small><b class="num">${pct}%</b></div><div><small>Photos</small><b class="num">${SHOT.length}</b></div><div><small>Ground detail</small><b class="num">${plan.gsdCm.toFixed(1)} cm/px</b></div><div><small>Time left</small><b class="num">${timeLeft}</b></div></div></div>
+  <div class="wrap"><div class="stage" id="st"><canvas id="cv"></canvas><div class="views"><span class="on">Chase</span><span>Site</span><span>Top-down</span></div>
+    <div class="lines">${Array.from({ length: NL }, (_, i) => `<i class="${i < CUR ? 'd' : i === CUR ? 'c' : ''}"></i>`).join('')}<span>Line ${CUR + 1} of ${NL}</span></div></div>
+   <div class="rail"><div><h3>Scan</h3><div class="big num">${pct}%</div><div style="color:var(--ink2);margin-top:4px">of the site scanned</div><div class="meter"><i style="width:${pct}%"></i></div></div>
+    <div><div class="row"><span>Photos</span><b class="num">${SHOT.length} of ~${PTS.length}</b></div><div class="row"><span>Ground detail</span><b class="num">${plan.gsdCm.toFixed(1)} cm/px</b></div><div class="row"><span>Height</span><b class="num">${plan.params.altitudeM} m</b></div><div class="row"><span>Overlap</span><b class="num">75% · 70%</b></div><div class="row"><span>Speed</span><b class="num">10 m/s</b></div><div class="row" style="border:0"><span>Battery</span><b class="num">58%</b></div></div>
+    <div style="font-size:12px;color:var(--ink2);line-height:1.5">The blue beam is the camera's view. Where it has passed, the site's digital plan lights up on the ground.</div></div></div>
+  <div class="acts"><span class="seg"><span class="on">Flight</span><span>Results</span></span><span class="btn p">Pause</span><span class="btn">Re-fly weak patches</span><span class="seg"><span>1×</span><span class="on">4×</span><span>16×</span></span><span class="sp"></span><span class="btn">Export package</span><span class="btn d">Return home</span></div>
+  </main>`;
+
+  const host = document.getElementById('st')!, cv = document.getElementById('cv') as HTMLCanvasElement;
+  const w = host.clientWidth, h = host.clientHeight;
+  const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(2); renderer.setSize(w, h); renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  const scene = new THREE.Scene();
+  // Late-afternoon sky and haze.
+  { const c = document.createElement('canvas'); c.width = 4; c.height = 256; const g = c.getContext('2d')!; const gr = g.createLinearGradient(0, 0, 0, 256);
+    gr.addColorStop(0, '#8fb3d6'); gr.addColorStop(0.55, '#d9dfe2'); gr.addColorStop(0.8, '#efdcc4'); gr.addColorStop(1, '#f3d9b8'); g.fillStyle = gr; g.fillRect(0, 0, 4, 256);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; scene.background = t; }
+  scene.fog = new THREE.Fog(0xe8dccb, 260, 1150);
+  scene.add(new THREE.HemisphereLight(0xcfe0f2, 0x8a7a60, 0.9));
+  const sun = new THREE.DirectionalLight(0xffe2bc, 2.6); sun.position.set(-260, 220, -140); sun.castShadow = true;
+  sun.shadow.mapSize.set(4096, 4096); Object.assign(sun.shadow.camera, { left: -320, right: 320, top: 320, bottom: -320, near: 10, far: 900 }); sun.shadow.bias = -0.0005; scene.add(sun);
+  const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(new THREE.Scene().add(new THREE.HemisphereLight(0xdde8f4, 0x8a7a60, 3)) as THREE.Scene, 0.04).texture; scene.environmentIntensity = 0.5;
+
+  // Ground: the venue photograph draped on the terrain.
+  const img = photo(4096); const tex = new THREE.CanvasTexture(img); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 16;
+  const G = new THREE.PlaneGeometry(WORLD_M, WORLD_M, 300, 300).rotateX(-Math.PI / 2);
+  { const a = G.attributes.position as THREE.BufferAttribute; for (let i = 0; i < a.count; i++) a.setY(i, heightAt(a.getX(i), a.getZ(i))); G.computeVertexNormals(); }
+  const ground = new THREE.Mesh(G, new THREE.MeshStandardMaterial({ map: tex, roughness: 1, metalness: 0 })); ground.receiveShadow = true; scene.add(ground);
+  const at = (x: number, y: number, up = 0) => new THREE.Vector3(x, heightAt(x, y) + up, y);
+  // Buildings, tents, trucks, trees, cars.
+  const wall = new THREE.MeshStandardMaterial({ color: 0xd9d6d0, roughness: 0.85 });
+  for (const s of STRUCTS) {
+    const gy = heightAt(s.x, s.y), roof = new THREE.MeshStandardMaterial({ color: new THREE.Color(s.roof), roughness: 0.7 });
+    let m: THREE.Mesh;
+    if (s.kind === 'tent') { m = new THREE.Mesh(new THREE.ConeGeometry(s.w * 0.72, s.h, 4).rotateY(Math.PI / 4), new THREE.MeshStandardMaterial({ color: 0xf6f5f0, roughness: 0.8 })); m.position.set(s.x, gy + s.h / 2, s.y); }
+    else if (s.kind === 'hall') { const r = s.d / 2, arch = new THREE.Shape(); arch.moveTo(-r, 0); arch.absarc(0, 0, r, Math.PI, 0, true); arch.lineTo(-r, 0);
+      m = new THREE.Mesh(new THREE.ExtrudeGeometry(arch, { depth: s.w, bevelEnabled: false, curveSegments: 36 }).translate(0, 0, -s.w / 2).rotateY(Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xdfe2e5, roughness: 0.6, metalness: 0.1 })); m.position.set(s.x, gy, s.y); m.scale.y = s.h / r; }
+    else { m = new THREE.Mesh(new THREE.BoxGeometry(s.w, s.h, s.d), [wall, wall, roof, wall, wall, wall]); m.position.set(s.x, gy + s.h / 2, s.y); }
+    m.castShadow = true; m.receiveShadow = true; scene.add(m);
+  }
+  const m4 = new THREE.Matrix4();
+  const crowns = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 2), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 }), TREES.length); crowns.castShadow = true; crowns.receiveShadow = true;
+  TREES.forEach((t, i) => { const p = at(t.x, t.y); m4.compose(new THREE.Vector3(p.x, p.y + t.r * 1.5, p.z), new THREE.Quaternion(), new THREE.Vector3(t.r, t.r * 1.25, t.r)); crowns.setMatrixAt(i, m4); crowns.setColorAt(i, new THREE.Color().setHSL(0.25, 0.34, 0.24 + t.shade * 0.1)); }); scene.add(crowns);
+  const cars = new THREE.InstancedMesh(new THREE.BoxGeometry(1.8, 1.4, 4.3), new THREE.MeshStandardMaterial({ roughness: 0.35, metalness: 0.5 }), PARKED_CARS.length); cars.castShadow = true;
+  PARKED_CARS.forEach((c, i) => { const p = at(c.x + 1.3, c.y + 2.5, 0.7); m4.makeTranslation(p.x, p.y, p.z); cars.setMatrixAt(i, m4); cars.setColorAt(i, new THREE.Color(c.color)); }); scene.add(cars);
+
+  // ---- the holographic survey ----
+  const HOLO = new THREE.Color(0.3, 0.68, 1.45), HOLO2 = new THREE.Color(0.12, 0.38, 0.95);
+  const glow = (c: THREE.Color, o = 1) => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
+  const drape = (pts: Pt[], step = 2, up = 0.35) => { const out: THREE.Vector3[] = []; for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], b = pts[i + 1], n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / step)); for (let k = 0; k < n; k++) { const t = k / n; out.push(at(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, up)); } } const l = pts[pts.length - 1]; out.push(at(l.x, l.y, up)); return out; };
+  const tube = (pts: THREE.Vector3[], r: number, mat: THREE.Material) => { const m = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0), Math.max(8, pts.length * 2), r, 6), mat); scene.add(m); return m; };
+  // The blueprint layer: the site plan in light, revealed where the scan has passed, faint elsewhere.
+  { const N = 4096, bp = document.createElement('canvas'); bp.width = bp.height = N; const g = bp.getContext('2d')!, s = N / WORLD_M;
+    const P = (x: number, y: number): [number, number] => [(x + WORLD_M / 2) * s, (y + WORLD_M / 2) * s];
+    const plan2 = document.createElement('canvas'); plan2.width = plan2.height = N; const q = plan2.getContext('2d')!;
+    q.strokeStyle = '#fff'; q.fillStyle = '#fff'; q.lineCap = 'round';
+    // grid every 10 m inside the boundary
+    q.save(); q.beginPath(); SITE.boundary.forEach((p, i) => (i ? q.lineTo(...P(p.x, p.y)) : q.moveTo(...P(p.x, p.y)))); q.closePath(); q.clip();
+    q.globalAlpha = 0.16; q.lineWidth = 1.2; for (let x = -260; x <= 260; x += 10) { q.beginPath(); q.moveTo(...P(x, -200)); q.lineTo(...P(x, 200)); q.stroke(); } for (let y = -200; y <= 200; y += 10) { q.beginPath(); q.moveTo(...P(-260, y)); q.lineTo(...P(260, y)); q.stroke(); }
+    q.restore(); q.globalAlpha = 1;
+    // structures: outline, inner offset line, dimensions
+    q.font = `600 ${Math.round(3.2 * s)}px Inter`; q.textAlign = 'center';
+    for (const st of STRUCTS) {
+      const [x0, y0] = P(st.x - st.w / 2, st.y - st.d / 2), ww = st.w * s, dd = st.d * s;
+      q.lineWidth = 0.55 * s; q.strokeRect(x0, y0, ww, dd);
+      if (st.w > 10) { q.lineWidth = 0.22 * s; q.strokeRect(x0 + 1.2 * s, y0 + 1.2 * s, ww - 2.4 * s, dd - 2.4 * s);
+        q.lineWidth = 0.18 * s; const yy = y0 - 3 * s; q.beginPath(); q.moveTo(x0, yy); q.lineTo(x0 + ww, yy); q.moveTo(x0, yy - s); q.lineTo(x0, yy + s); q.moveTo(x0 + ww, yy - s); q.lineTo(x0 + ww, yy + s); q.stroke();
+        q.font = `600 ${Math.round(Math.min(4.2, st.w / 7) * s)}px Inter`; q.fillText(st.label, x0 + ww / 2, y0 + dd / 2); q.font = `500 ${Math.round(Math.min(3.2, st.w / 9) * s)}px Inter`; q.fillText(`${st.w} × ${st.d} m`, x0 + ww / 2, y0 + dd / 2 + Math.min(5, st.w / 6) * s); }
+    }
+    // paths as centrelines with edges, parking stalls, stockpile rings
+    for (const pth of PATHS) for (const [lw, a] of [[0.3, 1], [6, 0.12]] as [number, number][]) { q.globalAlpha = a; q.lineWidth = lw * s; q.beginPath(); pth.forEach(([x, y], i) => (i ? q.lineTo(...P(x, y)) : q.moveTo(...P(x, y)))); q.stroke(); }
+    q.globalAlpha = 1; const PK = SITE.parking; q.lineWidth = 0.25 * s; q.strokeRect(...P(PK.x0, PK.y0), (PK.x1 - PK.x0) * s, (PK.y1 - PK.y0) * s);
+    for (let row = 0; row < 4; row++) for (let col = 0; col <= 40; col++) { const [x, y] = P(PK.x0 + 4 + col * 2.8, PK.y0 + 6 + row * 15); q.beginPath(); q.moveTo(x, y); q.lineTo(x, y + 5 * s); q.stroke(); }
+    for (let k = 1; k <= 4; k++) { const [x, y] = P(STOCKPILE.x, STOCKPILE.y); q.beginPath(); q.arc(x, y, STOCKPILE.r * s * (k / 4), 0, Math.PI * 2); q.stroke(); }
+    // reveal: full where photographed, 18% elsewhere
+    const mk = document.createElement('canvas'); mk.width = mk.height = N; const mg = mk.getContext('2d')!; mg.fillStyle = 'rgba(255,255,255,.1)'; mg.fillRect(0, 0, N, N);
+    mg.fillStyle = '#fff'; for (const p of SHOT) { const c4 = footprintCorners(p.p, p.headingRad); mg.beginPath(); c4.forEach((c, i) => (i ? mg.lineTo(...P(c.x, c.y)) : mg.moveTo(...P(c.x, c.y)))); mg.closePath(); mg.fill(); }
+    g.drawImage(plan2, 0, 0); g.globalCompositeOperation = 'destination-in'; g.drawImage(mk, 0, 0); g.globalCompositeOperation = 'source-over';
+    const bt = new THREE.CanvasTexture(bp); bt.anisotropy = 16;
+    const layer = new THREE.Mesh(G.clone(), new THREE.MeshBasicMaterial({ map: bt, color: HOLO, opacity: 0.7, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -4 }));
+    layer.position.y = 0.25; scene.add(layer);
+    // translucent blue over the whole site, like a survey area fill
+    const fillC = document.createElement('canvas'); fillC.width = fillC.height = 1024; const fg = fillC.getContext('2d')!; const fs = 1024 / WORLD_M;
+    fg.fillStyle = 'rgba(40,120,255,.07)'; fg.beginPath(); SITE.boundary.forEach((p, i) => (i ? fg.lineTo((p.x + WORLD_M / 2) * fs, (p.y + WORLD_M / 2) * fs) : fg.moveTo((p.x + WORLD_M / 2) * fs, (p.y + WORLD_M / 2) * fs))); fg.closePath(); fg.fill();
+    const ft = new THREE.CanvasTexture(fillC);
+    const fill = new THREE.Mesh(G.clone(), new THREE.MeshBasicMaterial({ map: ft, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })); fill.position.y = 0.15; scene.add(fill);
+  }
+  // Boundary: a glowing edge with nodes at the corners.
+  tube(drape([...SITE.boundary, SITE.boundary[0]], 2, 0.6), 0.45, glow(HOLO));
+  tube(drape([...SITE.boundary, SITE.boundary[0]], 2, 0.6), 1.6, glow(HOLO2, 0.25));
+  for (const p of SITE.boundary) { const v = at(p.x, p.y, 0.8); const n = new THREE.Mesh(new THREE.SphereGeometry(1.6, 16, 12), glow(new THREE.Color(1.2, 2, 3))); n.position.copy(v); scene.add(n);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(3, 3.6, 40).rotateX(-Math.PI / 2), glow(HOLO, 0.8)); ring.position.copy(v); scene.add(ring); }
+  // Flight lines on the ground: flown bright, the current one to the aircraft, the rest faint.
+  for (const l of capLegs) {
+    if (l.line < CUR) tube(drape([l.a, l.b], 3, 0.5), 0.28, glow(HOLO, 0.9));
+    else if (l.line === CUR) { tube(drape([l.a, AT.p], 3, 0.5), 0.45, glow(new THREE.Color(0.7, 1.4, 2.6))); tube(drape([AT.p, l.b], 3, 0.5), 0.18, glow(HOLO, 0.35)); }
+    else tube(drape([l.a, l.b], 3, 0.5), 0.15, glow(HOLO2, 0.28));
+  }
+  // The aircraft (scaled up so it reads from the chase camera) and its scan beam.
+  const ALT = heightAt(SITE.home.x, SITE.home.y) + plan.params.altitudeM;
+  const dir = new THREE.Vector3(Math.cos(AT.headingRad), 0, Math.sin(AT.headingRad)), side = new THREE.Vector3(-dir.z, 0, dir.x);
+  const D = new THREE.Vector3(AT.p.x, ALT, AT.p.y);
+  const air = buildDrone(droneMaterials(), radialTexture()); const K = 10; air.group.scale.setScalar(K); air.group.position.copy(D); air.group.rotation.y = -AT.headingRad;
+  air.blur.forEach(b => { b.visible = true; }); air.group.traverse(o => { const m = o as THREE.Mesh; if (m.isMesh) m.castShadow = !(m.material as THREE.Material).transparent; }); scene.add(air.group);
+  const cam0 = D.clone().addScaledVector(dir, 0.4 * K).add(new THREE.Vector3(0, -0.12 * K, 0));
+  const fp = footprintCorners(AT.p, AT.headingRad).map(c => at(c.x, c.y, 0.6));
+  { const pos: number[] = [], uv: number[] = [];
+    for (let i = 0; i < 4; i++) { const a = fp[i], b = fp[(i + 1) % 4]; pos.push(cam0.x, cam0.y, cam0.z, a.x, a.y, a.z, b.x, b.y, b.z); uv.push(0.5, 0, 0, 1, 1, 1); }
+    const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); bg.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    const sc = document.createElement('canvas'); sc.width = 4; sc.height = 256; const sg = sc.getContext('2d')!;
+    for (let y = 0; y < 256; y++) { const t = y / 255, band = (Math.floor(y / 6) % 2) * 0.12; sg.fillStyle = `rgba(255,255,255,${(0.1 + 0.32 * t + band * t).toFixed(3)})`; sg.fillRect(0, y, 4, 1); }
+    const beam = new THREE.Mesh(bg, new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), color: new THREE.Color(0.35, 0.8, 1.6), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false })); scene.add(beam);
+    tube([...fp, fp[0]], 0.35, glow(new THREE.Color(0.8, 1.6, 2.8)));
+    for (const c of fp) tube([cam0, c], 0.08, glow(HOLO, 0.7));          // the beam's edges
+    const footFill = new THREE.Mesh(new THREE.BufferGeometry().setFromPoints([fp[0], fp[1], fp[2], fp[0], fp[2], fp[3]]), glow(new THREE.Color(0.2, 0.5, 1.1), 0.35)); scene.add(footFill);
+  }
+  // Chase camera behind and beside the aircraft, looking down the line.
+  const cam = new THREE.PerspectiveCamera(46, w / h, 1, 3000);
+  cam.position.copy(D).addScaledVector(dir, -58).addScaledVector(side, -34).add(new THREE.Vector3(0, 24, 0));
+  cam.lookAt(D.clone().addScaledVector(dir, 30).addScaledVector(side, 6).add(new THREE.Vector3(0, -36, 0)));
+  const composer = new EffectComposer(renderer); composer.setPixelRatio(2); composer.setSize(w, h);
+  composer.addPass(new RenderPass(scene, cam)); composer.addPass(new UnrealBloomPass(new THREE.Vector2(w, h), 0.42, 0.5, 0.9)); composer.addPass(new OutputPass());
+  composer.render();
+  // Floating cards anchored to the site.
+  const proj = (v: THREE.Vector3) => { const p = v.clone().project(cam); return { x: (p.x * 0.5 + 0.5) * w, y: (-p.y * 0.5 + 0.5) * h, ok: p.z < 1 }; };
+  const card = (icon: string, t: string, sub: string, v: THREE.Vector3, lift = 46) => {
+    const p = proj(v); if (!p.ok || p.x < 0 || p.x > w || p.y < 0 || p.y > h) return;
+    const e = document.createElement('div'); e.className = 'card'; e.innerHTML = `<i>${icon}</i><div>${t}<small>${sub}</small></div>`; host.appendChild(e);
+    e.style.left = `${p.x - e.offsetWidth / 2}px`; e.style.top = `${p.y - lift - e.offsetHeight}px`; e.style.setProperty('--lh', `${lift}px`);
+  };
+  const S = (id: string) => STRUCTS.find(s => s.id === id)!;
+  card('▲', 'Main stage', '38 × 20 m · 15 m high', at(S('stage').x, S('stage').y, S('stage').h), 30);
+  card('➚', `Aircraft · line ${CUR + 1} of ${NL}`, '60 m · 10 m/s · battery 58%', D.clone().add(new THREE.Vector3(0, 0.25 * K, 0)), 34);
+  card('◉', 'Gravel stockpile', 'volume after landing', at(STOCKPILE.x, STOCKPILE.y, STOCKPILE.h), 34);
+  card('✦', `Photo ${SHOT.length}`, `line ${CUR + 1} · 1.6 cm/px`, fp[1].clone().lerp(fp[2], 0.5), 24);
+  done();
+}
+
 // Canvas text needs the faces loaded first (the page links Inter; the stills harness injects it).
-Promise.all(['400 10px Inter', '500 10px Inter', '600 10px Inter', '500 10px "JetBrains Mono"'].map(f => document.fonts.load(f))).catch(() => undefined).then(() => ({ sheet, model, lightbox, relief })[C]());
+Promise.all(['400 10px Inter', '500 10px Inter', '600 10px Inter', '500 10px "JetBrains Mono"'].map(f => document.fonts.load(f))).catch(() => undefined).then(() => ({ sheet, model, lightbox, relief, holo })[C]());
