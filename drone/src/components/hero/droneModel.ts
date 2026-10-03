@@ -311,6 +311,8 @@ function sculptDrone(mats: Record<string, THREE.Material>, blurTex: THREE.Textur
   const podGeo = new THREE.LatheGeometry([[0, -0.028], [0.04, -0.028], [0.054, -0.023], [0.06, -0.01], [0.061, 0.008], [0.058, 0.018], [0.05, 0.023], [0, 0.023]].map(([r, y]) => new THREE.Vector2(r, y)), 32);
   const discGeo = new THREE.CircleGeometry(PROP_R + 0.012, 64);
   const smearGeo = { [1]: smearGeometry(PROP_R, 0.05, 1), [-1]: smearGeometry(PROP_R, 0.05, -1) } as Record<number, THREE.BufferGeometry>;
+  // Painted tip stripes, when the material set has a stripe paint (the light-show finish the hero uses).
+  const stripeGeo = M.stripe ? { [1]: bladeGeometry(PROP_R, 0.042, 1, 3, 9, { from: 0.8, to: 0.87, inflate: 0.0006 }), [-1]: bladeGeometry(PROP_R, 0.042, -1, 3, 9, { from: 0.8, to: 0.87, inflate: 0.0006 }) } as Record<number, THREE.BufferGeometry> : null;
   ARMS.forEach(({ root, tip, front }, k) => {
     const dir = tip.clone().sub(root), L = dir.length() - 0.05; dir.normalize();
     const up = V(0, 1, 0).addScaledVector(dir, -dir.y).normalize(), side = new THREE.Vector3().crossVectors(dir, up);
@@ -353,6 +355,7 @@ function sculptDrone(mats: Record<string, THREE.Material>, blurTex: THREE.Textur
     for (let b = 0; b < 2; b++) {
       const blade = new THREE.Group(); blade.rotation.y = b * Math.PI; set.add(blade);
       add(bladeGeo[hand], M.blade, 0, 0.002, 0, 0, 0, 0, blade);
+      if (stripeGeo) add(stripeGeo[hand], M.stripe, 0, 0.002, 0, 0, 0, 0, blade);
       add(new THREE.CylinderGeometry(0.012, 0.012, 0.012, 20), M.graphite, 0.045, 0.004, 0, 0, 0, 0, blade);    // pivot boss
       add(new THREE.CylinderGeometry(0.005, 0.005, 0.002, 10), M.metal, 0.045, 0.0105, 0, 0, 0, 0, blade);      // pivot screw
       if (marked) add(new THREE.BoxGeometry(0.03, 0.0012, 0.004), M.mark, 0.085, 0.012, 0, 0, 0, 0, blade);
@@ -471,11 +474,18 @@ export function emberMaterials(): Record<string, THREE.Material> {
   m.carbon = new THREE.MeshPhysicalMaterial({ map: carbonTexture(), metalness: 0.15, roughness: 0.62, clearcoat: 0.25, clearcoatRoughness: 0.35 });
   m.glass = new THREE.MeshPhysicalMaterial({ color: 0x07090d, metalness: 0.2, roughness: 0.12, clearcoat: 0.8, clearcoatRoughness: 0.08, envMapIntensity: 0.9 });
   m.gunmetal = new THREE.MeshStandardMaterial({ color: 0x3c4148, metalness: 0.8, roughness: 0.38 });
-  m.blade = new THREE.MeshPhysicalMaterial({ color: 0x121417, metalness: 0.05, roughness: 0.45, clearcoat: 0.4, clearcoatRoughness: 0.3, side: THREE.DoubleSide });
-  m.stripe = new THREE.MeshStandardMaterial({ color: 0xc6cacf, roughness: 0.5, side: THREE.DoubleSide });
+  Object.assign(m, showPropMaterials());
   m.glow = new THREE.MeshBasicMaterial({ color: blue, toneMapped: false });
   m.ledFront = m.glow;
   return m;
+}
+
+/** The light-show prop finish: glossy black composite blades that catch the light, white tip stripes. */
+export function showPropMaterials(): { blade: THREE.Material; stripe: THREE.Material } {
+  return {
+    blade: new THREE.MeshPhysicalMaterial({ color: 0x121417, metalness: 0.05, roughness: 0.45, clearcoat: 0.4, clearcoatRoughness: 0.3, side: THREE.DoubleSide }),
+    stripe: new THREE.MeshStandardMaterial({ color: 0xc6cacf, roughness: 0.5, side: THREE.DoubleSide }),
+  };
 }
 
 /** Low-detail build for fleets (the light show): fewer curve and ring segments, no motor fins or screws. Set only while emberFleet builds. */

@@ -7,7 +7,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { BokehPass } from 'three/examples/jsm/postprocessing/BokehPass.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js';
-import { aimGimbal, buildDrone, buildEmber, droneMaterials, emberMaterials, radialTexture, ROTOR_SPIN, type Gimbal } from '../../components/hero/droneModel';
+import { aimGimbal, buildDrone, buildEmber, droneMaterials, emberMaterials, radialTexture, showPropMaterials, type Gimbal } from '../../components/hero/droneModel';
 import { FrameGovernor } from '../../lib/quality';
 import { release3d } from '../../lib/release3d';
 
@@ -130,8 +130,8 @@ export const DroneHero: React.FC<{ className?: string; progress?: { current: num
 
     // Materials: anodised metal, dark glass, LEDs bright enough to bloom.
     const mats = look === 'ember' ? emberMaterials() : droneMaterials();
-    // Against the night sky the blade smears read as light catching the blades, not smoke.
-    (mats.smear as THREE.MeshBasicMaterial).color.set(0xb4bcc6);
+    // Props finished as on the light-show fleet: glossy black blades that catch the light, white tip stripes.
+    if (look !== 'ember') { mats.blade.dispose(); Object.assign(mats, showPropMaterials()); }
     const blurTex = radialTexture();
     const n = phone ? 7 : 12;
     const [K0, K1, K2] = formations(n);
@@ -141,8 +141,8 @@ export const DroneHero: React.FC<{ className?: string; progress?: { current: num
       const ledColor = look === 'ember' ? new THREE.Color(0.3, 0.65, 2.2) : new THREE.Color(0.45, 0.8, 1.6);
       const air = look === 'ember' ? { ...buildEmber(mats, blurTex), gimbal: undefined } : buildDrone(mats, blurTex);
       const { group, props, blur } = air;
-      // Spinning props: each blade sweeps round trailing its motion smear, under a faint blur disc.
-      if (!reduced) air.blur.forEach(b => { b.visible = true; });
+      // Spinning props, as the light show draws them: crisp blades turning under a faint blur disc (no smears).
+      air.blur.forEach(b => { b.clear(); const m = b.material as THREE.MeshBasicMaterial; m.color.set(0x9aa4b0); m.opacity = 0.1; if (!reduced) b.visible = true; });
       group.position.set(...(reduced ? K1[i] : K0[i]));
       group.scale.setScalar(1.35);
       scene.add(group);
@@ -240,7 +240,7 @@ export const DroneHero: React.FC<{ className?: string; progress?: { current: num
         // The gimbal holds the horizon through the bank and slowly looks around, as a camera operator would.
         if (d.gimbal) aimGimbal(d.gimbal, { pan: Math.sin(t * 0.27 + d.phase) * 0.36, tilt: -0.2 + Math.sin(t * 0.19 + d.phase * 1.7) * 0.14 });
         nearest = Math.min(nearest, d.group.position.distanceTo(cam.position));
-        const spin = dt * (ROTOR_SPIN + vel.length() * 2);
+        const spin = dt * 62;   // the light show's rotor speed
         d.props.forEach((pr, k) => { pr.rotation.y += spin * (k % 2 ? -1 : 1); });
         // Nav lights: the aviation flash, once a second, offset per aircraft.
         const flash = ((t * 1.0 + d.phase) % 1) < 0.12 ? 1 : 0.18;
