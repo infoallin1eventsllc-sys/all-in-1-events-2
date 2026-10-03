@@ -97,12 +97,22 @@ did not exist in August frequently exists now.
 |---|---|
 | **Higgsfield** | **WAS WRONG.** Shipped a hosted MCP 30 Apr 2026. See its own section below |
 | **`frontend-design` skill** | **WAS WRONG.** Exists in `anthropics/skills`. Not enabled here is a different fact from not existing |
-| **Nano Banana** | **WAS WRONG.** Google ships no MCP, but community servers wrap it — see below |
+| **Nano Banana** | **WAS WRONG TWICE.** Available now through the Higgsfield connector — see below |
 | **Google Stitch MCP** | Checked Aug 2026: Stitch is real, shipped no MCP server. Its Figma export is the bridge. **Re-verify before repeating** |
 | **`motion.dev` skill** | Checked Aug 2026: none found. For animation use the Figma motion skills. **Re-verify before repeating** |
 | **21st.dev connector** | **WAS WRONG TWICE.** Real, hosted, and OAuth — connectable from the browser. See its own section below |
 
-## Nano Banana — community MCP servers, not connected
+## Nano Banana — ALREADY AVAILABLE through the Higgsfield connector
+
+**Checked 3 Oct 2026 with Higgsfield `models_explore`:** the Higgsfield
+connector exposes `nano_banana`, `nano_banana_pro` (1k/2k/4k, best text),
+`nano_banana_2` (up to 4K, supports mask inpainting) and `nano_banana_2_lite`,
+billed in Higgsfield credits. Call them through Higgsfield `generate_image`.
+**No separate Nano Banana MCP is needed** — do not send him looking for one.
+Magic Hour (via Composio) also offers it, but only on its paid Creator tier.
+
+The rest of this section is the 15 Sep background, kept for the judgement at
+its end.
 
 Re-checked 15 Sep 2026, correcting an earlier flat "no".
 
