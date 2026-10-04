@@ -39,7 +39,7 @@ A living record of what's done and **everything waiting on the client** before l
 - [ ] Approve the **Inferno Dreams hero** image, or pick a different hero photo
 - [ ] Approve **Figma** design and **Canva** flyer, or request changes
 
-- [ ] **Approve the new homepage hero**: a live black-and-white "candle on dark water" backdrop, drawn in code (no stock license needed). It replaces the Inferno Dreams arch photo in the hero; Inferno Dreams still appears in the collection.
+- [ ] **Approve the new homepage hero**: the 15-second black-and-white film "A new life candle experience" (with its piano music) now plays in the hero, in place of the earlier code-drawn candle on water. It starts silent (browser rule); visitors tap **Sound on** to hear the music.
 
 ### Promo video (new)
 - [ ] **Approve the "Inferno Dreams speaks" TikTok/Reels video** (25s, 9:16, voiced by the candle). Editor/preview: https://www.clipkit.dev/public-editor?id=a990ef49-7bbb-425c-bea2-a289dfc0f463 (see `marketing/video/README.md`)

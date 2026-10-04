@@ -41,8 +41,9 @@
 ## Motion
 1.4s reveal fades (18px rise), a 70s ribbon marquee, and 1.6–2.4s image zooms (≤4.5%). All of it respects `prefers-reduced-motion`.
 
-## Hero: "candle on dark water" (live backdrop)
-- `assets/js/hero-water.js` draws the hero backdrop live in WebGL: a tealight flame on black water with slow concentric silver ripples, a light pool and a shimmering reflection. There is no video file and no license; it stays sharp at any size and loops seamlessly.
-- It is monochrome by default. Add `data-warm="1"` to `#heroCanvas` for an amber flame.
-- It pauses when scrolled off-screen or when the tab is hidden, and shows a single still frame for visitors who turn off motion (`prefers-reduced-motion`). If WebGL is unavailable, a dark CSS gradient shows instead.
-- Copy sits centered above the candle in ivory: an ivory primary button and a light outline button (`.btn.ghost-light`).
+## Hero: "A new life candle experience" film
+- The hero plays the 15-second black-and-white Clipkit film (match strike → Exotic Peach → Brewed Elixir → Inferno Dreams → wordmark and tagline) with its piano score. Source project: `marketing/film/`.
+- Files: `assets/video/hero-film.mp4` (H.264/AAC, 720×1280, for Safari and everything else), `assets/video/hero-film.webm` (VP9/Opus, smaller) and `assets/video/hero-film-poster.jpg` (shown while loading and for reduced motion).
+- Layout: copy on the left in ivory; the film on the right in the house arch with an offset hairline, like the other framed media. On tablets and phones the film drops below the buttons.
+- Browsers only autoplay silent video, so it starts muted and loops. The **Sound on** button (`assets/js/hero-film.js`) unmutes it and restarts from the match strike so the music plays from the top. It pauses when scrolled away and doesn't autoplay for visitors who turn off motion.
+- To swap the film: export a new MP4 from the Clipkit editor and replace the three files above (keep the names).
