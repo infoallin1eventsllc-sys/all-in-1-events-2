@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap">
+  <style>
+    body { margin: 0; background: #1A1E23; font-family: Outfit, Montserrat, system-ui, sans-serif; }
+    a { color: #2E7D4F; } a:hover { color: #3E9B65; }
+  </style>
+</helmet>
+
+<div style="width: 640px; height: 640px; background: #1A1E23; display: flex; align-items: center; justify-content: center;">
+  <svg width="640" height="640" viewBox="0 0 640 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="70" y="70" width="500" height="500" rx="80" ry="80" stroke="{{green}}" stroke-width="12" fill="none"></rect>
+    <g stroke="#FFFFFF" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M228 238 L162 342 L246 342"></path>
+      <path d="M228 238 L228 402"></path>
+      <path d="M262 279 C262 247, 344 247, 344 281 C344 316, 268 356, 260 402 L348 402"></path>
+    </g>
+    <rect x="366" y="238" width="122" height="164" rx="61" ry="61" stroke="{{green}}" stroke-width="12" fill="none"></rect>
+      <g transform="translate(427, 345) scale(0.54)" stroke="{{green}}" stroke-width="18" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M0 0 C-13 -35, -12 -72, 0 -100 C12 -72, 13 -35, 0 0 Z"></path>
+        <path d="M0 0 C-11 -29, -10 -60, 0 -84 C10 -60, 11 -29, 0 0 Z" transform="rotate(33)"></path>
+        <path d="M0 0 C-11 -29, -10 -60, 0 -84 C10 -60, 11 -29, 0 0 Z" transform="rotate(-33)"></path>
+        <path d="M0 0 C-9 -22, -8 -45, 0 -62 C8 -45, 9 -22, 0 0 Z" transform="rotate(66)"></path>
+        <path d="M0 0 C-9 -22, -8 -45, 0 -62 C8 -45, 9 -22, 0 0 Z" transform="rotate(-66)"></path>
+        <path d="M0 0 C-7 -14, -6 -29, 0 -40 C6 -29, 7 -14, 0 0 Z" transform="rotate(100)"></path>
+        <path d="M0 0 C-7 -14, -6 -29, 0 -40 C6 -29, 7 -14, 0 0 Z" transform="rotate(-100)"></path>
+        <path d="M0 0 L0 18"></path>
+      </g>
+  </svg>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"green":{"editor":"color","default":"#2E7D4F","options":["#2E7D4F","#3E9B65","#1F6B41","#4CAF6E"],"section":"Brand"}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { green: this.props.green ?? '#2E7D4F' };
+  }
+}
+</script>
+</body>
+</html>

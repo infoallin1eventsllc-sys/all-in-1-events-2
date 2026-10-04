@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap">
+  <style>
+    body { margin: 0; background: #1A1E23; font-family: Outfit, Montserrat, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #2E7D4F; } a:hover { color: #3E9B65; }
+  </style>
+</helmet>
+
+<div style="width: 1080px; height: 1080px; background: #1A1E23; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;">
+
+  <svg width="1080" height="1080" viewBox="0 0 1080 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+    <!-- container frame -->
+    <rect x="240" y="180" width="600" height="600" rx="96" ry="96" stroke="{{green}}" stroke-width="12" fill="none"></rect>
+
+    <!-- 420, monoline -->
+    <g stroke="#FFFFFF" stroke-width="12" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M430 380 L348 508 L452 508"></path>
+      <path d="M430 380 L430 580"></path>
+      <path d="M470 430 C470 390, 572 390, 572 432 C572 476, 478 526, 468 580 L578 580"></path>
+    </g>
+
+    <!-- the zero, carrying the leaf -->
+    <rect x="600" y="380" width="150" height="200" rx="75" ry="75" stroke="{{green}}" stroke-width="12" fill="none"></rect>
+
+    <g transform="translate(675, 512) scale(0.66)" stroke="{{green}}" stroke-width="15" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M0 0 C-13 -35, -12 -72, 0 -100 C12 -72, 13 -35, 0 0 Z"></path>
+      <path d="M0 0 C-11 -29, -10 -60, 0 -84 C10 -60, 11 -29, 0 0 Z" transform="rotate(33)"></path>
+      <path d="M0 0 C-11 -29, -10 -60, 0 -84 C10 -60, 11 -29, 0 0 Z" transform="rotate(-33)"></path>
+      <path d="M0 0 C-9 -22, -8 -45, 0 -62 C8 -45, 9 -22, 0 0 Z" transform="rotate(66)"></path>
+      <path d="M0 0 C-9 -22, -8 -45, 0 -62 C8 -45, 9 -22, 0 0 Z" transform="rotate(-66)"></path>
+      <path d="M0 0 C-7 -14, -6 -29, 0 -40 C6 -29, 7 -14, 0 0 Z" transform="rotate(100)"></path>
+      <path d="M0 0 C-7 -14, -6 -29, 0 -40 C6 -29, 7 -14, 0 0 Z" transform="rotate(-100)"></path>
+      <path d="M0 0 L0 18"></path>
+    </g>
+
+    <!-- wordmark -->
+    <text x="540" y="905" text-anchor="middle" fill="#FFFFFF" font-family="Outfit, Montserrat, sans-serif" font-size="88" font-weight="500" letter-spacing="18">MONTAGE</text>
+    <text x="540" y="963" text-anchor="middle" fill="#7C8792" font-family="Outfit, Montserrat, sans-serif" font-size="21" font-weight="400" letter-spacing="11">[ 420 FRIENDLY EVENTS ]</text>
+
+  </svg>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"green":{"editor":"color","default":"#2E7D4F","options":["#2E7D4F","#3E9B65","#1F6B41","#4CAF6E"],"section":"Brand"}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { green: this.props.green ?? '#2E7D4F' };
+  }
+}
+</script>
+</body>
+</html>

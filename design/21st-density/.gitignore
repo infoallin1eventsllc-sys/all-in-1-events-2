@@ -1,0 +1,3 @@
+# Seeded canvas payload — regenerate with seed-canvas.mjs from the .dc.html files.
+*.html
+!*.dc.html

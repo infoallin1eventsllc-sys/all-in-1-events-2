@@ -1,0 +1,337 @@
+<title>Lounge Set 04</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600&family=Sora:wght@600;700;800&display=swap">
+<style>
+/* All in 1 Events dark system — DESIGN-SYSTEM.md. Single-theme on purpose:
+   this is a nightlife surface and a light version would be a different product. */
+:root{
+  --well:#0c0e12; --ground:#111317; --card:#1a1c20; --panel:#1e2024; --raised:#282a2e;
+  --orchid:#ecb2ff; --on-orchid:#520071; --cyan:#00eefc; --cyan-ink:#7df4ff; --pink:#ffb1c3;
+  --ink:#e2e2e8; --ink-2:#d4c0d7; --ink-3:#9d8ba0; --line:#514255;
+  --hair:rgba(255,255,255,.07);
+  --head:'Sora',system-ui,sans-serif;
+  --body:'Plus Jakarta Sans',system-ui,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--ground);color:var(--ink);
+  font:400 16px/1.55 var(--body);-webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+.wrap{max-width:1280px;margin:0 auto;padding-inline:24px}
+@media(min-width:900px){.wrap{padding-inline:64px}}
+
+h1,h2,h3{font-family:var(--head);margin:0;text-wrap:balance;letter-spacing:-.03em;line-height:1.02}
+h1{font-weight:800;font-size:clamp(40px,8.4vw,88px)}
+h2{font-weight:700;font-size:clamp(28px,4.6vw,52px)}
+h3{font-weight:600;font-size:20px;letter-spacing:-.01em}
+p{margin:0;max-width:62ch}
+
+.meta{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+.chip{display:inline-block;font:600 10px var(--body);letter-spacing:.12em;text-transform:uppercase;
+  padding:4px 9px;border-radius:999px;border:1px solid rgba(236,178,255,.22);
+  background:rgba(236,178,255,.07);color:var(--orchid)}
+.chip.cy{border-color:rgba(0,238,252,.22);background:rgba(0,238,252,.07);color:var(--cyan-ink)}
+
+/* ---------- grade + grain + vignette: the cheap cinematic layer ---------- */
+.graded{position:relative;isolation:isolate}
+.graded::after{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:2;
+  /* vignette */
+  background:radial-gradient(120% 88% at 50% 42%,transparent 42%,rgba(6,7,10,.62) 100%),
+  /* grade: the whole frame pulled toward the brand orchid, blacks crushed */
+             linear-gradient(180deg,rgba(236,178,255,.05),rgba(0,238,252,.035));
+}
+.grain{position:absolute;inset:0;pointer-events:none;z-index:3;opacity:.28;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='180' height='180' filter='url(%23n)' opacity='.5'/></svg>");
+  background-size:180px 180px}
+
+/* ---------- hero ---------- */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--hair)}
+.hero-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 70%;
+  z-index:0;opacity:.5}
+/* scrim: the headline must never depend on what the frame happens to show behind it */
+.hero::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(100deg,rgba(12,14,18,.94) 0%,rgba(12,14,18,.72) 42%,rgba(12,14,18,.2) 78%)}
+.hero-in{position:relative;z-index:4;padding-block:clamp(72px,13vw,132px) clamp(56px,9vw,96px);
+  display:flex;flex-direction:column;gap:26px}
+.eyebrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.hero p{color:var(--ink-2);font-size:clamp(16px,1.5vw,18px)}
+.rule{height:1px;background:var(--hair);border:0;margin:0}
+
+/* ---------- scrub ---------- */
+.track{position:relative;height:340vh}
+.stage{position:sticky;top:0;height:100svh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;overflow:hidden}
+.stage canvas{width:100%;height:100%;object-fit:cover;display:block;position:absolute;inset:0;z-index:0}
+.stage .fallback{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+.beats{position:relative;z-index:4;width:100%;max-width:1280px;padding-inline:24px;
+  margin-top:auto;margin-bottom:clamp(40px,8vh,88px)}
+@media(min-width:900px){.beats{padding-inline:64px}}
+.beat{opacity:0;transform:translateY(10px);transition:opacity .45s ease,transform .45s ease;
+  position:absolute;bottom:0;left:24px;right:24px;max-width:620px}
+@media(min-width:900px){.beat{left:64px;right:64px}}
+.beat[data-on="1"]{opacity:1;transform:none;position:relative;left:auto;right:auto}
+.beat h3{color:var(--ink);margin-bottom:8px}
+.beat p{color:var(--ink-2);font-size:15px}
+.progress{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--hair);z-index:5}
+.progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--orchid),var(--cyan))}
+
+/* ---------- spec ---------- */
+.spec{padding-block:clamp(72px,11vw,128px);border-bottom:1px solid var(--hair)}
+.spec-head{display:flex;flex-direction:column;gap:14px;margin-bottom:48px}
+.spec-grid{display:grid;gap:1px;background:var(--hair);border:1px solid var(--hair);border-radius:12px;
+  overflow:hidden;grid-template-columns:1fr}
+@media(min-width:620px){.spec-grid{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:960px){.spec-grid{grid-template-columns:repeat(4,1fr)}}
+.cell{background:var(--card);padding:22px 20px;display:flex;flex-direction:column;gap:6px}
+.cell .n{font:700 26px/1 var(--head);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.cell .n em{font-style:normal;font-size:14px;color:var(--ink-3);margin-left:3px}
+.cell .l{font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3)}
+
+/* ---------- receipts ---------- */
+.receipts{padding-block:clamp(72px,11vw,128px)}
+.rec-grid{display:grid;gap:32px;margin-top:44px;grid-template-columns:1fr}
+@media(min-width:820px){.rec-grid{grid-template-columns:1.15fr .85fr}}
+.steps{display:flex;flex-direction:column;gap:0;counter-reset:s}
+.step{display:grid;grid-template-columns:28px 1fr;gap:16px;padding:18px 0;border-top:1px solid var(--hair)}
+.step:last-child{border-bottom:1px solid var(--hair)}
+.step .k{font-family:var(--mono);font-size:11px;color:var(--orchid);padding-top:3px}
+.step p{color:var(--ink-3);font-size:14px;margin-top:4px}
+.budget{background:var(--panel);border:1px solid var(--hair);border-radius:12px;padding:24px;
+  align-self:start;display:flex;flex-direction:column;gap:2px}
+.brow{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:11px 0;
+  border-bottom:1px solid var(--hair);font-size:14px}
+.brow:last-child{border-bottom:0}
+.brow b{font:600 14px var(--body);color:var(--ink);font-variant-numeric:tabular-nums}
+.brow span{color:var(--ink-3)}
+.pass{color:var(--cyan-ink);font-family:var(--mono);font-size:10px;letter-spacing:.14em}
+.note{margin-top:26px;padding:18px 20px;border-left:2px solid var(--line);background:var(--well);
+  border-radius:0 8px 8px 0}
+.note p{color:var(--ink-3);font-size:14px}
+footer{border-top:1px solid var(--hair);padding-block:32px}
+
+@media(prefers-reduced-motion:reduce){
+  .track{height:auto}
+  .stage{position:relative;height:auto;min-height:0}
+  .stage canvas,.stage .fallback{position:relative;height:auto;aspect-ratio:4/3;max-width:100%}
+  .beat{position:relative!important;opacity:1!important;transform:none!important;left:auto;right:auto;
+    margin-top:22px;max-width:none}
+  .beats{margin-block:28px}
+  *{transition:none!important;animation:none!important}
+}
+</style>
+
+<header class="hero graded">
+  <img class="hero-img" src="frames/f000.webp" alt="VIP lounge set under orchid and cyan uplighting, truss towers either side of a pleated drape">
+  <div class="grain"></div>
+  <div class="wrap hero-in">
+    <div class="eyebrow">
+      <span class="chip">Lounge Set 04</span>
+      <span class="chip cy">Available Q4</span>
+      <span class="meta">All in 1 Events</span>
+    </div>
+    <h1>Walk the set<br>before we build it.</h1>
+    <p>Six uplights, two LED lounge tables and a seven-metre riser, rendered from the
+      same model our crew loads in from. Scroll to turn the room.</p>
+  </div>
+</header>
+
+<section class="track" id="track" aria-label="Lounge set walkaround">
+  <div class="stage graded">
+    <canvas id="seq" aria-hidden="true"></canvas>
+    <noscript><img class="fallback" src="frames/f024.webp" alt="The lounge set seen from the front"></noscript>
+    <div class="grain"></div>
+    <div class="beats">
+      <article class="beat" data-beat="0" data-on="1">
+        <h3>Truss at 4.4&nbsp;m, span at 7.4&nbsp;m</h3>
+        <p>Three moving heads on the span, aimed back into the seating.
+          Load-in is two crew and ninety minutes.</p>
+      </article>
+      <article class="beat" data-beat="1">
+        <h3>Six uplights on the drape line</h3>
+        <p>Orchid, cyan and pink, spaced at 1.76&nbsp;m. The wash is the room's only colour,
+          so the palette never argues with itself.</p>
+      </article>
+      <article class="beat" data-beat="2">
+        <h3>Two LED lounge tables</h3>
+        <p>900&nbsp;mm tops at seated height, throwing their own light onto a polished floor.
+          The reflection is doing half the work.</p>
+      </article>
+    </div>
+    <div class="progress"><i id="bar"></i></div>
+  </div>
+</section>
+
+<section class="spec wrap">
+  <div class="spec-head">
+    <span class="meta">Set sheet</span>
+    <h2>What lands on the truck.</h2>
+  </div>
+  <div class="spec-grid">
+    <div class="cell"><span class="n">7.0<em>m</em></span><span class="l">Riser width</span></div>
+    <div class="cell"><span class="n">4.6<em>m</em></span><span class="l">Riser depth</span></div>
+    <div class="cell"><span class="n">4.4<em>m</em></span><span class="l">Truss tower height</span></div>
+    <div class="cell"><span class="n">7.4<em>m</em></span><span class="l">Span</span></div>
+    <div class="cell"><span class="n">6</span><span class="l">Uplights</span></div>
+    <div class="cell"><span class="n">3</span><span class="l">Moving heads</span></div>
+    <div class="cell"><span class="n">2</span><span class="l">LED lounge tables</span></div>
+    <div class="cell"><span class="n">9.0<em>m</em></span><span class="l">Drape width</span></div>
+  </div>
+</section>
+
+<section class="receipts wrap">
+  <span class="meta">How this page was made</span>
+  <h2 style="margin-top:14px">Rendered, not generated.</h2>
+  <div class="rec-grid">
+    <div class="steps">
+      <div class="step"><span class="k">01</span><div>
+        <h3>Model the set at true scale</h3>
+        <p>One unit is one metre. Sofas, truss, drape and fixtures built as primitives at
+          the dimensions on the set sheet above. Nothing eyeballed.</p></div></div>
+      <div class="step"><span class="k">02</span><div>
+        <h3>Light it like the event</h3>
+        <p>Spot cones from floor level for the uplights, emissive tops and point lights for
+          the LED tables, one soft key. Brand hexes only.</p></div></div>
+      <div class="step"><span class="k">03</span><div>
+        <h3>Render the camera move to frames</h3>
+        <p>An 80&deg; arc that rises and closes in. Forty-eight stills, headless, deterministic.
+          The same forty-eight every time.</p></div></div>
+      <div class="step"><span class="k">04</span><div>
+        <h3>Scrub them on scroll</h3>
+        <p>Scroll position picks the frame and draws it to a canvas. It looks like video and
+          obeys the wheel, which is why it feels directed.</p></div></div>
+      <div class="step"><span class="k">05</span><div>
+        <h3>Grade, grain and vignette in CSS</h3>
+        <p>The warm cast, the corner falloff and the 28% noise over this whole page are four
+          rules of stylesheet, not a render pass.</p></div></div>
+    </div>
+
+    <aside class="budget">
+      <span class="meta" style="margin-bottom:12px">Weight budget</span>
+      <div class="brow"><span>48 frames, WebP</span><b>605 KB</b></div>
+      <div class="brow"><span>Largest single frame</span><b>14 KB</b></div>
+      <div class="brow"><span>Page, fonts and styles</span><b>&lt; 60 KB</b></div>
+      <div class="brow"><span>Budget for a hero sequence</span><b>1.5 MB</b></div>
+      <div class="brow"><span>Result</span><b class="pass">UNDER BY 60%</b></div>
+      <div class="note" style="margin-top:20px">
+        <p>Frames preload on idle and none is drawn before it has decoded. Device pixel ratio
+          is capped at 2. On reduced motion or Save-Data the sequence never starts and the
+          page shows a single still.</p>
+      </div>
+    </aside>
+  </div>
+
+  <div class="note">
+    <p><b style="color:var(--ink-2)">Honest about what this is.</b> A blocking render, not
+      photoreal: procedural geometry, no textures, no fabric simulation. It is accurate on
+      layout, scale and lighting design, which is what a client needs to approve a set.
+      Photoreal is a longer job and a different budget.</p>
+  </div>
+</section>
+
+<footer class="wrap">
+  <span class="meta">All in 1 Events &middot; Set visualisation &middot; Rendered from the load-in model</span>
+</footer>
+
+<script>
+(function () {
+  var COUNT = 48, PAD = 3;
+  var canvas = document.getElementById('seq');
+  var bar = document.getElementById('bar');
+  var track = document.getElementById('track');
+  var beats = Array.prototype.slice.call(document.querySelectorAll('.beat'));
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d', { alpha: false });
+
+  function src(i) { return 'frames/f' + String(i).padStart(PAD, '0') + '.webp'; }
+
+  // A direct request for less movement or less data is a request not to load 48 images.
+  var conn = navigator.connection || {};
+  var still =
+    (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ||
+    conn.saveData === true ||
+    /(^|\W)(slow-)?2g$/.test(conn.effectiveType || '');
+
+  var frames = new Array(COUNT), ready = new Array(COUNT).fill(false), current = -1;
+
+  function fit() {
+    var dpr = Math.min(window.devicePixelRatio || 1, 2); // cap: retina without the memory
+    var r = canvas.getBoundingClientRect();
+    var w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; current = -1; }
+  }
+
+  function draw(i) {
+    if (i === current || !ready[i]) return;
+    var img = frames[i];
+    fit();
+    var cw = canvas.width, ch = canvas.height;
+    var s = Math.max(cw / img.naturalWidth, ch / img.naturalHeight); // cover
+    var dw = img.naturalWidth * s, dh = img.naturalHeight * s;
+    ctx.drawImage(img, (cw - dw) / 2, (ch - dh) / 2, dw, dh);
+    current = i;
+  }
+
+  function load(i) {
+    return new Promise(function (res) {
+      var img = new Image();
+      img.src = src(i);
+      frames[i] = img;
+      var done = function () { ready[i] = true; res(img); };
+      // decode() first: a frame is never painted half-decoded, which is the stutter
+      if (img.decode) img.decode().then(done, function () { img.onload = done; img.onerror = res; });
+      else { img.onload = done; img.onerror = res; }
+    });
+  }
+
+  function progress() {
+    var r = track.getBoundingClientRect();
+    var total = r.height - window.innerHeight;
+    if (total <= 0) return 0;
+    return Math.min(1, Math.max(0, -r.top / total));
+  }
+
+  var queued = false;
+  function onScroll() {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(function () {
+      queued = false;
+      var p = progress();
+      draw(Math.min(COUNT - 1, Math.round(p * (COUNT - 1))));
+      bar.style.width = (p * 100).toFixed(2) + '%';
+      var b = p < 0.34 ? 0 : p < 0.68 ? 1 : 2;
+      for (var i = 0; i < beats.length; i++) beats[i].setAttribute('data-on', i === b ? '1' : '0');
+    });
+  }
+
+  if (still) {
+    // One still, full stop. The composition is the same, it simply holds.
+    var one = new Image();
+    one.className = 'fallback';
+    one.src = src(Math.round(COUNT / 2));
+    one.alt = 'The lounge set seen from the front';
+    canvas.replaceWith(one);
+    bar.style.width = '100%';
+    for (var i = 0; i < beats.length; i++) beats[i].setAttribute('data-on', '1');
+    return;
+  }
+
+  // First frame immediately so the section is never empty, the rest on idle.
+  load(0).then(function () {
+    draw(0);
+    var rest = function () {
+      var all = [];
+      for (var i = 1; i < COUNT; i++) all.push(load(i));
+      Promise.all(all).then(onScroll);
+    };
+    if (window.requestIdleCallback) requestIdleCallback(rest, { timeout: 1500 });
+    else setTimeout(rest, 300);
+  });
+
+  addEventListener('scroll', onScroll, { passive: true });
+  addEventListener('resize', function () { current = -1; onScroll(); });
+  onScroll();
+})();
+</script>

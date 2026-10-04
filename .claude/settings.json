@@ -1,0 +1,19 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/branch-guard.sh", "if": "Bash(git commit *)", "timeout": 10, "statusMessage": "Checking branch…" },
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/secrets-guard.sh", "if": "Bash(git commit *)", "timeout": 15, "statusMessage": "Scanning staged diff for secrets…" }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|Read|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/secrets-guard.sh", "timeout": 5 }
+        ]
+      }
+    ]
+  }
+}

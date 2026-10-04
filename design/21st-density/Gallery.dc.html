@@ -1,0 +1,262 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Sora:wght@600;700;800&display=swap">
+  <style>
+    body { margin: 0; font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #4F6D8C; text-decoration: none; }
+    a:hover { color: #3E4C63; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    .gc { display: flex; flex-direction: column; border-radius: 12px; overflow: hidden; transition: border-color .2s ease, transform .2s ease; }
+    .gc:hover { transform: translateY(-2px); }
+    .pv { height: 158px; display: flex; align-items: center; justify-content: center; padding: 18px; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; min-height: 1040px; background: {{bg}}; color: {{ink}}; display: flex; flex-direction: column;">
+
+  <!-- top bar -->
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 32px; padding: 0 56px; height: 62px; border-bottom: 1px solid {{line}}; flex-shrink: 0;">
+    <div style="display: flex; align-items: center; gap: 38px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18V9l4.5 5L12 6l4.5 8L21 9v9"></path><path d="M3 21h18"></path></svg>
+        <span style="font-family: Sora, system-ui, sans-serif; font-weight: 700; font-size: 16px; letter-spacing: -0.02em; color: {{ink}};">Meridian Kit</span>
+        <span class="mono" style="font-size: 10px; letter-spacing: 0.1em; padding: 2px 6px; border-radius: 4px; border: 1px solid {{line}}; color: {{inkFaint}};">v0.4</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 24px;">
+        <a href="#components" style="font-size: 12px; font-weight: 600; color: {{ink}}; border-bottom: 2px solid {{accent}}; padding-bottom: 3px;">Components</a>
+        <a href="#tokens" style="font-size: 12px; font-weight: 600; color: {{inkSoft}};">Tokens</a>
+        <a href="#patterns" style="font-size: 12px; font-weight: 600; color: {{inkSoft}};">Patterns</a>
+        <a href="#changelog" style="font-size: 12px; font-weight: 600; color: {{inkSoft}};">Changelog</a>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 10px; height: 31px; padding: 0 10px 0 12px; border: 1px solid {{line}}; border-radius: 8px; background: {{card}}; min-width: 210px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="{{inkFaint}}" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+        <span style="flex-grow: 1; font-size: 12px; color: {{inkFaint}};">Search components</span>
+        <span class="mono" style="font-size: 10px; color: {{inkFaint}}; border: 1px solid {{line}}; border-radius: 4px; padding: 2px 5px;">⌘K</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- head -->
+  <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 40px; padding: 40px 56px 0;">
+    <div style="display: flex; flex-direction: column; gap: 9px;">
+      <div class="mono" style="font-size: 11px; letter-spacing: 0.18em; color: {{inkFaint}};">ONE VOCABULARY, EVERY CLIENT BUILD</div>
+      <h1 style="margin: 0; font-family: Sora, system-ui, sans-serif; font-weight: 700; font-size: 40px; line-height: 1.05; letter-spacing: -0.03em; color: {{ink}};">Components</h1>
+      <p style="margin: 2px 0 0; max-width: 500px; font-size: 14px; line-height: 22px; color: {{inkSoft}}; text-wrap: pretty;">Every piece renders live below. Copy one into a project and it arrives already carrying the Meridian tokens.</p>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span class="mono" style="font-size: 10px; letter-spacing: 0.14em; color: {{inkFaint}};">09 COMPONENTS</span>
+    </div>
+  </div>
+
+  <!-- grid -->
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; padding: 30px 56px 0;">
+
+    <!-- Buttons -->
+    <div class="gc" style="border: 1px solid {{line}}; background: {{card}};">
+      <div class="pv" style="background: {{stage}}; border-bottom: 1px solid {{line}};">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="height: 32px; display: flex; align-items: center; padding: 0 14px; border-radius: 8px; background: {{accent}}; color: #FFFFFF; font-size: 12px; font-weight: 600;">Approve</span>
+          <span style="height: 32px; display: flex; align-items: center; padding: 0 14px; border-radius: 8px; border: 1px solid {{line2}}; color: {{inkSoft}}; font-size: 12px; font-weight: 600;">Edit</span>
+          <span style="height: 32px; display: flex; align-items: center; padding: 0 12px; border-radius: 8px; color: {{inkFaint}}; font-size: 12px; font-weight: 600;">Skip</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 16px;">
+        <span style="font-family: Sora, system-ui, sans-serif; font-weight: 600; font-size: 14px; color: {{ink}};">Button</span>
+        <span class="mono" style="font-size: 10px; letter-spacing: 0.12em; color: {{inkFaint}};">ACTIONS · 3</span>
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="gc" style="border: 1px solid {{line}}; background: {{card}};">
+      <div class="pv" style="background: {{stage}}; border-bottom: 1px solid {{line}};">
+        <div style="display: flex; flex-direction: column; gap: 7px; width: 240px;">
+          <span class="mono" style="font-size: 9px; letter-spacing: 0.16em; color: {{inkFaint}};">EVENT DATE</span>
+          <div style="display: flex; align-items: center; gap: 9px; height: 36px; padding: 0 12px; border: 1px solid {{accent}}; border-radius: 8px; background: {{card}};">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"></rect><path d="M3 10h18"></path><path d="M8 3v4"></path><path d="M16 3v4"></path></svg>
+            <span style="flex-grow: 1; font-size: 13px; color: {{ink}};">14 March</span>
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 16px;">
+        <span style="font-family: Sora, system-ui, sans-serif; font-weight: 600; font-size: 14px; color: {{ink}};">Field</span>
+        <span class="mono" style="font-size: 10px; letter-spacing: 0.12em; color: {{inkFaint}};">FORMS · 6</span>
+      </div>
+    </div>
+
+    <!-- Stat tile -->
+    <div class="gc" style="border: 1px solid {{line}}; background: {{card}};">
+      <div class="pv" style="background: {{stage}}; border-bottom: 1px solid {{line}};">
+        <div style="display: flex; align-items: stretch; border: 1px solid {{line}}; border-radius: 10px; background: {{card}}; overflow: hidden;">
+          <div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 18px;">
+            <span style="font-family: Sora, system-ui, sans-serif; font-weight: 700; font-size: 20px; color: {{ink}};">6</span>
+            <span class="mono" style="font-size: 9px; letter-spacing: 0.16em; color: {{inkFaint}};">PENDING</span>
+          </div>
+          <div style="width: 1px; background: {{line}};"></div>
+          <div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 18px;">
+            <span style="font-family: Sora, system-ui, sans-serif; font-weight: 700; font-size: 20px; color: {{accent}};">4</span>
+            <span class="mono" style="font-size: 9px; letter-spacing: 0.16em; color: {{inkFaint}};">CHANNELS</span>
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 16px;">
+        <span style="font-family: Sora, system-ui, sans-serif; font-weight: 600; font-size: 14px; color: {{ink}};">Stat strip</span>
+        <span class="mono" style="font-size: 10px; letter-spacing: 0.12em; color: {{inkFaint}};">DATA · 2</span>
+      </div>
+    </div>
+
+    <!-- Tags -->
+    <div class="gc" style="border: 1px solid {{line}}; background: {{card}};">
+      <div class="pv" style="background: {{stage}}; border-bottom: 1px solid {{line}};">
+        <div style="display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; max-width: 250px;">
+          <span style="font-size: 10px; letter-spacing: 0.12em; font-weight: 600; padding: 4px 9px; border-radius: 9999px; background: {{tagFill}}; border: 1px solid {{tagLine}}; color: {{tagInk}};">DRAFTED</span>
+          <span style="font-size: 10px; letter-spacing: 0.12em; font-weight: 600; padding: 4px 9px; border-radius: 9999px; background: rgba(62,124,134,0.10); border: 1px solid rgba(62,124,134,0.28); color: #4E97A3;">APPROVED</span>
+          <span style="font-size: 10px; letter-spacing: 0.12em; font-weight: 600; padding: 4px 9px; border-radius: 9999px; border: 1px dashed {{line2}}; color: {{inkFaint}};">NEEDS ASSET</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 16px;">
+        <span style="font-family: Sora, system-ui, sans-serif; font-weight: 600; font-size: 14px; color: {{ink}};">Tag</span>
+        <span class="mono" style="font-size: 10px; letter-spacing: 0.12em; color: {{inkFaint}};">STATUS · 5</span>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="gc" style="border: 1px solid {{line}}; background: {{card}};">
+      <div class="pv" style="background: {{stage}}; border-bottom: 1px solid {{line}};">
+        <div style="display: flex; align-items: center; gap: 7px;">
+          <span style="height: 30px; display: flex; align-items: center; padding: 0 13px; border-radius: 9999px; border: 1px solid {{accent}}; background: {{tagFill}}; color: {{accent}}; font-size: 11px; font-weight: 600;">All</span>
+          <span style="height: 30px; display: flex; align-items: center; padding: 0 13px; border-radius: 9999px; border: 1px solid {{line2}}; color: {{inkSoft}}; font-size: 11px; font-weight: 600;">Social</span>
+          <span style="height: 30px; display: flex; align-items: center; padding: 0 13px; border-radius: 9999px; border: 1px solid {{line2}}; color: {{inkSoft}}; font-size: 11px; font-weight: 600;">Email</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 16px;">
+        <span style="font-family: Sora, system-ui, sans-serif; font-weight: 600; font-size: 14px; color: {{ink}};">Filter tabs</span>
+        <span class="mono" style="font-size: 10px; letter-spacing: 0.12em; color: {{inkFaint}};">NAV · 2</span>
+      </div>
+    </div>
+
+    <!-- Toggle -->
+    <div class="gc" style="border: 1px solid {{line}}; background: {{card}};">
+      <div class="pv" style="background: {{stage}}; border-bottom: 1px solid {{line}};">
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="width: 38px; height: 22px; border-radius: 9999px; background: {{accent}}; display: flex; align-items: center; justify-content: flex-end; padding: 0 3px;"><span style="width: 16px; height: 16px; border-radius: 9999px; background: #FFFFFF;"></span></span>
+            <span style="font-size: 12px; color: {{ink}};">Auto-publish approved</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="width: 38px; height: 22px; border-radius: 9999px; border: 1px solid {{line2}}; background: {{stage}}; display: flex; align-items: center; padding: 0 3px;"><span style="width: 16px; height: 16px; border-radius: 9999px; background: {{inkFaint}};"></span></span>
+            <span style="font-size: 12px; color: {{inkSoft}};">Weekend sending</span>
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 16px;">
+        <span style="font-family: Sora, system-ui, sans-serif; font-weight: 600; font-size: 14px; color: {{ink}};">Switch</span>
+        <span class="mono" style="font-size: 10px; letter-spacing: 0.12em; color: {{inkFaint}};">FORMS · 2</span>
+      </div>
+    </div>
+
+    <!-- Avatar stack -->
+    <div class="gc" style="border: 1px solid {{line}}; background: {{card}};">
+      <div class="pv" style="background: {{stage}}; border-bottom: 1px solid {{line}};">
+        <div style="display: flex; align-items: center; gap: 11px;">
+          <div style="display: flex; align-items: center;">
+            <span style="width: 32px; height: 32px; border-radius: 9999px; background: {{accent}}; border: 2px solid {{stage}}; display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-size: 11px; font-weight: 600;">OT</span>
+            <span style="width: 32px; height: 32px; border-radius: 9999px; background: #3E7C86; border: 2px solid {{stage}}; margin-left: -10px; display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-size: 11px; font-weight: 600;">RM</span>
+            <span style="width: 32px; height: 32px; border-radius: 9999px; background: {{line2}}; border: 2px solid {{stage}}; margin-left: -10px; display: flex; align-items: center; justify-content: center; color: {{inkSoft}}; font-size: 11px; font-weight: 600;">+3</span>
+          </div>
+          <span style="font-size: 12px; color: {{inkSoft}};">on this event</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 16px;">
+        <span style="font-family: Sora, system-ui, sans-serif; font-weight: 600; font-size: 14px; color: {{ink}};">Avatar stack</span>
+        <span class="mono" style="font-size: 10px; letter-spacing: 0.12em; color: {{inkFaint}};">PEOPLE · 2</span>
+      </div>
+    </div>
+
+    <!-- Table row -->
+    <div class="gc" style="border: 1px solid {{line}}; background: {{card}};">
+      <div class="pv" style="background: {{stage}}; border-bottom: 1px solid {{line}};">
+        <div style="display: flex; flex-direction: column; width: 260px; border: 1px solid {{line}}; border-radius: 8px; background: {{card}}; overflow: hidden;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; border-bottom: 1px solid {{line}};">
+            <span class="mono" style="font-size: 9px; letter-spacing: 0.14em; color: {{inkFaint}};">LEAD</span>
+            <span class="mono" style="font-size: 9px; letter-spacing: 0.14em; color: {{inkFaint}};">STAGE</span>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-bottom: 1px solid {{line}};">
+            <span style="font-size: 12px; color: {{ink}};">Riverside Gala</span>
+            <span style="font-size: 11px; font-weight: 600; color: {{accent}};">Quoted</span>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px;">
+            <span style="font-size: 12px; color: {{ink}};">Ortega wedding</span>
+            <span style="font-size: 11px; font-weight: 600; color: {{inkFaint}};">New</span>
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 16px;">
+        <span style="font-family: Sora, system-ui, sans-serif; font-weight: 600; font-size: 14px; color: {{ink}};">Table</span>
+        <span class="mono" style="font-size: 10px; letter-spacing: 0.12em; color: {{inkFaint}};">DATA · 4</span>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div class="gc" style="border: 1px solid {{line}}; background: {{card}};">
+      <div class="pv" style="background: {{stage}}; border-bottom: 1px solid {{line}};">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 9px; text-align: center;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="{{inkFaint}}" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5L12 3l9 5.5v7L12 21l-9-5.5z"></path><path d="M3 8.5l9 5.5 9-5.5"></path><path d="M12 14v7"></path></svg>
+          <span style="font-size: 13px; font-weight: 600; color: {{ink}};">Queue is clear</span>
+          <span style="font-size: 11px; line-height: 17px; color: {{inkFaint}}; max-width: 190px;">Next orchestrator run drafts again at 06:00.</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 16px;">
+        <span style="font-family: Sora, system-ui, sans-serif; font-weight: 600; font-size: 14px; color: {{ink}};">Empty state</span>
+        <span class="mono" style="font-size: 10px; letter-spacing: 0.12em; color: {{inkFaint}};">FEEDBACK · 3</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- install bar -->
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 24px; margin: 28px 56px 44px; padding: 14px 18px; border: 1px solid {{line}}; border-radius: 12px; background: {{stage}};">
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <span class="mono" style="font-size: 10px; letter-spacing: 0.16em; color: {{inkFaint}};">ADD TO A PROJECT</span>
+      <span class="mono" style="font-size: 13px; color: {{ink}};">npx meridian-kit add button field stat-strip</span>
+    </div>
+    <button style="display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 14px; border: 1px solid {{line2}}; border-radius: 8px; background: {{card}}; color: {{inkSoft}}; font-family: inherit; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; cursor: pointer;">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"></path></svg>
+      COPY
+    </button>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"theme":{"editor":"enum","options":["Light","Dark"],"default":"Light","section":"Theme"},"accent":{"editor":"color","default":"#4F6D8C","options":["#4F6D8C","#3E4C63","#3E7C86","#ecb2ff"],"section":"Theme"}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const dark = (this.props.theme ?? 'Light') === 'Dark';
+    const accent = this.props.accent ?? '#4F6D8C';
+    const t = dark
+      ? { bg: '#141518', card: '#1B1D21', stage: '#0F1013', line: '#2A2D33', line2: '#3A3E46',
+          ink: '#ECEBE6', inkSoft: '#A8ADB6', inkFaint: '#767B84' }
+      : { bg: '#F5F4EF', card: '#FFFFFF', stage: '#FAFAF7', line: '#E7E5DD', line2: '#DCE0E7',
+          ink: '#23262B', inkSoft: '#5B626C', inkFaint: '#8A8F98' };
+    return {
+      accent,
+      bg: t.bg, card: t.card, stage: t.stage, line: t.line, line2: t.line2,
+      ink: t.ink, inkSoft: t.inkSoft, inkFaint: t.inkFaint,
+      tagFill: dark ? 'rgba(124,150,174,0.16)' : 'rgba(62,76,99,0.06)',
+      tagLine: dark ? 'rgba(124,150,174,0.34)' : 'rgba(62,76,99,0.16)',
+      tagInk:  dark ? '#A8C0D6' : '#3E4C63'
+    };
+  }
+}
+</script>
+</body>
+</html>
