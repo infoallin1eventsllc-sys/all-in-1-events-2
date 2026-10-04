@@ -15,7 +15,6 @@
      and the product ids in main.js. `file` is the asset filename used
      when publishing (drop the exported ZIP into assets/images/). */
   var SLOTS = [
-    { id: "hero",               name: "Hero banner (top of page)", file: "hero.jpg" },
     { id: "spotlight",          name: "Signature spotlight",       file: "spotlight.jpg" },
     { id: "harlem-smock",       name: "Harlem Smock",              file: "real-harlem-smock.jpg" },
     { id: "moon-flower",        name: "Moon Flower",               file: "moon-flower.jpg" },

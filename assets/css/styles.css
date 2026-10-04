@@ -229,6 +229,31 @@ b, strong { font-weight: 500; }
 .rating-float .num { font-family: var(--serif); font-size: 30px; font-weight: 300; color: var(--ink); line-height: 1; margin-top: 6px; }
 .rating-float .cap { font-size: 9px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--ink-muted); margin-top: 6px; }
 
+/* ---------- Night hero: candle on dark water (live WebGL backdrop) ---------- */
+.hero.night {
+  position: relative; isolation: isolate; overflow: hidden;
+  min-height: max(640px, calc(100svh - 120px));
+  padding-block: clamp(56px, 9vh, 110px) 0;
+  background: radial-gradient(120% 70% at 50% 85%, #1a1a1a 0%, #050505 60%);
+  color: #f7f4ef;
+}
+.hero.night::before { display: none; }
+.hero-canvas { position: absolute; inset: 0; z-index: -2; display: block; width: 100%; height: 100%; opacity: 0; transition: opacity 1.8s var(--ease); }
+.hero-canvas.ready { opacity: 1; }
+.hero-canvas.no-gl { display: none; }
+.hero-scrim { position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(to bottom, rgba(5, 5, 5, 0.6) 0%, rgba(5, 5, 5, 0.15) 38%, rgba(5, 5, 5, 0) 55%); }
+.hero-center { display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 860px; }
+.hero.night .hero-badge { color: rgba(247, 244, 239, 0.66); }
+.hero.night h1 { color: #f7f4ef; font-size: clamp(46px, 6.2vw, 92px); max-width: 15ch; }
+.hero.night h1 em { color: rgba(247, 244, 239, 0.6); }
+.hero.night .hero-lead { color: rgba(247, 244, 239, 0.74); margin-inline: auto; max-width: 520px; }
+.hero.night .hero-cta { justify-content: center; }
+.btn.ghost-light { --bg: transparent; --fg: #f7f4ef; border-color: rgba(247, 244, 239, 0.5); }
+.btn.ghost-light:hover { background: #f7f4ef; color: var(--ink); border-color: #f7f4ef; }
+.hero-scroll { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); width: 1px; height: 46px; background: rgba(247, 244, 239, 0.22); overflow: hidden; }
+.hero-scroll span { position: absolute; left: 0; top: -40%; width: 1px; height: 40%; background: #f7f4ef; animation: scroll-cue 2.8s var(--ease) infinite; }
+@keyframes scroll-cue { to { top: 100%; } }
+
 /* =============================================================
    Ribbon — slow italic serif
    ============================================================= */

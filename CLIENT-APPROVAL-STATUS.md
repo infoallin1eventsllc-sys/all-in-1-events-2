@@ -39,6 +39,8 @@ A living record of what's done and **everything waiting on the client** before l
 - [ ] Approve the **Inferno Dreams hero** image, or pick a different hero photo
 - [ ] Approve **Figma** design and **Canva** flyer, or request changes
 
+- [ ] **Approve the new homepage hero**: a live black-and-white "candle on dark water" backdrop, drawn in code (no stock license needed). It replaces the Inferno Dreams arch photo in the hero; Inferno Dreams still appears in the collection.
+
 ### Promo video (new)
 - [ ] **Approve the "Inferno Dreams speaks" TikTok/Reels video** (25s, 9:16, voiced by the candle). Editor/preview: https://www.clipkit.dev/public-editor?id=a990ef49-7bbb-425c-bea2-a289dfc0f463 (see `marketing/video/README.md`)
 - [ ] Approve the voice (ElevenLabs "Sara – Smooth Ads") and the script, or request another voice

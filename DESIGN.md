@@ -40,3 +40,9 @@
 
 ## Motion
 1.4s reveal fades (18px rise), a 70s ribbon marquee, and 1.6–2.4s image zooms (≤4.5%). All of it respects `prefers-reduced-motion`.
+
+## Hero: "candle on dark water" (live backdrop)
+- `assets/js/hero-water.js` draws the hero backdrop live in WebGL: a tealight flame on black water with slow concentric silver ripples, a light pool and a shimmering reflection. There is no video file and no license; it stays sharp at any size and loops seamlessly.
+- It is monochrome by default. Add `data-warm="1"` to `#heroCanvas` for an amber flame.
+- It pauses when scrolled off-screen or when the tab is hidden, and shows a single still frame for visitors who turn off motion (`prefers-reduced-motion`). If WebGL is unavailable, a dark CSS gradient shows instead.
+- Copy sits centered above the candle in ivory: an ivory primary button and a light outline button (`.btn.ghost-light`).
