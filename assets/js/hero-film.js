@@ -38,4 +38,20 @@
       if (es[0].isIntersecting) play(); else video.pause();
     }, { threshold: 0.2 }).observe(video);
   }
+
+  // Depth: the film drifts a little slower than the copy as the hero scrolls away.
+  // Damped (lerped toward the true scroll) so it never feels twitchy; capped at 18px; transform only; off under reduced motion.
+  var film = video.closest(".hero-film");
+  if (film && !still && window.innerWidth > 900) {
+    var target = 0, current = 0, ticking = false;
+    function settle() {
+      current += (target - current) * 0.12;
+      film.style.setProperty("--drift", current.toFixed(2) + "px");
+      if (Math.abs(target - current) > 0.05) requestAnimationFrame(settle); else ticking = false;
+    }
+    window.addEventListener("scroll", function () {
+      target = Math.min(18, Math.max(0, window.scrollY) * 0.06);
+      if (!ticking) { ticking = true; requestAnimationFrame(settle); }
+    }, { passive: true });
+  }
 })();

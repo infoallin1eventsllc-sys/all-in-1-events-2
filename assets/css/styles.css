@@ -151,9 +151,9 @@ b, strong { font-weight: 500; }
   background: var(--bg); color: var(--fg);
   font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase; font-weight: 400;
   padding: 17px 34px; border-radius: var(--radius); border: 1px solid var(--bg);
-  transition: background 0.45s var(--ease), color 0.45s var(--ease), border-color 0.45s var(--ease);
+  transition: transform 0.25s var(--ease), background 0.45s var(--ease), color 0.45s var(--ease), border-color 0.45s var(--ease);
 }
-.btn:hover { background: #3a3733; border-color: #3a3733; }
+.btn:hover { background: #3a3733; border-color: #3a3733; transform: translateY(-2px); }   /* taste: hover is a 2px lift, not a spectacle */
 .btn.ghost { --bg: transparent; --fg: var(--ink); border-color: var(--ink); }
 .btn.ghost:hover { background: var(--ink); color: var(--on-sage); border-color: var(--ink); }
 .btn.on-sage { --bg: var(--on-sage); --fg: var(--ink); }
@@ -243,30 +243,32 @@ b, strong { font-weight: 500; }
 .hero-film-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: clamp(40px, 7vw, 120px); align-items: center; width: 100%; }
 .hero-copy-night { max-width: 560px; }
 .hero.night .hero-badge { color: rgba(247, 244, 239, 0.66); }
-.hero.night h1 { color: #f7f4ef; font-size: clamp(46px, 5.6vw, 88px); text-wrap: balance; }
+.hero.night h1 { color: #f7f4ef; font-size: clamp(46px, 5.6vw, 88px); letter-spacing: -0.03em; text-wrap: balance; }
 .hero.night h1 em { color: rgba(247, 244, 239, 0.6); }
 .hero.night .hero-lead { color: rgba(247, 244, 239, 0.74); max-width: 46ch; text-wrap: pretty; }
 /* the three scents that appear in the film, as quiet links into the collection */
-.hero-scents { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 22px; margin-top: 34px; padding-top: 22px; border-top: 1px solid rgba(247, 244, 239, 0.14); }
+.hero-scents { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 22px; margin-top: 34px; padding-top: 22px; border-top: 1px solid rgba(247, 244, 239, 0.08); }
 .hero-scents .lbl { font-size: 9.5px; letter-spacing: 0.3em; text-transform: uppercase; color: rgba(247, 244, 239, 0.45); margin-right: 6px; }
 .hero-scents a { font-family: var(--serif); font-size: 19px; font-weight: 400; letter-spacing: 0.02em; color: rgba(247, 244, 239, 0.82); text-decoration: none; position: relative; transition: color 0.4s var(--ease); }
 .hero-scents a::after { content: ""; position: absolute; left: 0; right: 0; bottom: -3px; height: 1px; background: #f7f4ef; transform: scaleX(0); transform-origin: left; transition: transform 0.5s var(--ease); }
 .hero-scents a:hover { color: #f7f4ef; }
 .hero-scents a:hover::after { transform: scaleX(1); }
 .btn.ghost-light { --bg: transparent; --fg: #f7f4ef; border-color: rgba(247, 244, 239, 0.5); }
-.btn.ghost-light:hover { background: #f7f4ef; color: var(--ink); border-color: #f7f4ef; }
+.btn.ghost-light:hover { background: #f7f4ef; color: var(--ink); border-color: #f7f4ef; transform: translateY(-2px); }
 
 /* The film sits flat beside the copy, no frame */
-.hero-film { position: relative; margin: 0; height: min(72vh, 720px); aspect-ratio: 9 / 16; border-radius: var(--radius); background: #000; }
+.hero-film { position: relative; margin: 0; height: min(72vh, 720px); transform: translateY(var(--drift, 0px)); will-change: transform; aspect-ratio: 9 / 16; border-radius: var(--radius); background: #000; }
 .hero-film video { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; opacity: 0; transition: opacity 1.6s var(--ease); }
 .hero-film video.playing, .no-js .hero-film video, .hero-film video[data-still] { opacity: 1; }
 .film-sound {
   position: absolute; right: 14px; bottom: 14px; display: inline-flex; align-items: center; gap: 8px;
-  padding: 9px 14px; border: 1px solid rgba(247, 244, 239, 0.32); border-radius: var(--radius);
+  min-height: 44px; padding: 0 16px; border: 1px solid rgba(247, 244, 239, 0.32); border-radius: var(--radius);
   background: rgba(5, 5, 5, 0.45); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
   color: #f7f4ef; font: 400 10px/1 var(--sans); letter-spacing: 0.24em; text-transform: uppercase; cursor: pointer;
-  transition: background 0.4s var(--ease), border-color 0.4s var(--ease);
+  transition: background 0.4s var(--ease), border-color 0.4s var(--ease), transform 0.15s var(--ease);
 }
+.film-sound:active { transform: translateY(1px) scale(0.98); transition-duration: 0.08s; }
+@media (prefers-reduced-transparency: reduce) { .film-sound { background: #0a0a0a; -webkit-backdrop-filter: none; backdrop-filter: none; } }
 .film-sound:hover { background: rgba(5, 5, 5, 0.7); border-color: rgba(247, 244, 239, 0.6); }
 .film-sound:focus-visible { outline: 1px solid #f7f4ef; outline-offset: 3px; }
 .film-sound .i-on, .film-sound[aria-pressed="true"] .i-off { display: none; }
