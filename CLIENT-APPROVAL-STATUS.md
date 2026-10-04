@@ -1,16 +1,15 @@
 # Secrets of Cint — Project Status & Client Approval Checklist
 
-_Last updated: 2026-08-17 · Branch: `claude/client-promo-website-5ct9i8` · Built by All in 1 Events LLC_
+_Last updated: 2026-10-04 · Branch: `claude/client-promo-website-5ct9i8` · Built by All in 1 Events LLC_
 
 A living record of what's done and **everything waiting on the client** before launch.
 
 ## Quick links
-- **Live preview (private):** https://claude.ai/code/artifact/0910620c-af54-4c83-8ece-b01a3ffd2ba3
-  (share from the page's menu; also delivered as a single-file `Secrets-of-Cint-Preview.html`)
+- **Live preview (private):** https://claude.ai/artifact/27vCEJNALTeHxof2cokcux (share from the page's menu)
 - **Pull request:** https://github.com/infoallin1eventsllc-sys/all-in-1-events-2/pull/1 _(open, not merged)_
 - **Figma design:** https://www.figma.com/design/ZywyhvgLhvXvnmFXf1Yp77
 - **Canva flyer:** https://www.canva.com/d/75zJd3Hyw0oXf6p
-- **Owner Photo Portal:** footer **🔒 Owner Login** → PIN **1234** → 📸 Owner Photo Control
+- **Owner Photo Portal:** footer **Owner Login** → PIN **1234** → Owner Photo Control
 
 ---
 
@@ -28,6 +27,8 @@ A living record of what's done and **everything waiting on the client** before l
 - **Owner Photo Control portal** — discreet, PIN-gated (1234), upload by file or image URL, live update,
   export ZIP to publish
 - Editable **Figma** design + **Canva** promo flyer
+- **Hero film**: the 15s black-and-white product film plays in the hero, ending on the brand logo, under 1.2 MB per format
+- **Design pass**: the cinematic-web, apple-interface, taste and awesome-design skills applied across the site (see `DESIGN.md`); invented ratings and testimonials removed, dead links removed
 - Committed & pushed; interactive preview published
 
 ---
@@ -36,7 +37,6 @@ A living record of what's done and **everything waiting on the client** before l
 
 ### Approvals
 - [ ] **Approve the overall design** (soft ivory & charcoal "Maison" edition, SF rebrand) via the preview link — greenlight to proceed
-- [ ] Approve the **Inferno Dreams hero** image, or pick a different hero photo
 - [ ] Approve **Figma** design and **Canva** flyer, or request changes
 
 - [ ] **Approve the new homepage hero**: the 15-second black-and-white film "A new life candle experience" (with its piano music) now plays in the hero, in place of the earlier code-drawn candle on water. It starts silent (browser rule); visitors tap **Sound on** to hear the music.
@@ -66,7 +66,6 @@ A living record of what's done and **everything waiting on the client** before l
 - [ ] **Reviews and ratings**: the star ratings on the product cards were removed and the review section is now labelled as sample reviews, with name and city as fill-in slots. Send the first real reviews (name, city, a sentence or two) and the labels go away
 - [ ] **Prices** for every scent (confirmed Boho/others at $35, Harlem Smock $38 — please verify all)
 - [ ] **Amber Blush** third scent note (label was partly cut off — currently "Vanilla · White Amber · Jasmine")
-- [ ] Replace **placeholder customer reviews** with real ones before launch
 - [ ] Confirm the **full product list** — anything missing or discontinued? (e.g., travel tins seen on the store)
 
 ### Decisions
