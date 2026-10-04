@@ -1,12 +1,5 @@
-# netlify.toml
-# 
-# Netlify deployment configuration for All in 1 Events
-# 
-# Handles:
-# - Serverless function configuration
-# - Security headers
-# - Redirects
-# - Build settings
+# Netlify deployment configuration — Secrets of Cint
+# Static marketing site, no build step required.
 
 [build]
   command = "echo 'Static site, no build needed'"
@@ -16,40 +9,14 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    # Prevent clickjacking
-    X-Frame-Options = "DENY"
-    
-    # Prevent MIME type sniffing
+    X-Frame-Options = "SAMEORIGIN"
     X-Content-Type-Options = "nosniff"
-    
-    # Referrer policy
     Referrer-Policy = "strict-origin-when-cross-origin"
-    
-    # Content Security Policy
-    # - default-src: restrict to same-origin
-    # - img-src: allow images from Google's CDN and data URIs
-    # - style-src: allow inline styles (Tailwind), Google Fonts
-    # - script-src: allow inline + Tailwind CDN
-    # - connect-src: allow Anthropic API
-    Content-Security-Policy = "default-src 'self'; img-src 'self' https://lh3.googleusercontent.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; connect-src 'self' https://api.anthropic.com"
-    
-    # Permissions policy (formerly Feature Policy)
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Content-Security-Policy = "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self'; connect-src 'self' https:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
 
-# ===== FUNCTIONS =====
-[functions]
-  directory = "netlify/functions"
-  node_bundler = "esbuild"
-
-# ===== REDIRECTS =====
-# No redirects needed for this static site, but here's an example:
-# [[redirects]]
-#   from = "/api/*"
-#   to = "/.netlify/functions/:splat"
-#   status = 200
-
-# ===== ENVIRONMENT VARIABLES =====
-# Set ANTHROPIC_API_KEY in the Netlify dashboard:
-# Site settings → Environment variables → Add new
-# Key: ANTHROPIC_API_KEY
-# Value: sk-ant-...
+# Long-cache static assets (images, css, js are content-addressable enough for a marketing site)
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"

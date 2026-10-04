@@ -1,28 +1,26 @@
 {
-  "name": "all-in-1-events",
+  "name": "secrets-of-cint",
   "version": "1.0.0",
-  "description": "Luxury event production website with AI concierge chatbot",
+  "description": "Secrets of Cint — luxury hand-poured soy candles & room sprays. Promotional marketing website.",
   "main": "index.html",
   "scripts": {
-    "dev": "python -m http.server 8000",
-    "start": "netlify dev",
-    "lint": "echo 'Install ESLint to lint JS files'"
+    "dev": "python3 -m http.server 8000",
+    "start": "python3 -m http.server 8000"
   },
   "keywords": [
-    "events",
+    "candles",
+    "soy-candles",
+    "room-spray",
+    "harlem",
     "luxury",
-    "chatbot",
-    "ai",
-    "concierge"
+    "ecommerce",
+    "marketing-site"
   ],
-  "author": "Otis Williams",
+  "author": "All in 1 Events LLC",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/infoallin1eventsllc-sys/all-in-1-events-2"
-  },
-  "devDependencies": {
-    "netlify-cli": "^17.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
