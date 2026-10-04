@@ -3,7 +3,8 @@
    Plays the "A new life candle experience" film muted and looping
    (browsers only autoplay silent video). The Sound button unmutes it
    and restarts from the match strike so the music lands in sync.
-   Pauses off-screen; honours reduced motion by showing the poster.
+   The film fades up from black on first play; it pauses off-screen and
+   honours reduced motion by holding the poster.
    ============================================================= */
 (function () {
   "use strict";
@@ -13,9 +14,12 @@
 
   var still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var userPaused = still;
-  if (still) { video.removeAttribute("autoplay"); video.pause(); }
+  if (still) { video.removeAttribute("autoplay"); video.pause(); video.setAttribute("data-still", ""); }
 
-  function play() { var p = video.play(); if (p && p.catch) p.catch(function () {}); }
+  function play() { var p = video.play(); if (p && p.catch) p.catch(function () { video.setAttribute("data-still", ""); }); }
+  video.addEventListener("playing", function () { video.classList.add("playing"); });
+  // If autoplay is blocked (low-power mode, data saver), show the poster instead of a black box.
+  setTimeout(function () { if (video.paused && !video.classList.contains("playing")) video.setAttribute("data-still", ""); }, 2500);
 
   if (btn) {
     btn.addEventListener("click", function () {

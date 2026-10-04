@@ -129,6 +129,7 @@
 
   function buildCard(p) {
     var card = el("article", "card");
+    card.id = "p-" + p.id;   // deep-link target (the hero's "In the film" links)
     card.setAttribute("data-cat", p.cat);
 
     var media = el("div", "card-media");

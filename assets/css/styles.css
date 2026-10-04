@@ -232,23 +232,34 @@ b, strong { font-weight: 500; }
 /* ---------- Night hero: the "A new life candle experience" film ---------- */
 .hero.night {
   position: relative; isolation: isolate; overflow: hidden;
-  padding-block: clamp(48px, 7vh, 96px);
+  display: flex; align-items: center;
+  min-height: calc(100svh - 126px);            /* fills the first screen below the header on desktop */
+  padding-block: clamp(40px, 6vh, 80px);
   background: #000;   /* the film's own black, so the backdrop and the film read as one */
   color: #f7f4ef;
 }
 .hero.night::before { display: none; }
-.hero-film-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: clamp(40px, 7vw, 120px); align-items: center; }
+.hero.night :focus-visible { outline-color: #f7f4ef; }
+.hero-film-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: clamp(40px, 7vw, 120px); align-items: center; width: 100%; }
 .hero-copy-night { max-width: 560px; }
 .hero.night .hero-badge { color: rgba(247, 244, 239, 0.66); }
-.hero.night h1 { color: #f7f4ef; font-size: clamp(46px, 5.6vw, 88px); }
+.hero.night h1 { color: #f7f4ef; font-size: clamp(46px, 5.6vw, 88px); text-wrap: balance; }
 .hero.night h1 em { color: rgba(247, 244, 239, 0.6); }
-.hero.night .hero-lead { color: rgba(247, 244, 239, 0.74); max-width: 470px; }
+.hero.night .hero-lead { color: rgba(247, 244, 239, 0.74); max-width: 46ch; text-wrap: pretty; }
+/* the three scents that appear in the film, as quiet links into the collection */
+.hero-scents { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 22px; margin-top: 34px; padding-top: 22px; border-top: 1px solid rgba(247, 244, 239, 0.14); }
+.hero-scents .lbl { font-size: 9.5px; letter-spacing: 0.3em; text-transform: uppercase; color: rgba(247, 244, 239, 0.45); margin-right: 6px; }
+.hero-scents a { font-family: var(--serif); font-size: 19px; font-weight: 400; letter-spacing: 0.02em; color: rgba(247, 244, 239, 0.82); text-decoration: none; position: relative; transition: color 0.4s var(--ease); }
+.hero-scents a::after { content: ""; position: absolute; left: 0; right: 0; bottom: -3px; height: 1px; background: #f7f4ef; transform: scaleX(0); transform-origin: left; transition: transform 0.5s var(--ease); }
+.hero-scents a:hover { color: #f7f4ef; }
+.hero-scents a:hover::after { transform: scaleX(1); }
 .btn.ghost-light { --bg: transparent; --fg: #f7f4ef; border-color: rgba(247, 244, 239, 0.5); }
 .btn.ghost-light:hover { background: #f7f4ef; color: var(--ink); border-color: #f7f4ef; }
 
 /* The film sits flat beside the copy, no frame */
-.hero-film { position: relative; margin: 0; height: min(76vh, 760px); aspect-ratio: 9 / 16; border-radius: var(--radius); background: #000; }
-.hero-film video { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.hero-film { position: relative; margin: 0; height: min(72vh, 720px); aspect-ratio: 9 / 16; border-radius: var(--radius); background: #000; }
+.hero-film video { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; opacity: 0; transition: opacity 1.6s var(--ease); }
+.hero-film video.playing, .no-js .hero-film video, .hero-film video[data-still] { opacity: 1; }
 .film-sound {
   position: absolute; right: 14px; bottom: 14px; display: inline-flex; align-items: center; gap: 8px;
   padding: 9px 14px; border: 1px solid rgba(247, 244, 239, 0.32); border-radius: var(--radius);
@@ -292,7 +303,7 @@ b, strong { font-weight: 500; }
 .chip.active::after { transform: scaleX(1); }
 
 .grid { --cols: 4; --gx: 32px; display: flex; flex-wrap: wrap; justify-content: center; gap: 56px var(--gx); margin-top: 64px; }
-.card { display: flex; flex-direction: column; width: calc((100% - (var(--cols) - 1) * var(--gx)) / var(--cols)); }
+.card { scroll-margin-top: 120px; display: flex; flex-direction: column; width: calc((100% - (var(--cols) - 1) * var(--gx)) / var(--cols)); }
 .card-media {
   position: relative; aspect-ratio: 3 / 4; overflow: hidden; background: var(--cream-warm);
   border-radius: var(--arch-sm);
@@ -529,6 +540,7 @@ b, strong { font-weight: 500; }
   .header-book { display: none; }
   .hero-grid { grid-template-columns: 1fr; }
   .hero-media { max-width: 440px; margin-inline: auto; width: 100%; margin-top: 12px; }
+  .hero.night { min-height: 0; display: block; }
   .hero-film-grid { grid-template-columns: 1fr; gap: 56px; }
   .hero-film { height: auto; width: min(100%, 420px); margin-inline: auto; }
   .rating-float { left: auto; right: 0; top: -18px; }
@@ -561,5 +573,8 @@ b, strong { font-weight: 500; }
   .announce { font-size: 9px; letter-spacing: 0.16em; padding: 10px 12px; }
   .hero-badge, .eyebrow { letter-spacing: 0.26em; }
   .hero-cta .btn { flex: 1 1 100%; }
+  .hero-scents { gap: 8px 18px; margin-top: 28px; }
+  .hero-scents .lbl { flex-basis: 100%; margin: 0 0 2px; }
+  .hero-scents a { font-size: 18px; }
   .btn { padding-inline: 24px; letter-spacing: 0.24em; }
 }
