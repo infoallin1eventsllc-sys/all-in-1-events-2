@@ -60,6 +60,10 @@ A living record of what's done and **everything waiting on the client** before l
   pour/packaging) somewhere — e.g., a gallery strip
 
 ### Details to confirm
+- [ ] **Burn time**: the site says "50+ hours". Confirm for the 9 oz candle, or send the real figure
+- [ ] **Social links**: send the Instagram, Facebook, TikTok and Pinterest URLs. The footer icons have no destination yet
+- [ ] **Footer pages**: Wholesale, Candle Care, Shipping & Returns and FAQ were removed from the footer because those pages don't exist. They come back as soon as the content is supplied
+- [ ] **Reviews and ratings**: the star ratings on the product cards were removed and the review section is now labelled as sample reviews, with name and city as fill-in slots. Send the first real reviews (name, city, a sentence or two) and the labels go away
 - [ ] **Prices** for every scent (confirmed Boho/others at $35, Harlem Smock $38 — please verify all)
 - [ ] **Amber Blush** third scent note (label was partly cut off — currently "Vanilla · White Amber · Jasmine")
 - [ ] Replace **placeholder customer reviews** with real ones before launch

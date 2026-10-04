@@ -102,7 +102,7 @@ b, strong { font-weight: 500; }
 .section { padding-block: clamp(84px, 11vw, 156px); }
 
 /* ---------- Reveal on scroll (guarded by .js) ---------- */
-.js .reveal { opacity: 0; transform: translateY(18px); transition: opacity 1.4s var(--ease), transform 1.4s var(--ease); }
+.js .reveal { opacity: 0; transform: translateY(14px); transition: opacity 0.9s var(--ease), transform 0.9s var(--ease); }
 .js .reveal.in { opacity: 1; transform: none; }
 .js .reveal[data-delay="1"] { transition-delay: 0.12s; }
 .js .reveal[data-delay="2"] { transition-delay: 0.24s; }
@@ -298,7 +298,7 @@ b, strong { font-weight: 500; }
    Product grid — soft arches, no boxes
    ============================================================= */
 .filters { display: flex; flex-wrap: wrap; gap: 4px 28px; margin-top: 30px; }
-.chip { font-size: 11px; letter-spacing: 0.26em; text-transform: uppercase; font-weight: 400; padding: 8px 0; color: var(--ink-muted); position: relative; transition: color 0.4s var(--ease); }
+.chip { font-size: 11px; letter-spacing: 0.26em; text-transform: uppercase; font-weight: 400; padding: 14px 0; min-height: 44px; color: var(--ink-muted); position: relative; transition: color 0.4s var(--ease); }
 .chip::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--ink); transform: scaleX(0); transition: transform 0.5s var(--ease); }
 .chip:hover { color: var(--ink); }
 .chip.active { color: var(--ink); }
@@ -331,7 +331,7 @@ b, strong { font-weight: 500; }
 .card .price { font-family: var(--serif); font-size: 21px; font-weight: 400; color: var(--ink); }
 .card .rate { font-size: 11.5px; color: var(--ink-muted); display: inline-flex; align-items: center; gap: 4px; letter-spacing: 0.04em; }
 .card .rate .s { color: var(--ink); font-size: 10px; }
-.card-add { margin-top: 20px; align-self: center; background: transparent; border: 0; border-bottom: 1px solid var(--line-strong); color: var(--ink); font-size: 10.5px; letter-spacing: 0.28em; text-transform: uppercase; font-weight: 400; padding: 6px 2px; border-radius: 0; transition: border-color 0.4s var(--ease), color 0.4s var(--ease); display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
+.card-add { margin-top: 20px; align-self: center; background: transparent; border: 0; border-bottom: 1px solid var(--line-strong); color: var(--ink); font-size: 10.5px; letter-spacing: 0.28em; text-transform: uppercase; font-weight: 400; padding: 14px 2px 12px; min-height: 44px; border-radius: 0; transition: border-color 0.4s var(--ease), color 0.4s var(--ease); display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
 .card-add:hover { border-color: var(--ink); }
 .card-add svg { width: 13px; height: 13px; stroke-width: 1.4; }
 
@@ -386,12 +386,10 @@ b, strong { font-weight: 500; }
 .story-stat .l { font-size: 9.5px; letter-spacing: 0.3em; text-transform: uppercase; margin-top: 8px; color: var(--ink-muted); }
 .story-copy h2 { font-family: var(--serif); font-size: clamp(36px, 4.6vw, 58px); font-weight: 300; margin-top: 20px; letter-spacing: -0.01em; }
 .story-copy p:not(.eyebrow) { margin-top: 22px; color: var(--ink-soft); font-size: 16.5px; max-width: 520px; }
-.pillars { display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px 36px; margin-top: 44px; padding-top: 36px; border-top: 1px solid var(--line); }
-.pillar { display: flex; gap: 16px; align-items: flex-start; }
-.pillar .ico { width: 22px; height: 22px; display: grid; place-items: center; color: var(--ink-muted); flex-shrink: 0; margin-top: 3px; }
-.pillar .ico svg { width: 22px; height: 22px; stroke-width: 1.1; }
-.pillar h4 { font-family: var(--serif); font-size: 20px; font-weight: 400; }
-.pillar p { margin-top: 4px; font-size: 13.5px; color: var(--ink-muted); line-height: 1.6; }
+.specs { margin-top: 40px; border-top: 1px solid var(--line); }
+.specs div { display: grid; grid-template-columns: 112px 1fr; gap: 24px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.specs dt { font-size: 9.5px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--ink-muted); padding-top: 5px; }
+.specs dd { margin: 0; font-family: var(--serif); font-size: 19px; font-weight: 400; line-height: 1.4; color: var(--ink); }
 
 /* =============================================================
    Reviews — open columns, no boxes
@@ -561,7 +559,7 @@ b, strong { font-weight: 500; }
   .reviews-grid { grid-template-columns: 1fr; }
   .review { padding-inline: 4px; }
   .review + .review { border-left: 0; border-top: 1px solid var(--line); }
-  .pillars { grid-template-columns: 1fr; }
+  .specs div { grid-template-columns: 1fr; gap: 6px; }
   .spot-notes { max-width: none; }
   .footer-grid { grid-template-columns: 1fr; }
   .hero-trust { gap: 14px 24px; }
@@ -580,3 +578,9 @@ b, strong { font-weight: 500; }
   .hero-scents a { font-size: 18px; }
   .btn { padding-inline: 24px; letter-spacing: 0.24em; }
 }
+
+/* Missing facts render as visible slots, never as invented ones */
+.slot { border-bottom: 1px dashed var(--line-strong); color: var(--ink-muted); }
+.footer li span { color: rgba(247, 244, 239, 0.55); font-size: 14px; }
+.owner-login { background: none; border: 0; color: inherit; font: inherit; letter-spacing: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 4px; }
+.owner-login:hover { color: var(--on-sage); }

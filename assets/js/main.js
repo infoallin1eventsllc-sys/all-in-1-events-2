@@ -75,14 +75,16 @@
       img: "real-citrus-grove.jpg", badge: "new" }
   ];
 
+  // Sample reviews. Names and cities are visible fill-in slots, never invented people:
+  // the Owner Portal replaces these with real customer reviews.
   var REVIEWS = [
-    { author: "Marcus T.", loc: "San Francisco, CA", title: "The Santal scent is out of this world!",
+    { author: "[Customer name]", loc: "[City, state]", title: "The Santal scent is out of this world!",
       body: "I picked up Harlem Smock on a whim and the hot throw fills my entire apartment within 15 minutes. Quality is unbelievable." },
-    { author: "Kendra W.", loc: "Oakland, CA", title: "This peach spray smells SO good!",
+    { author: "[Customer name]", loc: "[City, state]", title: "This peach spray smells SO good!",
       body: "Two spritzes of Exotic Peach on my sofa linen and it literally lasts all day. The mango and coconut blend is perfection." },
-    { author: "Darnell R.", loc: "Sacramento, CA", title: "Moon Flower is pure luxury",
+    { author: "[Customer name]", loc: "[City, state]", title: "Moon Flower is pure luxury",
       body: "Bergamot, soft leather, and labdanum — the black vessel with the wood lid looks incredible on my mantel, too." },
-    { author: "Aaliyah M.", loc: "San Jose, CA", title: "A brand with real soul",
+    { author: "[Customer name]", loc: "[City, state]", title: "A brand with real soul",
       body: "You can feel the love and culture poured into every candle. The vessels are reusable and gorgeous. Ordering a few more right now." }
   ];
 
@@ -96,7 +98,6 @@
   }
   var ICON_CART = '<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>';
   var ICON_HEART = '<path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10Z"/>';
-  var ICON_CHECK = '<path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5Z"/><path d="m9 12 2 2 4-4"/>';
 
   /* ---------- Cart state (demo) ---------- */
   var cart = 0;
@@ -166,9 +167,7 @@
 
     var meta = el("div", "card-meta");
     var price = el("span", "price"); price.textContent = "$" + p.price.toFixed(2);
-    var rate = el("span", "rate");
-    rate.innerHTML = '<span class="s">★</span> ' + p.rating.toFixed(1) + " (" + p.reviews + ")";
-    meta.appendChild(price); meta.appendChild(rate);
+    meta.appendChild(price);   // no star rating until there are real reviews to count: never an invented stat
     body.appendChild(meta);
 
     var add = el("button", "card-add");
@@ -194,20 +193,21 @@
   var reviewsGrid = document.getElementById("reviewsGrid");
   function renderReviews() {
     REVIEWS.forEach(function (r) {
+      var sample = r.author.charAt(0) === "[";   // a fill-in slot, not a real customer
       var card = el("article", "review reveal");
-      var stars = el("div", "stars"); stars.textContent = "★★★★★"; card.appendChild(stars);
+      if (!sample) { var stars = el("div", "stars"); stars.textContent = "★★★★★"; card.appendChild(stars); }
       var h4 = el("h4"); h4.textContent = r.title; card.appendChild(h4);
       var body = el("p", "body"); body.textContent = "“" + r.body + "”"; card.appendChild(body);
 
       var verified = el("span", "verified");
-      verified.innerHTML = svg(ICON_CHECK, 14) + " Verified Buyer";
+      verified.textContent = sample ? "Sample review" : "Customer review";
       card.appendChild(verified);
 
       var who = el("div", "who");
-      var av = el("div", "avatar"); av.textContent = r.author.charAt(0); who.appendChild(av);
+      var av = el("div", "avatar"); av.textContent = sample ? "·" : r.author.charAt(0); who.appendChild(av);
       var m = el("div", "meta");
-      var nm = el("div", "nm"); nm.textContent = r.author; m.appendChild(nm);
-      var lo = el("div", "lo"); lo.textContent = r.loc; m.appendChild(lo);
+      var nm = el("div", "nm" + (sample ? " slot" : "")); nm.textContent = r.author; m.appendChild(nm);
+      var lo = el("div", "lo" + (sample ? " slot" : "")); lo.textContent = r.loc; m.appendChild(lo);
       who.appendChild(m);
       card.appendChild(who);
 

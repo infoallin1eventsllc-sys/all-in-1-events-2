@@ -148,7 +148,7 @@
     </section>
 
     <!-- ============ PROMO / BIG DEAL ============ -->
-    <section class="section promo">
+    <section class="section promo" id="popup">
       <div class="wrap">
         <div class="promo-card reveal">
           <div class="promo-copy">
@@ -209,24 +209,13 @@
           <p class="eyebrow">Our Story</p>
           <h2>Made with family, self-love &amp; culture</h2>
           <p>Secrets of Cint is a Black-owned candle house in San Francisco. Every candle and room spray is hand-poured in small batches — 100% natural soy wax, lead-free cotton wicks, and phthalate-free fragrance — to symbolize family, self-love, and culture, and to encourage the next generation to take creative risks.</p>
-          <div class="pillars">
-            <div class="pillar">
-              <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2c1.6 3 4.2 4.7 4.2 8.3A4.2 4.2 0 0 1 12 14.5a4.2 4.2 0 0 1-4.2-4.2C7.8 6.7 10.4 5 12 2Z"/><path d="M5 22h14"/></svg></span>
-              <div><h4>100% USA Soy Wax</h4><p>Clean, soot-free burning that lasts 50+ hours.</p></div>
-            </div>
-            <div class="pillar">
-              <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5Z"/><path d="m9 12 2 2 4-4"/></svg></span>
-              <div><h4>Phthalate-Free Oils</h4><p>Premium botanical extracts, zero toxic additives.</p></div>
-            </div>
-            <div class="pillar">
-              <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v18M3 12h18" opacity=".4"/><path d="M12 2 9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5Z"/></svg></span>
-              <div><h4>Reusable Vessels</h4><p>Black glass with natural wood lids.</p></div>
-            </div>
-            <div class="pillar">
-              <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10Z"/></svg></span>
-              <div><h4>Black-Owned in SF</h4><p>Rooted in community, creativity &amp; culture.</p></div>
-            </div>
-          </div>
+          <!-- The making, as a spec list: hairline rows, no icon tiles -->
+          <dl class="specs">
+            <div><dt>Wax</dt><dd>100% USA soy, clean and soot-free, 50+ hours of burn</dd></div>
+            <div><dt>Fragrance</dt><dd>Phthalate-free oils and botanical extracts, no toxic additives</dd></div>
+            <div><dt>Vessel</dt><dd>Reusable black glass with a natural wood lid</dd></div>
+            <div><dt>House</dt><dd>Black-owned, hand-poured in San Francisco</dd></div>
+          </dl>
         </div>
       </div>
     </section>
@@ -237,25 +226,25 @@
         <div class="head center reveal">
           <p class="eyebrow">Loved Out Loud</p>
           <h2>What our customers are saying</h2>
-          <p>Real words from real homes — coast to coast.</p>
+          <p>Sample reviews are shown here until the first customer reviews are added.</p>
         </div>
         <div class="reviews-grid" id="reviewsGrid"><!-- reviews injected --></div>
       </div>
     </section>
 
     <!-- ============ NEWSLETTER ============ -->
-    <section class="news">
+    <section class="news" id="newsletter">
       <div class="wrap">
         <div class="news-card reveal">
           <p class="eyebrow">Keep In Touch</p>
           <h2>Be first to the next drop</h2>
-          <p>Join the list for early access to limited heritage batches, seasonal scents, and the occasional insider offer — there might even be a deal in there for you.</p>
+          <p>Early access to limited batches, seasonal scents and pop-up dates.</p>
           <form class="news-form" id="newsForm" novalidate>
             <input type="email" id="newsEmail" placeholder="Enter your email…" aria-label="Email address" required />
             <button type="submit" class="btn">Join the List</button>
           </form>
           <p class="news-note">No spam, ever. Unsubscribe anytime.</p>
-          <p class="news-ok" id="newsOk">Welcome to the family — check your inbox soon. ✦</p>
+          <p class="news-ok" id="newsOk">Welcome to the family — check your inbox soon.</p>
         </div>
       </div>
     </section>
@@ -278,24 +267,23 @@
             <a href="#" aria-label="Pinterest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2a10 10 0 0 0-3.6 19.3c-.1-.8-.2-2 0-2.9l1.2-5s-.3-.6-.3-1.5c0-1.4.8-2.5 1.9-2.5.9 0 1.3.7 1.3 1.5 0 .9-.6 2.2-.9 3.5-.2 1 .5 1.9 1.6 1.9 1.9 0 3.2-2.4 3.2-5.3 0-2.2-1.5-3.8-4.1-3.8a4.7 4.7 0 0 0-4.9 4.7c0 .9.3 1.5.7 2 .2.2.2.3.1.6l-.2.9c-.1.3-.3.4-.6.2-1.2-.5-1.8-1.9-1.8-3.5 0-2.6 2.2-5.7 6.5-5.7 3.5 0 5.8 2.5 5.8 5.2 0 3.5-2 6.2-4.9 6.2-1 0-1.9-.5-2.2-1.1l-.6 2.4c-.2.8-.7 1.7-1.1 2.3A10 10 0 1 0 12 2Z"/></svg></a>
           </div>
         </div>
+        <!-- Only links with a real destination. Wholesale, Candle Care, Shipping & Returns and FAQ return when those pages exist. -->
         <div>
           <h5>Shop</h5>
           <ul>
-            <li><a href="#collection">Signature Collection</a></li>
-            <li><a href="#collection">Seasonal Collection</a></li>
+            <li><a href="#collection">Signature Candles</a></li>
             <li><a href="#collection">Room Sprays</a></li>
-            <li><a href="#collection">New Arrivals</a></li>
-            <li><a href="#">Wholesale</a></li>
+            <li><a href="#collection">Reed Diffusers</a></li>
+            <li><a href="#signature">Moon Flower</a></li>
           </ul>
         </div>
         <div>
           <h5>The House</h5>
           <ul>
             <li><a href="#story">Our Story</a></li>
+            <li><a href="#popup">Pop-Up at The Crossing</a></li>
             <li><a href="#reviews">Reviews</a></li>
-            <li><a href="#">Candle Care</a></li>
-            <li><a href="#">Pop-Up Shop</a></li>
-            <li><a href="#">Wholesale</a></li>
+            <li><a href="#newsletter">Newsletter</a></li>
           </ul>
         </div>
         <div>
@@ -304,16 +292,14 @@
             <li><a href="mailto:secretsofcintllc@outlook.com">secretsofcintllc@outlook.com</a></li>
             <li><a href="tel:+14152023147">(415) 202-3147</a></li>
             <li><a href="https://www.secretsofcint.com" target="_blank" rel="noopener">secretsofcint.com</a></li>
-            <li><a href="#">San Francisco, CA</a></li>
-            <li><a href="#">Shipping &amp; Returns</a></li>
-            <li><a href="#reviews">FAQ</a></li>
+            <li><span>San Francisco, CA</span></li>
           </ul>
         </div>
       </div>
       <div class="footer-bottom">
         <span>© <span id="year"></span> Secrets of Cint. All rights reserved.</span>
         <span class="credit">A new life candle experience · Hand-poured in San Francisco, CA
-          &nbsp;·&nbsp; <button type="button" id="ownerLogin" class="owner-login" aria-label="Owner login">🔒 Owner Login</button></span>
+          &nbsp;·&nbsp; <button type="button" id="ownerLogin" class="owner-login" aria-label="Owner login"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="12" height="12" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Owner Login</button></span>
       </div>
     </div>
   </footer>
