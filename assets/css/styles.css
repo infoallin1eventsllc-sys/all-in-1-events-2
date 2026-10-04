@@ -246,16 +246,8 @@ b, strong { font-weight: 500; }
 .btn.ghost-light { --bg: transparent; --fg: #f7f4ef; border-color: rgba(247, 244, 239, 0.5); }
 .btn.ghost-light:hover { background: #f7f4ef; color: var(--ink); border-color: #f7f4ef; }
 
-/* The film sits in the house arch, with a fine offset hairline like the other framed media */
-.hero-film {
-  position: relative; margin: 14px; height: min(76vh, 760px); aspect-ratio: 9 / 16;
-  border-radius: var(--arch); background: #000;
-  box-shadow: 0 50px 90px -40px rgba(0, 0, 0, 0.9);
-}
-.hero-film::before {
-  content: ""; position: absolute; inset: -14px; border: 1px solid rgba(247, 244, 239, 0.16);
-  border-radius: 274px 274px 4px 4px; pointer-events: none;
-}
+/* The film sits flat beside the copy, no frame */
+.hero-film { position: relative; margin: 0; height: min(76vh, 760px); aspect-ratio: 9 / 16; border-radius: var(--radius); background: #000; }
 .hero-film video { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
 .film-sound {
   position: absolute; right: 14px; bottom: 14px; display: inline-flex; align-items: center; gap: 8px;
@@ -533,7 +525,7 @@ b, strong { font-weight: 500; }
   .hero-grid { grid-template-columns: 1fr; }
   .hero-media { max-width: 440px; margin-inline: auto; width: 100%; margin-top: 12px; }
   .hero-film-grid { grid-template-columns: 1fr; gap: 56px; }
-  .hero-film { height: auto; width: min(100% - 28px, 420px); margin-inline: auto; }
+  .hero-film { height: auto; width: min(100%, 420px); margin-inline: auto; }
   .rating-float { left: auto; right: 0; top: -18px; }
   .spot-grid, .story-grid, .promo-card { grid-template-columns: 1fr; }
   .promo-media { min-height: 340px; }
@@ -555,8 +547,7 @@ b, strong { font-weight: 500; }
   .footer-grid { grid-template-columns: 1fr; }
   .hero-trust { gap: 14px 24px; }
   .hero-media::before { inset: -9px; }
-  .hero-film { width: min(100% - 18px, 400px); margin: 9px auto; }
-  .hero-film::before { inset: -9px; border-radius: 269px 269px 4px 4px; }
+  .hero-film { width: min(100%, 400px); margin-inline: auto; }
   .story-stat { right: 8px; padding: 18px 22px; }
   .promo-copy { padding: 36px 26px; }
   .brand-name .n1 { font-size: 22px; }
