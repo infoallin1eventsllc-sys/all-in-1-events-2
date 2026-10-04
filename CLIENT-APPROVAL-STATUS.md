@@ -39,6 +39,11 @@ A living record of what's done and **everything waiting on the client** before l
 - [ ] Approve the **Inferno Dreams hero** image, or pick a different hero photo
 - [ ] Approve **Figma** design and **Canva** flyer, or request changes
 
+### Promo video (new)
+- [ ] **Approve the "Inferno Dreams speaks" TikTok/Reels video** (25s, 9:16, voiced by the candle). Editor/preview: https://www.clipkit.dev/public-editor?id=a990ef49-7bbb-425c-bea2-a289dfc0f463 (see `marketing/video/README.md`)
+- [ ] Approve the voice (ElevenLabs "Sara – Smooth Ads") and the script, or request another voice
+- [ ] FYI: the Inferno Dreams label reads **"SCENTED SOX CANDLE"** (likely meant "SOY"). Exotic Peach reads "SOY". Flag this for the next label print run
+
 ### Photos still needed (real product shots)
 - [ ] **For Him** (candle) — on placeholder
 - [ ] **Vintage Bloom** (candle) — on placeholder
