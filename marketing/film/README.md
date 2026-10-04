@@ -8,8 +8,11 @@
 ## Shot list
 | Time | Beat |
 |---|---|
-| 0.0–0.6 | Total darkness |
-| 0.6–4.6 | A match strikes (sparks, a soft bloom, the strike sound). The flame lights Inferno Dreams as the camera slowly pulls back from extreme close-up. A silver light sweep crosses the label and smoke curls up. |
+| 0.0–0.45 | Total darkness |
+| 0.45–0.6 | The scratch: a bright streak draws itself along the striker, spitting grit |
+| 0.6–0.7 | Ignition: a hot white core blooms, a brief exposure kick lifts the whole frame, the candle catches with a hard jump of light |
+| 0.6–1.3 | A shockwave ring races outward; an anamorphic streak and a wide soft wash spread the light across the frame; 260 sparks (bright fast ones and a few large slow ones) with a rain of grit |
+| 0.6–3.2 | Glowing embers drift up and settle for two seconds, a puff of smoke, then the camera slowly pulls back from the extreme close-up as the flame takes hold; a silver light sweep crosses the label |
 | 4.3–7.4 | **EXOTIC PEACH** (the matte black vessel) on a polished black surface with a reflection. Slow drift and push-in, light sweep across the label. |
 | 6.6–9.7 | **BREWED ELIXIR**, with the same treatment and a slow pull-back |
 | 8.9–12.0 | **INFERNO DREAMS**, lit, with a flickering glow and rising smoke |
@@ -21,7 +24,7 @@ Finish: vignette, fine film grain, deep blacks and luminous whites.
 
 ## Sound
 - `score-ambient-piano.mp3`: ElevenLabs Music, 16s of sparse felt piano over a low pad. No vocals (checked by transcription).
-- `sfx-match-strike.mp3`: ElevenLabs SFX, about 1s match strike, placed at 0.45s.
+- `sfx-match-strike-v2.mp3`: ElevenLabs SFX, scratch, flare and crackling embers, at 0.45s; `sfx-match-strike.mp3` (the original strike) sits under it at 0.5s, quieter, for body.
 
 ## Export
 - **9:16, 1080×1920:** use the editor's free in-browser export.
