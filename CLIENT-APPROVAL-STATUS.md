@@ -44,6 +44,9 @@ A living record of what's done and **everything waiting on the client** before l
 - [ ] Approve the voice (ElevenLabs "Sara – Smooth Ads") and the script, or request another voice
 - [ ] FYI: the Inferno Dreams label reads **"SCENTED SOX CANDLE"** (likely meant "SOY"). Exotic Peach reads "SOY". Flag this for the next label print run
 
+- [ ] **Approve the 15s monochrome product film** (match strike, then Exotic Peach, Brewed Elixir, Inferno Dreams, then the wordmark). Preview: https://www.clipkit.dev/public-editor?id=8ddbc285-b4cf-42a1-93ee-eb372fe2ec5d (see `marketing/film/README.md`)
+- [ ] Confirm the three featured scents and the tagline ("A new life candle experience") for the film
+
 ### Photos still needed (real product shots)
 - [ ] **For Him** (candle) — on placeholder
 - [ ] **Vintage Bloom** (candle) — on placeholder
