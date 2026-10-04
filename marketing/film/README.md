@@ -2,7 +2,8 @@
 
 - **Watch, edit and export (free, in the browser):** https://www.clipkit.dev/public-editor?id=8ddbc285-b4cf-42a1-93ee-eb372fe2ec5d
 - **Built from the client's real products.** The candles were cut out of the real photos (`cutouts/`, background removal with rembg) and converted to true grayscale at the source, so no color can slip into any frame.
-- **All lettering is typeset in the editor** (Cormorant Garamond Light and Jost Light), never drawn by AI. It stays crisp and is easy to change.
+- **All lettering is typeset in the editor** (Cormorant Garamond Light and Jost Light), never drawn by AI. The end card uses the brand logo itself: `cutouts/logo-on-black.png`, made from the 480px `assets/images/logo.jpg`. A vector logo from the client would make it sharper; see `ai-video-prompts.md` for the logo rules.
+- Note: the Clipkit runtime draws a white-on-transparent RGBA logo as a solid white box, so the logo is a white-on-black RGB plate with `blend_mode: screen` instead.
 
 ## Shot list
 | Time | Beat |
@@ -13,7 +14,7 @@
 | 6.6–9.7 | **BREWED ELIXIR**, with the same treatment and a slow pull-back |
 | 8.9–12.0 | **INFERNO DREAMS**, lit, with a flickering glow and rising smoke |
 | 10.9–13.6 | All three together in soft, low-key light; the flame glows |
-| 12.8–15.0 | Fade to black. The **Secrets of Cint** wordmark appears in thin white type, then a fine rule and **A NEW LIFE CANDLE EXPERIENCE** |
+| 12.8–15.0 | Fade to black. The **Secrets of Cint** logo (the script mark, as a white plate on black, screen-blended) fades in with a soft blur-in, then a fine rule and **A NEW LIFE CANDLE EXPERIENCE** |
 
 All transitions are long dissolves with gentle ease-in-out. There are no fast cuts.
 Finish: vignette, fine film grain, deep blacks and luminous whites.

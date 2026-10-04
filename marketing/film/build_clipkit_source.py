@@ -1,6 +1,7 @@
 import json
 A="https://api.clipkit.dev/storage/v1/object/public/assets/anon/"
 INF=A+"fb509d80-5576-41d2-8c1a-498213584c52.png"; PEACH=A+"79e7b0f9-65c5-45f5-ac40-98f69a7ff64e.png"; ELX=A+"0569e71d-1459-4769-a60c-6e469418955c.png"
+LOGO=A+"bba26203-74f6-46b8-8b9f-909dafb21d2a.png"   # white logo on black, screen-blended (RGBA cutouts render as a white box in the Clipkit runtime)
 SCORE=A+"93b20ae6-0705-456b-8497-51d200fed8c6.mp3"; MATCH=A+"35c75ea3-1677-42b3-a09d-a898e0ee1c74.mp3"
 FS="https://cdn.jsdelivr.net/npm/@fontsource/"
 SERIF="Cormorant Garamond"; SANS="Jost"; W="#ffffff"; E="ease-in-out-sine"
@@ -119,14 +120,15 @@ els.append({"type":"shape","id":"vignette","layer":ly(),"time":0,"duration":"end
 els.append({"type":"shape","id":"grain","layer":ly(),"time":0,"duration":"end","width":"100%","height":"100%","fill_color":"#808080",
   "blend_mode":"overlay","opacity":0.2,
   "effects":[{"type":"fractal_noise","scale":1.6,"octaves":1,"evolution":{"expr":"floor(t*24.0)*3.7"},"seed":7}]})
-# ---------- wordmark (typeset in the editor, never AI-drawn) ----------
-els.append({"type":"text","id":"wordmark","layer":ly(),"time":12.8,"duration":2.2,"x":0,"y":860,"width":1080,"text_align":"center",
-  "text":"Secrets of Cint","font_family":SERIF,"font_weight":300,"font_size":122,"letter_spacing":2,"fill_color":W,"line_height":1.0,
+# ---------- end card: the Secrets of Cint logo (white cutout of the brand mark), rule, tagline ----------
+els.append({"type":"image","id":"logo","layer":ly(),"time":12.8,"duration":2.2,"source":LOGO,"x":540,"x_anchor":"50%","y":700,
+  "width":620,"height":415,"fit":"contain","blend_mode":"screen",
   "opacity":k((0,0),(1.3,1,E),(1.75,1),(2.2,0.0,E)),
-  "keyframe_animations":[{"property":"blur_radius","keyframes":k((0,10),(1.3,0,E))},{"property":"letter_spacing","keyframes":k((0,10),(2.2,2,E))}]})
-els.append({"type":"shape","id":"wm_rule","layer":ly(),"time":13.3,"duration":1.7,"x":540,"x_anchor":"50%","y":1010,"height":1,
+  "keyframe_animations":[{"property":"blur_radius","keyframes":k((0,8),(1.3,0,E))},
+                         {"property":"scale","keyframes":k((0,1.05),(2.2,1.0,E))}]})
+els.append({"type":"shape","id":"wm_rule","layer":ly(),"time":13.3,"duration":1.7,"x":540,"x_anchor":"50%","y":1160,"height":1,
   "fill_color":W,"width":k((0,0),(0.9,90,E)),"opacity":k((0,0.6),(1.25,0.6),(1.7,0,E))})
-els.append({"type":"text","id":"tagline","layer":ly(),"time":13.4,"duration":1.6,"x":0,"y":1046,"width":1080,"text_align":"center",
+els.append({"type":"text","id":"tagline","layer":ly(),"time":13.4,"duration":1.6,"x":0,"y":1196,"width":1080,"text_align":"center",
   "text":"A NEW LIFE CANDLE EXPERIENCE","font_family":SANS,"font_weight":300,"font_size":24,"letter_spacing":10,"fill_color":W,
   "opacity":k((0,0),(0.8,0.8,E),(1.15,0.8),(1.6,0,E))})
 # ---------- sound ----------
