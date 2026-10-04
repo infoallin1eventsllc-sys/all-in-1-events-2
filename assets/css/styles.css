@@ -233,7 +233,7 @@ b, strong { font-weight: 500; }
 .hero.night {
   position: relative; isolation: isolate; overflow: hidden;
   padding-block: clamp(48px, 7vh, 96px);
-  background: radial-gradient(90% 80% at 72% 55%, #161616 0%, #050505 62%);
+  background: #000;   /* the film's own black, so the backdrop and the film read as one */
   color: #f7f4ef;
 }
 .hero.night::before { display: none; }

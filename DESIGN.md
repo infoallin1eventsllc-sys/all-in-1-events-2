@@ -42,6 +42,7 @@
 1.4s reveal fades (18px rise), a 70s ribbon marquee, and 1.6–2.4s image zooms (≤4.5%). All of it respects `prefers-reduced-motion`.
 
 ## Hero: "A new life candle experience" film
+- The hero background is flat #000, the same black as the film, so the two read as one surface.
 - The hero plays the 15-second black-and-white Clipkit film (match strike → Exotic Peach → Brewed Elixir → Inferno Dreams → wordmark and tagline) with its piano score. Source project: `marketing/film/`.
 - Files: `assets/video/hero-film.mp4` (H.264/AAC, 720×1280, for Safari and everything else), `assets/video/hero-film.webm` (VP9/Opus, smaller) and `assets/video/hero-film-poster.jpg` (shown while loading and for reduced motion).
 - Layout: copy on the left in ivory; the film on the right, flat and unframed (no arch, no hairline) so the full frame of the film shows. On tablets and phones the film drops below the buttons.
