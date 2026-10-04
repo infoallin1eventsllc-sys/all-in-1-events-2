@@ -16,6 +16,7 @@ A living record of what's done and **everything waiting on the client** before l
 
 ## ✅ Done
 - White **& black minimalist** theme (per client), elegant serif (Cormorant + Jost), fully responsive
+- **Elegance upgrade ("Maison" edition)** — softer black & white: warm ivory page, soft charcoal instead of pure black, light airy header, hairlines instead of boxes and shadows, lighter serif headlines, slower and gentler motion. Real photos are unchanged. System documented in `DESIGN.md`
 - **Full San Francisco rebrand** (Harlem framing removed; product names kept)
 - Catalog matched to the **real store** (shop.app / secretsofcint.com): names, prices, scent notes
 - **Real product photography** wired in for: Hero (Inferno Dreams), Signature spotlight (Moon Flower),
@@ -34,7 +35,7 @@ A living record of what's done and **everything waiting on the client** before l
 ## ⏳ Waiting on CLIENT (approval / decisions / assets)
 
 ### Approvals
-- [ ] **Approve the overall design** (white/black, SF rebrand) via the preview link — greenlight to proceed
+- [ ] **Approve the overall design** (soft ivory & charcoal "Maison" edition, SF rebrand) via the preview link — greenlight to proceed
 - [ ] Approve the **Inferno Dreams hero** image, or pick a different hero photo
 - [ ] Approve **Figma** design and **Canva** flyer, or request changes
 
