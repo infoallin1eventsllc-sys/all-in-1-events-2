@@ -3,6 +3,7 @@ A="https://api.clipkit.dev/storage/v1/object/public/assets/anon/"
 INF=A+"fb509d80-5576-41d2-8c1a-498213584c52.png"; PEACH=A+"79e7b0f9-65c5-45f5-ac40-98f69a7ff64e.png"; ELX=A+"0569e71d-1459-4769-a60c-6e469418955c.png"
 LOGO=A+"bba26203-74f6-46b8-8b9f-909dafb21d2a.png"   # white logo on black, screen-blended (RGBA cutouts render as a white box in the Clipkit runtime)
 MATCH2=A+"f3d0a039-09d0-495f-9863-c1c0862d05f2.mp3"   # ElevenLabs SFX: scratch, flare, crackling embers
+SHIMMER=A+"bd9ff14b-ef89-4a24-b3a9-9426fc05f32e.mp3"  # ElevenLabs SFX: twinkling glitter shimmer
 SCORE=A+"93b20ae6-0705-456b-8497-51d200fed8c6.mp3"; MATCH=A+"35c75ea3-1677-42b3-a09d-a898e0ee1c74.mp3"
 FS="https://cdn.jsdelivr.net/npm/@fontsource/"
 SERIF="Cormorant Garamond"; SANS="Jost"; W="#ffffff"; E="ease-in-out-sine"
@@ -109,11 +110,15 @@ els.append(seq("core",0.6,0.55,type="shape",shape="ellipse",x=SX,y=SY,x_anchor="
 els.append(seq("exposure",0.6,0.5,type="shape",width="100%",height="100%",fill_color=W,blend_mode="screen",
   opacity=k((0,0),(0.05,0.22,"ease-out-expo"),(0.42,0,"ease-out-quad"))))
 els.append(glow("strike_flash",0.6,1.4,SX,SY,900,opac=k((0,0),(0.07,1.0),(0.45,0.5,E),(1.4,0,E))))
-# the shockwave: a thin ring racing outward and thinning to nothing
-els.append(seq("ring",0.62,0.7,type="shape",shape="ellipse",x=SX,y=SY,x_anchor="50%",y_anchor="50%",blend_mode="screen",blur_radius=1.5,
-  gradient=rad([{"offset":0,"color":"rgba(255,255,255,0)"},{"offset":0.86,"color":"rgba(255,255,255,0)"},{"offset":0.93,"color":"rgba(255,255,255,0.9)"},{"offset":1,"color":"rgba(255,255,255,0)"}]),
-  width=k((0,24),(0.7,1150,"ease-out-quart")),height=k((0,24),(0.7,1150,"ease-out-quart")),
-  opacity=k((0,0.95),(0.25,0.6),(0.7,0,"ease-out-quad"))))
+# the shockwave: three rings, each larger and slower than the last, the final one dying at 2.85s as the music enters
+def ring(id,t0,dur,size,band,peak):
+    return seq(id,t0,dur,type="shape",shape="ellipse",x=SX,y=SY,x_anchor="50%",y_anchor="50%",blend_mode="screen",blur_radius=2,
+      gradient=rad([{"offset":0,"color":"rgba(255,255,255,0)"},{"offset":1-band*2.2,"color":"rgba(255,255,255,0)"},{"offset":1-band,"color":"rgba(255,255,255,%s)"%peak},{"offset":1,"color":"rgba(255,255,255,0)"}]),
+      width=k((0,24),(dur,size,"ease-out-quart")),height=k((0,24),(dur,size,"ease-out-quart")),
+      opacity=k((0,1),(dur*0.35,0.75),(dur,0,"ease-out-quad")))
+els.append(ring("ring",0.62,1.1,1700,0.06,0.95))
+els.append(ring("ring2",0.74,1.6,2200,0.08,0.7))
+els.append(ring("ring3",0.9,1.95,2800,0.11,0.5))
 # the light spreading across the frame: a razor anamorphic streak and a wide soft wash behind it
 els.append(seq("streak",0.6,1.3,type="shape",shape="rectangle",x=SX,y=SY,x_anchor="50%",y_anchor="50%",height=10,blend_mode="screen",blur_radius=5,border_radius=5,
   gradient={"type":"linear","angle":90,"stops":[{"offset":0,"color":"rgba(255,255,255,0)"},{"offset":0.2,"color":"rgba(255,255,255,0.35)"},{"offset":0.5,"color":"rgba(255,255,255,1)"},{"offset":0.8,"color":"rgba(255,255,255,0.35)"},{"offset":1,"color":"rgba(255,255,255,0)"}]},
@@ -128,13 +133,20 @@ els.append(seq("sparks",0.6,1.2,type="particles",x=SX,y=SY,x_anchor="50%",y_anch
 els.append(seq("sparks_big",0.6,1.3,type="particles",x=SX,y=SY,x_anchor="50%",y_anchor="50%",width=24,height=24,burst=True,burst_count=40,
   velocity=430,spread=360,direction=-90,gravity=520,lifetime=1.1,size=8,size_variation=0.5,particle_shape="circle",color=WHITES,fade_at=0.4,
   blend_mode="screen",rotation_speed=0,blur_radius=0.6,effects=[{"type":"glow","radius":12,"intensity":1.4}]))
-els.append(seq("embers",0.62,2.6,type="particles",x=SX,y=SY,x_anchor="50%",y_anchor="50%",width=30,height=30,burst=True,burst_count=70,
-  velocity=230,spread=150,direction=-90,gravity=120,lifetime=2.3,size=5,size_variation=0.7,particle_shape="circle",color=WHITES,fade_at=0.45,
+els.append(seq("embers",0.62,2.23,type="particles",x=SX,y=SY,x_anchor="50%",y_anchor="50%",width=30,height=30,burst=True,burst_count=70,
+  velocity=230,spread=150,direction=-90,gravity=120,lifetime=2.1,size=5,size_variation=0.7,particle_shape="circle",color=WHITES,fade_at=0.45,
   blend_mode="screen",rotation_speed=0,blur_radius=0.8,effects=[{"type":"glow","radius":10,"intensity":1.3}],
-  opacity=k((0,1),(1.8,1),(2.6,0,E))))
+  opacity=k((0,1),(1.6,1),(2.23,0,E))))
 els.append(seq("grit_rain",0.64,0.9,type="particles",x=SX,y=SY,x_anchor="50%",y_anchor="50%",width=40,height=40,rate=120,
   velocity=180,spread=360,direction=-90,gravity=560,lifetime=1.0,size=2.2,size_variation=0.6,particle_shape="circle",color=WHITES,fade_at=0.4,
   blend_mode="screen",rotation_speed=0,opacity=k((0,1),(0.6,1),(0.9,0,E))))
+# glitter: a burst that rises and falls, spinning to catch the light, and a slow rain across the frame; all gone by 2.85s
+els.append(seq("glitter",0.62,2.25,type="particles",x=SX,y=SY,x_anchor="50%",y_anchor="50%",width=40,height=40,burst=True,burst_count=420,
+  velocity=330,spread=360,direction=-90,gravity=150,lifetime=2.2,size=4,size_variation=0.7,particle_shape="square",color=WHITES,fade_at=0.55,
+  blend_mode="screen",rotation_speed=520,effects=[{"type":"glow","radius":5,"intensity":1.0}],opacity=k((0,1),(1.6,1),(2.25,0,E))))
+els.append(seq("glitter_rain",0.7,2.15,type="particles",x=SX,y=SY-320,x_anchor="50%",y_anchor="50%",width=1100,height=40,rate=170,
+  velocity=35,spread=40,direction=90,gravity=70,lifetime=1.8,size=3,size_variation=0.7,particle_shape="square",color=WHITES,fade_at=0.5,
+  blend_mode="screen",rotation_speed=380,effects=[{"type":"glow","radius":4,"intensity":0.9}],opacity=k((0,0),(0.3,0.9,E),(1.3,0.9),(2.15,0,E))))
 # the puff of smoke a strike leaves, then the slow curl once the flame holds
 els.append(seq("puff",0.72,1.6,type="particles",x=SX,y=SY-20,x_anchor="50%",y_anchor="50%",width=30,height=12,rate=36,
   velocity=95,spread=46,direction=-90,gravity=-40,lifetime=1.5,size=44,size_variation=0.6,particle_shape="circle",color=[W,"#e6e6e6"],fade_at=0.2,
@@ -180,9 +192,11 @@ els.append({"type":"text","id":"tagline","layer":ly(),"time":13.4,"duration":1.6
   "text":"A NEW LIFE CANDLE EXPERIENCE","font_family":SANS,"font_weight":300,"font_size":24,"letter_spacing":10,"fill_color":W,
   "opacity":k((0,0),(0.8,0.8,E),(1.15,0.8),(1.6,0,E))})
 # ---------- sound ----------
-els.append({"type":"audio","id":"score","layer":ly(),"source":SCORE,"time":0,"duration":15,"volume":100,"audio_fade_out":1.2})
+els.append({"type":"audio","id":"score","layer":ly(),"source":SCORE,"time":2.9,"duration":12.1,"volume":100,"audio_fade_in":0.9,"audio_fade_out":1.2})
 els.append({"type":"audio","id":"match","layer":ly(),"source":MATCH,"time":0.5,"duration":1.0,"volume":45})
 els.append({"type":"audio","id":"match2","layer":ly(),"source":MATCH2,"time":0.45,"duration":1.0,"volume":90})
+els.append({"type":"audio","id":"shimmer","layer":ly(),"source":SHIMMER,"time":0.8,"duration":1.05,"volume":70})
+els.append({"type":"audio","id":"shimmer2","layer":ly(),"source":SHIMMER,"time":1.75,"duration":1.05,"volume":45})
 fonts=[{"family":SERIF,"weight":300,"style":"normal","src":FS+"cormorant-garamond@5.3.0/files/cormorant-garamond-latin-300-normal.woff2"},
        {"family":SANS,"weight":300,"style":"normal","src":FS+"jost@5.3.0/files/jost-latin-300-normal.woff2"}]
 src={"clipkit_version":"1.0","width":1080,"height":1920,"duration":15,"frame_rate":24,"background_color":"#000000","fonts":fonts,"elements":els}
