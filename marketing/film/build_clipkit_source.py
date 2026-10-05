@@ -144,13 +144,18 @@ els.append(seq("grit_rain",0.64,0.9,type="particles",x=SX,y=SY,x_anchor="50%",y_
 els.append(seq("glitter",0.62,2.8,type="particles",x=SX,y=SY,x_anchor="50%",y_anchor="50%",width=40,height=40,burst=True,burst_count=700,
   velocity=360,spread=360,direction=-90,gravity=140,lifetime=2.7,size=4,size_variation=0.7,particle_shape="square",color=WHITES,fade_at=0.55,
   blend_mode="screen",rotation_speed=520,effects=[{"type":"glow","radius":5,"intensity":1.0}],opacity=k((0,1),(2.0,1),(2.8,0,E))))
-els.append(seq("glitter_rain",0.7,5.6,type="particles",x=SX,y=SY-320,x_anchor="50%",y_anchor="50%",width=1100,height=40,rate=200,
+# Continuous emitters only show their first generation (one lifetime), so long effects are chained short emitters.
+def rain(id,t0): return seq(id,t0,2.2,type="particles",x=SX,y=SY-320,x_anchor="50%",y_anchor="50%",width=1100,height=40,rate=200,
   velocity=35,spread=40,direction=90,gravity=70,lifetime=1.8,size=3,size_variation=0.7,particle_shape="square",color=WHITES,fade_at=0.5,
-  blend_mode="screen",rotation_speed=380,effects=[{"type":"glow","radius":4,"intensity":0.9}],opacity=k((0,0),(0.3,0.9,E),(2.4,0.9),(5.6,0,E))))
-# a slow twinkle of sparkles drifting across the whole film, through the logo at the end
-els.append(seq("twinkle",0.9,13.7,type="particles",x=540,y=960,x_anchor="50%",y_anchor="50%",width=1080,height=1700,rate=30,
-  velocity=14,spread=360,direction=-90,gravity=9,lifetime=2.4,size=3.2,size_variation=0.7,particle_shape="square",color=WHITES,fade_at=0.3,
-  blend_mode="screen",rotation_speed=720,effects=[{"type":"glow","radius":6,"intensity":1.1}],opacity=k((0,0),(1.0,0.85,E),(12.2,0.85),(13.7,0,E))))
+  blend_mode="screen",rotation_speed=380,effects=[{"type":"glow","radius":4,"intensity":0.9}],opacity=k((0,0),(0.3,0.9,E),(1.5,0.9),(2.2,0,E)))
+for i,t in enumerate((0.7,2.4,4.1)): els.append(rain("glitter_rain%d"%(i+1),t))
+# a slow twinkle of sparkles across the whole film, through the logo at the end: particles only spawn at a point,
+# so these use target_points + scatter_radius (born anywhere in a 950px disk, drifting toward the flame) and are chained
+def twinkle(id,t0,amount=0.85): return seq(id,t0,2.6,type="particles",x=540,y=960,x_anchor="50%",y_anchor="50%",width=40,height=40,rate=85,
+  velocity=0,spread=360,direction=-90,gravity=0,lifetime=2.4,size=4.5,size_variation=0.7,particle_shape="square",color=WHITES,fade_at=0.3,
+  target_points=[[540,760]],scatter_radius=950,convergence_easing="ease-in-out-sine",
+  blend_mode="screen",rotation_speed=720,effects=[{"type":"glow","radius":6,"intensity":1.1}],opacity=k((0,0),(0.5,amount,E),(2.0,amount),(2.6,0,E)))
+for i,t in enumerate((0.9,2.9,4.9,6.9,8.9,10.9,12.4)): els.append(twinkle("twinkle%d"%(i+1),t,0.85 if t<12 else 0.7))
 # the puff of smoke a strike leaves, then the slow curl once the flame holds
 els.append(seq("puff",0.72,1.6,type="particles",x=SX,y=SY-20,x_anchor="50%",y_anchor="50%",width=30,height=12,rate=36,
   velocity=95,spread=46,direction=-90,gravity=-40,lifetime=1.5,size=44,size_variation=0.6,particle_shape="circle",color=[W,"#e6e6e6"],fade_at=0.2,
