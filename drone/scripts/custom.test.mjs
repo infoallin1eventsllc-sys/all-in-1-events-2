@@ -155,9 +155,41 @@ const hbPayload = (custom, type, autopilot, base) => { const p = new Uint8Array(
   // A 360° lidar: 72 sectors of 5°, offset 0; one return at sector 54 (270°, left) at 2.5 m.
   const od = new Uint8Array(167); const dv = new DataView(od.buffer);
   for (let i = 0; i < 72; i++) dv.setUint16(8 + i * 2, 1301, true);          // max + 1: nothing there
-  dv.setUint16(8 + 54 * 2, 250, true); dv.setUint16(152, 1300, true); dv.setUint16(154, 20, true); od[157] = 5;
+  dv.setUint16(8 + 54 * 2, 250, true); dv.setUint16(152, 20, true); dv.setUint16(154, 1300, true); od[157] = 5;
   m.decodeInto(t, frame(330, od));
   o = m.nearestObstacle(t); assert.equal(o.m, 2.5); assert.equal(o.bearingDeg, 270); assert.equal(m.obstacleText(o), '2.5 m left');
+  // The same messages as pymavlink packs them (the reference implementation), so field offsets are checked
+  // against MAVLink itself, not against this test's own idea of the layout.
+  const hex = h => Uint8Array.from(h.match(/../g).map(b => parseInt(b, 16)));
+  const ref = h => { const f = new m.MavParser().push(hex(h)); assert.equal(f.length, 1); assert.equal(f[0].checked, true, 'CRC-checked'); return f[0]; };
+  const REF = {   // pymavlink 2.4: OBSTACLE_DISTANCE (min 20, max 1300, 5° sectors) and DISTANCE_SENSOR (min 20, max 1200)
+    od12: 'fda700000001014a01000000000000000000150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505fa00150515051505150515051505150515051505150515051505150515051505150515051400140500050000a040000000000c3ab9',
+    od0: 'fda200000001014a010000000000000000002c01150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051505150515051400140500050000a040e72a',
+    dsA: 'fd0c0000000101840000000000001400b004a40100019859',       // id 1, forward, 4.2 m
+    dsB: 'fd0c0000000101840000000000001400b00420030002c3ed',       // id 2, forward, 8 m
+    dsBmax: 'fd0c0000000101840000000000001400b004b0040002f784',    // id 2, forward, at max range: nothing seen
+  };
+  {
+    const r = { ...m.EMPTY_TELEMETRY, yawDeg: 90 };
+    m.decodeInto(r, ref(REF.od12));                      // body frame (FRD): sector 54 is 270° whatever the heading
+    assert.deepEqual(m.nearestObstacle(r), { m: 2.5, bearingDeg: 270 });
+  }
+  {
+    const r = { ...m.EMPTY_TELEMETRY, yawDeg: 90 };      // heading east
+    m.decodeInto(r, ref(REF.od0));                       // earth frame: 3 m due north is on the left
+    assert.deepEqual(m.nearestObstacle(r), { m: 3, bearingDeg: 270 });
+  }
+  {
+    const r = { ...m.EMPTY_TELEMETRY };
+    m.decodeInto(r, ref(REF.dsA)); m.decodeInto(r, ref(REF.dsB));
+    assert.deepEqual(m.nearestObstacle(r), { m: 4.2, bearingDeg: 0 }, 'two forward sensors keep their own readings');
+    m.decodeInto(r, ref(REF.dsBmax));
+    assert.deepEqual(m.nearestObstacle(r), { m: 4.2, bearingDeg: 0 }, 'a reading at max range clears only its own sensor');
+    assert.equal(Object.keys(r.proximity).length, 1);
+  }
+  // Betaflight 4.5 sends its heartbeat from component 200 as GENERIC; it still counts as the vehicle.
+  assert.equal(m.isVehicleHeartbeat({ msgId: 0, sysId: 0, compId: 200, payload: new DataView(hbPayload(0, 2, 0, 0).buffer) }), true);
+  assert.equal(m.isVehicleHeartbeat({ msgId: 0, sysId: 1, compId: 200, payload: new DataView(hbPayload(0, 6, 8, 0).buffer) }), false, 'a GCS on comp 200 is not the vehicle');
   // Pre-flight: says plainly when the drone won't stop for obstacles; amber, never holds the gate.
   const P = o2 => Object.fromEntries(Object.entries(o2).map(([k, x]) => [k, x === null ? null : { name: k, value: x, type: 9, count: 0, index: 0 }]));
   const none = pc.avoidCheck('ARDUPILOT', P({ PRX1_TYPE: 0, AVOID_ENABLE: 3 }), false);

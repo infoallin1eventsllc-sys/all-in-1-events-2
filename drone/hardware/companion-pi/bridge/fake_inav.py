@@ -7,7 +7,7 @@ MAVLink 1 by default (INAV's `mavlink_version = 1`) or 2 with --v2:
   sends     HEARTBEAT as MAV_AUTOPILOT_GENERIC, its modes in ArduCopter's numbers with the
             custom-mode flag; GPS_RAW_INT, GLOBAL_POSITION_INT, ATTITUDE, SYS_STATUS, VFR_HUD
   takes     the mission upload as MISSION_COUNT -> MISSION_REQUEST -> MISSION_ITEM (not _INT),
-            waypoints and RTL in GLOBAL_RELATIVE_ALT only; COMMAND_INT DO_REPOSITION in
+            waypoints and RTL in GLOBAL_RELATIVE_ALT only, on the ground only (armed: MAV_MISSION_ERROR); COMMAND_INT DO_REPOSITION in
             MAV_FRAME_GLOBAL, accepted only with GCS NAV mode on (--gcs-nav), DENIED otherwise
   ignores   COMMAND_LONG (INAV has no handler: arming and modes are the pilot's radio),
             MISSION_ITEM_INT, PARAM_* beyond nothing
@@ -78,6 +78,11 @@ def main() -> None:
             say(f"MIS count {expect}")
             mav.mission_request_send(255, 190, 0)
         elif t == "MISSION_ITEM":
+            if args.flying and msg.current != 2:
+                # INAV refuses a route upload while armed (MAV_MISSION_ERROR), unless it is a guided waypoint.
+                say(f"MIS item {msg.seq} refused: armed")
+                mav.mission_ack_send(255, 190, mavutil.mavlink.MAV_MISSION_ERROR)
+                continue
             frame_ok = msg.frame == mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT or (msg.frame == mavutil.mavlink.MAV_FRAME_MISSION and msg.command == 20)
             if not frame_ok:
                 say(f"MIS item {msg.seq} refused frame {msg.frame}")

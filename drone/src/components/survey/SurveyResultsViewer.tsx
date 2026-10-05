@@ -53,6 +53,7 @@ interface Props {
 const ELEV_RAMP = ['#104281', '#1c5cab', '#2a78d6', '#5598e7', '#9ec5f4', '#cde2fb'];
 const CUT = ['#b3342b', '#e0604f', '#f0a79a'], FILL = ['#1c5cab', '#3987e5', '#86b6ef'], MID = '#383835';
 const ACCENT = '#4aa8ff';   // holographic blue, as on the survey stage
+const CASING = '#0b1424';   // under the accent, so it reads on the blue elevation and fill colours
 const CELL = 1.5;
 
 const hex = (h: string) => new THREE.Color(h);
@@ -202,6 +203,7 @@ export const SurveyResultsViewer: React.FC<Props> = (props) => {
       m.resolution.set(el.clientWidth || 1, el.clientHeight || 1); fatMats.push(m);
       const l = new Line2(g, m); if (dashed) l.computeLineDistances(); return l;
     };
+    const over = (l: Line2) => { l.renderOrder = 1; return l; };   // drawn after its casing at the same depth
     const ground = (x: number, y: number, lift = 0.25) => new THREE.Vector3(x, surf(x, y) + lift, y);
     const along = (a: Pt, b: Pt, step: number, lift = 0.25) => { const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / step)); return Array.from({ length: n + 1 }, (_, k) => ground(a.x + (b.x - a.x) * k / n, a.y + (b.y - a.y) * k / n, lift)); };
     /** `pri`: when labels collide on screen the higher one stays (names, then over-limit grades, then grades). */
@@ -260,7 +262,7 @@ export const SurveyResultsViewer: React.FC<Props> = (props) => {
           const L = it.line, lift = 9;
           const path: THREE.Vector3[] = [];
           for (let i = 0; i + 1 < a.pts.length; i++) path.push(...along(a.pts[i], a.pts[i + 1], 1, 0.3).slice(i ? 1 : 0));
-          annot.add(fat(path, ACCENT, sel ? 3.5 : 2.5));
+          annot.add(fat(path, CASING, sel ? 6.5 : 5), over(fat(path, ACCENT, sel ? 3.5 : 2.5)));   // a dark casing keeps the blue trace off the blue ramps
           const raised = a.pts.map(p => ground(p.x, p.y, lift));
           annot.add(fat(raised, '#ffffff', sel ? 2 : 1.4, 0.95));
           a.pts.forEach(p => annot.add(fat([ground(p.x, p.y, 0.3), ground(p.x, p.y, lift)], '#ffffff', 1.2, 0.85)));
@@ -272,7 +274,8 @@ export const SurveyResultsViewer: React.FC<Props> = (props) => {
           addLabel(ground(a.pts[0].x, a.pts[0].y, lift + 4), a.name, `rv-label${sel ? ' rv-sel' : ''}`, 3);
         } else if (a.kind === 'POINT' && a.pts[0]) {
           const p = a.pts[0], z = surf(p.x, p.y);
-          annot.add(fat([new THREE.Vector3(p.x, z, p.y), new THREE.Vector3(p.x, z + 8, p.y)], ACCENT, 2.5));
+          const pin = [new THREE.Vector3(p.x, z, p.y), new THREE.Vector3(p.x, z + 8, p.y)];
+          annot.add(fat(pin, CASING, 5), over(fat(pin, ACCENT, 2.5)));
           const dot = new THREE.Mesh(new THREE.SphereGeometry(0.9, 16, 12), new THREE.MeshBasicMaterial({ color: ACCENT, toneMapped: false })); dot.position.set(p.x, z + 0.4, p.y); annot.add(dot);
           addLabel(new THREE.Vector3(p.x, z + 10, p.y), `${a.name}<br><b>${(z + M.zOffset).toFixed(2)} m</b>`, `rv-label${sel ? ' rv-sel' : ''}`);
         }

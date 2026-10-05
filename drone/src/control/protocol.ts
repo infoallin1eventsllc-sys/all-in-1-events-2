@@ -78,7 +78,8 @@ export function stepsFor(c: Cmd, ap: Autopilot, kind: VehicleKind = 'COPTER'): S
     case 'RTL': return [{ cmd: MAV_CMD.RETURN_TO_LAUNCH, params: [] }];
     case 'LAND':
       if (ardu && kind === 'VTOL') return [{ cmd: MAV_CMD.DO_SET_MODE, params: [], mode: 'LAND' }];
-      if (ardu && kind === 'ROVER') return [{ cmd: MAV_CMD.DO_SET_MODE, params: [], mode: 'HOLD' }];
+      // A rover does not land: it stops. ArduRover's Hold mode; PX4's rover holds in its loiter (Hold) mode.
+      if (kind === 'ROVER') return [{ cmd: MAV_CMD.DO_SET_MODE, params: [], mode: ardu ? 'HOLD' : 'LOITER' }];
       if (ardu && kind === 'PLANE') return [{ cmd: MAV_CMD.DO_LAND_START, params: [] }];
       return [{ cmd: MAV_CMD.LAND, params: [] }];
     case 'MODE': return [{ cmd: MAV_CMD.DO_SET_MODE, params: [], mode: c.mode }];

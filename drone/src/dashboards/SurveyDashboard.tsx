@@ -179,13 +179,13 @@ export const SurveyDashboard: React.FC = () => {
 
   const setPattern = (p: Pattern) => sim.setParams({ pattern: p, altitudeM: PATTERNS[p].altitude });
   const stage = (
-    <SurveyHoloStage plan={plan} legs={sim.legs} legIndex={sim.legIndex} legProgressM={sim.legProgressM} aircraft={ac}
-      photosRef={sim.photosRef} photoCount={sim.photoCount} grid={sim.grid} gridVersion={sim.gridVersion} phase={phase}
+    <SurveyHoloStage plan={plan} legs={sim.legs} legIndex={sim.legIndex} aircraft={ac}
+      photosRef={sim.photosRef} photoCount={sim.photoCount} grid={sim.grid} phase={phase}
       layer={layer} onLayerChange={setLayer} coveredPct={stats.coveredPct} progressLabel={progressLabel} compact={hero !== '3D'} boundary={sim.site.boundary}
       lines={orbit ? { done: angles, total: ORBIT_PHOTOS, current: null, angles } : { done: sim.linesDone, total: plan.lines.length, current: phase === 'CAPTURING' || phase === 'TRANSIT' ? sim.currentLine : null }} />
   );
   const map = (
-    <SurveyMapCanvas key={siteKey} site={sim.site} fence={flight.fence} draft={draft} plan={plan} legs={sim.legs} legIndex={sim.legIndex} aircraft={ac} photosRef={sim.photosRef} grid={sim.grid} gridVersion={sim.gridVersion} layer={layer} compact={hero !== 'MAP'}
+    <SurveyMapCanvas key={siteKey} site={sim.site} fence={flight.fence} draft={draft} plan={plan} legs={sim.legs} legIndex={sim.legIndex} aircraft={ac} photosRef={sim.photosRef} grid={sim.grid} layer={layer} compact={hero !== 'MAP'}
       edit={sim.boundaryEdit} terrain={sim.terrain} clearance={flight.clearance} />
   );
   const HERO = 'absolute inset-0';
@@ -292,8 +292,9 @@ export const SurveyDashboard: React.FC = () => {
               <span className="ml-auto flex items-center gap-2">
                 {connected && !sim.live && <span className="text-[11px] text-ink-3">Waiting for the autopilot's heartbeat…</span>}
                 <ToolButton icon={<Download />} label="Export package" onClick={exportPackage} title="Mission plan with geofence, site KML, photo geotags and coverage, for QGroundControl, Google Earth / DJI Pilot 2 and WebODM / Pix4D / DroneDeploy" />
-                <ToolButton command="abort" icon={<Home />} label="Return home" danger disabled={sim.live ? false : !flying || phase === 'RETURNING' || phase === 'LANDING'}
-                  onClick={() => (sim.live ? link.returnToLaunch() : sim.returnHome())} />
+                <ToolButton command="abort" icon={<Home />} label="Return home" danger disabled={sim.live ? link.capabilities.RTL.level === 'no' : !flying || phase === 'RETURNING' || phase === 'LANDING'}
+                  title={sim.live && link.capabilities.RTL.level === 'no' ? link.capabilities.RTL.note : undefined}
+                  onClick={() => (sim.live ? link.returnToLaunch().catch(() => undefined) : sim.returnHome())} />
               </span>
             </div>
           </Card>

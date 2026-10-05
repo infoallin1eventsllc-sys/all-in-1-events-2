@@ -29,7 +29,8 @@ export const SurveySitePanel: React.FC<{ sim: ReturnType<typeof useSurveyMission
   const t = link.telemetry;
   const ed = sim.boundaryEdit, tr = sim.terrain, real = !usesDemoGeometry(site);
   const bm = useSyncExternalStore(subscribeBasemap, basemapSettings), act = activeBasemap(bm);
-  const agl = sim.params.altitudeM, px4 = link.autopilot === 'PX4';
+  // Only ArduPilot follows terrain itself (MAV_FRAME_GLOBAL_TERRAIN_ALT); PX4 and the rest fly planned heights.
+  const agl = sim.params.altitudeM, px4 = link.autopilot === 'PX4' || link.autopilot === 'GENERIC';
 
   const adopt = (name: string, ring: LatLon[], kind: 'IMPORTED' | 'WALKED') => {
     const c = checkBoundary(ring);
@@ -150,7 +151,7 @@ export const SurveySitePanel: React.FC<{ sim: ReturnType<typeof useSurveyMission
               ...(px4 ? [] : [{ id: 'AUTOPILOT' as const, label: 'Autopilot terrain', title: 'MAV_FRAME_GLOBAL_TERRAIN_ALT: ArduPilot follows its own terrain data' }]),
             ]} />
             <p className="text-[11px] leading-relaxed text-ink-3">
-              {px4 ? 'PX4 missions have no terrain frame: the heights are planned here, with extra waypoints where the ground bends.'
+              {px4 ? `${link.autopilot === 'PX4' ? 'PX4' : 'This flight controller\'s'} missions have no terrain frame: the heights are planned here, with extra waypoints where the ground bends.`
                 : tr.method === 'AUTOPILOT' ? 'Autopilot terrain (MAV_FRAME_GLOBAL_TERRAIN_ALT; needs TERRAIN_ENABLE and terrain data on the SD card). ArduPilot only.'
                 : 'Each waypoint gets its height above home for the ground below it; lines are split where the ground bends by more than the tolerance.'}
             </p>

@@ -29,7 +29,6 @@ interface Props {
   aircraft: SurveyAircraft;
   photosRef: React.RefObject<Photo[]>;
   grid: CoverageGrid;
-  gridVersion: number;
   layer: SurveyLayer;
   site: SurveySite;
   /** Inclusion geofence to draw, local metres. */

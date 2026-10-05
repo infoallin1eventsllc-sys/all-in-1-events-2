@@ -12,8 +12,8 @@ how much you can do from the screen. Drone Command detects it automatically and 
 commands your drone can take.
 
 - **Full control:** ArduPilot or PX4 on any frame: multirotor, helicopter, fixed wing, VTOL, rover or boat.
-- **Watch and send routes:** INAV. You see the drone live, send it a route and fly it to a point.
-  Arming, takeoff and starting the route stay on your radio.
+- **Watch and send routes:** INAV. You see the drone live, send it a route (on the ground: INAV
+  refuses a new route once armed) and fly it to a point. Arming, takeoff and starting the route stay on your radio.
 - **Watch only:** Betaflight (FPV racing firmware). Re-flash the board with ArduPilot or INAV to fly routes.
 - **Cannot connect:** DJI, Autel, Skydio and toy drones. They are closed systems.
 
@@ -123,7 +123,7 @@ the pre-flight says, in amber, that the drone will not stop for obstacles.
 | Land | Yes | Via mission landing | Yes, vertical | Stops (Hold) | Yes | From radio | From radio |
 | Return home, hold position | Yes | Yes, circles | Yes | Yes | Yes | From radio | From radio |
 | Fly to a point | Yes | Yes | Yes | Yes | Yes | With GCS NAV mode | No |
-| Upload a route | Yes | Yes | Yes | Yes | Yes | Waypoints only | No |
+| Upload a route | Yes | Yes | Yes | Yes | Yes | Waypoints only, on the ground | No |
 | Start the route from the screen | Yes | Yes | Yes | Yes | Yes | From radio | No |
 | Site survey missions | Yes | Yes | Yes | No | Yes | No | No |
 | Geofence, safety settings check | Yes | Yes | Yes | Yes | Yes | No | No |
@@ -144,7 +144,7 @@ the pre-flight says, in amber, that the drone will not stop for obstacles.
 2. Props off. Check the pre-flight list turns to Go.
 3. Props off. Open "What this aircraft can do from here" and confirm it matches the table above.
 4. Props on, open field. Take off by hand, switch to a GPS hold mode, then send one short go-to.
-5. Upload a two-waypoint route and fly it while the pilot watches, ready to take over.
+5. Upload a two-waypoint route (INAV: before arming) and fly it while the pilot watches, ready to take over.
 6. Test Return home from the screen, then from the radio.
 7. With an obstacle sensor: in Loiter (ArduPilot) or Position mode (PX4), fly slowly toward a large
    soft target (a foam board on a stand) and confirm the drone stops short of it and the screen warns.

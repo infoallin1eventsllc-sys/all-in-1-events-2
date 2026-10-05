@@ -38,12 +38,10 @@ interface Props {
   plan: SurveyPlan;
   legs: Leg[];
   legIndex: number;
-  legProgressM: number;
   aircraft: SurveyAircraft;
   photosRef: React.RefObject<Photo[]>;
   photoCount: number;
   grid: CoverageGrid;
-  gridVersion: number;
   phase: Phase;
   layer: SurveyLayer;
   onLayerChange: (l: SurveyLayer) => void;
@@ -75,6 +73,15 @@ function skyTexture(): THREE.CanvasTexture {
   const gr = g.createLinearGradient(0, 0, 0, 256);
   gr.addColorStop(0, '#8fb3d6'); gr.addColorStop(0.55, '#d9dfe2'); gr.addColorStop(0.8, '#efdcc4'); gr.addColorStop(1, '#f3d9b8');
   g.fillStyle = gr; g.fillRect(0, 0, 4, 256);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+
+/** Sky above, warm horizon, ground below: wrapped round a sphere for the reflections on cars and the aircraft. */
+function envTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas'); c.width = 4; c.height = 128; const g = c.getContext('2d')!;
+  const gr = g.createLinearGradient(0, 0, 0, 128);
+  gr.addColorStop(0, '#8fb3d6'); gr.addColorStop(0.42, '#dfe4e6'); gr.addColorStop(0.5, '#efdcc4'); gr.addColorStop(0.56, '#9a8a70'); gr.addColorStop(1, '#5f5546');
+  g.fillStyle = gr; g.fillRect(0, 0, 4, 128);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 
@@ -123,7 +130,7 @@ export const SurveyHoloStage: React.FC<Props> = (props) => {
   const viewRef = useRef<View>(view); viewRef.current = view;
   const goal = useRef({ ...SITE_VIEW, target: new THREE.Vector3() });
   const now = useRef({ ...SITE_VIEW, target: new THREE.Vector3() });
-  const drag = useRef<{ x: number; y: number } | null>(null);
+  const drag = useRef<{ x: number; y: number; moved: number } | null>(null);
   const lastInput = useRef(performance.now());
 
   useEffect(() => {
@@ -143,14 +150,20 @@ export const SurveyHoloStage: React.FC<Props> = (props) => {
     const camera = new THREE.PerspectiveCamera(46, w / h, 1, 4000);
     scene.add(new THREE.HemisphereLight(0xcfe0f2, 0x8a7a60, 0.9));
     const sun = new THREE.DirectionalLight(0xffe2bc, 2.6); sun.position.set(-260, 220, -140); sun.castShadow = true;
-    sun.shadow.mapSize.set(compact ? 1024 : 4096, compact ? 1024 : 4096); sun.shadow.bias = -0.0005;
+    // Shadow detail by screen: 4096 only on a large stage on a capable machine; the governor lowers it under load.
+    const small = compact || w < 700, dpr = window.devicePixelRatio || 1;
+    const shadowSize = small ? 1024 : dpr <= 1 ? 2048 : 4096;
+    sun.shadow.mapSize.set(shadowSize, shadowSize); sun.shadow.bias = -0.0005;
     Object.assign(sun.shadow.camera, { left: -320, right: 320, top: 320, bottom: -320, near: 10, far: 900 }); scene.add(sun);
     const pmrem = new THREE.PMREMGenerator(renderer);
-    const envScene = new THREE.Scene(); envScene.add(new THREE.HemisphereLight(0xdde8f4, 0x8a7a60, 3));
+    // A light alone renders nothing into an environment map: give PMREM a sky to see.
+    const envSky = envTexture(), envScene = new THREE.Scene(), envBall = new THREE.Mesh(new THREE.SphereGeometry(10, 32, 16), new THREE.MeshBasicMaterial({ map: envSky, side: THREE.BackSide }));
+    envScene.add(envBall);
     const envTex = pmrem.fromScene(envScene, 0.04).texture; scene.environment = envTex; scene.environmentIntensity = 0.5;
+    envBall.geometry.dispose(); (envBall.material as THREE.Material).dispose(); envSky.dispose();
 
     // ---- the venue in daylight ----------------------------------------------------------
-    const photoTex = new THREE.CanvasTexture(sitePhoto(w < 700 || compact ? 2048 : 4096)); photoTex.colorSpace = THREE.SRGBColorSpace; photoTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    const photoTex = new THREE.CanvasTexture(sitePhoto(small || dpr <= 1 ? 2048 : 4096)); photoTex.colorSpace = THREE.SRGBColorSpace; photoTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
     const G = new THREE.PlaneGeometry(WORLD_M, WORLD_M, SEG, SEG).rotateX(-Math.PI / 2);
     { const a = G.attributes.position as THREE.BufferAttribute; for (let i = 0; i < a.count; i++) a.setY(i, heightAt(a.getX(i), a.getZ(i))); G.computeVertexNormals(); }
     const ground = new THREE.Mesh(G, new THREE.MeshStandardMaterial({ map: photoTex, roughness: 1, metalness: 0 })); ground.receiveShadow = true; scene.add(ground);
@@ -211,8 +224,9 @@ export const SurveyHoloStage: React.FC<Props> = (props) => {
     const edgeMats = { core: glowMat(HOLO), halo: glowMat(HOLO_DIM, 0.25), node: glowMat(new THREE.Color(1.2, 2, 3)), ring: glowMat(HOLO, 0.8) };
     const nodeGeo = new THREE.SphereGeometry(1.6, 16, 12), ringGeo = new THREE.RingGeometry(3, 3.6, 40).rotateX(-Math.PI / 2);
     const edge = new THREE.Group(); scene.add(edge);
-    let boundaryKey = '';
+    let boundaryKey = '', boundaryArr: Pt[] | null = null;
     const buildBoundary = (b: Pt[]) => {
+      if (b === boundaryArr) return; boundaryArr = b;
       const key = b.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(';'); if (key === boundaryKey) return; boundaryKey = key;
       edge.children.slice().forEach(o => { const m = o as THREE.Mesh; if (m.geometry !== nodeGeo && m.geometry !== ringGeo) m.geometry.dispose(); edge.remove(o); });
       if (b.length < 3) return;
@@ -222,7 +236,8 @@ export const SurveyHoloStage: React.FC<Props> = (props) => {
       const old = planTex; planTex = new THREE.CanvasTexture(blueprintCanvas(b, w < 700 ? 2048 : 4096)); planTex.anisotropy = renderer.capabilities.getMaxAnisotropy(); shared.uPlan.value = planTex; old.dispose();
     };
     // The plan's lettering needs Inter; redraw once the face has loaded.
-    document.fonts?.load('600 40px Inter').then(() => { boundaryKey = ''; buildBoundary(propsRef.current.boundary ?? SITE.boundary); }).catch(() => undefined);
+    let alive = true;
+    document.fonts?.load('600 40px Inter').then(() => { if (!alive) return; boundaryKey = ''; boundaryArr = null; buildBoundary(propsRef.current.boundary ?? SITE.boundary); }).catch(() => undefined);
 
     // ---- flight lines on the ground ----------------------------------------------------------
     const lineMats = { flown: glowMat(HOLO, 0.9), cur: glowMat(HOLO_HOT), ahead: glowMat(HOLO, 0.35), todo: glowMat(HOLO_DIM, 0.28) };
@@ -249,7 +264,9 @@ export const SurveyHoloStage: React.FC<Props> = (props) => {
     const bead = (() => { const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d')!; const gr = g.createRadialGradient(16, 16, 0, 16, 16, 16); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.4, 'rgba(255,255,255,.5)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 32, 32); return new THREE.CanvasTexture(c); })();
     const phPos = new Float32Array(PHOTO_CAP * 3), phCol = new Float32Array(PHOTO_CAP * 3);
     const phGeo = new THREE.BufferGeometry(); phGeo.setAttribute('position', new THREE.BufferAttribute(phPos, 3)); phGeo.setAttribute('color', new THREE.BufferAttribute(phCol, 3)); phGeo.setDrawRange(0, 0);
-    scene.add(new THREE.Points(phGeo, new THREE.PointsMaterial({ size: 3, map: bead, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, fog: false })));
+    const beads = new THREE.Points(phGeo, new THREE.PointsMaterial({ size: 3, map: bead, vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, fog: false }));
+    beads.frustumCulled = false;   // the bounding sphere is taken once, while every point is still at the origin
+    scene.add(beads);
     let shown = 0;
 
     // ---- aircraft and its scan beam ----------------------------------------------------------------
@@ -287,11 +304,27 @@ export const SurveyHoloStage: React.FC<Props> = (props) => {
       el.style.transform = `translate(${((proj.x + 1) / 2) * host.clientWidth}px, ${((1 - proj.y) / 2) * host.clientHeight}px)`;
     };
     const cardAnchors = (['stage', 'hall'] as const).map(id => { const s = structureAt(id)!; return at(s.x, s.y, s.h); }).concat([at(STOCKPILE.x, STOCKPILE.y, STOCKPILE.h)]);
+    // The aircraft arrives at 10 Hz. Draw it where it is now: carry it on from the last two fixes, then ease,
+    // so the aircraft, the chase camera and the bank are smooth at any refresh rate.
+    const fix = { x: NaN, y: NaN, t: 0, vx: 0, vy: 0 }, disp = { x: 0, y: 0, alt: 0, hdg: 0, init: false };
     let raf = 0, lastT = performance.now();
     const tick = (t: number) => {
       raf = requestAnimationFrame(tick);
       const dt = Math.max(0, Math.min(0.1, (t - lastT) / 1000)); lastT = t;
-      const P = propsRef.current, a = P.aircraft, pl = P.plan;
+      const P = propsRef.current, src = P.aircraft, pl = P.plan;
+      if (src.x !== fix.x || src.y !== fix.y) {
+        const since = (t - fix.t) / 1000;
+        if (Number.isFinite(fix.x) && since > 0 && since < 0.5) { fix.vx = (src.x - fix.x) / since; fix.vy = (src.y - fix.y) / since; } else { fix.vx = fix.vy = 0; }
+        fix.x = src.x; fix.y = src.y; fix.t = t;
+      } else if (t - fix.t > 200) { fix.vx = fix.vy = 0; }
+      const ahead = Math.min(0.1, (t - fix.t) / 1000), px = src.x + fix.vx * ahead, py = src.y + fix.vy * ahead;
+      if (!disp.init || reduced || Math.hypot(px - disp.x, py - disp.y) > 60) { disp.x = px; disp.y = py; disp.alt = src.altM; disp.hdg = src.headingDeg; disp.init = true; }
+      else {
+        const e = 1 - Math.exp(-dt * 14);
+        disp.x += (px - disp.x) * e; disp.y += (py - disp.y) * e; disp.alt += (src.altM - disp.alt) * e;
+        disp.hdg += ((((src.headingDeg - disp.hdg) % 360) + 540) % 360 - 180) * (1 - Math.exp(-dt * 6));
+      }
+      const a = { ...src, x: disp.x, y: disp.y, altM: disp.alt, headingDeg: disp.hdg };
       const groundY = heightAt(a.x, a.y), acY = groundY + Math.max(0.6, a.altM), flying = a.altM > 0.3, capturing = P.phase === 'CAPTURING';
 
       buildBoundary(P.boundary ?? SITE.boundary);
@@ -367,7 +400,10 @@ export const SurveyHoloStage: React.FC<Props> = (props) => {
         camera.lookAt(o.target);
       }
 
-      // Cards (none on a phone-sized stage: the scene is too small to carry them).
+      // Cards (none on a phone-sized stage: the scene is too small to carry them). Their sizes are read
+      // before this frame writes any style, so the browser is not made to lay out the page mid-frame.
+      const cardEls = [acCard.current, photoCard.current, ...siteCards.current, homeTag.current];
+      const rects = cardEls.map(el => (el?.firstElementChild as HTMLElement | null)?.getBoundingClientRect() ?? null);
       const roomy = host.clientWidth >= 640;
       place(acCard.current, a.x, acY + 0.3 * AC_SCALE, a.y, roomy);
       const far = corners[1].clone().lerp(corners[2], 0.5);
@@ -375,16 +411,19 @@ export const SurveyHoloStage: React.FC<Props> = (props) => {
       place(homeTag.current, SITE.home.x, heightAt(SITE.home.x, SITE.home.y) + 2, SITE.home.y, roomy && (!flying || vw !== 'CHASE'));
       cardAnchors.forEach((v, i) => place(siteCards.current[i], v.x, v.y, v.z, roomy && vw !== 'CHASE'));
       const shownRects: DOMRect[] = [];
-      for (const el of [acCard.current, photoCard.current, ...siteCards.current, homeTag.current]) {
-        if (!el || el.style.opacity === '0') continue;
-        const r = (el.firstElementChild as HTMLElement | null)?.getBoundingClientRect(); if (!r) continue;
-        if (shownRects.some(q => r.left < q.right + 6 && r.right > q.left - 6 && r.top < q.bottom + 4 && r.bottom > q.top - 4)) { el.style.opacity = '0'; continue; }
+      cardEls.forEach((el, i) => {
+        const r = rects[i]; if (!el || !r || el.style.opacity === '0') return;
+        if (shownRects.some(q => r.left < q.right + 6 && r.right > q.left - 6 && r.top < q.bottom + 4 && r.bottom > q.top - 4)) { el.style.opacity = '0'; return; }
         shownRects.push(r);
-      }
+      });
 
       bloom.enabled = gov.level < 2;
       composer.render();
-      if (gov.tick(dt * 1000)) { renderer.setPixelRatio(gov.pixelRatio(2)); const cw = host.clientWidth, ch = host.clientHeight; if (cw && ch) { camera.aspect = cw / ch; camera.updateProjectionMatrix(); renderer.setSize(cw, ch); composer.setSize(cw, ch); } }
+      if (gov.tick(dt * 1000)) {
+        renderer.setPixelRatio(gov.pixelRatio(2)); composer.setPixelRatio(gov.pixelRatio(2));
+        const want = gov.level >= 1 ? Math.min(shadowSize, 1024) : shadowSize;
+        if (sun.shadow.mapSize.x !== want) { sun.shadow.mapSize.set(want, want); sun.shadow.map?.dispose(); sun.shadow.map = null; }
+        const cw = host.clientWidth, ch = host.clientHeight; if (cw && ch) { camera.aspect = cw / ch; camera.updateProjectionMatrix(); renderer.setSize(cw, ch); composer.setSize(cw, ch); } }
     };
     raf = requestAnimationFrame(tick);
 
@@ -394,7 +433,7 @@ export const SurveyHoloStage: React.FC<Props> = (props) => {
     });
     ro.observe(host);
     return () => {
-      cancelAnimationFrame(raf); ro.disconnect();
+      alive = false; cancelAnimationFrame(raf); ro.disconnect();
       release3d(scene, renderer, composer, [photoTex, planTex, maskTex, sky, envTex, pmrem, bead, beamTex, nodeGeo, ringGeo, blueprintMat, overlapMat, ...Object.values(edgeMats), ...Object.values(lineMats)]);
     };
   }, []);
@@ -405,13 +444,15 @@ export const SurveyHoloStage: React.FC<Props> = (props) => {
     goal.current = { ...(v === 'TOP' ? TOP_VIEW : SITE_VIEW), target: new THREE.Vector3() };
   };
   const onPointerDown = (e: React.PointerEvent) => {
-    drag.current = { x: e.clientX, y: e.clientY }; lastInput.current = performance.now(); (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    if (viewRef.current === 'CHASE') { setView('SITE'); viewRef.current = 'SITE'; }   // a drag hands the camera to the operator, from where the chase was
+    drag.current = { x: e.clientX, y: e.clientY, moved: 0 }; lastInput.current = performance.now(); (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
   const onPointerMove = (e: React.PointerEvent) => {
     if (!drag.current) return;
-    const dx = e.clientX - drag.current.x, dy = e.clientY - drag.current.y; drag.current = { x: e.clientX, y: e.clientY };
+    const dx = e.clientX - drag.current.x, dy = e.clientY - drag.current.y;
+    drag.current = { x: e.clientX, y: e.clientY, moved: drag.current.moved + Math.abs(dx) + Math.abs(dy) };
     lastInput.current = performance.now();
+    if (drag.current.moved < 6) return;   // a tap is not a drag
+    if (viewRef.current === 'CHASE') { setView('SITE'); viewRef.current = 'SITE'; }   // a drag hands the camera to the operator, from where the chase was
     goal.current.theta += dx * 0.005; goal.current.phi = Math.max(0.02, Math.min(1.42, goal.current.phi - dy * 0.005));
   };
   const onPointerUp = () => { drag.current = null; };
@@ -439,7 +480,7 @@ export const SurveyHoloStage: React.FC<Props> = (props) => {
   return (
     <div id="survey-stage" className="relative w-full h-full bg-[#d9dfe2] select-none overflow-hidden">
       <div ref={hostRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}
-        className="w-full h-full cursor-grab active:cursor-grabbing" role="img" aria-label={`3D view of ${SITE.name}, ${coveredPct.toFixed(0)}% photographed`} />
+        className="w-full h-full cursor-grab active:cursor-grabbing touch-pan-y" role="img" aria-label={`3D view of ${SITE.name}, ${coveredPct.toFixed(0)}% photographed`} />
 
       {/* Cards that float over the scene */}
       <div className={`pointer-events-none absolute inset-0 overflow-hidden ${compact ? 'hidden' : ''}`} aria-hidden="true">
@@ -461,8 +502,8 @@ export const SurveyHoloStage: React.FC<Props> = (props) => {
       </div>
 
       {!compact && <>
-        <div className="absolute left-3 top-3 flex items-center gap-2 pointer-events-none">
-          <span className={`${chip} px-2.5 py-1 text-[12px] font-medium hidden sm:inline`}>{SITE.name}</span>
+        <div className="absolute left-3 top-3 hidden sm:flex items-center gap-2 pointer-events-none">{/* a phone shows the progress above the stage */}
+          <span className={`${chip} px-2.5 py-1 text-[12px] font-medium`}>{SITE.name}</span>
           <span className={`${chip} px-2.5 py-1 text-[11px] num`}>{progressLabel}</span>
           {props.plan.params.pattern === 'ORBIT' && stageS && <span className={`${chip} px-2.5 py-1 text-[11px] hidden md:inline`}>Target · {stageS.label}</span>}
         </div>
@@ -474,10 +515,10 @@ export const SurveyHoloStage: React.FC<Props> = (props) => {
                 className={`h-6 px-2 rounded-md text-[11px] font-medium transition-colors ${layer === id ? 'bg-[#0f1720] text-white' : 'text-[#4d5866] hover:text-[#0f1720]'}`}>{label}</button>
             ))}
           </div>
-          <div role="group" aria-label="Camera" className={`hidden sm:inline-flex items-center gap-0.5 p-0.5 ${chip}`}>
+          <div role="group" aria-label="Camera" className={`inline-flex items-center gap-0.5 p-0.5 ${chip}`}>
             {([['CHASE', 'Chase', 'Behind the aircraft, looking down its line'], ['SITE', 'Site', 'The whole venue; drag to turn, scroll to zoom'], ['TOP', 'Top-down', 'Straight down on the venue']] as [View, string, string][]).map(([id, label, title]) => (
-              <button key={id} type="button" title={title} aria-pressed={view === id} onClick={() => applyView(id)}
-                className={`h-6 px-2 rounded-md text-[11px] font-medium transition-colors ${view === id ? 'bg-[#0f1720] text-white' : 'text-[#4d5866] hover:text-[#0f1720]'}`}>{label}</button>
+              <button key={id} type="button" title={title} aria-label={label} aria-pressed={view === id} onClick={() => applyView(id)}
+                className={`h-6 px-2 max-sm:px-1.5 rounded-md text-[11px] font-medium transition-colors ${view === id ? 'bg-[#0f1720] text-white' : 'text-[#4d5866] hover:text-[#0f1720]'}`}>{id === 'TOP' ? <><span className="sm:hidden">Top</span><span className="max-sm:hidden">{label}</span></> : label}</button>
             ))}
           </div>
           <button type="button" aria-label="Reset view" title="Reset view" onClick={() => applyView(view)}

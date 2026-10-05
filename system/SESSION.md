@@ -258,6 +258,24 @@ through the GitHub commit-status API instead.
 - Bench: `fake_vehicle.py --obstacle M` (PRX1_TYPE 4 + forward DISTANCE_SENSOR), `scripts/bench/obstacle.mjs` PASS.
 - Checklist doc gained a Safety features section, Step 5 (obstacle sensors), table rows, a first-flight test.
 
+## Diagnostic (Oct 5, end of day): link, safety and 3D survey fixes
+- Found by review and fixed:
+  - OBSTACLE_DISTANCE read min/max range from swapped offsets (152 is min, 154 max), so a lidar's returns were
+    dropped. Earth-frame sectors are now turned by heading; two rangefinders facing the same way keep separate
+    readings (keyed by sensor id); a reading at max range clears only its own sensor. The tests now use frames
+    packed by pymavlink, so the byte layout is checked against MAVLink itself.
+  - Serial probe: left the port open on a read error, could not be cancelled, and took unchecked frames as a
+    hit. Fixed (release on every path, a generation token, CRC-checked frames only).
+  - INAV refuses a route upload while armed: the dashboard now says so before sending; Betaflight 4.5's
+    heartbeat (sys 0, comp 200) is now recognised. Return home is off where the firmware can't take it, and
+    waits for the aircraft before the simulation moves; go-to refusals show in the Surveillance action bar.
+  - Survey 3D stage: photo markers vanished in Chase (frustum culling); aircraft and chase camera juddered at
+    the 10 Hz update (now carried on and eased); lower quality never shrank post-processing (also Light show);
+    a tap on a phone dropped Chase for good, and phones had no camera buttons; font-load ran after unmount;
+    shadow map and site photo sized by screen; environment map was black; results measurement line now cased.
+- Verified: tsc, 23 test suites, build; desktop/dark/phone crawl 0 issues; benches survey-flight (ArduPilot,
+  PX4), inav-link (MAVLink 1 and 2), obstacle.
+
 ## Open next steps (not done)
 - **Before autonomy = auto:** port the runner send-path fixes above into the live runner.
 - Wire dashboard into the deployed website so real photos render + it's live.

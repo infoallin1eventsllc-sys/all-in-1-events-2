@@ -175,6 +175,8 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const operator = useOperator();
   const opRef = useRef(operator); opRef.current = operator;
   const closer = useRef<(() => Promise<void>) | null>(null);
+  /** Bumped by every reset: a connect that is still probing sees it changed and stands down. */
+  const connGen = useRef(0);
 
   // Publish the telemetry snapshot at 10 Hz and count message rate.
   useEffect(() => {
@@ -222,7 +224,9 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const ingest = useCallback((chunk: Uint8Array) => {
     bytesIn.current += chunk.length;
     for (const f of parser.current.push(chunk)) {
-      if (f.compId !== 1 && f.msgId === 0) continue; // ignore heartbeats from cameras/gimbals; the autopilot is component 1
+      // MAVLink system 0 is reserved (broadcast), but Betaflight 4.5 sends its telemetry from it: it is system 1 here.
+      if (f.sysId === 0) f.sysId = 1;
+      if (f.msgId === 0 && !isVehicleHeartbeat(f) && f.compId !== 1) continue; // cameras, gimbals: the autopilot is component 1 (Betaflight 200)
       // A vehicle exists only once its autopilot heartbeats: a SiK radio (sys 51, comp 68), another GCS or a
       // companion computer talking on the link is not an aircraft, and must not appear as one.
       if (isVehicleHeartbeat(f) && !vehicles.current[f.sysId]) {
@@ -248,6 +252,7 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   /** Forget everything about the last connection: the next one may be a different aircraft on a different id. */
   const resetLink = useCallback(() => {
+    connGen.current++;   // a serial probe still running for the previous connect stops at its next step
     closer.current = null; writer.current = null;
     telem.current = { ...EMPTY_TELEMETRY }; vehicles.current = {}; primarySys.current = 0; parser.current = new MavParser(); bytesIn.current = 0; msgCount.current = 0;
     paramStore.current = {}; paramsRev.current++;
@@ -300,41 +305,55 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const connectSerial = useCallback(async () => {
     if (!support.serial) { setState(s => ({ ...s, status: 'ERROR', error: 'Web Serial is not available in this browser. Use Chrome or Edge on desktop, over HTTPS.' })); return; }
     resetLink();
+    const gen = connGen.current, stale = () => connGen.current !== gen;
     setState(s => ({ ...s, transport: 'SERIAL', status: 'CONNECTING', error: '' }));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let port: any = null;
+    let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+    /** Let go of the reader and close the port, whatever state they are in. */
+    const release = async () => {
+      if (reader) { try { await reader.cancel(); } catch { /* ignore */ } try { reader.releaseLock(); } catch { /* ignore */ } reader = null; }
+      if (port) { try { await port.close(); } catch { /* not open */ } }
+    };
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const port = await (navigator as any).serial.requestPort();
+      port = await (navigator as unknown as { serial: { requestPort: () => Promise<unknown> } }).serial.requestPort();
+      if (stale()) { await release(); return; }
+      // Disconnect while probing: stop at the next step and close the port.
+      closer.current = async () => { connGen.current++; await release(); };
       const info = port.getInfo?.() ?? {};
       const name = info.usbVendorId ? `USB radio ${info.usbVendorId.toString(16)}:${(info.usbProductId ?? 0).toString(16)}` : 'Serial radio';
       // The baud rate: a flight controller's own USB port takes any, but a radio or a USB-serial adapter on a TELEM
       // port only talks at the rate it is set to (SiK and mLRS 57600; TELEM ports 57600 or 115200; ELRS 460800;
-      // companion-style ports 921600). Each is tried until whole MAVLink frames arrive, the last one that worked first.
+      // companion-style ports 921600). Each is tried until a MAVLink frame with a good checksum arrives (wrong-rate
+      // noise can look like an unchecked frame, never a checked one), the last one that worked first. A wrong rate
+      // can also make the port report a framing or parity error: that rate is simply not it.
       const remembered = (() => { try { return Number(localStorage.getItem('a1-serial-baud')) || 0; } catch { return 0; } })();
       const rates = [...new Set([remembered, ...SERIAL_RATES].filter(Boolean))];
-      let reader: ReadableStreamDefaultReader<Uint8Array> | null = null, baud = 0;
+      let baud = 0;
       const first: Uint8Array[] = [];
       for (const r of rates) {
+        if (stale()) { await release(); return; }
         await port.open({ baudRate: r });
-        const rd = port.readable.getReader(), probe = new MavParser(), got: Uint8Array[] = [];
-        const until = Date.now() + PROBE_MS;
+        reader = port.readable.getReader() as ReadableStreamDefaultReader<Uint8Array>;
+        const probe = new MavParser(), got: Uint8Array[] = [], until = Date.now() + PROBE_MS;
         let heard = false;
-        while (!heard && Date.now() < until) {
-          const res = await Promise.race([rd.read(), new Promise<null>(res => setTimeout(() => res(null), until - Date.now()))]);
-          if (!res) break;
-          if (res.done) break;
-          if (res.value) { got.push(res.value); heard = probe.push(res.value).length > 0; }
-        }
-        if (heard) { reader = rd; baud = r; first.push(...got); break; }
-        try { await rd.cancel(); } catch { /* ignore */ }
-        try { rd.releaseLock(); } catch { /* ignore */ }
-        await port.close();
+        try {
+          while (!heard && Date.now() < until && !stale()) {
+            const res = await Promise.race([reader.read(), new Promise<null>(res => setTimeout(() => res(null), until - Date.now()))]);
+            if (!res || res.done) break;
+            if (res.value) { got.push(res.value); heard = probe.push(res.value).some(f => f.checked); }
+          }
+        } catch { heard = false; /* a framing / parity / break error at this rate */ }
+        if (heard && !stale()) { baud = r; first.push(...got); break; }
+        await release();
       }
-      if (!reader) {
+      if (stale()) { await release(); return; }
+      if (!baud) {
         // Nothing at any rate: keep the port open at the first one so a radio whose aircraft is still off is heard
         // when it powers up, and say why the screen is quiet.
         baud = rates[0];
         await port.open({ baudRate: baud });
-        reader = port.readable.getReader();
+        reader = port.readable.getReader() as ReadableStreamDefaultReader<Uint8Array>;
         setState(s => ({ ...s, error: `No MAVLink heard at ${rates.join(', ')} baud yet. Is the aircraft powered and its port set to MAVLink?` }));
       } else { try { localStorage.setItem('a1-serial-baud', String(baud)); } catch { /* private mode */ } }
       const rdr = reader!;
@@ -357,6 +376,9 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setSerialBaud(baud);
       setState(s => ({ ...s, status: 'CONNECTED', deviceName: name }));
     } catch (err) {
+      await release();
+      if (stale()) return;
+      closer.current = null;
       const msg = err instanceof Error ? err.message : String(err);
       setState(s => ({ ...s, status: /No port selected/i.test(msg) ? 'DISCONNECTED' : 'ERROR', error: /No port selected/i.test(msg) ? '' : msg, transport: 'SIMULATION' }));
     }
@@ -437,7 +459,7 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     need('LAND');
     const k = kind();
     if (ap() === 'ARDUPILOT' && k === 'VTOL') { await changeMode('LAND'); return; }
-    if (ap() === 'ARDUPILOT' && k === 'ROVER') { await changeMode('HOLD'); return; }
+    if (k === 'ROVER') { await changeMode(ap() === 'ARDUPILOT' ? 'HOLD' : 'LOITER'); return; }   // a rover stops where it is
     if (ap() === 'ARDUPILOT' && k === 'PLANE') {
       const r = ackFor(MAV_CMD.DO_LAND_START);
       await send(encodeCommandLong(MAV_CMD.DO_LAND_START, [], sysId()));
@@ -455,8 +477,9 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (!writer.current) throw new Error('Not connected');
     need('TAKEOFF');
     if (ap() === 'ARDUPILOT' && kind() === 'PLANE') {
-      // TKOFF_ALT is the height Takeoff mode climbs to. Best effort: a crew that set it already keeps theirs if the write fails.
-      await setParamRef.current('TKOFF_ALT', altM).catch(() => undefined);
+      // TKOFF_ALT is the height Takeoff mode climbs to: set it, or say so, rather than climb to whatever was stored.
+      try { await setParamRef.current('TKOFF_ALT', altM); }
+      catch (e) { throw new Error(`Takeoff height not set (TKOFF_ALT ${altM} m): ${e instanceof Error ? e.message : String(e)}. Nothing was sent.`); }
       await changeMode('TAKEOFF');
       return;
     }
@@ -473,9 +496,9 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     need('GOTO');
     const a = ap(), k = kind();
     if (a === 'PX4' || a === 'GENERIC' || k === 'PLANE' || k === 'VTOL') {
-      const r = ackFor(MAV_CMD.DO_REPOSITION);
+      const r = a === 'GENERIC' ? ackFor(MAV_CMD.DO_REPOSITION) : null;
       await send(encodeRepositionFor(a, lat, lon, altRelM, telem.current, sysId()));
-      if (a !== 'GENERIC') return;
+      if (!r) return;
       const res = await r;
       if (res === MAV_RESULT.DENIED) throw new Error('The flight controller refused the go-to: switch on GCS NAV mode from the radio (INAV), then try again.');
       if (res === MAV_RESULT.UNSUPPORTED) throw new Error('This flight controller does not take a go-to over MAVLink.');
@@ -606,6 +629,12 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (!writer.current) throw new Error('Not connected');
     need('MISSION');
     if (ap() === 'GENERIC') {
+      // INAV refuses a new route while armed (src/main/telemetry/mavlink.c answers MAV_MISSION_ERROR): say so first.
+      if (telem.current.armed) {
+        const msg = 'This flight controller (INAV) takes a new route only on the ground: land and disarm, upload, then launch from the radio.';
+        setMissionUpload({ state: 'FAILED', sent: 0, total: 0, error: msg });
+        throw new Error(msg);
+      }
       // INAV: waypoints and return-home only, as MISSION_ITEM in GLOBAL_RELATIVE_ALT, no home item, started from the
       // radio. A takeoff item is the pilot's (they launch); anything else (a survey's camera and speed items) refused.
       const route = items.filter(i => (i.command ?? MAV_CMD.NAV_WAYPOINT) !== MAV_CMD.TAKEOFF);

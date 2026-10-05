@@ -57,6 +57,7 @@ export const SurveillanceDashboard: React.FC = () => {
   // Send an aircraft to a waypoint: the simulation always; the real aircraft when it is the linked one.
   // A go-to the real aircraft refused (an INAV without GCS NAV mode, say), shown under the route.
   const [goError, setGoError] = useState('');
+  useEffect(() => { setGoError(''); }, [selectedDroneId]);
   const sendToWaypoint = (i: number) => {
     if (!canFly) return;
     sim.goToWaypoint(selectedDroneId, i);
@@ -268,9 +269,15 @@ export const SurveillanceDashboard: React.FC = () => {
                   )}
                 </span>
                 <span className="w-40"><Toggle on={d.autopilot} onChange={on => sim.setAutopilot(d.id, on)} label="Autopilot" /></span>
-                <ToolButton command="abort" icon={<Home />} label="Return home" danger disabled={offline || d.status === 'RTH'} onClick={() => { sim.returnHome(d.id); if (liveId && isPrimary) link.returnToLaunch(); }} title={liveId ? 'Sends MAV_CMD_NAV_RETURN_TO_LAUNCH to the aircraft' : undefined} />
+                <ToolButton command="abort" icon={<Home />} label="Return home" danger
+                  disabled={offline || d.status === 'RTH' || (!!liveId && link.capabilities.RTL.level === 'no')}
+                  // The real aircraft first: the card shows Returning only once the command went (a refusal is shown, not hidden).
+                  onClick={() => { if (liveId && isPrimary) { setGoError(''); link.returnToLaunch().then(() => sim.returnHome(d.id)).catch(e => setGoError(e instanceof Error ? e.message : String(e))); } else sim.returnHome(d.id); }}
+                  title={liveId ? (link.capabilities.RTL.level === 'no' ? link.capabilities.RTL.note : 'Sends MAV_CMD_NAV_RETURN_TO_LAUNCH to the aircraft') : undefined} />
               </span>
             </div>
+            {/* A command the real aircraft refused (go-to from a waypoint or a detection, return home), whichever tab sent it. */}
+            {goError && <div role="alert" className="mt-2 text-[12px] text-bad">{goError}</div>}
           </Card>
         </div>
 
@@ -367,7 +374,6 @@ export const SurveillanceDashboard: React.FC = () => {
                       );
                     })}
                   </ol>
-                  {goError && <div role="alert" className="mt-1 text-[11px] text-bad">{goError}</div>}
                 </Section>
               </div>
             )}

@@ -36,14 +36,14 @@ const wsPort = process.env.BENCH_WS_PORT ?? '8772', udpPort = process.env.BENCH_
 run('python3', ['mavlink_ws.py', '--udp', `127.0.0.1:${udpPort}`, '--host', '127.0.0.1', '--port', wsPort, '--token', 'bench']);
 await new Promise(r => setTimeout(r, 1500));
 let fc = null;
-const startFc = (gcsNav) => {
+/** `flying`: armed in position hold, launched by the pilot from the radio (INAV arms only from there). */
+const startFc = ({ flying = false, gcsNav = false } = {}) => {
   if (fc) { fc.kill(); kids.splice(kids.indexOf(fc), 1); }
-  // Flying in position hold, launched by the pilot from the radio (INAV arms only from there).
-  fc = run('python3', ['fake_inav.py', '--to', `127.0.0.1:${udpPort}`, '--flying', ...(gcsNav ? ['--gcs-nav'] : []), ...(v2 ? ['--v2'] : [])]);
+  fc = run('python3', ['fake_inav.py', '--to', `127.0.0.1:${udpPort}`, ...(flying ? ['--flying'] : []), ...(gcsNav ? ['--gcs-nav'] : []), ...(v2 ? ['--v2'] : [])]);
   fc.stdout.on('data', d => vlog.push(...String(d).trim().split('\n')));
   fc.stderr.on('data', d => vlog.push(...String(d).trim().split('\n')));
 };
-startFc(false);
+startFc();   // on the ground first: INAV takes a route only there
 
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'], ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -62,9 +62,9 @@ log(`connected: INAV stand-in on MAVLink ${v2 ? 2 : 1}`);
 await page.getByRole('button', { name: /What this aircraft can do/ }).evaluate(b => b.click());
 const pop = await page.locator('#link-button').locator('..').innerText();
 for (const want of [/Live position, attitude, battery, GPS/, /from your radio: not over MAVLink/, /GCS NAV mode/, /waypoints and return-home only/, /needs ArduPilot or PX4/]) if (!want.test(pop)) fail(`capabilities list is missing ${want}`);
-if (await page.getByRole('button', { name: 'Disarm', exact: true }).isEnabled()) fail('Disarm is offered to a flight controller that disarms from the radio');
+if (await page.getByRole('button', { name: 'Arm', exact: true }).isEnabled()) fail('Arm is offered to a flight controller that arms from the radio');
 if (await page.getByRole('button', { name: /Return to launch/ }).isEnabled()) fail('Return to launch is offered to a flight controller that takes it from the radio');
-log('capabilities listed; Disarm and Return to launch held off');
+log('capabilities listed; Arm and Return to launch held off');
 await page.screenshot({ path: process.env.BENCH_SHOT ?? '/dev/null', clip: { x: 1000, y: 40, width: 440, height: 960 } }).catch(() => {});
 await page.mouse.click(600, 900);
 
@@ -78,9 +78,19 @@ await upload.click({ timeout: 15000 }).catch(async e => { if (process.env.BENCH_
 await waitLog(/MIS stored 5 waypoints/, 15000, 'the flight controller did not store the 5 patrol waypoints');
 if (vlog.some(l => /IGNORED MISSION_ITEM_INT|refused/.test(l))) fail('an item was sent in a form INAV does not take');
 await page.getByText(/Route on the aircraft · start the route from the radio/).waitFor({ timeout: 5000 }).catch(() => fail('the screen did not say the route is started from the radio'));
-log('patrol uploaded as 5 MISSION_ITEMs; screen says start it from the radio');
+log('on the ground: patrol uploaded as 5 MISSION_ITEMs; screen says start it from the radio');
 
-// Go-to without GCS NAV: refused, and the refusal reaches the screen.
+// In the air: INAV refuses a new route, and the dashboard says so before sending anything.
+startFc({ flying: true });
+await page.waitForTimeout(2500);
+const countsBefore = vlog.filter(l => /^MIS count/.test(l)).length;
+for (let i = 0; i < 40 && !(await upload.isEnabled()); i++) await page.waitForTimeout(250);
+await upload.click({ timeout: 15000 }).catch(e => fail(`Upload patrol could not be clicked in the air: ${e.message.split('\n')[0]}`));
+await page.getByText(/takes a new route only on the ground/).first().waitFor({ timeout: 5000 }).catch(() => fail('the in-flight upload refusal did not reach the screen'));
+if (vlog.filter(l => /^MIS count/.test(l)).length !== countsBefore) fail('a route was sent to an armed INAV');
+log('in the air: route upload refused on screen, nothing sent');
+
+// Go-to without GCS NAV (still flying): refused, and the refusal reaches the screen.
 const wp = page.getByRole('button', { name: /WP2/ });
 await wp.click();
 await waitLog(/CMD reposition denied/, 8000, 'the go-to did not reach the flight controller');
@@ -88,11 +98,11 @@ await page.getByRole('alert').filter({ hasText: /GCS NAV mode/ }).waitFor({ time
 log('go-to without GCS NAV: refused, and the screen says why');
 
 // With GCS NAV mode on: accepted.
-startFc(true);
+startFc({ flying: true, gcsNav: true });
 await page.waitForTimeout(2500);
 await wp.click();
 await waitLog(/CMD reposition 33\.\d+,-118\.\d+ alt \d+/, 8000, 'the go-to was not accepted with GCS NAV on');
 log(`go-to with GCS NAV: ${vlog.filter(l => /CMD reposition \d/.test(l)).pop()}`);
 
-console.log(`PASS: INAV stand-in on MAVLink ${v2 ? 2 : 1}: named, capabilities shown, patrol uploaded as waypoints, go-to refused then flown`);
+console.log(`PASS: INAV stand-in on MAVLink ${v2 ? 2 : 1}: named, capabilities shown, patrol uploaded on the ground and refused in the air, go-to refused then flown`);
 await browser.close(); cleanup(); process.exit(0);

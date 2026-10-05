@@ -416,7 +416,7 @@ export const LightShowCanvas3D: React.FC<LightShowCanvas3DProps> = ({
       st.bloom.threshold = 1.6 - 1.38 * zc; st.bloom.strength = 0.45 + 0.45 * zc; st.bloom.radius = 0.2 + 0.45 * zc;
       st.bloom.enabled = glow;
       if (glow && gov.level < 2) st.composer.render(); else st.renderer.render(s, camera);
-      if (gov.tick(dt * 1000)) { renderer.setPixelRatio(gov.pixelRatio(2)); const cw = container.clientWidth, ch = container.clientHeight; if (cw && ch) { camera.aspect = cw / ch; camera.updateProjectionMatrix(); renderer.setSize(cw, ch); composer.setSize(cw, ch); bloom.setSize(cw, ch); } }
+      if (gov.tick(dt * 1000)) { renderer.setPixelRatio(gov.pixelRatio(2)); composer.setPixelRatio(gov.pixelRatio(2)); const cw = container.clientWidth, ch = container.clientHeight; if (cw && ch) { camera.aspect = cw / ch; camera.updateProjectionMatrix(); renderer.setSize(cw, ch); composer.setSize(cw, ch); bloom.setSize(cw, ch); } }
     };
     raf = requestAnimationFrame(tick);
 

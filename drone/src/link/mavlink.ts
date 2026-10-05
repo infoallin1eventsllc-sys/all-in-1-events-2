@@ -12,7 +12,7 @@
  * through as `{ id, payload }` so a caller can extend without touching this file.
  */
 
-export interface MavFrame { seq: number; sysId: number; compId: number; msgId: number; payload: DataView; /** Arrived as MAVLink 1. */ v1?: boolean }
+export interface MavFrame { seq: number; sysId: number; compId: number; msgId: number; payload: DataView; /** Arrived as MAVLink 1. */ v1?: boolean; /** Its CRC was checked (a message this codec knows); unknown ids pass on framing alone. */ checked?: boolean }
 
 // CRC_EXTRA per message id (from the common dialect).
 const CRC_EXTRA: Record<number, number> = {
@@ -105,7 +105,7 @@ export class MavParser {
         if (ok) {
           const payload = new Uint8Array(255);
           payload.set(this.buf.subarray(i + 6, i + 6 + len));
-          out.push({ seq: this.buf[i + 2], sysId: this.buf[i + 3], compId: this.buf[i + 4], msgId, payload: new DataView(payload.buffer), v1: true });
+          out.push({ seq: this.buf[i + 2], sysId: this.buf[i + 3], compId: this.buf[i + 4], msgId, payload: new DataView(payload.buffer), v1: true, checked: extra !== undefined });
           i += total;
         } else { this.badCrc++; i++; }
         continue;
@@ -135,7 +135,7 @@ export class MavParser {
       if (ok) {
         const payload = new Uint8Array(255); // v2 trims trailing zeros; re-pad so field offsets are stable
         payload.set(this.buf.subarray(i + 10, i + 10 + len));
-        out.push({ seq: this.buf[i + 4], sysId: this.buf[i + 5], compId: this.buf[i + 6], msgId, payload: new DataView(payload.buffer) });
+        out.push({ seq: this.buf[i + 4], sysId: this.buf[i + 5], compId: this.buf[i + 6], msgId, payload: new DataView(payload.buffer), checked: extra !== undefined });
         i += total;
       } else { this.badCrc++; i++; }
     }
@@ -188,7 +188,8 @@ export interface Telemetry {
   mavVersion: number;
   /**
    * What the aircraft's obstacle sensors see, by direction: the latest reading per sensor sector, keyed by
-   * MAV_SENSOR_ORIENTATION (0–7 = nose, then every 45° clockwise; 24 = up) or 1000 + sector for OBSTACLE_DISTANCE.
+   * MAV_SENSOR_ORIENTATION × 256 + sensor id for DISTANCE_SENSOR (orientation 0–7 = nose, then every 45° clockwise;
+   * 24 = up), or PROX_SECTOR + sector for OBSTACLE_DISTANCE.
    * `bearingDeg` is from the nose, clockwise; NaN = straight up. Downward rangefinders (the ground) are left out.
    */
   proximity: Record<number, { m: number; bearingDeg: number; atMs: number }>;
@@ -206,6 +207,8 @@ export const EMPTY_TELEMETRY: Telemetry = {
   photoLog: [], photoSource: 'NONE', windMps: -1, windFromDeg: 0, home: null, fenceBreached: false, swVersion: 0, mavVersion: 0, proximity: {}, proximityHeardMs: 0,
 };
 
+/** OBSTACLE_DISTANCE sectors are keyed from here, clear of DISTANCE_SENSOR's orientation × 256 + id keys. */
+const PROX_SECTOR = 100_000;
 /** Proximity readings older than this are stale (a sensor stopped reporting). */
 export const PROXIMITY_FRESH_MS = 1500;
 /** The nearest obstacle the aircraft's sensors report now, or null (no sensor, or nothing in range). */
@@ -302,26 +305,32 @@ export function decodeInto(t: Telemetry, f: MavFrame): Telemetry {
     case 162: // FENCE_STATUS: breach_time u32, breach_count u16, breach_status u8 at 6, breach_type u8 at 7
       t.fenceBreached = p.getUint8(6) !== 0;
       break;
-    case 132: { // DISTANCE_SENSOR: min, max, current (cm) at 4, 6, 8; orientation at 12
+    case 132: { // DISTANCE_SENSOR: min, max, current (cm) at 4, 6, 8; id at 11, orientation at 12
       const o = p.getUint8(12); if (o === 25) break;           // pointing down: the ground, not an obstacle
       if (!(o <= 7 || o === 24)) break;
       t.proximityHeardMs = Date.now();
-      const min = p.getUint16(4, true), max = p.getUint16(6, true), cur = p.getUint16(8, true);
+      const min = p.getUint16(4, true), max = p.getUint16(6, true), cur = p.getUint16(8, true), key = o * 256 + p.getUint8(11);
       const next = { ...t.proximity };
-      // Out of range (nothing seen) clears that direction rather than leaving an old obstacle there.
-      if (cur >= min && cur <= max && cur < 65535) next[o] = { m: cur / 100, bearingDeg: o === 24 ? NaN : o * 45, atMs: Date.now() }; else delete next[o];
+      // At or past max (many drivers report max for "nothing seen"), or under min: that sensor sees nothing,
+      // which clears its direction rather than leaving an old obstacle there. Each sensor id keeps its own reading.
+      if (cur >= min && cur < max) next[key] = { m: cur / 100, bearingDeg: o === 24 ? NaN : o * 45, atMs: Date.now() }; else delete next[key];
       t.proximity = next;
       break;
     }
-    case 330: { // OBSTACLE_DISTANCE: 72 × u16 cm at 8, max at 152, min at 154, increment u8 at 157, increment_f at 158, angle_offset at 162
+    case 330: { // OBSTACLE_DISTANCE: time u64 0, distances u16[72] 8–151, min_distance 152, max_distance 154, sensor_type 156,
+                // increment u8 157; extensions increment_f 158, angle_offset 162, frame 166 (common.xml; wire order by size)
       t.proximityHeardMs = Date.now();
-      const max = p.getUint16(152, true), min = p.getUint16(154, true), incF = p.getFloat32(158, true), inc = incF > 0 ? incF : p.getUint8(157) || 5, off = p.getFloat32(162, true) || 0;
+      const min = p.getUint16(152, true), max = p.getUint16(154, true), incF = p.getFloat32(158, true), inc = incF > 0 ? incF : p.getUint8(157) || 5;
+      const off = p.getFloat32(162, true) || 0, fr = p.getUint8(166);
+      // MAV_FRAME_BODY_FRD (12) is nose-aligned; anything else (MAV_FRAME_GLOBAL 0, the default) is north-aligned,
+      // so the angle is turned into one from the nose with the aircraft's yaw.
+      const turn = fr === 12 ? 0 : -t.yawDeg;
       const next: Telemetry['proximity'] = {};
-      for (const [k, r] of Object.entries(t.proximity)) if (+k < 1000) next[+k] = r;   // keep the rangefinders
+      for (const [k, r] of Object.entries(t.proximity)) if (+k < PROX_SECTOR) next[+k] = r;   // keep the rangefinders
       for (let i = 0; i < 72; i++) {
         const d = p.getUint16(8 + i * 2, true);
-        if (d === 65535 || d > max || d < min) continue;   // unknown, or nothing within range in this sector
-        next[1000 + i] = { m: d / 100, bearingDeg: (off + i * inc + 360) % 360, atMs: Date.now() };
+        if (d === 65535 || d >= max || d < min) continue;   // unknown, or nothing within range in this sector
+        next[PROX_SECTOR + i] = { m: d / 100, bearingDeg: (((off + i * inc + turn) % 360) + 360) % 360, atMs: Date.now() };
       }
       t.proximity = next;
       break;
@@ -477,7 +486,9 @@ export const FIX_NAMES: Record<number, string> = { 0: 'No GPS', 1: 'No fix', 2: 
  * or companion computer (MAV_AUTOPILOT_INVALID = 8), not another ground station (MAV_TYPE_GCS = 6).
  */
 export function isVehicleHeartbeat(f: MavFrame): boolean {
-  return f.msgId === 0 && f.compId === 1 && f.payload.getUint8(5) !== 8 && f.payload.getUint8(4) !== 6;
+  if (f.msgId !== 0 || f.payload.getUint8(5) === 8 || f.payload.getUint8(4) === 6) return false;
+  // Betaflight (4.5 and earlier) sends its telemetry as component 200 (MAV_COMP_ID_IMU), MAV_AUTOPILOT_GENERIC.
+  return f.compId === 1 || (f.compId === 200 && f.payload.getUint8(5) === 0);
 }
 
 /**
@@ -545,7 +556,7 @@ export function capabilitiesOf(ap: Autopilot, kind: VehicleKind): Record<Feature
       ...all(radio),
       TELEMETRY: Y('position, attitude, battery and GPS, as the flight controller sends them'),
       GOTO: P('INAV: with GCS NAV mode switched on from the radio'),
-      MISSION: P('INAV: waypoints and return-home only (holds, camera and speed items are not taken)'),
+      MISSION: P('INAV: waypoints and return-home only (holds, camera and speed items are not taken), uploaded on the ground: INAV refuses a new route while armed'),
       MISSION_START: N('start the route from the radio (INAV: WP mission mode)'),
       SURVEY: N('needs ArduPilot or PX4: a survey triggers the camera at each photo point'),
       FENCE: N('set fences on the flight controller itself'), PARAMS: N('change settings in the flight controller\'s own configurator'),
