@@ -126,8 +126,6 @@
 
   /* ---------- Render products ---------- */
   var grid = document.getElementById("productGrid");
-  function starStr(r) { return "★★★★★"; }
-
   function buildCard(p) {
     var card = el("article", "card");
     card.id = "p-" + p.id;   // deep-link target (the hero's "In the film" links)
@@ -142,13 +140,6 @@
     img.width = 1000; img.height = 1000;
     media.appendChild(img);
 
-    if (p.badge) {
-      var badges = el("div", "card-badges");
-      var b = el("span", "badge " + p.badge);
-      b.textContent = BADGE_TEXT[p.badge];
-      badges.appendChild(b);
-      media.appendChild(badges);
-    }
 
     var fav = el("button", "card-fav");
     fav.setAttribute("aria-label", "Save " + p.name + " to wishlist");
@@ -168,6 +159,9 @@
     var meta = el("div", "card-meta");
     var price = el("span", "price"); price.textContent = "$" + p.price.toFixed(2);
     meta.appendChild(price);   // no star rating until there are real reviews to count: never an invented stat
+    if (p.badge) {   // the tag sits beside the price, never over the photo, so neither can hide the other
+      var b = el("span", "badge " + p.badge); b.textContent = BADGE_TEXT[p.badge]; meta.appendChild(b);
+    }
     body.appendChild(meta);
 
     var add = el("button", "card-add");
@@ -195,7 +189,6 @@
     REVIEWS.forEach(function (r) {
       var sample = r.author.charAt(0) === "[";   // a fill-in slot, not a real customer
       var card = el("article", "review reveal");
-      if (!sample) { var stars = el("div", "stars"); stars.textContent = "★★★★★"; card.appendChild(stars); }
       var h4 = el("h4"); h4.textContent = r.title; card.appendChild(h4);
       var body = el("p", "body"); body.textContent = "“" + r.body + "”"; card.appendChild(body);
 
@@ -204,7 +197,7 @@
       card.appendChild(verified);
 
       var who = el("div", "who");
-      var av = el("div", "avatar"); av.textContent = sample ? "·" : r.author.charAt(0); who.appendChild(av);
+      var av = el("div", "avatar" + (sample ? " slot" : "")); av.textContent = sample ? "" : r.author.charAt(0); who.appendChild(av);
       var m = el("div", "meta");
       var nm = el("div", "nm" + (sample ? " slot" : "")); nm.textContent = r.author; m.appendChild(nm);
       var lo = el("div", "lo" + (sample ? " slot" : "")); lo.textContent = r.loc; m.appendChild(lo);

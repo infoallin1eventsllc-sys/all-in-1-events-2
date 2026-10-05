@@ -14,7 +14,7 @@
 | `--line` / `--line-strong` | `#e8e4dd` / `#d6d1c8` | Hairlines |
 | `--ink` / `--sage` | `#1f1d1a` | Headlines, buttons, footer (soft charcoal) |
 | `--ink-soft` | `#4f4b45` | Body text |
-| `--ink-muted` | `#75706a` | Labels, captions |
+| `--ink-muted` | `#645f59` | Labels, captions (5.5:1 on stone, the darkest surface it sits on) |
 | `--on-sage` | `#f7f4ef` | Ivory text on charcoal |
 
 (Legacy token names `--sage*` are kept so nothing else had to change; they now hold charcoal.)
@@ -22,7 +22,7 @@
 ## Type
 - **Display:** Cormorant Garamond **300** for headlines (hero 50–94px, sections 38–64px) with tight tracking (−0.01em). Italic 300 for quotes, scent notes and reviews.
 - **Text:** Jost **300** at 16.5px with 1.8 line-height.
-- **Labels:** Jost 400 at 9.5–11px, uppercase, tracked 0.26–0.38em. Section eyebrows carry a 28px hairline.
+- **Labels:** Jost 400 at 10.5–11px (never smaller), uppercase, tracked 0.22–0.38em. Section eyebrows carry a 28px hairline.
 
 ## Shape, space, depth
 - Arches: `260px 260px 3px 3px` (hero, spotlight, story) and `160px` (product cards). Everything else is near-square (2–4px radius).
@@ -33,7 +33,7 @@
 ## Components
 - **Buttons:** solid charcoal, or an outline that fills on hover. Text is 11px tracked uppercase. No lift and no shadow.
 - **Filters:** text tabs with an underline for the active tab.
-- **Product cards:** no box; arch image, small label, serif name, italic notes, and an underlined "Add to Cart" link.
+- **Product cards:** no box; arch image (nothing laid over it), small label, serif name, italic notes, price with an optional hairline tag ("Best Seller" / "New Arrival") beside it, and an underlined "Add to Cart" link.
 - **Reviews:** open columns divided by hairlines, with the quote in italic serif.
 - **Newsletter:** stone band with an underline-only email field.
 - **Footer:** the one dark charcoal anchor on the page.
@@ -71,3 +71,14 @@ Automated checks run in a real browser at 1440 and 375 (and 320 for the header),
 - **Dead CSS removed:** the old photo-hero rules (`.hero-grid`, `.hero-media`, `.hero-frame`, `.hero-tag`, `.hero-emblem`, `.hero-trust`, `.rating-float`, `.scent-pills`, `.pill`) and a duplicate `.owner-login` rule. Stylesheet 586→~545 lines; no selector is defined twice outside media queries.
 - **Layering:** z-index inventory is now just `.mobile-nav` (99) and the portal overlay (120); the hero uses `isolation: isolate` with no z-index games.
 - **Behaviour exercised:** filter chips, add-to-cart + toast + badge, Sound on/off (mute state verified), newsletter submit, scent deep links scroll to their cards, 13 products and 4 reviews render. Console: no page errors (the only failed request is Google Fonts, blocked by the sandbox, not the site).
+
+
+## Clarity QC (every word legible, everything in its place) — 2026-10-05
+A script measured every visible text node in a real browser at 1440 and 375: computed size, contrast of the rendered colour against the surface actually behind it (opacity chains and translucent layers included), clipping and off-screen position. Then full-page screenshots were read section by section at both widths.
+- **Contrast.** The muted label grey (`--ink-muted`) was `#75706a`, which reads 3.6:1 on ivory and 3.5:1 on stone, below the 4.5:1 reading floor. It is `#645f59` now: 5.9:1 on ivory, 5.5:1 on stone, 6.3:1 on porcelain. That one token carried every eyebrow, filter chip, card category, scent-note key, spec label, review caption, newsletter note and the burn-time caption, so all of them pass in one change. The footer's bottom line went from ivory at 50% to 60%.
+- **Size floor.** Nothing tracked-uppercase sits below 10.5px any more (was 9–10px): announcement bar, header subtitle, cart count, hero scent label, Sound button, badges, card categories, Add to Cart, pop-up code, scent-note keys, burn-time caption, spec labels, review captions, newsletter note, footer headings, portal buttons. Label scale in the type section is now 10.5–11px.
+- **Badges off the photographs.** "Best Seller" sat on top of the lettering printed in the Harlem Smock artwork; a top corner clipped against the arch. Badges are now a hairline tag beside the price, in the card text, so no photo is ever covered and the tag can never be covered. Product names stay level across a row.
+- **Reviews.** Sample reviews showed a stray dot in the avatar circle; the circle is an empty dashed slot now, matching the dashed name and city slots. The renderer no longer draws a hard-coded five-star row for a real review (a rating that was never collected is an invented one).
+- **Phone fit.** The hero badge broke onto two lines between its two hairlines at 375px; it keeps one line and one hairline there, and just the words at 320px. Card categories tighten their tracking so "Signature Candle" fits a two-column card on one line. The footer's bottom line stacks (copyright, tagline, Owner Login) instead of wrapping around a stray separator dot.
+- **Dead rules removed:** `.card .rate`, `.card .rate .s`, `.review .stars`, `.card-badges`, the duplicate 8px header-subtitle rule, and the unused `starStr()` helper.
+- **Re-verified:** contrast audit clean at both widths; filters, cart, sound, newsletter and deep links still pass; `scrollWidth == clientWidth` at 375 and 320; all controls ≥44px.
