@@ -64,6 +64,8 @@ export function useSurveyFlight(sim: Sim, link: Link, plan: SurveyPlan) {
       : { id: 'batt-plan', label: `Battery covers the ${minutes.toFixed(0)}-min flight`, ok: t.batteryPct < 0 || t.batteryPct >= needPct, detail: t.batteryPct >= 0 ? `${t.batteryPct}% of ${needPct}% needed` : 'no %', advisory: true },
     ...complianceChecks,
   ];
+  // A survey triggers the camera at each photo point and flies precise lines: ArduPilot or PX4 aircraft that fly.
+  if (link.live && link.capabilities.SURVEY.level === 'no') checks.unshift({ id: 'survey-capable', label: 'Aircraft can fly survey missions', ok: false, detail: link.capabilities.SURVEY.note });
   // The autopilot's own fences, read from its parameters. ArduCopter's defaults (FENCE_TYPE 7: max altitude 100 m, a 300 m
   // circle round home, polygons; libraries/AC_Fence/AC_Fence.cpp) would stop a big or high survey part way, and PX4's
   // GF_MAX_HOR_DIST / GF_MAX_VER_DIST do the same when set. The circle is round the autopilot's home, so reach is

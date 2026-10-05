@@ -75,17 +75,26 @@ stills and the 34-second reel in `portfolio/fleet/` were made (1080p, 24 fps).
 
 ## Which drones work
 
-Any aircraft whose flight controller runs **ArduPilot** (recommended) or **PX4** — they
-speak **MAVLink**. The autopilot is detected from its heartbeat and every command is
-encoded for it (flight-mode numbering, takeoff altitude reference and mission item 0
-differ between the two).
+Any aircraft, custom-built or bought, whose flight controller speaks **MAVLink** (1 or 2).
+The flight software and the airframe are read from its heartbeat, and every command is
+encoded for both: flight-mode numbering, how it takes off and lands, the takeoff altitude
+reference and mission item 0 all differ. What each combination can do from here is one
+table, `capabilitiesOf` in `src/link/mavlink.ts`; the link popover shows it for the
+connected aircraft (**What this aircraft can do from here**), and anything outside it is
+refused with the reason instead of being sent. The customer-facing version is
+[`docs/CUSTOM-BUILD-CHECKLIST.md`](docs/CUSTOM-BUILD-CHECKLIST.md).
 
-| Aircraft | Works? |
-| --- | --- |
-| ArduPilot: Pixhawk / Cube / Matek controllers (e.g. Holybro X500 V2 + Pixhawk 6C) | ✅ every feature |
-| PX4 on the same hardware | ✅ flight, missions, payload |
-| Skybrush show drones (ArduPilot show firmware) | ✅ via the show-package export; Skybrush flies the fleet |
-| DJI (Mini, Mavic, Mavic 3 Enterprise, Matrice), Autel, Skydio | ❌ closed systems, no MAVLink |
+| Flight controller firmware | Airframes | Works? |
+| --- | --- | --- |
+| **ArduPilot** (Pixhawk, Cube, Holybro, Matek, SpeedyBee, Kakute H7…) | multirotor, helicopter | ✅ every feature |
+| ArduPilot (ArduPlane) | fixed wing | ✅ takes off in Takeoff mode to its `TKOFF_ALT` (the link's Take off sets it to the height asked); **Land** flies the mission's landing sequence (`DO_LAND_START`); hold circles |
+| ArduPilot (ArduPlane QuadPlane) | VTOL | ✅ vertical takeoff in Guided, QLAND, QLOITER |
+| ArduPilot (ArduRover) | rover, boat | ✅ no takeoff; **Land** and hold stop it (Hold); no survey |
+| **PX4** on the same hardware | multirotor, fixed wing, VTOL | ✅ flight, missions, payload |
+| **INAV** | multirotor, fixed wing | ⚠️ live telemetry, recording, go-to (with GCS NAV mode on), route upload as waypoints; arm, takeoff, modes and mission start stay on the pilot's radio; no surveys, fences, settings or payload |
+| **Betaflight** (FPV) | multirotor | ⚠️ live telemetry and recording only (no navigation in the firmware); re-flash ArduPilot or INAV to fly routes |
+| Skybrush show drones (ArduPilot show firmware) | multirotor | ✅ via the show-package export; Skybrush flies the fleet |
+| DJI (Mini, Mavic, Mavic 3 Enterprise, Matrice), Autel, Skydio, toy drones | — | ❌ closed systems, no MAVLink |
 
 For **all features** on one airframe: ArduPilot, a Raspberry Pi companion computer
 (network link + video), a MAVLink gimbal camera (Siyi A8 mini; ZT6 / ZT30 for thermal),
@@ -121,14 +130,17 @@ The **link button** in the app bar connects the browser to a flight controller o
 | Transport | Browser API | Hardware | Range |
 | --- | --- | --- | --- |
 | **Bluetooth** | Web Bluetooth (BLE) | A BLE bridge on the flight controller's TELEM port exposing the Nordic UART Service — an ESP32 running a MAVLink-to-NUS sketch is the usual part. | ~30 m: pairing, pre-flight, pad checks |
-| **USB telemetry radio** | Web Serial, 57600 baud | SiK 915 MHz, mLRS or ELRS radio plugged into the laptop, or the controller's own USB port | kilometres |
-| **Network** | WebSocket | The companion computer's bridge (`hardware/companion-pi/bridge/mavlink_ws.py`) on Wi-Fi, LTE or Tailscale; `wss://` with a token | wherever the network reaches |
+| **USB telemetry radio** | Web Serial; baud found automatically (57600, 115200, 460800, 921600…) | SiK 915 MHz, mLRS or ELRS radio plugged into the laptop, a USB-serial adapter on a TELEM port, or the controller's own USB port | kilometres |
+| **Network** | WebSocket | The companion computer's bridge (`hardware/companion-pi/bridge/mavlink_ws.py`) on Wi-Fi, LTE or Tailscale; `wss://` with a token. The same bridge on a laptop turns a UDP or TCP MAVLink source into a link: an ELRS Wi-Fi backpack, an ESP8266/ESP32 Wi-Fi bridge, mLRS Wi-Fi or SITL (`--udp 0.0.0.0:14550`, `--tcp host:5760`) | wherever the network reaches |
 | **Simulation** | — | none | — |
 
 Bluetooth and USB need **Chrome or Edge** over **HTTPS** and a click — the browser shows
 its own device picker and never connects silently. Network works in every browser. To
 bench-test the whole chain with no drone, run the bridge with
-`bridge/fake_vehicle.py` (ArduCopter, or `--px4`); see `hardware/companion-pi/README.md`.
+`bridge/fake_vehicle.py` (ArduCopter, or `--px4`) or `bridge/fake_inav.py` (an INAV hobby
+build on MAVLink 1, or `--v2`); see `hardware/companion-pi/README.md`. The benches
+`scripts/bench/survey-flight.mjs [--px4]` and `scripts/bench/inav-link.mjs [--v2]` drive
+the dashboard through the real bridge against them.
 
 Once linked, every vehicle heard on the radio takes over an aircraft slot in the
 Surveillance dashboard (routing by MAVLink system id), driven by live telemetry —
@@ -137,7 +149,8 @@ position, altitude, heading, speed, battery, GPS, radio RSSI. The link popover s
 flight commands: **Arm · Take off · Land · Return to launch**. In the Route tab,
 clicking a waypoint sends a GUIDED go-to, and **Upload patrol** pushes the five
 waypoints as a MAVLink mission and starts AUTO. The codec is `src/link/mavlink.ts`
-(v2 framing with CRC, decoders, heartbeat / command / mission encoders; `npm test`);
+(v1 and v2 framing with CRC, decoders, heartbeat / command / mission encoders, and
+`capabilitiesOf`; `npm test`, including `scripts/custom.test.mjs` for custom builds);
 the transports and handshakes are `src/link/useAircraftLink.tsx`. ArduCopter is the
 reference autopilot for mode numbers.
 

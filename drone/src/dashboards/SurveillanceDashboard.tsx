@@ -55,10 +55,12 @@ export const SurveillanceDashboard: React.FC = () => {
   const viewOnly = `${ROLE_LABEL[op.role]}: only the pilot in command can do this`;
 
   // Send an aircraft to a waypoint: the simulation always; the real aircraft when it is the linked one.
+  // A go-to the real aircraft refused (an INAV without GCS NAV mode, say), shown under the route.
+  const [goError, setGoError] = useState('');
   const sendToWaypoint = (i: number) => {
     if (!canFly) return;
     sim.goToWaypoint(selectedDroneId, i);
-    if (liveId && isPrimary) { const ll = sim.waypointLatLon(i); if (ll) link.goTo(ll.lat, ll.lon, WAYPOINTS[i].altM).catch(() => {}); }
+    if (liveId && isPrimary) { const ll = sim.waypointLatLon(i); if (ll) { setGoError(''); link.goTo(ll.lat, ll.lon, WAYPOINTS[i].altM).catch(e => setGoError(e instanceof Error ? e.message : String(e))); } }
   };
   // Send the selected aircraft to a detection: the simulation, and the real aircraft when it is the linked one.
   // Another live aircraft (not the one commands go to) or one with no position fix yet can't be sent.
@@ -68,7 +70,8 @@ export const SurveillanceDashboard: React.FC = () => {
     if (liveId) {
       const ll = detLatLon(det);
       if (!isPrimary || !ll) return;
-      link.goTo(ll.lat, ll.lon, 45).catch(() => {});
+      setGoError('');
+      link.goTo(ll.lat, ll.lon, 45).catch(e => setGoError(e instanceof Error ? e.message : String(e)));
     }
     sim.dispatchToDetection(selectedDroneId, det.id);
   };
@@ -104,7 +107,8 @@ export const SurveillanceDashboard: React.FC = () => {
 
   // What the upload-and-start actually did: the link reports DONE as soon as the items are on the
   // aircraft, while arming and starting are still running (or about to fail).
-  const [patrolStart, setPatrolStart] = useState<{ state: 'IDLE' | 'STARTING' | 'STARTED' | 'FAILED'; error: string }>({ state: 'IDLE', error: '' });
+  // RADIO: on the aircraft, to be started from the pilot's radio (INAV and other firmware that can't be started over MAVLink).
+  const [patrolStart, setPatrolStart] = useState<{ state: 'IDLE' | 'STARTING' | 'STARTED' | 'RADIO' | 'FAILED'; error: string }>({ state: 'IDLE', error: '' });
   const uploadPatrol = () => {
     const items = WAYPOINTS.map((w, i) => { const ll = sim.waypointLatLon(i); return ll ? { lat: ll.lat, lon: ll.lon, altRelM: w.altM, holdS: w.holdSec } : null; });
     if (items.some(x => !x)) return;
@@ -113,7 +117,7 @@ export const SurveillanceDashboard: React.FC = () => {
     const takeoff = { command: 22, lat: t.home?.lat ?? t.lat, lon: t.home?.lon ?? t.lon, altRelM: WAYPOINTS[0].altM, params: [0, 0, 0, NaN] as [number, number, number, number], frame: 3 };
     setPatrolStart({ state: 'STARTING', error: '' });
     link.uploadMission([...(onGround ? [takeoff] : []), ...(items as { lat: number; lon: number; altRelM: number; holdS: number }[])], true)
-      .then(() => setPatrolStart({ state: 'STARTED', error: '' }))
+      .then(() => setPatrolStart({ state: link.capabilities.MISSION_START.level === 'no' ? 'RADIO' : 'STARTED', error: link.capabilities.MISSION_START.note }))
       .catch(e => setPatrolStart({ state: 'FAILED', error: e instanceof Error ? e.message : String(e) }));
   };
 
@@ -285,7 +289,7 @@ export const SurveillanceDashboard: React.FC = () => {
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="text-[15px] font-semibold text-ink">{d.id}</div>
-                    <div className="text-[12px] text-ink-3">{liveId ? `${link.transport === 'BLUETOOTH' ? 'Bluetooth LE' : link.transport === 'NETWORK' ? 'Network' : 'USB radio'} · ${link.autopilot === 'PX4' ? 'PX4' : 'ArduPilot'} · ${link.telemetry.msgsPerSec} msg/s` : d.model} · {SENSOR_LABEL[d.sensorMode]}</div>
+                    <div className="text-[12px] text-ink-3">{liveId ? `${link.transport === 'BLUETOOTH' ? 'Bluetooth LE' : link.transport === 'NETWORK' ? 'Network' : 'USB radio'} · ${link.autopilot === 'PX4' ? 'PX4' : link.autopilot === 'ARDUPILOT' ? 'ArduPilot' : 'MAVLink'} · ${link.telemetry.msgsPerSec} msg/s` : d.model} · {SENSOR_LABEL[d.sensorMode]}</div>
                   </div>
                   <Chip tone={STATUS_TONE[d.status]} pulse={d.status === 'MONITORING'}>{STATUS_LABEL[d.status]}</Chip>
                 </div>
@@ -341,6 +345,7 @@ export const SurveillanceDashboard: React.FC = () => {
                     </div>
                     {link.missionUpload.state === 'DONE' && patrolStart.state === 'STARTING' && <div className="mt-1 text-[11px] text-ink-2">Mission on the aircraft · starting…</div>}
                     {link.missionUpload.state === 'DONE' && patrolStart.state === 'STARTED' && <div className="mt-1 text-[11px] text-ok">Mission on the aircraft · started</div>}
+                    {link.missionUpload.state === 'DONE' && patrolStart.state === 'RADIO' && <div className="mt-1 text-[11px] text-ok">Route on the aircraft · {patrolStart.error}</div>}
                     {link.missionUpload.state === 'FAILED' ? <div className="mt-1 text-[11px] text-bad">{link.missionUpload.error}</div>
                       : patrolStart.state === 'FAILED' && <div className="mt-1 text-[11px] text-bad">{link.missionUpload.state === 'DONE' ? 'Mission on the aircraft · not started: ' : ''}{patrolStart.error}</div>}
                     {link.telemetry.missionCurrent > 0 && <div className="mt-1 text-[11px] text-ink-2">Aircraft reports mission item {link.telemetry.missionCurrent}</div>}
@@ -362,6 +367,7 @@ export const SurveillanceDashboard: React.FC = () => {
                       );
                     })}
                   </ol>
+                  {goError && <div role="alert" className="mt-1 text-[11px] text-bad">{goError}</div>}
                 </Section>
               </div>
             )}

@@ -4,6 +4,7 @@ import {
   encodeFlightMode, encodeTakeoffFor, encodeRepositionFor, encodeGimbalPitchYaw, encodeMountControl, encodeCameraZoom, encodeCameraSource, encodeRelay, encodeTakePhoto,
   autopilotOf, modeName, isVehicleHeartbeat, MODE_LABEL, EMPTY_TELEMETRY, MAV_CMD, MAV_RESULT, type Telemetry, type MavFrame, type MissionItem, type Autopilot, type FlightMode,
   encodeParamRequestRead, encodeParamSet, decodeParamValue, decodeParamError, paramEncodingOf, paramStored, encodeFenceEnable, FENCE_TYPE, MAV_PARAM_TYPE, PARAM_ERROR_TEXT, type ParamValue,
+  vehicleKind, capabilitiesOf, FEATURE_LABEL, type VehicleKind, type Feature, type Capability,
 } from './mavlink';
 import { PREFLIGHT_PARAMS, READ_UNLESS, paramPreflight, type Params } from './paramChecks';
 import { useOperator, ROLE_LABEL } from '../operator/operator';
@@ -20,7 +21,9 @@ import { uploadItems, startMission as startMissionOn, awaitAck as awaitAckOn, MI
  *              Service — e.g. an ESP32 on the flight controller's TELEM port.
  *              Chrome / Edge on desktop and Android; needs HTTPS and a click.
  *   SERIAL     Web Serial to a USB telemetry radio (SiK 915 MHz, mLRS, ELRS
- *              backpack) or the flight controller's own USB port. 57600 baud.
+ *              backpack), a USB-serial adapter on a TELEM port, or the flight
+ *              controller's own USB port. The baud rate is found automatically
+ *              (57600, 115200, 460800, 921600, ...; the last one that worked first).
  *   NETWORK    WebSocket to the companion computer's bridge
  *              (hardware/companion-pi/bridge), raw MAVLink in binary messages.
  *              Works in every browser, including iPhone and iPad, which have
@@ -28,8 +31,11 @@ import { uploadItems, startMission as startMissionOn, awaitAck as awaitAckOn, MI
  *   SIMULATION No hardware; the dashboards run their client-side sims.
  *
  * DJI consumer aircraft are not reachable this way — they only speak through
- * DJI's SDK / cloud. This works with ArduPilot and PX4 flight controllers; the
- * autopilot is detected from its heartbeat and commands are encoded for it.
+ * DJI's SDK / cloud. Any flight controller that speaks MAVLink 1 or 2 connects:
+ * ArduPilot (Copter, Plane, QuadPlane, Rover) and PX4 take every command, encoded
+ * for the autopilot and airframe its heartbeat names; INAV, Betaflight and other
+ * MAVLink firmware are shown live and take what they implement. capabilitiesOf
+ * (mavlink.ts) is the table, and commands outside it are refused with the reason.
  */
 
 export type Transport = 'SIMULATION' | 'BLUETOOTH' | 'SERIAL' | 'NETWORK';
@@ -71,6 +77,12 @@ interface LinkApi extends LinkState {
   connectNetwork: (url: string) => Promise<void>;
   /** Detected from the heartbeat. Commands below are encoded for it. */
   autopilot: Autopilot;
+  /** The airframe its heartbeat names (multirotor, fixed wing, VTOL, rover). */
+  vehicleKind: VehicleKind;
+  /** What this aircraft can do from here (see capabilitiesOf). */
+  capabilities: Record<Feature, Capability>;
+  /** Baud rate the serial link settled on (0 unless on serial). */
+  serialBaud: number;
   disconnect: () => Promise<void>;
   send: (bytes: Uint8Array) => Promise<void>;
   returnToLaunch: () => Promise<void>;
@@ -115,6 +127,11 @@ interface LinkApi extends LinkState {
    */
   setParam: (name: string, value: number, type?: number, sys?: number) => Promise<ParamValue>;
 }
+
+/** Serial rates tried in order (after the last one that worked). */
+export const SERIAL_RATES = [57600, 115200, 460800, 921600, 38400, 230400, 500000, 1500000];
+/** How long each rate is given to produce a whole MAVLink frame (an autopilot heartbeats at 1 Hz and streams faster). */
+const PROBE_MS = 1600;
 
 const NUS_SERVICE = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
 const NUS_RX = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // write to bridge
@@ -193,6 +210,8 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, [send]);
 
   const readPreflight = useRef<(sys: number) => Promise<void>>(async () => {});
+  /** setParam, for callbacks declared before it (takeoff sets a plane's TKOFF_ALT). */
+  const setParamRef = useRef<(name: string, value: number) => Promise<unknown>>(async () => undefined);
   const ingest = useCallback((chunk: Uint8Array) => {
     bytesIn.current += chunk.length;
     for (const f of parser.current.push(chunk)) {
@@ -270,6 +289,7 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, [support.bluetooth, ingest, resetLink, dropped]);
 
+  const [serialBaud, setSerialBaud] = useState(0);
   const connectSerial = useCallback(async () => {
     if (!support.serial) { setState(s => ({ ...s, status: 'ERROR', error: 'Web Serial is not available in this browser. Use Chrome or Edge on desktop, over HTTPS.' })); return; }
     resetLink();
@@ -277,25 +297,57 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const port = await (navigator as any).serial.requestPort();
-      await port.open({ baudRate: 57600 });
       const info = port.getInfo?.() ?? {};
       const name = info.usbVendorId ? `USB radio ${info.usbVendorId.toString(16)}:${(info.usbProductId ?? 0).toString(16)}` : 'Serial radio';
-      const reader = port.readable.getReader();
+      // The baud rate: a flight controller's own USB port takes any, but a radio or a USB-serial adapter on a TELEM
+      // port only talks at the rate it is set to (SiK and mLRS 57600; TELEM ports 57600 or 115200; ELRS 460800;
+      // companion-style ports 921600). Each is tried until whole MAVLink frames arrive, the last one that worked first.
+      const remembered = (() => { try { return Number(localStorage.getItem('a1-serial-baud')) || 0; } catch { return 0; } })();
+      const rates = [...new Set([remembered, ...SERIAL_RATES].filter(Boolean))];
+      let reader: ReadableStreamDefaultReader<Uint8Array> | null = null, baud = 0;
+      const first: Uint8Array[] = [];
+      for (const r of rates) {
+        await port.open({ baudRate: r });
+        const rd = port.readable.getReader(), probe = new MavParser(), got: Uint8Array[] = [];
+        const until = Date.now() + PROBE_MS;
+        let heard = false;
+        while (!heard && Date.now() < until) {
+          const res = await Promise.race([rd.read(), new Promise<null>(res => setTimeout(() => res(null), until - Date.now()))]);
+          if (!res) break;
+          if (res.done) break;
+          if (res.value) { got.push(res.value); heard = probe.push(res.value).length > 0; }
+        }
+        if (heard) { reader = rd; baud = r; first.push(...got); break; }
+        try { await rd.cancel(); } catch { /* ignore */ }
+        try { rd.releaseLock(); } catch { /* ignore */ }
+        await port.close();
+      }
+      if (!reader) {
+        // Nothing at any rate: keep the port open at the first one so a radio whose aircraft is still off is heard
+        // when it powers up, and say why the screen is quiet.
+        baud = rates[0];
+        await port.open({ baudRate: baud });
+        reader = port.readable.getReader();
+        setState(s => ({ ...s, error: `No MAVLink heard at ${rates.join(', ')} baud yet. Is the aircraft powered and its port set to MAVLink?` }));
+      } else { try { localStorage.setItem('a1-serial-baud', String(baud)); } catch { /* private mode */ } }
+      const rdr = reader!;
       const w = port.writable.getWriter();
       // port.close() rejects while either stream is still locked, leaving the port open ("already open" on
       // the next connect): the read loop releases its lock as it ends, and the port is closed only after that.
       const shut = async () => { try { w.releaseLock(); } catch { /* ignore */ } try { await port.close(); } catch { /* ignore */ } };
       let running = true;
+      for (const c of first) ingest(c);
       const loop = (async () => {
-        try { while (running) { const { value, done } = await reader.read(); if (done) break; if (value) ingest(value); } }
+        try { while (running) { const { value, done } = await rdr.read(); if (done) break; if (value) ingest(value); } }
         catch { /* unplugged, or a port error */ }
         finally {
-          try { reader.releaseLock(); } catch { /* ignore */ }
+          try { rdr.releaseLock(); } catch { /* ignore */ }
           if (running) { running = false; await shut(); dropped('Serial link dropped'); }
         }
       })();
       writer.current = async (bytes: Uint8Array) => { await w.write(bytes); };
-      closer.current = async () => { running = false; try { await reader.cancel(); } catch { /* ignore */ } await loop; await shut(); };
+      closer.current = async () => { running = false; try { await rdr.cancel(); } catch { /* ignore */ } await loop; await shut(); };
+      setSerialBaud(baud);
       setState(s => ({ ...s, status: 'CONNECTED', deviceName: name }));
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -336,10 +388,22 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const sysId = () => primarySys.current || 1;
   const ap = () => autopilotOf(telem.current);
-  const returnToLaunch = useCallback(() => send(encodeCommandLong(MAV_CMD.RETURN_TO_LAUNCH, [], sysId())), [send]);
-  const land = useCallback(() => send(encodeCommandLong(MAV_CMD.LAND, [], sysId())), [send]);
-  const arm = useCallback((on: boolean) => send(encodeArm(on, false, sysId())), [send]);
-  const setFlightMode = useCallback(async (mode: FlightMode) => { const b = encodeFlightMode(ap(), mode, sysId(), telem.current.vehicleType); if (b) await send(b); }, [send]);
+  const kind = () => vehicleKind(telem.current.vehicleType);
+  /** Refuse, with the reason, what this aircraft can't take over MAVLink (see capabilitiesOf). */
+  const need = (f: Feature) => {
+    const c = capabilitiesOf(ap(), kind())[f];
+    if (c.level === 'no') throw new Error(`${FEATURE_LABEL[f]}: ${c.note}`);
+  };
+  /** The primary's COMMAND_ACK result for `command`, or null after `ms` (IN_PROGRESS keeps waiting). */
+  const ackFor = (command: number, ms = 1500) => new Promise<number | null>(resolve => {
+    const onFrame = (f: MavFrame) => { if (f.msgId === 77 && f.sysId === sysId() && f.payload.getUint16(0, true) === command && f.payload.getUint8(2) !== MAV_RESULT.IN_PROGRESS) done(f.payload.getUint8(2)); };
+    const done = (r: number | null) => { clearTimeout(timer); frameListeners.current.delete(onFrame); resolve(r); };
+    const timer = setTimeout(() => done(null), ms);
+    frameListeners.current.add(onFrame);
+  });
+  const returnToLaunch = useCallback(async () => { need('RTL'); await send(encodeCommandLong(MAV_CMD.RETURN_TO_LAUNCH, [], sysId())); }, [send]); // eslint-disable-line react-hooks/exhaustive-deps
+  const arm = useCallback(async (on: boolean) => { need('ARM'); await send(encodeArm(on, false, sysId())); }, [send]); // eslint-disable-line react-hooks/exhaustive-deps
+  const setFlightMode = useCallback(async (mode: FlightMode) => { need('MODES'); const b = encodeFlightMode(ap(), mode, sysId(), telem.current.vehicleType); if (b) await send(b); }, [send]); // eslint-disable-line react-hooks/exhaustive-deps
   /** Resolve once the autopilot's heartbeat reports `mode`, or after `ms` (found flying real ArduCopter SITL). */
   const awaitMode = useCallback((mode: FlightMode, ms = 2000) => new Promise<boolean>(resolve => {
     const t0 = Date.now();
@@ -358,20 +422,62 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (!(await awaitMode(mode))) throw new Error(`The aircraft did not switch to ${MODE_LABEL[mode]} (still ${MODE_LABEL[modeName(telem.current)]})`);
   }, [send, awaitMode]);
   /**
-   * ArduCopter only takes off in GUIDED; PX4 switches to its takeoff mode by itself.
-   * The mode change must land before the takeoff command, or ArduCopter refuses it.
+   * Land, the way this airframe lands: a multirotor or PX4 aircraft lands where it is; a QuadPlane switches to
+   * QLAND; an ArduPlane fixed wing jumps to its mission's landing sequence (DO_LAND_START), and says so when it
+   * has none; a rover or boat stops (Hold).
+   */
+  const land = useCallback(async () => {
+    need('LAND');
+    const k = kind();
+    if (ap() === 'ARDUPILOT' && k === 'VTOL') { await changeMode('LAND'); return; }
+    if (ap() === 'ARDUPILOT' && k === 'ROVER') { await changeMode('HOLD'); return; }
+    if (ap() === 'ARDUPILOT' && k === 'PLANE') {
+      const r = ackFor(MAV_CMD.DO_LAND_START);
+      await send(encodeCommandLong(MAV_CMD.DO_LAND_START, [], sysId()));
+      if ((await r) !== MAV_RESULT.ACCEPTED) throw new Error('This plane has no landing sequence in its mission (DO_LAND_START). Use Return home, or land it from the radio.');
+      return;
+    }
+    await send(encodeCommandLong(MAV_CMD.LAND, [], sysId()));
+  }, [send, changeMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  /**
+   * Take off, the way this airframe takes off. ArduCopter (and a QuadPlane, vertically) only takes off in GUIDED,
+   * and the mode change must land before the takeoff command or it is refused; PX4 switches to its takeoff mode by
+   * itself; an ArduPlane fixed wing uses Takeoff mode, climbing to TKOFF_ALT (set first to the height asked).
    */
   const takeoff = useCallback(async (altM: number) => {
     if (!writer.current) throw new Error('Not connected');
+    need('TAKEOFF');
+    if (ap() === 'ARDUPILOT' && kind() === 'PLANE') {
+      // TKOFF_ALT is the height Takeoff mode climbs to. Best effort: a crew that set it already keeps theirs if the write fails.
+      await setParamRef.current('TKOFF_ALT', altM).catch(() => undefined);
+      await changeMode('TAKEOFF');
+      return;
+    }
     if (ap() !== 'PX4') await changeMode('GUIDED');
     await send(encodeTakeoffFor(ap(), altM, telem.current, sysId()));
-  }, [send, changeMode]);
+  }, [send, changeMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  /**
+   * Fly to a point. PX4: DO_REPOSITION. ArduCopter and ArduRover: GUIDED, then a position target. ArduPlane (and
+   * QuadPlane): DO_REPOSITION, which it flies to and circles. INAV: DO_REPOSITION in its frame, which it takes only in
+   * GCS NAV mode; its refusal is reported as such.
+   */
   const goTo = useCallback(async (lat: number, lon: number, altRelM: number) => {
     if (!writer.current) throw new Error('Not connected');
-    if (ap() === 'PX4') { await send(encodeRepositionFor('PX4', lat, lon, altRelM, telem.current, sysId())); return; }
+    need('GOTO');
+    const a = ap(), k = kind();
+    if (a === 'PX4' || a === 'GENERIC' || k === 'PLANE' || k === 'VTOL') {
+      const r = ackFor(MAV_CMD.DO_REPOSITION);
+      await send(encodeRepositionFor(a, lat, lon, altRelM, telem.current, sysId()));
+      if (a !== 'GENERIC') return;
+      const res = await r;
+      if (res === MAV_RESULT.DENIED) throw new Error('The flight controller refused the go-to: switch on GCS NAV mode from the radio (INAV), then try again.');
+      if (res === MAV_RESULT.UNSUPPORTED) throw new Error('This flight controller does not take a go-to over MAVLink.');
+      if (res === null) throw new Error('No answer to the go-to: this firmware may not take it over MAVLink.');
+      return;
+    }
     await changeMode('GUIDED');
     await send(encodeGotoGlobal(lat, lon, altRelM, sysId()));
-  }, [send, changeMode]);
+  }, [send, changeMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Resolve with the primary aircraft's COMMAND_ACK result for `command`, or null after `ms`. */
   const awaitAck = useCallback((command: number, ms = 900) => new Promise<number | null>(resolve => {
@@ -423,6 +529,7 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, [readParam]);
 
   const setParam = useCallback(async (name: string, value: number, type?: number, sys = sysId()) => {
+    if (sys === sysId()) need('PARAMS');
     // The role gate lives here, not only on the button: a parameter change is a command to the aircraft.
     const op = opRef.current;
     if (!op.canCommand) {
@@ -443,10 +550,12 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     throw new Error(`${name} not set to ${value}: ${why}`);
   }, [paramExchange, readParam]);
 
+  setParamRef.current = setParam;
+
   readPreflight.current = async (sys: number) => {
     const ap = autopilotOf(vehicles.current[sys] ?? telem.current);
     const w = writer.current;
-    if (ap === 'UNKNOWN') return;
+    if (ap !== 'ARDUPILOT' && ap !== 'PX4') return; // INAV and others answer no parameters over MAVLink
     for (const n of PREFLIGHT_PARAMS[ap]) {
       const key = READ_UNLESS[n];
       if (key && paramStore.current[sys]?.[key]) continue;
@@ -480,10 +589,29 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     sysId,
   }), [send]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const startMission = useCallback(() => startMissionOn(io, ap()), [io]); // eslint-disable-line react-hooks/exhaustive-deps
+  const startMission = useCallback(async (): Promise<StartResult> => {
+    const c = capabilitiesOf(ap(), kind()).MISSION_START;
+    if (c.level === 'no') return { ok: false, error: `The route is on the aircraft: ${c.note}` };
+    return startMissionOn(io, ap());
+  }, [io]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const uploadMission = useCallback(async (items: MissionItem[], start = false) => {
     if (!writer.current) throw new Error('Not connected');
+    need('MISSION');
+    if (ap() === 'GENERIC') {
+      // INAV: waypoints and return-home only, as MISSION_ITEM in GLOBAL_RELATIVE_ALT, no home item, started from the
+      // radio. A takeoff item is the pilot's (they launch); anything else (a survey's camera and speed items) refused.
+      const route = items.filter(i => (i.command ?? MAV_CMD.NAV_WAYPOINT) !== MAV_CMD.TAKEOFF);
+      const odd = route.filter(i => ![MAV_CMD.NAV_WAYPOINT, MAV_CMD.RETURN_TO_LAUNCH].includes((i.command ?? MAV_CMD.NAV_WAYPOINT) as 16 | 20));
+      if (odd.length) throw new Error(`This flight controller takes waypoints only; ${odd.length} item${odd.length > 1 ? 's' : ''} of this mission (camera, speed or other commands) can't be sent. Survey missions need ArduPilot or PX4.`);
+      const legacy = route.map(i => ({ ...i, holdS: 0, params: undefined, frame: 3 }));
+      setMissionUpload({ state: 'UPLOADING', sent: 0, total: legacy.length, error: '' });
+      try {
+        await uploadItems(io, legacy, { missionType: MISSION_TYPE.MISSION, firstCurrent: 0, legacy: true, onProgress: p => setMissionUpload(m => ({ ...m, sent: p.sent })) });
+        setMissionUpload(m => ({ ...m, state: 'DONE', sent: legacy.length }));
+      } catch (e) { const msg = e instanceof Error ? e.message : String(e); setMissionUpload(m => ({ ...m, state: 'FAILED', error: msg })); throw e; }
+      return; // `start`: the pilot starts it from the radio (capabilities MISSION_START says so on screen)
+    }
     const t = telem.current;
     // ArduPilot reserves item 0 for home; PX4 flies item 0 as the first real item.
     const home = t.home ?? { lat: t.lat, lon: t.lon };
@@ -509,6 +637,7 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const uploadFence = useCallback(async (items: MissionItem[]) => {
     if (!writer.current) throw new Error('Not connected');
+    need('FENCE');
     await uploadItems(io, items, { missionType: MISSION_TYPE.FENCE });
     // PX4 has no fence enable (DO_FENCE_ENABLE is unsupported): an uploaded fence is enforced whenever GF_ACTION is not 0.
     if (ap() === 'PX4') { const a = await readParam('GF_ACTION'); return { enabled: !!a && a.value > 0 }; }
@@ -531,7 +660,7 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     // RSSI comes from RADIO_STATUS, which the telemetry radio injects (see ingest); Bluetooth and network links have none.
     { id: 'link', label: 'Radio link quality', ok: tNow.radioRssi === 0 || tNow.radioRssi > 60, detail: tNow.radioRssi ? `RSSI ${tNow.radioRssi}${tNow.radioRemRssi ? ` · remote ${tNow.radioRemRssi}` : ''}` : 'n/a on this transport' },
     // Read from the aircraft's parameters: what it does on a low battery and a fence breach, and how high it returns.
-    ...(hbFresh && autopilotOf(tNow) !== 'UNKNOWN' ? paramPreflight(autopilotOf(tNow) as 'ARDUPILOT' | 'PX4', state.params) : []),
+    ...(hbFresh && (autopilotOf(tNow) === 'ARDUPILOT' || autopilotOf(tNow) === 'PX4') ? paramPreflight(autopilotOf(tNow) as 'ARDUPILOT' | 'PX4', state.params) : []),
   ];
   const preflight = { ok: checks.every(c => c.ok || c.advisory), checks };
 
@@ -543,9 +672,12 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const api: LinkApi = {
     ...state, support,
     connectBluetooth, connectSerial, connectNetwork, disconnect, send, returnToLaunch, land, arm, takeoff, setFlightMode, goTo, uploadMission, missionUpload, preflight,
-    uploadFence, startMission, missionSeqOffset: autopilotOf(state.telemetry) === 'PX4' ? 0 : 1,
+    uploadFence, startMission, missionSeqOffset: autopilotOf(state.telemetry) === 'ARDUPILOT' ? 1 : 0,
     setGimbal, setZoom, setCameraSource, setRelay, takePhoto,
     autopilot: autopilotOf(state.telemetry),
+    vehicleKind: vehicleKind(state.telemetry.vehicleType),
+    capabilities: capabilitiesOf(autopilotOf(state.telemetry), vehicleKind(state.telemetry.vehicleType)),
+    serialBaud: state.transport === 'SERIAL' ? serialBaud : 0,
     live: state.status === 'CONNECTED' && state.telemetry.heartbeatMs > 0,
     onFrame, readParam, readParams, setParam,
   };

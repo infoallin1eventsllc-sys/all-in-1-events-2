@@ -1,6 +1,6 @@
 import { MAV_RESULT } from '../link/mavlink';
 import { describe, stepsFor, RESULT_NAME, type Cmd, type Step } from './protocol';
-import type { Autopilot } from '../link/mavlink';
+import type { Autopilot, VehicleKind } from '../link/mavlink';
 
 /**
  * The dispatcher: sends one command to one aircraft or to 500, and knows what
@@ -46,6 +46,8 @@ export interface Batch {
 export interface Transport {
   send: (id: string, step: Step) => void;
   autopilot: (id: string) => Autopilot;
+  /** The airframe (multirotor when not given): a fixed wing, VTOL or rover takes some commands differently. */
+  kind?: (id: string) => VehicleKind;
   /**
    * Does the aircraft's state already show this step done? Used when a retry is
    * refused: if the first send worked and only its ACK was lost, a real
@@ -108,7 +110,7 @@ export class Commander {
     for (const id of ids) {
       const held = opts.hold?.get(id);
       b.targets.set(id, { id, status: held ? 'HELD' : 'QUEUED', step: 0, attempts: 0, dueAt: now + (opts.delayS?.(id) ?? 0) * 1000, timeoutAt: 0, reason: held ?? '', doneAt: held ? now : 0 });
-      b.steps.set(id, stepsFor(opts.perTarget?.get(id) ?? cmd, this.transport.autopilot(id)));
+      b.steps.set(id, stepsFor(opts.perTarget?.get(id) ?? cmd, this.transport.autopilot(id), this.transport.kind?.(id)));
     }
     (b as Batch & { retries: number; timeout: number }).retries = retries;
     (b as Batch & { retries: number; timeout: number }).timeout = timeout;

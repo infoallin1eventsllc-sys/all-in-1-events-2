@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Bluetooth, Usb, Cpu, Link2, Link2Off, Satellite, Radio, ShieldCheck, Plane, ArrowDownToLine, Wifi } from 'lucide-react';
 import { useAircraftLink, type Transport } from './useAircraftLink';
-import { FIX_NAMES, MODE_LABEL, modeName } from './mavlink';
+import { FIX_NAMES, MODE_LABEL, modeName, FEATURE_LABEL, KIND_LABEL, type Feature } from './mavlink';
 import { PREFLIGHT_PARAMS } from './paramChecks';
 import { Chip, Dot, ToolButton, type Tone } from '../dashboards/ui';
 
@@ -35,6 +35,13 @@ export const LinkButton: React.FC = () => {
   const tone: Tone = link.status === 'CONNECTED' ? (link.live ? 'ok' : 'warn') : link.status === 'CONNECTING' ? 'warn' : link.status === 'ERROR' || link.lost ? 'bad' : 'neutral';
   const label = link.status === 'CONNECTED' ? (link.live ? link.deviceName : `${link.deviceName} · no heartbeat`) : link.status === 'CONNECTING' ? 'Connecting…' : link.lost ? 'Link lost' : 'Simulation';
   const t = link.telemetry;
+  const cap = link.capabilities;
+  const firmware = link.autopilot === 'PX4' ? 'PX4' : link.autopilot === 'ARDUPILOT'
+    ? ({ COPTER: 'ArduCopter', PLANE: 'ArduPlane', VTOL: 'ArduPlane QuadPlane', ROVER: 'ArduRover', OTHER: 'ArduPilot' } as const)[link.vehicleKind]
+    : link.autopilot === 'GENERIC' ? 'MAVLink flight controller (INAV, Betaflight or other)' : '';
+  const why = (f: Feature) => (cap[f].level === 'no' ? cap[f].note : cap[f].note || undefined);
+  const runCmd = (p: Promise<unknown>) => { setCmdError(''); p.catch(e => setCmdError(e instanceof Error ? e.message : String(e))); };
+  const [showCaps, setShowCaps] = useState(false);
 
   const TransportRow: React.FC<{ id: Transport; icon: React.ReactNode; title: string; body: string; available: boolean; onPick: () => void }> = ({ id, icon, title, body, available, onPick }) => (
     <button
@@ -73,7 +80,9 @@ export const LinkButton: React.FC = () => {
 
           {link.status === 'CONNECTED' ? (
             <div className="px-3 py-2 space-y-2">
-              <div className="text-[12px] text-ink-2">{link.deviceName} · {link.transport === 'BLUETOOTH' ? 'Bluetooth LE' : link.transport === 'NETWORK' ? 'Network bridge' : 'USB serial · 57600'}{link.autopilot !== 'UNKNOWN' ? ` · ${link.autopilot === 'PX4' ? 'PX4' : 'ArduPilot'}` : ''}</div>
+              <div className="text-[12px] text-ink-2">{link.deviceName} · {link.transport === 'BLUETOOTH' ? 'Bluetooth LE' : link.transport === 'NETWORK' ? 'Network bridge' : `USB serial · ${link.serialBaud || '—'} baud`}</div>
+              {firmware && <div className="text-[12px] text-ink"><span className="font-medium">{firmware}</span><span className="text-ink-3"> · {KIND_LABEL[link.vehicleKind]} · MAVLink {t.mavVersion || '—'}</span></div>}
+              {!link.live && link.error && <div className="text-[11px] text-warn">{link.error}</div>}
               <div className="grid grid-cols-3 gap-2 text-[12px]">
                 <div><div className="text-[11px] text-ink-3">Mode</div><div className="font-medium text-ink">{t.heartbeatMs ? `${MODE_LABEL[modeName(t)]}${t.armed ? ' · armed' : ''}` : '—'}</div></div>
                 <div><div className="text-[11px] text-ink-3">GPS</div><div className="font-medium text-ink num">{FIX_NAMES[t.fixType] ?? '—'} · {t.satellites}</div></div>
@@ -91,23 +100,38 @@ export const LinkButton: React.FC = () => {
                     <li key={c.id} className="flex items-center justify-between gap-2 py-1 text-[12px]"><span className="flex items-center gap-2 text-ink-2"><Dot tone={c.ok ? 'ok' : c.advisory ? 'warn' : 'bad'} />{c.label}</span><span className="num text-[11px] text-ink-3 text-right">{c.detail}</span></li>
                   ))}
                 </ul>
-                {link.autopilot !== 'UNKNOWN' && link.preflight.checks.some(c => /not read/.test(c.detail)) && (
+                {(link.autopilot === 'ARDUPILOT' || link.autopilot === 'PX4') && link.preflight.checks.some(c => /not read/.test(c.detail)) && (
                   <button type="button" className="mt-1 text-[11px] text-accent hover:underline" onClick={() => void link.readParams(PREFLIGHT_PARAMS[link.autopilot as 'ARDUPILOT' | 'PX4'])}>Some settings did not answer · read again</button>
                 )}
                 <p className="mt-1 text-[11px] text-ink-3">Amber items are read from the aircraft's settings and do not hold the gate: the crew decides.</p>
               </div>
               <div className="flex flex-wrap gap-2 pt-1">
                 {!t.armed
-                  ? <ToolButton command="fly" size="sm" icon={<ShieldCheck />} label="Arm" primary disabled={!link.live || !link.preflight.ok} onClick={() => link.arm(true)} title={link.preflight.ok ? 'COMPONENT_ARM_DISARM' : 'Pre-flight gate not satisfied'} />
-                  : <ToolButton command="abort" size="sm" icon={<ShieldCheck />} label="Disarm" disabled={!link.live} onClick={() => link.arm(false)} />}
-                <ToolButton command="fly" size="sm" icon={<Plane />} label="Take off 30 m" disabled={!link.live || !t.armed} onClick={() => { setCmdError(''); link.takeoff(30).catch(e => setCmdError(e instanceof Error ? e.message : String(e))); }} />
-                <ToolButton command="abort" size="sm" icon={<ArrowDownToLine />} label="Land" disabled={!link.live || !t.armed} onClick={() => link.land()} />
-                <ToolButton command="abort" size="sm" icon={<Satellite />} label="Return to launch" disabled={!link.live} onClick={() => link.returnToLaunch()} />
+                  ? <ToolButton command="fly" size="sm" icon={<ShieldCheck />} label="Arm" primary disabled={!link.live || !link.preflight.ok || cap.ARM.level === 'no'} onClick={() => runCmd(link.arm(true))} title={cap.ARM.level === 'no' ? cap.ARM.note : link.preflight.ok ? 'COMPONENT_ARM_DISARM' : 'Pre-flight gate not satisfied'} />
+                  : <ToolButton command="abort" size="sm" icon={<ShieldCheck />} label="Disarm" disabled={!link.live || cap.ARM.level === 'no'} onClick={() => runCmd(link.arm(false))} title={why('ARM')} />}
+                <ToolButton command="fly" size="sm" icon={<Plane />} label="Take off 30 m" disabled={!link.live || !t.armed || cap.TAKEOFF.level === 'no'} onClick={() => runCmd(link.takeoff(30))} title={why('TAKEOFF')} />
+                <ToolButton command="abort" size="sm" icon={<ArrowDownToLine />} label={link.vehicleKind === 'ROVER' ? 'Stop' : 'Land'} disabled={!link.live || !t.armed || cap.LAND.level === 'no'} onClick={() => runCmd(link.land())} title={why('LAND')} />
+                <ToolButton command="abort" size="sm" icon={<Satellite />} label="Return to launch" disabled={!link.live || cap.RTL.level === 'no'} onClick={() => runCmd(link.returnToLaunch())} title={why('RTL')} />
                 <ToolButton size="sm" label="Disconnect" onClick={() => { link.disconnect(); }} />
               </div>
               {cmdError && <div className="text-[11px] text-bad">{cmdError}</div>}
               {t.lastAck && Date.now() - t.lastAck.atMs < 8000 && (
                 <div className={`text-[11px] ${t.lastAck.result === 0 ? 'text-ok' : 'text-warn'}`}>Command {t.lastAck.command}: {['accepted', 'temporarily rejected', 'denied', 'unsupported', 'failed', 'in progress'][t.lastAck.result] ?? `result ${t.lastAck.result}`}</div>
+              )}
+              {link.live && (
+                <div className="pt-1">
+                  <button type="button" className="text-[12px] font-semibold text-ink hover:underline" aria-expanded={showCaps} onClick={() => setShowCaps(v => !v)}>What this aircraft can do from here {showCaps ? '▴' : '▾'}</button>
+                  {showCaps && (
+                    <ul className="mt-1 divide-y divide-line">
+                      {(Object.keys(FEATURE_LABEL) as Feature[]).map(f => (
+                        <li key={f} className="py-1 text-[12px]">
+                          <span className="flex items-center gap-2 text-ink-2"><Dot tone={cap[f].level === 'yes' ? 'ok' : cap[f].level === 'partial' ? 'warn' : 'neutral'} />{FEATURE_LABEL[f]}</span>
+                          {cap[f].note && <span className="block pl-4 text-[11px] text-ink-3">{cap[f].note}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               )}
               {Object.keys(link.vehicles).length > 1 && <div className="text-[11px] text-ink-3">{Object.keys(link.vehicles).length} vehicles on this link (system ids {Object.keys(link.vehicles).join(', ')})</div>}
             </div>
@@ -134,7 +158,7 @@ export const LinkButton: React.FC = () => {
               {link.error && <div className="mx-2 mt-1 rounded bg-bad-soft px-2.5 py-1.5 text-[11px] text-bad">{link.error}</div>}
               <div className="mx-2 mt-1 rounded bg-surface-2 px-2.5 py-2 text-[11px] text-ink-3 flex gap-2">
                 <Radio className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                <span>Speaks MAVLink to ArduPilot (recommended) and PX4 aircraft, detected automatically. DJI, Autel and Skydio drones are closed systems and can't connect.</span>
+                <span>Connects to any flight controller that speaks MAVLink: ArduPilot (Copter, Plane, QuadPlane, Rover) and PX4 take every command; INAV and Betaflight show live, with the commands their firmware takes. Detected automatically. DJI, Autel and Skydio drones are closed systems and can't connect.</span>
               </div>
             </div>
           )}

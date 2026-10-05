@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useAircraftLink } from '../link/useAircraftLink';
-import { autopilotOf, modeName, MAV_RESULT, type FlightMode } from '../link/mavlink';
+import { autopilotOf, modeName, vehicleKind, MAV_RESULT, type FlightMode } from '../link/mavlink';
 import { useFleetHealth } from '../diagnostics/useFleetHealth';
 import { readiness, SHOW_MIN_BATTERY, type Readiness } from '../diagnostics/fleet';
 import { recorder } from '../record/recorder';
@@ -97,9 +97,12 @@ export const ControlProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
     const liveT: Transport = {
       autopilot: id => autopilotOf(vehiclesLive.current[Number(id.replace(/\D/g, ''))] ?? { autopilot: 3 }),
+      kind: id => vehicleKind(vehiclesLive.current[Number(id.replace(/\D/g, ''))]?.vehicleType ?? 2),
       send: (id, step) => {
         const sys = Number(id.replace(/\D/g, '')), t = vehiclesLive.current[sys];
         if (!t) return;
+        // Not something this aircraft takes over MAVLink: refused now, with the reason, instead of three unanswered tries.
+        if (step.unsupported) { c.ack(id, step.cmd, MAV_RESULT.UNSUPPORTED, performance.now(), step.unsupported); return; }
         const o = origin.current ?? { lat: t.lat, lon: t.lon };
         const bytes = encodeStep(step, autopilotOf(t), sys, t, o);
         if (bytes) link.send(bytes).catch(() => {});

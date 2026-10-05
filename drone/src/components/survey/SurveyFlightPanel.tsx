@@ -51,7 +51,7 @@ export const SurveyFlightPanel: React.FC<{ flight: ReturnType<typeof useSurveyFl
       <Section title="Mission">
         <div className="space-y-1.5">
           <Row label="Items" value={flight.count} />
-          <Row label="Autopilot" value={link.autopilot === 'UNKNOWN' ? 'Waiting for heartbeat' : link.autopilot === 'PX4' ? 'PX4' : 'ArduPilot'} />
+          <Row label="Autopilot" value={link.autopilot === 'UNKNOWN' ? 'Waiting for heartbeat' : link.autopilot === 'PX4' ? 'PX4' : link.autopilot === 'ARDUPILOT' ? 'ArduPilot' : 'Other MAVLink (INAV, Betaflight…)'} />
           <Row label="Upload" value={upload.state === 'UPLOADING' ? `${link.missionUpload.sent} of ${link.missionUpload.total}` : upload.state === 'READY' ? (flight.uploaded ? 'On the aircraft' : 'Plan changed; upload again') : upload.state === 'FAILED' ? 'Failed' : 'Not yet'}
             tone={upload.state === 'FAILED' ? 'bad' : flight.uploaded ? 'ok' : 'neutral'} />
           <Row label="Mode" value={t.heartbeatMs ? MODE_LABEL[modeName(t)] : '—'} />

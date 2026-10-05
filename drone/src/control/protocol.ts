@@ -1,4 +1,4 @@
-import { MAV_CMD, MAV_RESULT, encodeCommandLong, encodeFlightMode, encodeRepositionFor, encodeTakeoffFor, type Autopilot, type FlightMode, type Telemetry } from '../link/mavlink';
+import { MAV_CMD, MAV_RESULT, encodeCommandLong, encodeFlightMode, encodeRepositionFor, encodeTakeoffFor, capabilitiesOf, FEATURE_LABEL, type Autopilot, type FlightMode, type Telemetry, type VehicleKind, type Feature } from '../link/mavlink';
 import { metresPerDegree } from '../lib/geo';
 
 /**
@@ -25,7 +25,8 @@ export type Cmd =
   | { k: 'KILL' }
   | { k: 'MODE'; mode: FlightMode };
 
-export interface Step { cmd: number; params: number[]; mode?: FlightMode; to?: { x: number; y: number; altM: number } }
+/** `unsupported`: this aircraft can't take the command; nothing is sent and the reason is shown as its refusal. */
+export interface Step { cmd: number; params: number[]; mode?: FlightMode; to?: { x: number; y: number; altM: number }; unsupported?: string }
 
 export const FORCE_DISARM = 21196;   // MAVLink magic number: disarm even in flight
 
@@ -50,21 +51,36 @@ export function describe(c: Cmd): string {
   }
 }
 
-/** The MAVLink steps for a command on this autopilot. */
-export function stepsFor(c: Cmd, ap: Autopilot): Step[] {
+const FEATURE_OF: Record<Cmd['k'], Feature> = { ARM: 'ARM', DISARM: 'ARM', KILL: 'ARM', TAKEOFF: 'TAKEOFF', HOLD: 'HOLD', GOTO: 'GOTO', RTL: 'RTL', LAND: 'LAND', MODE: 'MODES' };
+
+/**
+ * The MAVLink steps for a command on this autopilot and airframe (multirotor unless said). The airframe
+ * matters for ArduPilot: a fixed wing takes off in Takeoff mode and lands through its mission's landing
+ * sequence, a QuadPlane lands and holds in its VTOL modes, a rover holds instead of landing.
+ */
+export function stepsFor(c: Cmd, ap: Autopilot, kind: VehicleKind = 'COPTER'): Step[] {
+  const cap = capabilitiesOf(ap, kind)[FEATURE_OF[c.k]];
+  if (cap.level === 'no') return [{ cmd: 0, params: [], unsupported: `${FEATURE_LABEL[FEATURE_OF[c.k]]}: ${cap.note}` }];
+  const ardu = ap === 'ARDUPILOT';
   switch (c.k) {
     case 'ARM': return [{ cmd: MAV_CMD.COMPONENT_ARM_DISARM, params: [1] }];
     case 'DISARM': return [{ cmd: MAV_CMD.COMPONENT_ARM_DISARM, params: [0] }];
     case 'KILL': return [{ cmd: MAV_CMD.COMPONENT_ARM_DISARM, params: [0, FORCE_DISARM] }];
     // Each aircraft arms itself just before its own takeoff: a staggered launch of 500 takes longer
     // than the 10 s ArduCopter waits before disarming an armed aircraft that has not taken off.
-    case 'TAKEOFF': return ap === 'PX4'
-      ? [{ cmd: MAV_CMD.COMPONENT_ARM_DISARM, params: [1] }, { cmd: MAV_CMD.TAKEOFF, params: [], to: { x: NaN, y: NaN, altM: c.altM } }]
-      : [{ cmd: MAV_CMD.DO_SET_MODE, params: [], mode: 'GUIDED' }, { cmd: MAV_CMD.COMPONENT_ARM_DISARM, params: [1] }, { cmd: MAV_CMD.TAKEOFF, params: [], to: { x: NaN, y: NaN, altM: c.altM } }];
-    case 'HOLD': return [{ cmd: MAV_CMD.DO_SET_MODE, params: [], mode: 'LOITER' }];
+    case 'TAKEOFF':
+      if (ap === 'PX4') return [{ cmd: MAV_CMD.COMPONENT_ARM_DISARM, params: [1] }, { cmd: MAV_CMD.TAKEOFF, params: [], to: { x: NaN, y: NaN, altM: c.altM } }];
+      // ArduPlane fixed wing: Takeoff mode, then arm; it climbs to its TKOFF_ALT.
+      if (ardu && kind === 'PLANE') return [{ cmd: MAV_CMD.DO_SET_MODE, params: [], mode: 'TAKEOFF' }, { cmd: MAV_CMD.COMPONENT_ARM_DISARM, params: [1] }];
+      return [{ cmd: MAV_CMD.DO_SET_MODE, params: [], mode: 'GUIDED' }, { cmd: MAV_CMD.COMPONENT_ARM_DISARM, params: [1] }, { cmd: MAV_CMD.TAKEOFF, params: [], to: { x: NaN, y: NaN, altM: c.altM } }];
+    case 'HOLD': return [{ cmd: MAV_CMD.DO_SET_MODE, params: [], mode: ardu && kind === 'VTOL' ? 'POSITION' : ardu && kind === 'ROVER' ? 'HOLD' : 'LOITER' }];
     case 'GOTO': return [{ cmd: MAV_CMD.DO_REPOSITION, params: [], to: { x: c.x, y: c.y, altM: c.altM } }];
     case 'RTL': return [{ cmd: MAV_CMD.RETURN_TO_LAUNCH, params: [] }];
-    case 'LAND': return [{ cmd: MAV_CMD.LAND, params: [] }];
+    case 'LAND':
+      if (ardu && kind === 'VTOL') return [{ cmd: MAV_CMD.DO_SET_MODE, params: [], mode: 'LAND' }];
+      if (ardu && kind === 'ROVER') return [{ cmd: MAV_CMD.DO_SET_MODE, params: [], mode: 'HOLD' }];
+      if (ardu && kind === 'PLANE') return [{ cmd: MAV_CMD.DO_LAND_START, params: [] }];
+      return [{ cmd: MAV_CMD.LAND, params: [] }];
     case 'MODE': return [{ cmd: MAV_CMD.DO_SET_MODE, params: [], mode: c.mode }];
   }
 }
@@ -97,6 +113,7 @@ export function stepDone(s: Step, v: { armed: boolean; airborne: boolean; mode: 
     case MAV_CMD.TAKEOFF: return v.airborne;
     case MAV_CMD.DO_SET_MODE: return v.mode === s.mode;
     case MAV_CMD.LAND: return v.mode === 'LAND' || !v.airborne;
+    case MAV_CMD.DO_LAND_START: return v.mode === 'AUTO' || !v.airborne;
     case MAV_CMD.RETURN_TO_LAUNCH: return v.mode === 'RTL' || v.mode === 'LAND' || !v.airborne;
     default: return false;
   }

@@ -120,6 +120,22 @@ python3 bridge/fake_vehicle.py --fault prop3                # health screen: pro
 # dashboard (opened from http://localhost): Network → ws://127.0.0.1:8770/?token=test
 ```
 
+`bridge/fake_inav.py` stands in for a hobby build on **INAV**: MAVLink 1 (`--v2` for 2),
+`MAV_AUTOPILOT_GENERIC`, waypoint uploads as `MISSION_ITEM`, go-to as `DO_REPOSITION` in
+`MAV_FRAME_GLOBAL` (accepted only with `--gcs-nav`), `COMMAND_LONG` ignored as INAV does.
+`--flying` starts it armed at 30 m, as if launched from the radio.
+
+```bash
+python3 bridge/fake_inav.py --to 127.0.0.1:14550 --flying --gcs-nav
+```
+
+**Laptop bridge for Wi-Fi radios:** an ELRS Wi-Fi backpack, an ESP8266/ESP32 MAVLink Wi-Fi
+bridge or mLRS in Wi-Fi mode sends MAVLink as UDP to port 14550 (or serves TCP 5760).
+A browser can't open UDP, so run the same bridge on the laptop and connect to it:
+`python3 bridge/mavlink_ws.py --udp 0.0.0.0:14550 --token test` (or `--tcp 192.168.4.1:5760`),
+then **Network → ws://127.0.0.1:8770/?token=test** (browsers allow a plain `ws://` to this same computer
+even from the hosted https app).
+
 ## Video → dashboard
 
 `stream.py` serves a WebRTC offer/answer endpoint on port 8080. In the dashboard:

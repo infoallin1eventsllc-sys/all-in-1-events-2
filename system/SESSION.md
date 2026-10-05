@@ -230,6 +230,23 @@ through the GitHub commit-status API instead.
   pixels (`MAP_W`, `METERS_PER_PX`) for detections, range and live-GPS mapping.
 - Re-shot `drone/public/demo/patrol.jpg` and `drone/portfolio/gallery/patrol.jpg` without the map.
 
+## Custom builds: any MAVLink drone (Oct 5)
+- The owner asked that Drone Command integrate with any custom-built drone. Audit found: MAVLink 1 frames
+  were dropped; serial was fixed at 57600; INAV/Betaflight (MAV_AUTOPILOT_GENERIC) were sent ArduCopter
+  commands; ArduPlane/QuadPlane/Rover took off and landed the copter way.
+- Fixed in `src/link/`: v1 parsing; serial auto-baud (57600, 115200, 460800, 921600, …, last good first);
+  `capabilitiesOf(autopilot, vehicleKind)` in mavlink.ts is the one table of what each firmware/airframe
+  takes, read by the link (refuses with the reason), fleet commands (`control/protocol.ts stepsFor`), the
+  link popover ("What this aircraft can do from here") and the survey checklist. Plane: Takeoff mode +
+  TKOFF_ALT, DO_LAND_START; QuadPlane: Guided takeoff, QLAND, QLOITER; Rover: Hold. INAV: telemetry,
+  go-to (DO_REPOSITION in MAV_FRAME_GLOBAL, GCS NAV mode), route upload as MISSION_ITEM waypoints, started
+  from the radio. Betaflight: watch only.
+- Verified: 23 test suites (new `scripts/custom.test.mjs`); bench flights through the real bridge:
+  `scripts/bench/survey-flight.mjs` (ArduPilot and `--px4`, PASS) and new `scripts/bench/inav-link.mjs`
+  against new `hardware/companion-pi/bridge/fake_inav.py` (MAVLink 1 and `--v2`, PASS); desktop crawl 0 issues.
+- Customer checklist: Claude Docs https://claude.ai/code/artifact/eb20a46d-6d10-46ea-9ca1-8cb7e8d9c162
+  (private), repo copy `drone/docs/CUSTOM-BUILD-CHECKLIST.md`. Not yet flown on a real customer aircraft.
+
 ## Open next steps (not done)
 - **Before autonomy = auto:** port the runner send-path fixes above into the live runner.
 - Wire dashboard into the deployed website so real photos render + it's live.

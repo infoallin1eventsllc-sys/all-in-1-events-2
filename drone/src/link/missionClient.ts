@@ -15,7 +15,7 @@
  * waiting for the upload's ACK can mistake for the end of the upload.
  */
 import {
-  encodeMissionCount, encodeMissionItemInt, encodeCommandLong, encodeArm, encodeFlightMode, modeName,
+  encodeMissionCount, encodeMissionItemInt, encodeMissionItem, encodeCommandLong, encodeArm, encodeFlightMode, modeName,
   MAV_CMD, MAV_RESULT, type MavFrame, type MissionItem, type Telemetry, type Autopilot, type FlightMode,
 } from './mavlink';
 
@@ -46,7 +46,8 @@ export interface UploadProgress { sent: number; total: number }
  * `firstCurrent` marks the item the autopilot should start from.
  * Resolves on MISSION_ACK accepted; rejects with a readable reason otherwise.
  */
-export function uploadItems(io: MissionIO, items: MissionItem[], opts: { missionType?: number; firstCurrent?: number; onProgress?: (p: UploadProgress) => void; timeoutMs?: number; retries?: number } = {}): Promise<void> {
+/** `legacy`: answer with MISSION_ITEM (float positions) instead of MISSION_ITEM_INT, for autopilots that take only that (INAV). */
+export function uploadItems(io: MissionIO, items: MissionItem[], opts: { missionType?: number; firstCurrent?: number; onProgress?: (p: UploadProgress) => void; timeoutMs?: number; retries?: number; legacy?: boolean } = {}): Promise<void> {
   const type = opts.missionType ?? MISSION_TYPE.MISSION;
   const timeoutMs = opts.timeoutMs ?? 3000;
   let retriesLeft = opts.retries ?? 3;
@@ -72,7 +73,7 @@ export function uploadItems(io: MissionIO, items: MissionItem[], opts: { mission
         const seq = f.payload.getUint16(0, true), mt = f.payload.getUint8(4);
         if (mt !== type || seq >= items.length) return;
         highest = Math.max(highest, seq);
-        io.send(encodeMissionItemInt(seq, items[seq], seq === (opts.firstCurrent ?? 0) ? 1 : 0, sys, 1, type)).catch(e => finish(String(e)));
+        io.send((opts.legacy ? encodeMissionItem : encodeMissionItemInt)(seq, items[seq], seq === (opts.firstCurrent ?? 0) ? 1 : 0, sys, 1, type)).catch(e => finish(String(e)));
         opts.onProgress?.({ sent: seq + 1, total: items.length });
         arm(() => finish(`Timed out waiting for the autopilot after item ${seq + 1} of ${items.length}`));
         return;
