@@ -141,12 +141,16 @@ els.append(seq("grit_rain",0.64,0.9,type="particles",x=SX,y=SY,x_anchor="50%",y_
   velocity=180,spread=360,direction=-90,gravity=560,lifetime=1.0,size=2.2,size_variation=0.6,particle_shape="circle",color=WHITES,fade_at=0.4,
   blend_mode="screen",rotation_speed=0,opacity=k((0,1),(0.6,1),(0.9,0,E))))
 # glitter: a burst that rises and falls, spinning to catch the light, and a slow rain across the frame; all gone by 2.85s
-els.append(seq("glitter",0.62,2.25,type="particles",x=SX,y=SY,x_anchor="50%",y_anchor="50%",width=40,height=40,burst=True,burst_count=420,
-  velocity=330,spread=360,direction=-90,gravity=150,lifetime=2.2,size=4,size_variation=0.7,particle_shape="square",color=WHITES,fade_at=0.55,
-  blend_mode="screen",rotation_speed=520,effects=[{"type":"glow","radius":5,"intensity":1.0}],opacity=k((0,1),(1.6,1),(2.25,0,E))))
-els.append(seq("glitter_rain",0.7,2.15,type="particles",x=SX,y=SY-320,x_anchor="50%",y_anchor="50%",width=1100,height=40,rate=170,
+els.append(seq("glitter",0.62,2.8,type="particles",x=SX,y=SY,x_anchor="50%",y_anchor="50%",width=40,height=40,burst=True,burst_count=700,
+  velocity=360,spread=360,direction=-90,gravity=140,lifetime=2.7,size=4,size_variation=0.7,particle_shape="square",color=WHITES,fade_at=0.55,
+  blend_mode="screen",rotation_speed=520,effects=[{"type":"glow","radius":5,"intensity":1.0}],opacity=k((0,1),(2.0,1),(2.8,0,E))))
+els.append(seq("glitter_rain",0.7,5.6,type="particles",x=SX,y=SY-320,x_anchor="50%",y_anchor="50%",width=1100,height=40,rate=200,
   velocity=35,spread=40,direction=90,gravity=70,lifetime=1.8,size=3,size_variation=0.7,particle_shape="square",color=WHITES,fade_at=0.5,
-  blend_mode="screen",rotation_speed=380,effects=[{"type":"glow","radius":4,"intensity":0.9}],opacity=k((0,0),(0.3,0.9,E),(1.3,0.9),(2.15,0,E))))
+  blend_mode="screen",rotation_speed=380,effects=[{"type":"glow","radius":4,"intensity":0.9}],opacity=k((0,0),(0.3,0.9,E),(2.4,0.9),(5.6,0,E))))
+# a slow twinkle of sparkles drifting across the whole film, through the logo at the end
+els.append(seq("twinkle",0.9,13.7,type="particles",x=540,y=960,x_anchor="50%",y_anchor="50%",width=1080,height=1700,rate=30,
+  velocity=14,spread=360,direction=-90,gravity=9,lifetime=2.4,size=3.2,size_variation=0.7,particle_shape="square",color=WHITES,fade_at=0.3,
+  blend_mode="screen",rotation_speed=720,effects=[{"type":"glow","radius":6,"intensity":1.1}],opacity=k((0,0),(1.0,0.85,E),(12.2,0.85),(13.7,0,E))))
 # the puff of smoke a strike leaves, then the slow curl once the flame holds
 els.append(seq("puff",0.72,1.6,type="particles",x=SX,y=SY-20,x_anchor="50%",y_anchor="50%",width=30,height=12,rate=36,
   velocity=95,spread=46,direction=-90,gravity=-40,lifetime=1.5,size=44,size_variation=0.6,particle_shape="circle",color=[W,"#e6e6e6"],fade_at=0.2,
@@ -192,7 +196,6 @@ els.append({"type":"text","id":"tagline","layer":ly(),"time":13.4,"duration":1.6
   "text":"A NEW LIFE CANDLE EXPERIENCE","font_family":SANS,"font_weight":300,"font_size":24,"letter_spacing":10,"fill_color":W,
   "opacity":k((0,0),(0.8,0.8,E),(1.15,0.8),(1.6,0,E))})
 # ---------- sound ----------
-els.append({"type":"audio","id":"score","layer":ly(),"source":SCORE,"time":2.9,"duration":12.1,"volume":100,"audio_fade_in":0.9,"audio_fade_out":1.2})
 els.append({"type":"audio","id":"match","layer":ly(),"source":MATCH,"time":0.5,"duration":1.0,"volume":45})
 els.append({"type":"audio","id":"match2","layer":ly(),"source":MATCH2,"time":0.45,"duration":1.0,"volume":90})
 els.append({"type":"audio","id":"shimmer","layer":ly(),"source":SHIMMER,"time":0.8,"duration":1.05,"volume":70})

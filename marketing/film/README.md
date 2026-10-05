@@ -11,8 +11,7 @@
 | 0.0–0.45 | Total darkness |
 | 0.45–0.6 | The scratch: a bright streak draws itself along the striker, spitting grit |
 | 0.6–0.7 | Ignition: a hot white core blooms, a brief exposure kick lifts the whole frame, the candle catches with a hard jump of light |
-| 0.6–2.85 | Three shockwave rings race outward, each larger and slower than the last, the final one dying at 2.85s; an anamorphic streak and a wide soft wash spread the light; 260 sparks, 420 pieces of spinning glitter that rise and fall, and a slow glitter rain across the frame; embers drift and settle. Everything is gone by 2.85s |
-| 2.9 | The piano score enters (fade-in 0.9s) as the last ring dies: the strike plays out in near-silence over crackle and shimmer |
+| 0.6–2.85 | Three shockwave rings race outward, each larger and slower than the last, the final one dying at 2.85s; an anamorphic streak and a wide soft wash spread the light; 260 sparks, 700 pieces of spinning glitter that rise and fall, and a slow glitter rain across the frame that runs to 6.3s; embers drift and settle; a gentle twinkle of sparkles drifts across the whole film to 14.6s, through the logo card |
 | 2.4–4.6 | A puff of smoke, then the camera slowly pulls back from the extreme close-up as the flame takes hold; a silver light sweep crosses the label |
 | 4.3–7.4 | **EXOTIC PEACH** (the matte black vessel) on a polished black surface with a reflection. Slow drift and push-in, light sweep across the label. |
 | 6.6–9.7 | **BREWED ELIXIR**, with the same treatment and a slow pull-back |
@@ -24,8 +23,8 @@ All transitions are long dissolves with gentle ease-in-out. There are no fast cu
 Finish: vignette, fine film grain, deep blacks and luminous whites.
 
 ## Sound
-- `score-ambient-piano.mp3`: ElevenLabs Music, 16s of sparse felt piano over a low pad. No vocals (checked by transcription). Enters at 2.9s, after the strike.
-- **Fairy Dust (bell tree)**: the licensed "Fairy Dust" sample from Silverplatter Audio (silverplatteraudio.com/products/fairy-dust, $1.99, royalty-free, order #L3E306TE8, 2026-10-05, bought by Otis Williams). Its attack lands on the ignition at 0.6s, the ring carries the glitter, then it merges under the piano (which fades in over 1.2s from 2.9s) and levels off, fully gone by about 7s. The WAV is **not** in this repository (the licence covers use in productions, not redistribution): it lives with the agency's project files and is `.gitignore`d here. The rendered film in `assets/video/` is the deliverable.
+- `score-ambient-piano.mp3`: ElevenLabs Music, 16s of sparse felt piano over a low pad. No vocals (checked by transcription). **Not used in the current cut**: the film has no music; the bell tree is the score.
+- **Fairy Dust (bell tree)**: the licensed "Fairy Dust" sample from Silverplatter Audio (silverplatteraudio.com/products/fairy-dust, $1.99, royalty-free, order #L3E306TE8, 2026-10-05, bought by Otis Williams). Its attack lands on the ignition at 0.6s and its 14.6-second natural ring carries the whole film, fading with the picture at the end. There is no other music. The WAV is **not** in this repository (the licence covers use in productions, not redistribution): it lives with the agency's project files and is `.gitignore`d here. The rendered film in `assets/video/` is the deliverable.
 - `sfx-glitter-shimmer.mp3`: ElevenLabs SFX, a twinkling glitter shimmer. Stands in for Fairy Dust in the public Clipkit editor project, which cannot hold the licensed file.
 - `sfx-match-strike-v2.mp3`: ElevenLabs SFX, scratch, flare and crackling embers, at 0.45s; `sfx-match-strike.mp3` (the original strike) sits under it at 0.5s, quieter, for body.
 
