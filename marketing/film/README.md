@@ -25,7 +25,7 @@ Finish: vignette, fine film grain, deep blacks and luminous whites.
 
 ## Sound
 - `score-ambient-piano.mp3`: ElevenLabs Music, 16s of sparse felt piano over a low pad. No vocals (checked by transcription). Enters at 2.9s, after the strike.
-- **Fairy Dust (bell tree)**: the licensed "Fairy Dust" sample from Silverplatter Audio (silverplatteraudio.com/products/fairy-dust, $1.99, royalty-free, order #L3E306TE8, 2026-10-05, bought by Otis Williams). Its attack lands on the ignition at 0.6s and the ring carries the glitter, fading out by 2.85s. The WAV is **not** in this repository (the licence covers use in productions, not redistribution): it lives with the agency's project files and is `.gitignore`d here. The rendered film in `assets/video/` is the deliverable.
+- **Fairy Dust (bell tree)**: the licensed "Fairy Dust" sample from Silverplatter Audio (silverplatteraudio.com/products/fairy-dust, $1.99, royalty-free, order #L3E306TE8, 2026-10-05, bought by Otis Williams). Its attack lands on the ignition at 0.6s, the ring carries the glitter, then it merges under the piano (which fades in over 1.2s from 2.9s) and levels off, fully gone by about 7s. The WAV is **not** in this repository (the licence covers use in productions, not redistribution): it lives with the agency's project files and is `.gitignore`d here. The rendered film in `assets/video/` is the deliverable.
 - `sfx-glitter-shimmer.mp3`: ElevenLabs SFX, a twinkling glitter shimmer. Stands in for Fairy Dust in the public Clipkit editor project, which cannot hold the licensed file.
 - `sfx-match-strike-v2.mp3`: ElevenLabs SFX, scratch, flare and crackling embers, at 0.45s; `sfx-match-strike.mp3` (the original strike) sits under it at 0.5s, quieter, for body.
 
