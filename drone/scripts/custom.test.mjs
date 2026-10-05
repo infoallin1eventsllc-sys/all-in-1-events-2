@@ -55,7 +55,10 @@ const hbPayload = (custom, type, autopilot, base) => { const p = new Uint8Array(
   assert.equal(g.SURVEY.level, 'no'); assert.equal(g.PARAMS.level, 'no'); assert.match(g.ARM.note, /radio/);
   const copter = m.capabilitiesOf('ARDUPILOT', 'COPTER');
   assert.ok(Object.values(copter).every(c => c.level === 'yes'), 'a multirotor on ArduPilot takes everything');
-  assert.ok(Object.values(m.capabilitiesOf('PX4', 'COPTER')).every(c => c.level === 'yes'), 'and on PX4');
+  assert.ok(Object.entries(m.capabilitiesOf('PX4', 'COPTER')).every(([f, c]) => c.level === 'yes' || f === 'AVOID'), 'and on PX4');
+  assert.equal(m.capabilitiesOf('PX4', 'COPTER').AVOID.level, 'partial', 'PX4 collision prevention: Position mode only');
+  assert.equal(m.capabilitiesOf('ARDUPILOT', 'PLANE').AVOID.level, 'no'); assert.equal(m.capabilitiesOf('ARDUPILOT', 'VTOL').AVOID.level, 'no');
+  assert.equal(m.capabilitiesOf('ARDUPILOT', 'ROVER').AVOID.level, 'yes'); assert.equal(m.capabilitiesOf('GENERIC', 'COPTER').AVOID.level, 'no');
   assert.equal(m.capabilitiesOf('ARDUPILOT', 'ROVER').TAKEOFF.level, 'no'); assert.equal(m.capabilitiesOf('ARDUPILOT', 'ROVER').SURVEY.level, 'no');
   assert.equal(m.capabilitiesOf('ARDUPILOT', 'PLANE').TAKEOFF.level, 'partial');
   assert.equal(m.capabilitiesOf('ARDUPILOT', 'VTOL').LAND.level, 'yes');
@@ -132,6 +135,41 @@ const hbPayload = (custom, type, autopilot, base) => { const p = new Uint8Array(
   const items = [{ lat: 33.77, lon: -118.19, altRelM: 60, frame: 3 }, { lat: 33.771, lon: -118.19, altRelM: 70, frame: 3 }, { lat: 33.771, lon: -118.191, altRelM: 55, frame: 3 }];
   await mc.uploadItems(io, items, { legacy: true, timeoutMs: 500 });
   assert.deepEqual(got.map(g => [g.seq, g.cmd, g.frame, g.alt]), [[0, 16, 3, 60], [1, 16, 3, 70], [2, 16, 3, 55]]);
+}
+
+// --- obstacle sensing: DISTANCE_SENSOR and OBSTACLE_DISTANCE, and the avoidance pre-flight ---------------
+{
+  const pc = await loadModule('../src/link/paramChecks.ts');
+  const ds = (cm, orient, min = 20, max = 1200) => { const p = new Uint8Array(39); const v = new DataView(p.buffer); v.setUint16(4, min, true); v.setUint16(6, max, true); v.setUint16(8, cm, true); p[10] = 0; p[12] = orient; return p; };
+  const frame = (id, payload) => new m.MavParser().push(m.encodeRaw(id, payload, 1, 1))[0];
+  const t = { ...m.EMPTY_TELEMETRY };
+  m.decodeInto(t, frame(132, ds(420, 0)));                 // 4.2 m ahead
+  m.decodeInto(t, frame(132, ds(310, 2)));                 // 3.1 m right
+  m.decodeInto(t, frame(132, ds(150, 25)));                // the ground below: not an obstacle
+  let o = m.nearestObstacle(t);
+  assert.deepEqual(o, { m: 3.1, bearingDeg: 90 }); assert.equal(m.obstacleText(o), '3.1 m right');
+  assert.ok(m.proximityLive(t));
+  m.decodeInto(t, frame(132, ds(2000, 2)));                // out of range: that direction is clear again
+  assert.deepEqual(m.nearestObstacle(t), { m: 4.2, bearingDeg: 0 });
+  assert.equal(m.nearestObstacle(t, Date.now() + 5000), null, 'stale readings are dropped');
+  // A 360° lidar: 72 sectors of 5°, offset 0; one return at sector 54 (270°, left) at 2.5 m.
+  const od = new Uint8Array(167); const dv = new DataView(od.buffer);
+  for (let i = 0; i < 72; i++) dv.setUint16(8 + i * 2, 1301, true);          // max + 1: nothing there
+  dv.setUint16(8 + 54 * 2, 250, true); dv.setUint16(152, 1300, true); dv.setUint16(154, 20, true); od[157] = 5;
+  m.decodeInto(t, frame(330, od));
+  o = m.nearestObstacle(t); assert.equal(o.m, 2.5); assert.equal(o.bearingDeg, 270); assert.equal(m.obstacleText(o), '2.5 m left');
+  // Pre-flight: says plainly when the drone won't stop for obstacles; amber, never holds the gate.
+  const P = o2 => Object.fromEntries(Object.entries(o2).map(([k, x]) => [k, x === null ? null : { name: k, value: x, type: 9, count: 0, index: 0 }]));
+  const none = pc.avoidCheck('ARDUPILOT', P({ PRX1_TYPE: 0, AVOID_ENABLE: 3 }), false);
+  assert.equal(none.ok, false); assert.equal(none.advisory, true); assert.match(none.detail, /will not stop/);
+  const off = pc.avoidCheck('ARDUPILOT', P({ PRX1_TYPE: 4, AVOID_ENABLE: 1 }), true);
+  assert.equal(off.ok, false); assert.match(off.detail, /AVOID_ENABLE 1/);
+  const on = pc.avoidCheck('ARDUPILOT', P({ PRX1_TYPE: 4, AVOID_ENABLE: 3, AVOID_MARGIN: 2, OA_TYPE: 1 }), true);
+  assert.equal(on.ok, true); assert.match(on.detail, /stops 2 m away; steers round/);
+  assert.match(pc.avoidCheck('ARDUPILOT', P({ PRX1_TYPE: null, PRX_TYPE: 5, AVOID_ENABLE: 3 }), true).detail, /stops 2 m away/, 'PRX_TYPE on firmware before 4.3');
+  assert.equal(pc.avoidCheck('PX4', P({ CP_DIST: -1 }), true).ok, false);
+  assert.match(pc.avoidCheck('PX4', P({ CP_DIST: 3 }), true).detail, /3 m away, Position mode only/);
+  assert.equal(pc.avoidCheck('PX4', P({ CP_DIST: 3 }), false).ok, false, 'no sensor reporting');
 }
 
 console.log('custom builds: all tests passed');

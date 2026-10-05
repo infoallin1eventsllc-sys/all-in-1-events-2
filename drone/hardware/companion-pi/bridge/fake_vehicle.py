@@ -30,6 +30,7 @@ turned round by FENCE_ACTION. Unknown names get no answer (4.5 has no PARAM_ERRO
   python3 fake_vehicle.py --fault prop3                  # health screen: chipped prop on motor 3
   python3 fake_vehicle.py --time 8                       # run the world 8× faster (long survey missions)
   python3 fake_vehicle.py --param BATT_FS_LOW_ACT=2      # start with a parameter changed from its default
+  python3 fake_vehicle.py --obstacle 4                   # a forward proximity sensor seeing something 4 m ahead
       (faults: prop3, motor2, arm, vibration, cell, compass, oldfw)
 
 Health telemetry is sent like a real ArduCopter's: motor outputs (SERVO_OUTPUT_RAW),
@@ -68,9 +69,11 @@ I8, I32, F32 = m.MAV_PARAM_TYPE_INT8, m.MAV_PARAM_TYPE_INT32, m.MAV_PARAM_TYPE_R
 # name: [default, MAV_PARAM_TYPE]. ArduCopter 4.5 (libraries/AC_Fence/AC_Fence.cpp, AP_BattMonitor_Params.cpp,
 # ArduCopter/Parameters.cpp); PX4 main (navigator/geofence_params.yaml, rtl_params.yaml, commander/commander_params.yaml).
 ARDU_PARAMS = {"FENCE_ENABLE": (0, I8), "FENCE_TYPE": (7, I8), "FENCE_ACTION": (1, I8), "FENCE_RADIUS": (300.0, F32),
-               "FENCE_ALT_MAX": (100.0, F32), "FENCE_MARGIN": (2.0, F32), "BATT_FS_LOW_ACT": (0, I8), "RTL_ALT": (1500, I32)}
+               "FENCE_ALT_MAX": (100.0, F32), "FENCE_MARGIN": (2.0, F32), "BATT_FS_LOW_ACT": (0, I8), "RTL_ALT": (1500, I32),
+               # Obstacle avoidance (libraries/AC_Avoidance, AP_Proximity): on by default, but no proximity sensor fitted.
+               "AVOID_ENABLE": (3, I8), "AVOID_MARGIN": (2.0, F32), "PRX1_TYPE": (0, I8), "OA_TYPE": (0, I8)}
 PX4_PARAMS = {"GF_ACTION": (2, I32), "GF_MAX_HOR_DIST": (0.0, F32), "GF_MAX_VER_DIST": (0.0, F32), "COM_LOW_BAT_ACT": (0, I32),
-              "RTL_RETURN_ALT": (60.0, F32)}
+              "RTL_RETURN_ALT": (60.0, F32), "CP_DIST": (-1.0, F32)}
 FENCE_ALT_MAX_BIT, FENCE_CIRCLE_BIT, FENCE_POLYGON_BIT, FENCE_ALT_MIN_BIT = 1, 2, 4, 8
 
 
@@ -388,6 +391,8 @@ def main() -> None:
     ap.add_argument("--legacy-gimbal", action="store_true")
     ap.add_argument("--time", type=float, default=1.0, help="world speed-up (a long survey mission in minutes)")
     ap.add_argument("--param", action="append", default=[], metavar="NAME=VALUE", help="a parameter changed from its default (repeatable)")
+    ap.add_argument("--obstacle", type=float, default=0.0, metavar="M",
+                    help="a proximity sensor (PRX1_TYPE 4, a rangefinder) seeing an obstacle M metres ahead, sent as DISTANCE_SENSOR")
     ap.add_argument("--fault", default="none", choices=["none", "prop3", "motor2", "arm", "vibration", "cell", "compass", "oldfw"],
                     help="simulate a mechanical or setup fault for the health screen")
     args = ap.parse_args()
@@ -402,6 +407,8 @@ def main() -> None:
         if name not in v.params:
             ap.error(f"--param {name}: not one of {', '.join(v.params)}")
         v.params[name][0] = float(val) if v.params[name][1] == F32 else int(float(val))
+    if args.obstacle and not v.px4 and not any(kv.startswith("PRX1_TYPE=") for kv in args.param):
+        v.params["PRX1_TYPE"][0] = 4
     v.boot()
     say(f"EVT fake {'PX4' if args.px4 else 'ArduCopter'} sending to {args.to}")
 
@@ -443,6 +450,8 @@ def main() -> None:
             mav.global_position_int_send(int(now * 1000) & 0xFFFFFFFF, int(v.lat * 1e7), int(v.lon * 1e7), int((10 + v.alt) * 1000), int(v.alt * 1000), 0, 0, 0, int(v.heading * 100))
             mav.vfr_hud_send(v.speed, v.speed, int(v.heading), 48 if v.armed else 0, v.alt, 0)
             mav.attitude_send(int(now * 1000) & 0xFFFFFFFF, 0.0, -0.05 * v.speed / 8, math.radians(v.heading), 0, 0, 0)
+        if args.obstacle and tick % 2 == 0:  # 5 Hz: a forward rangefinder (orientation 0), 0.2-40 m
+            mav.distance_sensor_send(int(now * 1000) & 0xFFFFFFFF, 20, 4000, int(args.obstacle * 100), 0, 1, 0, 0)
         v.send_health(mav, tick, now)
 
         while True:

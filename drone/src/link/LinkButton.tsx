@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Bluetooth, Usb, Cpu, Link2, Link2Off, Satellite, Radio, ShieldCheck, Plane, ArrowDownToLine, Wifi } from 'lucide-react';
 import { useAircraftLink, type Transport } from './useAircraftLink';
-import { FIX_NAMES, MODE_LABEL, modeName, FEATURE_LABEL, KIND_LABEL, type Feature } from './mavlink';
+import { FIX_NAMES, MODE_LABEL, modeName, FEATURE_LABEL, KIND_LABEL, obstacleText, type Feature } from './mavlink';
 import { PREFLIGHT_PARAMS } from './paramChecks';
 import { Chip, Dot, ToolButton, type Tone } from '../dashboards/ui';
 
@@ -42,6 +42,7 @@ export const LinkButton: React.FC = () => {
   const why = (f: Feature) => (cap[f].level === 'no' ? cap[f].note : cap[f].note || undefined);
   const runCmd = (p: Promise<unknown>) => { setCmdError(''); p.catch(e => setCmdError(e instanceof Error ? e.message : String(e))); };
   const [showCaps, setShowCaps] = useState(false);
+  const obstacleClose = link.live && !!link.obstacle && link.obstacle.m < link.obstacleWarnM;
 
   const TransportRow: React.FC<{ id: Transport; icon: React.ReactNode; title: string; body: string; available: boolean; onPick: () => void }> = ({ id, icon, title, body, available, onPick }) => (
     <button
@@ -70,6 +71,10 @@ export const LinkButton: React.FC = () => {
         {link.status === 'CONNECTED' ? <Link2 className="w-3.5 h-3.5" /> : <Link2Off className="w-3.5 h-3.5" />}
         <span className="hidden sm:inline max-w-[160px] truncate">{label}</span>
       </button>
+      {/* On every page: something is close to the aircraft. The aircraft's own avoidance does the stopping. */}
+      {obstacleClose && link.obstacle && (
+        <span role="alert" className="absolute left-0 top-full mt-1 whitespace-nowrap rounded-md bg-bad px-2 py-0.5 text-[11px] font-semibold text-white shadow">Obstacle {obstacleText(link.obstacle)}</span>
+      )}
 
       {open && (
         <div className="fixed left-3 right-3 top-[108px] sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-[360px] max-h-[calc(100dvh-120px)] overflow-y-auto rounded-[var(--radius-card)] border border-line bg-surface shadow-[0_12px_40px_rgba(16,24,40,0.14)] p-2 z-50">
@@ -90,6 +95,10 @@ export const LinkButton: React.FC = () => {
                 <div><div className="text-[11px] text-ink-3">Altitude</div><div className="font-medium text-ink num">{t.altRelM.toFixed(1)} m</div></div>
                 <div><div className="text-[11px] text-ink-3">Ground speed</div><div className="font-medium text-ink num">{(t.groundspeedMps * 3.6).toFixed(0)} km/h</div></div>
                 <div><div className="text-[11px] text-ink-3">Stream</div><div className="font-medium text-ink num">{t.msgsPerSec} msg/s{link.badCrc ? ` · ${link.badCrc} bad` : ''}</div></div>
+              </div>
+              <div className="flex items-center justify-between gap-2 text-[12px]">
+                <span className="text-ink-3">Obstacle sensors</span>
+                <span className={`font-medium num ${obstacleClose ? 'text-bad' : 'text-ink'}`}>{!link.sensing ? 'none reporting' : link.obstacle ? `nearest ${obstacleText(link.obstacle)}` : 'clear'}</span>
               </div>
               {t.statusText && <div className="text-[11px] text-ink-2 rounded bg-surface-2 px-2 py-1 num">{t.statusText}</div>}
               {link.lastHeartbeatAgoS > 3 && <div className="text-[11px] text-warn">No heartbeat for {link.lastHeartbeatAgoS.toFixed(0)} s</div>}

@@ -44,6 +44,8 @@ const CRC_EXTRA: Record<number, number> = {
   112: 174, // CAMERA_TRIGGER (PX4: one per trigger pulse, no position)
   263: 133, // CAMERA_IMAGE_CAPTURED (MAVLink camera: one per image, with position and result)
   168: 1,   // WIND (ArduPilot estimate)
+  132: 85,  // DISTANCE_SENSOR (a rangefinder or one sector of a proximity sensor)
+  330: 23,  // OBSTACLE_DISTANCE (a 360° lidar or depth camera, in sectors)
   242: 104, // HOME_POSITION
   162: 189, // FENCE_STATUS
   285: 137, // GIMBAL_DEVICE_ATTITUDE_STATUS
@@ -184,6 +186,14 @@ export interface Telemetry {
   swVersion: number;
   /** MAVLink version of the aircraft's heartbeats: 1 or 2, 0 until heard. */
   mavVersion: number;
+  /**
+   * What the aircraft's obstacle sensors see, by direction: the latest reading per sensor sector, keyed by
+   * MAV_SENSOR_ORIENTATION (0–7 = nose, then every 45° clockwise; 24 = up) or 1000 + sector for OBSTACLE_DISTANCE.
+   * `bearingDeg` is from the nose, clockwise; NaN = straight up. Downward rangefinders (the ground) are left out.
+   */
+  proximity: Record<number, { m: number; bearingDeg: number; atMs: number }>;
+  /** Last time any obstacle sensor reported (in range or not), 0 = never. */
+  proximityHeardMs: number;
 }
 
 export const EMPTY_TELEMETRY: Telemetry = {
@@ -193,8 +203,24 @@ export const EMPTY_TELEMETRY: Telemetry = {
   batteryPct: -1, voltageV: 0, currentA: 0, fixType: 0, satellites: 0, hdop: 99,
   radioRssi: 0, radioNoise: 0, radioRemRssi: 0, statusText: '', msgsPerSec: 0, missionCurrent: 0, lastAck: null,
   gimbalPitchDeg: NaN, gimbalYawDeg: NaN, lastPhoto: null, photosReported: 0,
-  photoLog: [], photoSource: 'NONE', windMps: -1, windFromDeg: 0, home: null, fenceBreached: false, swVersion: 0, mavVersion: 0,
+  photoLog: [], photoSource: 'NONE', windMps: -1, windFromDeg: 0, home: null, fenceBreached: false, swVersion: 0, mavVersion: 0, proximity: {}, proximityHeardMs: 0,
 };
+
+/** Proximity readings older than this are stale (a sensor stopped reporting). */
+export const PROXIMITY_FRESH_MS = 1500;
+/** The nearest obstacle the aircraft's sensors report now, or null (no sensor, or nothing in range). */
+export function nearestObstacle(t: Pick<Telemetry, 'proximity'>, now = Date.now()): { m: number; bearingDeg: number } | null {
+  let best: { m: number; bearingDeg: number } | null = null;
+  for (const r of Object.values(t.proximity)) if (now - r.atMs < PROXIMITY_FRESH_MS && (!best || r.m < best.m)) best = { m: r.m, bearingDeg: r.bearingDeg };
+  return best;
+}
+/** True while any obstacle sensor is reporting (a reading of "nothing in range" counts). */
+export const proximityLive = (t: Pick<Telemetry, 'proximity' | 'proximityHeardMs'>, now = Date.now()) => now - t.proximityHeardMs < PROXIMITY_FRESH_MS;
+const DIRS = ['ahead', 'ahead right', 'right', 'behind right', 'behind', 'behind left', 'left', 'ahead left'];
+/** "3.2 m ahead left", "1.8 m above". */
+export function obstacleText(o: { m: number; bearingDeg: number }): string {
+  return `${o.m.toFixed(1)} m ${Number.isNaN(o.bearingDeg) ? 'above' : DIRS[Math.round((((o.bearingDeg % 360) + 360) % 360) / 45) % 8]}`;
+}
 
 function logPhoto(t: Telemetry, source: Telemetry['photoSource'], lat: number, lon: number, altRelM: number, ok: boolean, idx: number) {
   if (t.photoSource === 'NONE') t.photoSource = source;
@@ -276,6 +302,30 @@ export function decodeInto(t: Telemetry, f: MavFrame): Telemetry {
     case 162: // FENCE_STATUS: breach_time u32, breach_count u16, breach_status u8 at 6, breach_type u8 at 7
       t.fenceBreached = p.getUint8(6) !== 0;
       break;
+    case 132: { // DISTANCE_SENSOR: min, max, current (cm) at 4, 6, 8; orientation at 12
+      const o = p.getUint8(12); if (o === 25) break;           // pointing down: the ground, not an obstacle
+      if (!(o <= 7 || o === 24)) break;
+      t.proximityHeardMs = Date.now();
+      const min = p.getUint16(4, true), max = p.getUint16(6, true), cur = p.getUint16(8, true);
+      const next = { ...t.proximity };
+      // Out of range (nothing seen) clears that direction rather than leaving an old obstacle there.
+      if (cur >= min && cur <= max && cur < 65535) next[o] = { m: cur / 100, bearingDeg: o === 24 ? NaN : o * 45, atMs: Date.now() }; else delete next[o];
+      t.proximity = next;
+      break;
+    }
+    case 330: { // OBSTACLE_DISTANCE: 72 × u16 cm at 8, max at 152, min at 154, increment u8 at 157, increment_f at 158, angle_offset at 162
+      t.proximityHeardMs = Date.now();
+      const max = p.getUint16(152, true), min = p.getUint16(154, true), incF = p.getFloat32(158, true), inc = incF > 0 ? incF : p.getUint8(157) || 5, off = p.getFloat32(162, true) || 0;
+      const next: Telemetry['proximity'] = {};
+      for (const [k, r] of Object.entries(t.proximity)) if (+k < 1000) next[+k] = r;   // keep the rangefinders
+      for (let i = 0; i < 72; i++) {
+        const d = p.getUint16(8 + i * 2, true);
+        if (d === 65535 || d > max || d < min) continue;   // unknown, or nothing within range in this sector
+        next[1000 + i] = { m: d / 100, bearingDeg: (off + i * inc + 360) % 360, atMs: Date.now() };
+      }
+      t.proximity = next;
+      break;
+    }
     case 253: { // STATUSTEXT
       let s = ''; for (let i = 1; i < 51; i++) { const c = p.getUint8(i); if (!c) break; s += String.fromCharCode(c); }
       t.statusText = s; break;
@@ -476,9 +526,10 @@ export const KIND_LABEL: Record<VehicleKind, string> = { COPTER: 'Multirotor', P
  *   partial  works, with the limit in `note`
  *   no       not over MAVLink on this aircraft (the pilot's radio does it, or it does not exist)
  */
-export type Feature = 'TELEMETRY' | 'ARM' | 'TAKEOFF' | 'LAND' | 'RTL' | 'HOLD' | 'MODES' | 'GOTO' | 'MISSION' | 'MISSION_START' | 'SURVEY' | 'FENCE' | 'PARAMS' | 'GIMBAL' | 'CAMERA' | 'RELAY' | 'HEALTH';
+export type Feature = 'AVOID' | 'TELEMETRY' | 'ARM' | 'TAKEOFF' | 'LAND' | 'RTL' | 'HOLD' | 'MODES' | 'GOTO' | 'MISSION' | 'MISSION_START' | 'SURVEY' | 'FENCE' | 'PARAMS' | 'GIMBAL' | 'CAMERA' | 'RELAY' | 'HEALTH';
 export interface Capability { level: 'yes' | 'partial' | 'no'; note: string }
 export const FEATURE_LABEL: Record<Feature, string> = {
+  AVOID: 'Obstacle avoidance (stops before hitting things)',
   TELEMETRY: 'Live position, attitude, battery, GPS', ARM: 'Arm and disarm', TAKEOFF: 'Take off', LAND: 'Land', RTL: 'Return home', HOLD: 'Hold position',
   MODES: 'Change flight mode', GOTO: 'Fly to a point', MISSION: 'Upload a route', MISSION_START: 'Start the route from the screen', SURVEY: 'Survey missions (camera triggering)',
   FENCE: 'Geofence upload', PARAMS: 'Read and fix settings (failsafes, fence)', GIMBAL: 'Gimbal pointing', CAMERA: 'Camera zoom, thermal, photos', RELAY: 'Spotlight / relay', HEALTH: 'Health diagnostics',
@@ -500,13 +551,23 @@ export function capabilitiesOf(ap: Autopilot, kind: VehicleKind): Record<Feature
       FENCE: N('set fences on the flight controller itself'), PARAMS: N('change settings in the flight controller\'s own configurator'),
       GIMBAL: N('not over MAVLink on this firmware'), CAMERA: N('not over MAVLink on this firmware; video works through a capture device'), RELAY: N('not over MAVLink on this firmware'),
       HEALTH: P('battery, GPS and link only; motor and vibration data need ArduPilot or PX4'),
+      AVOID: N('this firmware does not stop for obstacles; distance sensors it reports are still shown'),
     };
   }
+  // Avoidance runs on the aircraft (a radio round trip is too slow to stop in time): the dashboard checks it is
+  // set up, shows what the sensors see and warns. ArduCopter (libraries/AC_Avoidance): stops or slides at
+  // AVOID_MARGIN in Loiter and AltHold with a proximity sensor; OA_TYPE steers round obstacles in Auto, Guided, RTL.
+  // PX4: collision prevention (CP_DIST) in Position mode only.
+  const avoid = ap === 'PX4'
+    ? P('with a distance sensor and CP_DIST set: slows and stops in Position mode only, not on missions')
+    : Y('with a proximity sensor (lidar or radar): stops at AVOID_MARGIN in Loiter and AltHold; with OA_TYPE set, steers round obstacles on missions, go-to and return home');
   const base: Record<Feature, Capability> = {
+    AVOID: avoid,
     TELEMETRY: Y(), ARM: Y(), TAKEOFF: Y(), LAND: Y(), RTL: Y(), HOLD: Y(), MODES: Y(), GOTO: Y(), MISSION: Y(), MISSION_START: Y(), SURVEY: Y(),
     FENCE: Y(), PARAMS: Y(), ...payload, HEALTH: Y(ap === 'PX4' ? 'motors, vibration, navigation filter, ESCs where the build reports them' : 'motors, vibration, ESC telemetry, navigation filter'),
   };
-  if (kind === 'ROVER') return { ...base, TAKEOFF: N('ground vehicles do not take off'), LAND: P('stops where it is (Hold)'), SURVEY: N('surveys are flown from the air') };
+  if (kind === 'ROVER') return { ...base, AVOID: ap === 'PX4' ? N('not on PX4 rovers') : Y('with a proximity sensor: stops at AVOID_MARGIN; with OA_TYPE set, steers round obstacles'), TAKEOFF: N('ground vehicles do not take off'), LAND: P('stops where it is (Hold)'), SURVEY: N('surveys are flown from the air') };
+  if (kind === 'PLANE' || kind === 'VTOL') base.AVOID = N('fixed wings can\'t stop in the air: keep routes above obstacles (return height, terrain following)');
   if (kind === 'PLANE' && ap === 'ARDUPILOT') return { ...base, TAKEOFF: P('Takeoff mode: climbs to its takeoff height (TKOFF_ALT; Take off on this screen sets it first), launched by hand or from a runway as the plane is set up'), LAND: P('flies the mission\'s landing sequence (DO_LAND_START); without one, use Return home'), HOLD: P('circles where it is (Loiter)') };
   if (kind === 'PLANE') return { ...base, LAND: P('PX4 fixed wing: lands with its own landing pattern'), HOLD: P('circles where it is') };
   if (kind === 'VTOL' && ap === 'ARDUPILOT') return { ...base, TAKEOFF: Y('vertical takeoff in Guided'), LAND: Y('vertical landing (QLAND)'), HOLD: Y('hovers (QLOITER)') };

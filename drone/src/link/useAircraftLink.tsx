@@ -5,8 +5,9 @@ import {
   autopilotOf, modeName, isVehicleHeartbeat, MODE_LABEL, EMPTY_TELEMETRY, MAV_CMD, MAV_RESULT, type Telemetry, type MavFrame, type MissionItem, type Autopilot, type FlightMode,
   encodeParamRequestRead, encodeParamSet, decodeParamValue, decodeParamError, paramEncodingOf, paramStored, encodeFenceEnable, FENCE_TYPE, MAV_PARAM_TYPE, PARAM_ERROR_TEXT, type ParamValue,
   vehicleKind, capabilitiesOf, FEATURE_LABEL, type VehicleKind, type Feature, type Capability,
+  nearestObstacle, proximityLive, obstacleText,
 } from './mavlink';
-import { PREFLIGHT_PARAMS, READ_UNLESS, paramPreflight, type Params } from './paramChecks';
+import { PREFLIGHT_PARAMS, READ_UNLESS, paramPreflight, avoidCheck, type Params } from './paramChecks';
 import { useOperator, ROLE_LABEL } from '../operator/operator';
 import { recorder } from '../record/recorder';
 import { chunkedWriter } from './writeQueue';
@@ -83,6 +84,12 @@ interface LinkApi extends LinkState {
   capabilities: Record<Feature, Capability>;
   /** Baud rate the serial link settled on (0 unless on serial). */
   serialBaud: number;
+  /** The nearest obstacle the primary aircraft's sensors report now (null: none in range, or no sensor). */
+  obstacle: { m: number; bearingDeg: number } | null;
+  /** An obstacle sensor is reporting. */
+  sensing: boolean;
+  /** Closer than this is a warning: twice the aircraft's own stopping margin, at least 5 m. */
+  obstacleWarnM: number;
   disconnect: () => Promise<void>;
   send: (bytes: Uint8Array) => Promise<void>;
   returnToLaunch: () => Promise<void>;
@@ -661,7 +668,21 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     { id: 'link', label: 'Radio link quality', ok: tNow.radioRssi === 0 || tNow.radioRssi > 60, detail: tNow.radioRssi ? `RSSI ${tNow.radioRssi}${tNow.radioRemRssi ? ` · remote ${tNow.radioRemRssi}` : ''}` : 'n/a on this transport' },
     // Read from the aircraft's parameters: what it does on a low battery and a fence breach, and how high it returns.
     ...(hbFresh && (autopilotOf(tNow) === 'ARDUPILOT' || autopilotOf(tNow) === 'PX4') ? paramPreflight(autopilotOf(tNow) as 'ARDUPILOT' | 'PX4', state.params) : []),
+    // Obstacle avoidance runs on the aircraft; this says whether it will stop for one (amber: most have no sensor).
+    ...(hbFresh && (autopilotOf(tNow) === 'ARDUPILOT' || autopilotOf(tNow) === 'PX4') && capabilitiesOf(autopilotOf(tNow), vehicleKind(tNow.vehicleType)).AVOID.level !== 'no'
+      ? [avoidCheck(autopilotOf(tNow) as 'ARDUPILOT' | 'PX4', state.params, proximityLive(tNow))] : []),
   ];
+  const sensing = state.status === 'CONNECTED' && proximityLive(tNow);
+  const obstacle = sensing ? nearestObstacle(tNow) : null;
+  const marginM = autopilotOf(tNow) === 'PX4' ? state.params.CP_DIST?.value : state.params.AVOID_MARGIN?.value;
+  const obstacleWarnM = Math.max(5, 2 * (marginM !== undefined && marginM > 0 ? marginM : 2));
+  // Into the record when something comes within the warning distance (once per approach).
+  const closeRef = useRef(false);
+  const close = !!obstacle && obstacle.m < obstacleWarnM;
+  useEffect(() => {
+    if (close && !closeRef.current && obstacle) recorder.event('SAFETY', 'WARNING', `Obstacle ${obstacleText(obstacle)}`);
+    closeRef.current = close;
+  }, [close]); // eslint-disable-line react-hooks/exhaustive-deps
   const preflight = { ok: checks.every(c => c.ok || c.advisory), checks };
 
   const onFrame = useCallback((listener: (f: MavFrame) => void) => {
@@ -678,6 +699,7 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     vehicleKind: vehicleKind(state.telemetry.vehicleType),
     capabilities: capabilitiesOf(autopilotOf(state.telemetry), vehicleKind(state.telemetry.vehicleType)),
     serialBaud: state.transport === 'SERIAL' ? serialBaud : 0,
+    obstacle, sensing, obstacleWarnM,
     live: state.status === 'CONNECTED' && state.telemetry.heartbeatMs > 0,
     onFrame, readParam, readParams, setParam,
   };

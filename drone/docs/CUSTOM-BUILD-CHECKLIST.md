@@ -17,6 +17,29 @@ commands your drone can take.
 - **Watch only:** Betaflight (FPV racing firmware). Re-flash the board with ArduPilot or INAV to fly routes.
 - **Cannot connect:** DJI, Autel, Skydio and toy drones. They are closed systems.
 
+## Safety features
+
+The stop-before-you-hit-it reflex runs on the drone itself, because a radio link to a laptop is too
+slow to brake in time. Drone Command checks that it is switched on, shows what the sensors see, and
+warns the pilot. These safety checks run before and during every flight, where the drone's firmware
+supports them:
+
+| Safety feature | What it does |
+| --- | --- |
+| Obstacle avoidance | With an obstacle sensor fitted (Step 5), the drone stops a set distance short of an obstacle in GPS hold modes. On ArduPilot it can also steer round obstacles on routes. |
+| Live obstacle warning | Shows the nearest obstacle and its direction ("3.5 m ahead") under the link button on every screen, and logs each close approach in the flight record. |
+| Pre-flight go / no-go | Arming stays off until the drone reports a 3D GPS fix, 10+ satellites, good GPS accuracy, 40%+ battery and a live link. |
+| Failsafe check | Flags a low-battery or geofence action that only warns instead of returning or landing. |
+| Return-home height check | Flags a return height above 120 m (400 ft), or below a planned survey's height. |
+| Geofence | Uploads a boundary round the job site and turns it on. |
+| Pilot-in-command lock | Only the signed-in pilot can fly or change settings; observers and clients can watch. |
+| Health diagnostics | Names the failing part and grounds the drone until it is fixed. |
+| Flight record | Records every flight, command and warning. |
+
+Obstacle sensors only see in the directions they point, and can miss thin wires, bare branches and
+glass. Avoidance is off in manual modes (Stabilize, Acro, Manual), and fixed-wing planes can't stop
+in the air, so plan their routes above obstacles.
+
 ## Step 1: Flight controller and firmware
 
 - [ ] Flight controller that runs ArduPilot or PX4 (for example Pixhawk 6C/6X, Cube Orange,
@@ -71,10 +94,29 @@ test-fly by hand before connecting.
 - [ ] Live video: an HDMI or analog FPV receiver into a USB capture stick, or a Raspberry Pi on
       the drone streaming its camera.
 
+## Step 5 (recommended): Obstacle sensors
+
+Works on ArduPilot multirotors and rovers, and on PX4 multirotors in Position mode. Without a sensor
+the pre-flight says, in amber, that the drone will not stop for obstacles.
+
+- [ ] Obstacle sensor fitted and facing the way the drone flies: a 360° scanning lidar (LightWare
+      SF45/B, RPLidar, LD06, Cygbot D1), a radar, or single-point rangefinders (Benewake TFmini,
+      LightWare) pointing forward and to the sides.
+- [ ] ArduPilot: `PRX1_TYPE` set for the sensor (4 rangefinders, 5 RPLidar, 8 SF45/B), and
+      `AVOID_ENABLE` includes 2 (on by default).
+- [ ] ArduPilot: `AVOID_MARGIN` set to the stopping distance (2 m default; more for fast or heavy drones).
+- [ ] ArduPilot, to steer round obstacles on routes too: `OA_TYPE` 1 (BendyRuler), then reboot.
+- [ ] PX4: distance sensor set up, `CP_DIST` set to the stopping distance, `MPC_POS_MODE`
+      acceleration based. Collision prevention works in Position mode only, not on routes.
+- [ ] Drone Command shows Obstacle sensors with a live distance, and the pre-flight shows Obstacle avoidance on.
+
 ## What works on your setup
 
 | Feature | ArduPilot multirotor | ArduPilot fixed wing | ArduPilot VTOL | ArduPilot rover or boat | PX4 | INAV | Betaflight |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| Obstacle avoidance (stops before hitting things) | Yes, with a sensor | No | No | Yes, with a sensor | Position mode only, with a sensor | No | No |
+| Live obstacle warning on screen | Yes, with a sensor | Yes, with a sensor | Yes, with a sensor | Yes, with a sensor | Yes, with a sensor | No | No |
+| Pre-flight go / no-go, failsafe and return-height checks | Yes | Yes | Yes | Yes | Yes | GPS and battery only | GPS and battery only |
 | Live map, battery, GPS, recording | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | Arm, disarm, change mode | Yes | Yes | Yes | Yes | Yes | From radio | From radio |
 | Take off | Yes | Yes, Takeoff mode | Yes, vertical | No | Yes | From radio | From radio |
@@ -104,6 +146,8 @@ test-fly by hand before connecting.
 4. Props on, open field. Take off by hand, switch to a GPS hold mode, then send one short go-to.
 5. Upload a two-waypoint route and fly it while the pilot watches, ready to take over.
 6. Test Return home from the screen, then from the radio.
+7. With an obstacle sensor: in Loiter (ArduPilot) or Position mode (PX4), fly slowly toward a large
+   soft target (a foam board on a stand) and confirm the drone stops short of it and the screen warns.
 
 - [ ] Pilot holds an FAA Part 107 certificate for commercial flights.
 - [ ] Drone registered with the FAA and broadcasting Remote ID.

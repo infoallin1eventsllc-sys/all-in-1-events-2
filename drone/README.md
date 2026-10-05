@@ -96,6 +96,14 @@ refused with the reason instead of being sent. The customer-facing version is
 | Skybrush show drones (ArduPilot show firmware) | multirotor | ✅ via the show-package export; Skybrush flies the fleet |
 | DJI (Mini, Mavic, Mavic 3 Enterprise, Matrice), Autel, Skydio, toy drones | — | ❌ closed systems, no MAVLink |
 
+**Obstacle avoidance** runs on the aircraft (a radio round trip is too slow to brake): ArduCopter
+and ArduRover with a proximity sensor stop at `AVOID_MARGIN` (and steer round obstacles on
+missions with `OA_TYPE`), PX4 multirotors stop at `CP_DIST` in Position mode. The dashboard reads
+`DISTANCE_SENSOR` and `OBSTACLE_DISTANCE`, shows the nearest obstacle in the link popover and as a
+warning under the link button on every page, records each close approach, and the pre-flight's
+amber **Obstacle avoidance on** says when a drone will not stop for obstacles (`avoidCheck` in
+`src/link/paramChecks.ts`). Bench: `fake_vehicle.py --obstacle 3.5`, `scripts/bench/obstacle.mjs`.
+
 For **all features** on one airframe: ArduPilot, a Raspberry Pi companion computer
 (network link + video), a MAVLink gimbal camera (Siyi A8 mini; ZT6 / ZT30 for thermal),
 a mapping camera on the autopilot's shutter output, and a spotlight on relay 1.

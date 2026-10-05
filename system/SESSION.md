@@ -247,6 +247,17 @@ through the GitHub commit-status API instead.
 - Customer checklist: Claude Docs https://claude.ai/code/artifact/eb20a46d-6d10-46ea-9ca1-8cb7e8d9c162
   (private), repo copy `drone/docs/CUSTOM-BUILD-CHECKLIST.md`. Not yet flown on a real customer aircraft.
 
+## Safety: obstacle avoidance (Oct 5)
+- The owner asked for sensors that stop the drone before it hits something. That reflex must run on the
+  aircraft (ArduCopter/ArduRover AC_Avoidance with a proximity sensor; PX4 collision prevention CP_DIST,
+  Position mode only); the dashboard now supports it: decodes DISTANCE_SENSOR (132) and OBSTACLE_DISTANCE
+  (330) into `Telemetry.proximity`; `nearestObstacle`/`obstacleText`; a red "Obstacle 3.5 m ahead" alert
+  under the link button on every page; "Obstacle sensors" row in the popover; each close approach recorded
+  (SAFETY event); amber pre-flight `avoidCheck` (paramChecks.ts: PRX1_TYPE/PRX_TYPE, AVOID_ENABLE bit 2,
+  AVOID_MARGIN, OA_TYPE; PX4 CP_DIST) saying plainly when a drone will not stop. capabilitiesOf has AVOID.
+- Bench: `fake_vehicle.py --obstacle M` (PRX1_TYPE 4 + forward DISTANCE_SENSOR), `scripts/bench/obstacle.mjs` PASS.
+- Checklist doc gained a Safety features section, Step 5 (obstacle sensors), table rows, a first-flight test.
+
 ## Open next steps (not done)
 - **Before autonomy = auto:** port the runner send-path fixes above into the live runner.
 - Wire dashboard into the deployed website so real photos render + it's live.

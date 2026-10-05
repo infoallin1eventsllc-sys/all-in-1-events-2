@@ -18,11 +18,13 @@ type Ap = 'ARDUPILOT' | 'PX4';
 export const PREFLIGHT_PARAMS: Record<Ap, string[]> = {
   // The fence check's own first (the survey holds its upload until they answer), then ones older firmware lacks:
   // an autopilot without PARAM_ERROR stays silent about those, and each costs the full retry time.
-  ARDUPILOT: ['FENCE_TYPE', 'FENCE_ENABLE', 'FENCE_RADIUS', 'FENCE_ALT_MAX', 'FENCE_ACTION', 'BATT_FS_LOW_ACT', 'RTL_ALT_M', 'RTL_ALT', 'FENCE_AUTOENABLE', 'FENCE_ALT_MAX_TP'],
-  PX4: ['GF_ACTION', 'GF_MAX_HOR_DIST', 'GF_MAX_VER_DIST', 'RTL_RETURN_ALT', 'COM_LOW_BAT_ACT'],
+  ARDUPILOT: ['FENCE_TYPE', 'FENCE_ENABLE', 'FENCE_RADIUS', 'FENCE_ALT_MAX', 'FENCE_ACTION', 'BATT_FS_LOW_ACT', 'RTL_ALT_M', 'RTL_ALT', 'FENCE_AUTOENABLE', 'FENCE_ALT_MAX_TP',
+    // Obstacle avoidance (libraries/AC_Avoidance, AP_Proximity): PRX1_TYPE from 4.3, PRX_TYPE before.
+    'AVOID_ENABLE', 'AVOID_MARGIN', 'PRX1_TYPE', 'PRX_TYPE', 'OA_TYPE'],
+  PX4: ['GF_ACTION', 'GF_MAX_HOR_DIST', 'GF_MAX_VER_DIST', 'RTL_RETURN_ALT', 'COM_LOW_BAT_ACT', 'CP_DIST'],
 };
 /** Read `name` only when the key parameter did not answer. */
-export const READ_UNLESS: Record<string, string> = { RTL_ALT: 'RTL_ALT_M' };
+export const READ_UNLESS: Record<string, string> = { RTL_ALT: 'RTL_ALT_M', PRX_TYPE: 'PRX1_TYPE' };
 export const FENCE_PARAMS: Record<Ap, string[]> = {
   ARDUPILOT: ['FENCE_ENABLE', 'FENCE_TYPE', 'FENCE_RADIUS', 'FENCE_ALT_MAX', 'FENCE_AUTOENABLE', 'FENCE_ALT_MAX_TP'],
   PX4: ['GF_ACTION', 'GF_MAX_HOR_DIST', 'GF_MAX_VER_DIST'],
@@ -72,6 +74,36 @@ export function paramPreflight(ap: Ap, p: Params): ParamCheck[] {
   out.push({ id: 'rtl-alt', label: 'Return altitude within 120 m', ok: rtl !== null && rtl <= 120, advisory: true,
     detail: rtl === null ? `${rn} ${ap === 'PX4' ? missing(p, rn) : missing(p, 'RTL_ALT_M', 'RTL_ALT')}` : rtl === 0 && ap !== 'PX4' ? `${rn} 0: returns at its current height` : `${rn} ${+rtl.toFixed(1)} m` });
   return out;
+}
+
+/**
+ * Obstacle avoidance: is it set up to stop this aircraft before it hits something? Amber, never holding the
+ * gate (most aircraft have no sensor), but it says plainly when the drone will not stop for obstacles.
+ *   ArduPilot  needs a proximity sensor (PRX1_TYPE, or PRX_TYPE before 4.3; a rangefinder counts as type 4) and
+ *              AVOID_ENABLE bit 2 (UseProximitySensor, on by default: AC_AVOID_DEFAULT = fence | proximity).
+ *              Simple avoidance stops at AVOID_MARGIN in Loiter and AltHold; OA_TYPE > 0 also steers round
+ *              obstacles in Auto, Guided and RTL.
+ *   PX4        collision prevention: CP_DIST ≥ 0 (negative = off), in Position mode only.
+ * `sensing`: a distance sensor is reporting now (DISTANCE_SENSOR / OBSTACLE_DISTANCE heard).
+ */
+export function avoidCheck(ap: Ap, p: Params, sensing: boolean): ParamCheck {
+  const label = 'Obstacle avoidance on';
+  if (ap === 'PX4') {
+    const d = v(p, 'CP_DIST');
+    if (d === undefined) return { id: 'avoid', label, ok: false, advisory: true, detail: `CP_DIST ${missing(p, 'CP_DIST')}` };
+    if (d < 0) return { id: 'avoid', label, ok: false, advisory: true, detail: 'CP_DIST off: will not stop for obstacles' };
+    if (!sensing) return { id: 'avoid', label, ok: false, advisory: true, detail: `CP_DIST ${+d.toFixed(1)} m, but no distance sensor reporting` };
+    return { id: 'avoid', label, ok: true, advisory: true, detail: `stops ${+d.toFixed(1)} m away, Position mode only` };
+  }
+  const prxName = known(p, 'PRX1_TYPE') || !known(p, 'PRX_TYPE') ? 'PRX1_TYPE' : 'PRX_TYPE';
+  const prx = v(p, prxName), en = v(p, 'AVOID_ENABLE');
+  if (prx === undefined && !sensing) return { id: 'avoid', label, ok: false, advisory: true, detail: `${prxName} ${missing(p, 'PRX1_TYPE', 'PRX_TYPE')}` };
+  if (!prx && !sensing) return { id: 'avoid', label, ok: false, advisory: true, detail: 'no obstacle sensor: will not stop for obstacles' };
+  if (en === undefined) return { id: 'avoid', label, ok: false, advisory: true, detail: `AVOID_ENABLE ${missing(p, 'AVOID_ENABLE')}` };
+  if (!(en & 2)) return { id: 'avoid', label, ok: false, advisory: true, detail: `sensor fitted, but AVOID_ENABLE ${en} leaves it off (add 2)` };
+  if (!prx) return { id: 'avoid', label, ok: false, advisory: true, detail: `a distance sensor reports, but ${prxName} is 0: avoidance does not use it` };
+  const m = v(p, 'AVOID_MARGIN') ?? 2, oa = v(p, 'OA_TYPE') ?? 0;
+  return { id: 'avoid', label, ok: true, advisory: true, detail: `stops ${+m.toFixed(1)} m away${oa > 0 ? '; steers round on missions' : '; missions fly straight (OA_TYPE 0)'}` };
 }
 
 /** The survey's return-altitude advisory: an RTL from low (after takeoff, on a resume) should climb to at least the survey height, which clears the site. */
