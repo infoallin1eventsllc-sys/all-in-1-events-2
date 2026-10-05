@@ -4,6 +4,31 @@ Compact record of what was built and the current state, so work can resume later
 
 ---
 
+## Oct 5 — redundant content removed; pre-launch QA skill
+
+Website f7f93ba. Otis asked for every repeat on the site to be found and
+fixed (10 items, all done): home shows 3 featured projects + "See all";
+one statement of the process (Services, 4 steps); home booking form gone;
+service cards open their service; footer has one contact block and tagline;
+"My Appointments" everywhere; FAQ and planner checklist no longer repeat
+other sections; the tech-stack card has its own picture. The Book page and
+My Appointments also stopped promising changes "anytime in the portal":
+nothing there changes a booking (handleCancelAppointment has no button).
+
+New skill `.claude/skills/meridian-prelaunch-qa` (Otis: "apply the skill
+before deploying the website online or a demo to a client"). Run it before
+every push to the website's main and before sending a demo link:
+`scripts/static.sh` then `scripts/browser.mjs` against `vite preview`.
+First run caught: a dead Google Maps URL still bundled in the Frame Shop,
+Analytics Hub 404ing on /api/ai/* every question (bundle patched, noted in
+public/demos/README.txt), plus three checker bugs fixed on the way.
+Result for f7f93ba: static 0 FAIL, browser 0 FAIL / 0 WARN.
+Known WARNs left by design: xlsx (vendor-only fix), ORCHESTRA demo and its
+images unlinked but kept, CRM/healthcare model labels (both answer with
+labelled samples).
+
+---
+
 ## Oct 2 — deep troubleshoot of site, demos, servers and security
 
 Website be0afe8 (live). Every demo crawled under the production CSP (read
