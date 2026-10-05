@@ -4,6 +4,17 @@ Compact record of what was built and the current state, so work can resume later
 
 ---
 
+## Oct 5 (later) — "appointment", not "consultation"
+
+Website bf18017. Otis: visitors make an appointment, not a consultation.
+Changed in nine places (hero button and line, How-we-work line, Book page
+intro, date label, confirmation, My Appointments heading, page title,
+bundle feature, noscript). Kept "Design Consultation" in the owner invoice
+tool: a billable service, not booking copy. QA: static 0 FAIL, browser
+0 FAIL / 0 WARN.
+
+---
+
 ## Oct 5 — redundant content removed; pre-launch QA skill
 
 Website f7f93ba. Otis asked for every repeat on the site to be found and
