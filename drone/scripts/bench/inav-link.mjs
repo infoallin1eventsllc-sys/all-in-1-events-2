@@ -61,7 +61,7 @@ log(`connected: INAV stand-in on MAVLink ${v2 ? 2 : 1}`);
 // The popover re-renders with every telemetry update; a DOM click is not thrown off by that.
 await page.getByRole('button', { name: /What this aircraft can do/ }).evaluate(b => b.click());
 const pop = await page.locator('#link-button').locator('..').innerText();
-for (const want of [/Live position, attitude, battery, GPS/, /fly this from your radio/, /GCS NAV mode/, /waypoints and return-home only/, /needs ArduPilot or PX4/]) if (!want.test(pop)) fail(`capabilities list is missing ${want}`);
+for (const want of [/Live position, attitude, battery, GPS/, /from your radio: not over MAVLink/, /GCS NAV mode/, /waypoints and return-home only/, /needs ArduPilot or PX4/]) if (!want.test(pop)) fail(`capabilities list is missing ${want}`);
 if (await page.getByRole('button', { name: 'Disarm', exact: true }).isEnabled()) fail('Disarm is offered to a flight controller that disarms from the radio');
 if (await page.getByRole('button', { name: /Return to launch/ }).isEnabled()) fail('Return to launch is offered to a flight controller that takes it from the radio');
 log('capabilities listed; Disarm and Return to launch held off');
@@ -69,12 +69,12 @@ await page.screenshot({ path: process.env.BENCH_SHOT ?? '/dev/null', clip: { x: 
 await page.mouse.click(600, 900);
 
 // The patrol, as waypoints.
-await page.getByRole('tab', { name: 'Route' }).click();
+await page.getByRole('tab', { name: 'Route' }).evaluate(b => b.click());   // the live screen re-renders at 10 Hz
 const upload = page.getByRole('button', { name: /Upload patrol/ });
 await upload.waitFor({ timeout: 10000 }).catch(() => fail('no Upload patrol for the live aircraft'));
 for (let i = 0; i < 40 && !(await upload.isEnabled()); i++) await page.waitForTimeout(250);
 if (!(await upload.isEnabled())) fail('Upload patrol stayed disabled (pre-flight gate)');
-await upload.click();
+await upload.click({ timeout: 15000 }).catch(async e => { if (process.env.BENCH_SHOT) await page.screenshot({ path: process.env.BENCH_SHOT, timeout: 120000 }).catch(() => {}); fail(`Upload patrol could not be clicked: ${e.message.split('\n')[0]}`); });
 await waitLog(/MIS stored 5 waypoints/, 15000, 'the flight controller did not store the 5 patrol waypoints');
 if (vlog.some(l => /IGNORED MISSION_ITEM_INT|refused/.test(l))) fail('an item was sent in a form INAV does not take');
 await page.getByText(/Route on the aircraft · start the route from the radio/).waitFor({ timeout: 5000 }).catch(() => fail('the screen did not say the route is started from the radio'));
