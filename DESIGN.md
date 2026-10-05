@@ -59,3 +59,15 @@
 - **Motion.** Section reveals are 0.9s / 14px (down from 1.4s / 18px) so the hero's orchestrated move is the page's one event.
 - **Hit targets.** Filter chips, card "Add to Cart" links and Owner Login are all 44px tall without changing their look.
 - **Copy.** Newsletter blurb is one concrete sentence; the dingbat after the thank-you line is gone; the reviews subhead no longer claims "coast to coast".
+
+
+## Debug pass (structure, layering, accessibility) — 2026-10-05
+Automated checks run in a real browser at 1440 and 375 (and 320 for the header), re-run after fixes until clean:
+- **Structure:** valid tag balance, no duplicate ids, every image has alt, every icon-only button has an aria-label, one `main`/`header`/`footer`. Footer headings were h5 after h2 (skipped levels) and are h3 now, same look.
+- **Overflow:** the page scrolled sideways on phones (header content was wider than a 375px screen because the brand could not shrink). The brand now shrinks, the header gaps tighten under 620px, the subtitle hides, and the name steps down at 360px. `scrollWidth == clientWidth` at 375 and 320.
+- **No-JS:** the hero video's fade-in hid it permanently when JavaScript was off (the reveal depended on a `.no-js` class nothing set). The hide-then-reveal is now gated on the `.js` class `head.js` adds, so without JS the video is simply visible.
+- **Hit targets:** cart and menu buttons 42→44px, wishlist hearts 34→44px, social icons 38→44px. Every control measures ≥44px on both viewports.
+- **Contrast:** the "In the film" label on black was below AA (ivory at 45%); now 62%.
+- **Dead CSS removed:** the old photo-hero rules (`.hero-grid`, `.hero-media`, `.hero-frame`, `.hero-tag`, `.hero-emblem`, `.hero-trust`, `.rating-float`, `.scent-pills`, `.pill`) and a duplicate `.owner-login` rule. Stylesheet 586→~545 lines; no selector is defined twice outside media queries.
+- **Layering:** z-index inventory is now just `.mobile-nav` (99) and the portal overlay (120); the hero uses `isolation: isolate` with no z-index games.
+- **Behaviour exercised:** filter chips, add-to-cart + toast + badge, Sound on/off (mute state verified), newsletter submit, scent deep links scroll to their cards, 13 products and 4 reviews render. Console: no page errors (the only failed request is Google Fonts, blocked by the sandbox, not the site).
