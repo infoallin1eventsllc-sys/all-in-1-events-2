@@ -885,7 +885,12 @@ function securityBlock() {
   const motion = byType("motion");
   const open = entry.filter(isAlert), wet = byType("leak").filter((l) => l.state.wet);
   const away = state.people.length > 0 && state.people.every((p) => !p.home);
-  const night = (() => { const h = new Date().getHours(); return h >= 22 || h < 6; })();
+  // Night from the home's own clock (the one the panel shows), not the device's.
+  const night = (() => {
+    let h = new Date().getHours();
+    try { h = Number(new Intl.DateTimeFormat("en-US", { timeZone: state.timezone, hour: "numeric", hourCycle: "h23" }).format(new Date())); } catch { /* no time zone: the device's hour */ }
+    return h >= 22 || h < 6;
+  })();
   const mode = away ? ["away", "Away", "Guarding the house"] : night ? ["night", "Night", "Watching the doors"] : ["home", "Home", "Watching"];
   const level = wet.length ? "bad" : open.length || !byType("water_valve").every((v) => v.state.open) ? "warn" : "ok";
   const headline = wet.length ? `Leak at ${wet.map((w) => w.name.replace(/ Leak Sensor$/, "")).join(", ")}`
@@ -894,7 +899,7 @@ function securityBlock() {
   const group = (title, items) => items.length ? el("div", { class: "sec-group" }, el("h3", {}, title), el("ul", { class: "sec-list" }, ...items.map(secRow))) : null;
   return block(null, "security-card",
     el("div", { class: "sec-head", "data-level": level },
-      el("div", { class: "sec-title" }, el("span", { class: "tile-icon" }, svg(ICON.shield)), el("h2", {}, "Security"), el("span", { class: `sec-mode ${mode[0]}` }, el("b", {}, mode[1]), ` · ${mode[2]}`)),
+      el("div", { class: "sec-title" }, el("span", { class: "tile-icon" }, svg(ICON.shield)), el("h2", {}, "Security"), el("span", { class: `sec-mode mode-${mode[0]}` }, el("b", {}, mode[1]), ` · ${mode[2]}`)),
       el("p", { class: "sec-headline" }, el("i", { class: `sec-dot ${level}`, "aria-hidden": "true" }), headline),
       el("div", { class: "sec-strip", role: "img", "aria-label": `${entry.length - open.length} of ${entry.length} entry points secured` },
         ...entry.map((d) => el("span", { class: `sec-seg ${secState(d)[0]}`, title: `${d.name}: ${secState(d)[1]}` }))),

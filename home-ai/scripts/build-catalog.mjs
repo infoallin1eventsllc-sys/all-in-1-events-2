@@ -53,6 +53,9 @@ async function capture(browser, finish, id) {
   await page.waitForFunction(() => !document.querySelector(".map.holo:not(.holo-ready)"), null, { timeout: 20000 }).catch(() => {});
   await page.waitForTimeout(1500);
   const jpg = await page.screenshot({ type: "jpeg", quality: 70 });
+  // The website (scripts/build-website.mjs) shows the same pictures as files.
+  fs.mkdirSync(path.join(out, "shots"), { recursive: true });
+  fs.writeFileSync(path.join(out, "shots", `${finish.key}-${id}.jpg`), jpg);
   await page.close();
   fs.rmSync(wrapper, { force: true });
   return `data:image/jpeg;base64,${jpg.toString("base64")}`;

@@ -783,7 +783,7 @@ footer { text-align: center; }
 .sec-title h2 { margin: 0; }
 .sec-mode { margin-left: auto; font-size: 0.8rem; color: var(--muted); padding: 5px 10px; border-radius: 999px; background: var(--glass-2); white-space: nowrap; }
 .sec-mode b { color: var(--ink); font-weight: 600; }
-.sec-mode.away b { color: var(--warn); }
+.sec-mode.mode-away b { color: var(--warn); }
 .sec-headline { margin: 0; display: flex; align-items: center; gap: 10px; font-size: 1.05rem; font-weight: 600; }
 .sec-dot, .sec-state i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
 .sec-dot.ok, .sec-state.ok i, .sec-seg.ok { background: var(--ok); }
