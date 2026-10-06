@@ -1,0 +1,159 @@
+<title>Haven by Meridian</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112,300;112,600;125,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #05080e; --panel: #0b121c; --panel-2: #101a26; --line: rgba(90, 210, 255, 0.2);
+    --cyan: #5ad2ff; --amber: #ffb35c; --green: #7fdc9a; --ink: #e9f0f5; --muted: #8ca2b4;
+    --display: "Archivo", "Helvetica Neue", Arial, sans-serif; --body: "Instrument Sans", "Segoe UI", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    --gutter: clamp(16px, 4vw, 48px);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.6 var(--body); padding-block: 0 48px; }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding-inline: var(--gutter); }
+  header.top { padding: 40px 0 8px; }
+  .brand { font: 700 12px/1 var(--display); font-stretch: 125%; letter-spacing: 0.32em; text-transform: uppercase; color: var(--cyan); margin: 0 0 14px; }
+  h1 { margin: 0 0 10px; font: 300 clamp(34px, 5vw, 60px)/1.02 var(--display); font-stretch: 112%; letter-spacing: -0.01em; text-wrap: balance; }
+  h1 em { font-style: normal; font-weight: 600; }
+  .lede { color: var(--muted); max-width: 64ch; margin: 0; }
+  .stamp { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 18px; font: 500 12px/1.4 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .stamp b { color: var(--ink); font-weight: 500; }
+  section { padding: 36px 0 8px; }
+  h2 { margin: 0 0 6px; font: 600 13px/1 var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--cyan); }
+  h2 + p { margin: 0 0 18px; color: var(--muted); max-width: 64ch; }
+  .film { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: #000; }
+  .film video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; max-width: 100%; }
+  .film .bar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; padding: 12px 16px; background: var(--panel); font-size: 14px; color: var(--muted); }
+  .beats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 0; margin: 18px 0 0; padding: 0; list-style: none; counter-reset: beat; border-top: 1px solid var(--line); }
+  .beats li { padding: 14px 16px 16px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .beats li::before { counter-increment: beat; content: "0" counter(beat); display: block; font: 500 12px/1.6 var(--mono); color: var(--cyan); }
+  .beats b { display: block; font-weight: 600; }
+  .beats span { color: var(--muted); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 12px; }
+  .card { display: block; padding: 18px 18px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); text-decoration: none; transition: border-color 0.15s, background 0.15s; }
+  .card:hover { border-color: var(--cyan); background: var(--panel-2); }
+  .card .k { font: 500 11px/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .card b { display: block; font: 600 18px/1.3 var(--body); margin-bottom: 6px; }
+  .card p { margin: 0; font-size: 14.5px; color: var(--muted); }
+  .card .go { display: inline-block; margin-top: 12px; font: 600 13px/1 var(--body); color: var(--cyan); }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 12px; }
+  .fact { padding: 16px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+  .fact .n { font: 300 36px/1 var(--display); font-stretch: 112%; font-variant-numeric: tabular-nums; }
+  .fact .n.ok { color: var(--green); }
+  .fact .l { margin-top: 6px; font-size: 13.5px; color: var(--muted); }
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 640px; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font: 500 11px/1.4 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); background: var(--panel); }
+  tr:last-child td { border-bottom: 0; }
+  td .mono { font: 400 12px/1.5 var(--mono); color: var(--muted); }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 12px; }
+  .box { padding: 18px 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+  .box h3 { margin: 0 0 10px; font: 600 15px/1.3 var(--body); }
+  .box.you { border-color: rgba(255, 179, 92, 0.45); }
+  .box.you h3 { color: var(--amber); }
+  .box ul, .box ol { margin: 0; padding-left: 18px; font-size: 14.5px; }
+  .box li { margin: 6px 0; }
+  .box li span { color: var(--muted); }
+  footer { margin-top: 36px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+  code { font: 400 0.9em var(--mono); }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <p class="brand">Meridian Interface</p>
+    <h1>Haven: <em>the whole project</em>, in one place.</h1>
+    <p class="lede">An AI agent for a new home, the hologram that shows the house, the film that sells it, and the sites that carry it. Everything below is live; the links are private until you share them.</p>
+    <div class="stamp"><span>Updated <b>October 6, 2026</b></span><span>Branch <b>claude/inspiring-fermi-jpi3vh</b></span><span>Folder <b>home-ai/</b></span></div>
+  </header>
+
+  <section id="film">
+    <h2>The film</h2>
+    <p>The house designs itself as a hologram, becomes real, and its holographic guide welcomes the client in and explains the security at the panel. 1:32, with the guide's voice (ElevenLabs "River"), a score and captions.</p>
+    <div class="film">
+      <video controls preload="metadata" playsinline src="meridian-film.mp4" poster="poster.jpg"></video>
+      <div class="bar"><span>Hologram scenes: our engine. Real scenes: five generated clips, cut together with the voice track.</span><span>1280&times;720 &middot; 24 fps</span></div>
+    </div>
+    <ol class="beats">
+      <li><b>Design</b><span>The plan drawn in light on the projection table.</span></li>
+      <li><b>Structure</b><span>Walls, glass and roof fly in and lock into place.</span></li>
+      <li><b>Furnish</b><span>Room by room, then the lights come on.</span></li>
+      <li><b>Becomes real</b><span>A sweep of light turns the hologram into the house at dusk.</span></li>
+      <li><b>Welcome</b><span>The door opens; the guide waits inside. "Welcome home."</span></li>
+      <li><b>Walkthrough</b><span>Sensor lines light the walls as the guide leads the couple.</span></li>
+      <li><b>The panel</b><span>"I'll never unlock a door or open the garage unless you say so."</span></li>
+      <li><b>Handover</b><span>Pull back to the house at dusk. The future, in your hands.</span></li>
+    </ol>
+  </section>
+
+  <section id="pages">
+    <h2>Live pages</h2>
+    <p>Each opens in its own tab. Share any of them from the page's Share menu.</p>
+    <div class="grid">
+      <a class="card" href="https://claude.ai/artifact/Md8dJzhNvV6ZM5Wbb39Mhu" target="_blank" rel="noopener"><div class="k">Film page</div><b>The Future, in Your Hands</b><p>The hologram film rendered live in the browser, with sound.</p><span class="go">Open &rarr;</span></a>
+      <a class="card" href="https://claude.ai/artifact/Fv4i2cKycgoSzHW46MRuru" target="_blank" rel="noopener"><div class="k">Website</div><b>Meridian Interface</b><p>Scrolling builds the home, chapter by chapter, then a before/after of every room and what Haven does.</p><span class="go">Open &rarr;</span></a>
+      <a class="card" href="https://claude.ai/artifact/HaLXwEUshczLYYctJR5gxW" target="_blank" rel="noopener"><div class="k">Property template</div><b>Linden House</b><p>A sample listing: scroll walk-through, specs and floor plans from the plan, rooms before and after, a preview-booking form.</p><span class="go">Open &rarr;</span></a>
+      <a class="card" href="https://claude.ai/artifact/J46Rus2S3KzY9CpbpYKyCk" target="_blank" rel="noopener"><div class="k">Haven demo</div><b>Grounded finish</b><p>The wall panel with the live hologram, rooms, Studio, Wallpaper, Nightstand and the rest, running on a simulated house.</p><span class="go">Open &rarr;</span></a>
+      <a class="card" href="https://claude.ai/artifact/NHSYrvBSADDcedguH3CBSm" target="_blank" rel="noopener"><div class="k">Haven demo</div><b>Futuristic finish</b><p>The same panel in the futuristic finish.</p><span class="go">Open &rarr;</span></a>
+      <a class="card" href="https://claude.ai/artifact/9SmqdXDppENdd3uGKZyWiV" target="_blank" rel="noopener"><div class="k">Haven demo</div><b>Vivid finish</b><p>Light and dark, under Screens &rarr; Appearance.</p><span class="go">Open &rarr;</span></a>
+      <a class="card" href="https://claude.ai/artifact/4tyqsjpBgWRi3ds9FwLnb6" target="_blank" rel="noopener"><div class="k">Catalog</div><b>Screen library</b><p>Every screen in every finish, with a link to open each one live. For clients and builders.</p><span class="go">Open &rarr;</span></a>
+      <a class="card" href="https://claude.ai/artifact/Ckggi61t1aWDwKHc2eMvis" target="_blank" rel="noopener"><div class="k">Sample</div><b>Hologram sample</b><p>The stand-alone hologram in the Aircraft Health style, before it went into the panel.</p><span class="go">Open &rarr;</span></a>
+    </div>
+  </section>
+
+  <section id="haven">
+    <h2>What Haven is</h2>
+    <p>A small server in the home and a wall panel in each room you choose. It talks with the family, watches the house, learns their comfort, and keeps a rulebook it can't argue its way around: unlocking a door, opening the garage or turning the water back on always waits for a person's yes. The hologram on the panel is the home's own plan; any style of home gets one from a short description.</p>
+    <div class="facts">
+      <div class="fact"><div class="n ok">124</div><div class="l">automated tests, all passing: safety, automations, learning, routes, weather, voice</div></div>
+      <div class="fact"><div class="n ok">397</div><div class="l">browser checks across the server panel and the demo, all passing</div></div>
+      <div class="fact"><div class="n ok">0</div><div class="l">accessibility violations (WCAG 2.2 AA) on every screen and finish</div></div>
+      <div class="fact"><div class="n">8</div><div class="l">home styles the hologram can draw: modern, contemporary, farmhouse, craftsman, colonial, ranch, mediterranean, cabin</div></div>
+    </div>
+  </section>
+
+  <section id="clips">
+    <h2>The generated clips</h2>
+    <p>Made on your Higgsfield account today. 804 of 1,200 credits remain. Each link opens the clip; they're also under Generations in your account.</p>
+    <div class="scroll"><table>
+      <thead><tr><th>Clip</th><th>What it shows</th><th>Model</th><th>Link</th></tr></thead>
+      <tbody>
+        <tr><td>A</td><td>Hologram flythrough (test)</td><td><span class="mono">Kling 3.0 pro, 1080p</span></td><td><a href="https://d8j0ntlcm91z4.cloudfront.net/user_3JCJestVZgBp8lJ2tJ8CJXNSkbz/hf_20261006_163653_224b0bf4-b461-4e2e-a6bf-a0982a1ca966.mp4" target="_blank" rel="noopener">Open</a></td></tr>
+        <tr><td>B</td><td>Photoreal flythrough (test): the reference for every later clip</td><td><span class="mono">Kling 3.0 pro, 1080p</span></td><td><a href="https://d8j0ntlcm91z4.cloudfront.net/user_3JCJestVZgBp8lJ2tJ8CJXNSkbz/hf_20261006_163642_49b468d1-97df-4984-8a3c-4bffeaf214ed.mp4" target="_blank" rel="noopener">Open</a></td></tr>
+        <tr><td>C</td><td>The hologram becomes the real house</td><td><span class="mono">Seedance 2.5, 720p</span></td><td><a href="https://d8j0ntlcm91z4.cloudfront.net/user_3JCJestVZgBp8lJ2tJ8CJXNSkbz/hf_20261006_165335_4943c9e6-f2cb-4790-b77d-312edea366ed.mp4" target="_blank" rel="noopener">Open</a></td></tr>
+        <tr><td>D</td><td>Welcome at the door</td><td><span class="mono">Seedance 2.5, 720p</span></td><td><a href="https://d8j0ntlcm91z4.cloudfront.net/user_3JCJestVZgBp8lJ2tJ8CJXNSkbz/hf_20261006_165335_fe835ee8-600d-4c66-b0f7-3e62d26ddc0d.mp4" target="_blank" rel="noopener">Open</a></td></tr>
+        <tr><td>E</td><td>The walkthrough, sensor lines in the walls</td><td><span class="mono">Seedance 2.5, 720p</span></td><td><a href="https://d8j0ntlcm91z4.cloudfront.net/user_3JCJestVZgBp8lJ2tJ8CJXNSkbz/hf_20261006_170209_df5c2bec-6b15-431c-bed1-d8e6825152c6.mp4" target="_blank" rel="noopener">Open</a></td></tr>
+        <tr><td>F</td><td>The guide explains the security at the panel</td><td><span class="mono">Seedance 2.5, 720p</span></td><td><a href="https://d8j0ntlcm91z4.cloudfront.net/user_3JCJestVZgBp8lJ2tJ8CJXNSkbz/hf_20261006_165335_9f7200bf-3910-488b-ad77-559739bb3174.mp4" target="_blank" rel="noopener">Open</a></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section id="next">
+    <h2>Where it stands</h2>
+    <p>Everything above is built, tested and pushed. Two things need you before the next stage can start.</p>
+    <div class="two">
+      <div class="box you">
+        <h3>Waiting on you</h3>
+        <ol>
+          <li><b>An empty GitHub repository</b> (suggested name <code>haven</code>). <span>Haven moves out of the events-site repo, which auto-deploys to Netlify.</span></li>
+          <li><b>Your Anthropic API key</b> in the cloud environment's settings, not in chat. <span>Then <code>npm run live-check</code> runs the real AI against the simulated house.</span></li>
+        </ol>
+      </div>
+      <div class="box">
+        <h3>Next steps</h3>
+        <ul>
+          <li>Try the hologram and the sites on a real tablet and phone. <span>Only checked in software rendering so far.</span></li>
+          <li>Regenerate the two 720p clips at 1080p if the cut goes to clients. <span>About 240 credits.</span></li>
+          <li>Live Claude, weather and the ElevenLabs voice on the real server. <span>Needs the key and a location.</span></li>
+          <li>Connect a Home Assistant hub and one real device of each type.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer><span>Meridian Interface &middot; Haven</span><span>The future, in your hands.</span></footer>
+</div>

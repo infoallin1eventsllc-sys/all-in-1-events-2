@@ -48,6 +48,7 @@ Republish after `npm run build:demo` by passing the Artifact URL:
 - The film: https://claude.ai/artifact/Md8dJzhNvV6ZM5Wbb39Mhu (`dist/film/meridian-film.artifact.html`, after `npm run build:film`)
 - Meridian Interface scroll site: https://claude.ai/artifact/Fv4i2cKycgoSzHW46MRuru (`dist/site/meridian.artifact.html`, after `npm run build:sites`)
 - Linden House property-site template: https://claude.ai/artifact/HaLXwEUshczLYYctJR5gxW (`dist/site/residence.artifact.html`)
+- Project overview (everything on one page): https://claude.ai/artifact/Y1kxeYYqjDxVo8yipLBFJS (`docs/overview.html` with `dist/film/meridian-film-merged-share.mp4` as `meridian-film.mp4` and `docs/poster.jpg`)
 - Screen library catalog: https://claude.ai/artifact/4tyqsjpBgWRi3ds9FwLnb6 (`dist/catalog/haven-screen-library.html`; rebuild with `DEMO_URL_GROUNDED=… DEMO_URL_FUTURISTIC=… DEMO_URL_VIVID=… npm run build:catalog`)
 - Each demo opens a specific screen with `#signature`, `#studio`, `#wallpaper`, `#command-center`, `#family-hub`, `#nightstand`, `#rooms` or `#entry`.
 
