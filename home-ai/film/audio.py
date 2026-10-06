@@ -3,13 +3,18 @@ placed on its cues, over a quiet synthesized score and a few effects (the door
 chime, the lock, the panel tap). Also writes the voice's loudness per frame, so
 the guide glows with its own voice.
 
-Usage: python3 film/audio.py <ffmpeg> <out-dir>
+Usage: python3 film/audio.py <ffmpeg> <out-dir> [cues.json]
+The optional cues file (written by scripts/assemble-film.mjs) moves every cue to a
+different timeline: {"duration", "segments": [[a, b, at]...], "chords": [t...],
+"level": [[t, v]...], "bells": [t...], "door": t, "lock": t, "tap": t|null,
+"end": t, "swells": [[a, b]...], "voice_frames": [from, to]}.
 """
 import json, subprocess, sys, wave
 import numpy as np
 
 FF, OUT = sys.argv[1], sys.argv[2]
-SR, DUR, FPS = 44100, 92.0, 24
+CUES = json.load(open(sys.argv[3])) if len(sys.argv) > 3 else {}
+SR, DUR, FPS = 44100, float(CUES.get("duration", 92.0)), 24
 N = int(SR * DUR)
 t = np.arange(N) / SR
 rng = np.random.default_rng(3)
@@ -18,14 +23,15 @@ raw = subprocess.run([FF, "-v", "error", "-i", "film/guide-voice.mp3", "-f", "f3
 src = np.frombuffer(raw, dtype=np.float32)
 
 # (start, end) in the take -> where it goes in the film
-SEGMENTS = [(0.0, 2.3, 51.0), (3.0, 8.4, 56.0), (8.5, 20.6, 63.2), (20.6, 25.87, 76.2)]
+SEGMENTS = [tuple(x) for x in CUES.get("segments", [(0.0, 2.3, 51.0), (3.0, 8.4, 56.0), (8.5, 20.6, 63.2), (20.6, 25.87, 76.2)])]
 voice = np.zeros(N, dtype=np.float64)
 for a, b, at in SEGMENTS:
     seg = src[int(a * SR):int(b * SR)].astype(np.float64)
     f = int(0.012 * SR)
     seg[:f] *= np.linspace(0, 1, f); seg[-f:] *= np.linspace(1, 0, f)
     i = int(at * SR)
-    voice[i:i + len(seg)] += seg[: max(0, N - i)]
+    seg = seg[: max(0, N - i)]
+    voice[i:i + len(seg)] += seg
 
 def env(points):
     """Piecewise-linear envelope from (time, value) pairs."""
@@ -43,6 +49,7 @@ CHORDS = [
     (76, [123.47, 185.0, 293.66, 369.99]),  # Bm
     (86, [146.83, 220.0, 329.63, 440.0]),   # D add9, resolve
 ]
+if "chords" in CUES: CHORDS = [(tt, ch) for tt, (_, ch) in zip(CUES["chords"], CHORDS)]
 music_l = np.zeros(N); music_r = np.zeros(N)
 for idx, (start, freqs) in enumerate(CHORDS):
     end = CHORDS[idx + 1][0] if idx + 1 < len(CHORDS) else DUR
@@ -52,7 +59,7 @@ for idx, (start, freqs) in enumerate(CHORDS):
         lfo = 1 + 0.15 * np.sin(2 * np.pi * (0.07 + k * 0.03) * t + k)
         music_l += w * amp * lfo * (np.sin(2 * np.pi * f * t) + 0.3 * np.sin(2 * np.pi * f * 2.003 * t))
         music_r += w * amp * lfo * (np.sin(2 * np.pi * f * 1.002 * t + 0.4) + 0.3 * np.sin(2 * np.pi * f * 1.997 * t))
-level = env([(0, 0), (4, 0.7), (13, 0.8), (24, 1.0), (33, 0.8), (44, 0.75), (50, 0.6), (82, 0.7), (86.5, 1.15), (89, 1.0), (92, 0)])
+level = env([tuple(x) for x in CUES.get("level", [(0, 0), (4, 0.7), (13, 0.8), (24, 1.0), (33, 0.8), (44, 0.75), (50, 0.6), (82, 0.7), (86.5, 1.15), (89, 1.0), (92, 0)])])
 # Duck the score under the voice.
 v_env = np.convolve(np.abs(voice), np.ones(int(0.25 * SR)) / int(0.25 * SR), mode="same")
 duck = 1 - 0.55 * np.clip(v_env / (v_env.max() + 1e-9) * 4, 0, 1)
@@ -77,15 +84,18 @@ def click(at, amp=0.25):
     return out
 
 fx = np.zeros(N)
-for at in (5.4, 13.4, 24.4, 33.4, 44.4):
+for at in CUES.get("bells", (5.4, 13.4, 24.4, 33.4, 44.4)):
     fx += bell(at, 1318.5, 2.5, 0.05)
-fx += swell(22.4, 26.2, 0.1) + swell(42.6, 45.0, 0.07) + swell(79.2, 82.0, 0.09)
-fx += bell(50.55, 659.25, 2.4, 0.16) + bell(50.75, 987.77, 2.4, 0.14) + bell(51.0, 1318.5, 2.0, 0.08)   # door chime
-fx += click(51.25, 0.3)                                                                                  # lock
-fx += click(81.9, 0.18) + bell(81.92, 1760.0, 1.2, 0.06)                                                 # the panel tap
-sub = np.zeros(N); i = int(86.2 * SR); n = int(3.5 * SR); tt = np.arange(n) / SR
+for a, b in CUES.get("swells", [(22.4, 26.2), (42.6, 45.0), (79.2, 82.0)]):
+    fx += swell(a, b, 0.09)
+door = CUES.get("door", 50.55)
+fx += bell(door, 659.25, 2.4, 0.16) + bell(door + 0.2, 987.77, 2.4, 0.14) + bell(door + 0.45, 1318.5, 2.0, 0.08)   # door chime
+fx += click(CUES.get("lock", 51.25), 0.3)                                                                            # lock
+tap = CUES.get("tap", 81.9)
+if tap is not None: fx += click(tap, 0.18) + bell(tap + 0.02, 1760.0, 1.2, 0.06)                                     # the panel tap
+sub = np.zeros(N); i = int(CUES.get("end", 86.2) * SR); n = int(3.5 * SR); tt = np.arange(n) / SR
 sub[i:i + n] = 0.28 * np.exp(-tt * 1.4) * np.sin(2 * np.pi * 55 * tt)
-fx += sub + bell(86.3, 880.0, 3.5, 0.07)
+fx += sub + bell(CUES.get("end", 86.2) + 0.1, 880.0, 3.5, 0.07)
 
 L = music_l + fx + voice * 0.95
 R = music_r + fx + voice * 0.95
@@ -97,8 +107,9 @@ with wave.open(f"{OUT}/film-audio.wav", "wb") as wf:
 
 # The voice's loudness per frame from 51 s, 0..1.
 frames = []
-for k in range(int((82 - 51) * FPS)):
-    a = int((51 + k / FPS) * SR); b = a + SR // FPS
+vf0, vf1 = CUES.get("voice_frames", (51, 82))
+for k in range(int((vf1 - vf0) * FPS)):
+    a = int((vf0 + k / FPS) * SR); b = a + SR // FPS
     frames.append(float(np.sqrt(np.mean(voice[a:b] ** 2))))
 m = max(frames) or 1
 json.dump([round(min(1.0, f / m * 1.3), 2) for f in frames], open(f"{OUT}/voice-env.json", "w"))

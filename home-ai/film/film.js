@@ -614,10 +614,10 @@ function shotCamera(t) {
     const k = ease(clamp01((t - 13) / 11)), a = lerp(0.55, 0.55 + Math.PI * 1.1, k), R = lerp(23, 21, k);
     pos.set(8 + Math.cos(a) * R, lerp(11, 7.5, k), 5 + Math.sin(a) * R); tgt.set(8, 2.6, 5);
   } else if (t < 33) {    // Detail: the orbit eases into a front three-quarter view, then keeps drifting
-    const a0 = 0.55 + Math.PI * 1.1;
-    const orbitEnd = new THREE.Vector3(8 + Math.cos(a0) * 21, 7.5, 5 + Math.sin(a0) * 21);
-    const k = ease(clamp01((t - 24) / 9));
-    pos.copy(orbitEnd).lerp(new THREE.Vector3(22, 9.5, 25), k); tgt.set(8.5, lerp(2.6, 2.0, k), 5);
+    // Keep orbiting (an arc, never through the house) round to the front three-quarter view.
+    const a0 = 0.55 + Math.PI * 1.1, a1 = Math.atan2(25 - 5, 22 - 8) + Math.PI * 2;
+    const k = ease(clamp01((t - 24) / 9)), a = lerp(a0, a1, k), R = lerp(21, Math.hypot(14, 20), k);
+    pos.set(8 + Math.cos(a) * R, lerp(7.5, 9.5, k), 5 + Math.sin(a) * R); tgt.set(8.5, lerp(2.6, 2.0, k), 5);
   } else if (t < 44) {    // Furnish: the same move continues up and in, looking down into the rooms
     const k = ease(clamp01((t - 33) / 11));
     pos.set(lerp(22, 15.2, k), lerp(9.5, 9.8, k), lerp(25, 14.8, k)); tgt.set(lerp(8.5, 11, k), lerp(2.0, 0.6, k), lerp(5, 5.4, k));
@@ -845,6 +845,7 @@ export async function createFilm(canvas, { width, height, voice = [] } = {}) {
     // One scan sweep as each stage lands, and a slow idle sweep while the guide speaks.
     U.uScan.value = t < 24 ? ((t - 13) % 3.6) * 2.2 - 0.5 : t < 44 ? ((t - 24) % 5) * 1.6 - 0.5 : ((t - 44) % 9) * 0.9 - 0.5;
     // Inside the house the camera is among the surfaces: turn the glow down so the walls read as walls.
+    // Near passes dim the glow: the close orbit as the shell locks in (24-33), the furnish cut-away, and inside the house.
     const inside = Math.max(smooth(31, 34, t) * 0.6, smooth(44, 46, t)) * (1 - smooth(82.5, 85.5, t) * 0.45);
     U.uGain.value = view && view.gain != null ? view.gain : 1 - inside;
     const soft = view && view.gain != null ? 1 - view.gain : inside;
