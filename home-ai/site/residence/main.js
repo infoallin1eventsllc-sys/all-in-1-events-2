@@ -96,6 +96,8 @@ setupCompare(document.querySelector("#rooms"));
 // The header takes the tone of whatever is under it: light text over the film and the green
 // section, dark text over the pale ones.
 const top = $(".top");
+// The rooms section is pale around its heading but dark once the sticky panes fill the view.
+$("#rooms .compare-track").setAttribute("data-tone", "dark");
 const io = new IntersectionObserver((entries) => {
   for (const e of entries) if (e.isIntersecting) top.dataset.tone = e.target.dataset.tone;
 }, { rootMargin: "-1px 0px -97% 0px" });

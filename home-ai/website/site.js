@@ -14,7 +14,15 @@
   setPaused(true);
   if (!reduce) film.play().catch(() => setPaused(true));
   pause.addEventListener("click", () => { if (film.paused) film.play().catch(() => {}); else { film.pause(); setPaused(true); } });
+  // The hero plays a short cut. "With sound" loads the full film and plays it from the start.
+  let fullFilm = false;
   sound.addEventListener("click", () => {
+    if (!fullFilm) {
+      fullFilm = true;
+      film.innerHTML = '<source src="meridian-film.mp4" type="video/mp4"><source src="meridian-film.webm" type="video/webm">';
+      film.load();
+      $("#film-note").textContent = "The full film, 1:32.";
+    }
     film.muted = false; film.loop = false; film.controls = true; film.currentTime = 0;
     film.play().catch(() => setPaused(true));
     sound.textContent = "Playing with sound";

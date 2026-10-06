@@ -389,7 +389,7 @@ function patch(mat, { planks = false, glow = false } = {}) {
       .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
         if (vTex > 0.5) roughnessFactor = roughT;`)
       .replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
-        totalEmissiveRadiance += uHoloColor * front * 0.6;
+        totalEmissiveRadiance += uHoloColor * front * 0.45;
         ${glow ? "totalEmissiveRadiance += vCol * (0.3 + 1.6 * uLights);" : ""}
         if (vPaint >= 0.0) totalEmissiveRadiance += uHoloColor * exp(-pow((uT - vPaint - 0.25) / 0.22, 2.0)) * 0.5;`);
   };
@@ -437,7 +437,7 @@ const HOLO_LINE_F = `uniform vec3 uHoloColor; uniform float uHolo; uniform float
   void main(){ if (vY > uCutY || vA < 0.002) discard; float s = exp(-pow((vY - uScan) / 0.12, 2.0)) + vFlash * 1.6;
     vec3 c = mix(uHoloColor, vec3(1.0, 0.72, 0.4), uWarm * smoothstep(3.4, 0.2, vY) * 0.7);
     float near = mix(1.0, 0.18 + 0.82 * smoothstep(0.3, 5.0, vD), 1.0 - uGain);
-    gl_FragColor = vec4(c * (0.5 + s * 1.3) * vA * uHolo * near * mix(1.0, 0.55, 1.0 - uGain), 1.0); }`;
+    gl_FragColor = vec4(c * (0.42 + s * 1.1) * vA * uHolo * near * mix(1.0, 0.55, 1.0 - uGain), 1.0); }`;
 const RIM_V = `attribute float aBirth; attribute float aSolid; attribute float aBase; attribute vec3 aOff; uniform float uT;
   varying vec3 vN; varying vec3 vV; varying float vA; varying float vY; varying float vD;
   void main(){
@@ -849,7 +849,7 @@ export async function createFilm(canvas, { width, height, voice = [] } = {}) {
     const inside = Math.max(smooth(31, 34, t) * 0.6, smooth(44, 46, t)) * (1 - smooth(82.5, 85.5, t) * 0.45);
     U.uGain.value = view && view.gain != null ? view.gain : 1 - inside;
     const soft = view && view.gain != null ? 1 - view.gain : inside;
-    bloom.strength = lerp(0.7, 0.3, soft); bloom.threshold = lerp(0.12, 0.5, soft);
+    bloom.strength = lerp(0.42, 0.22, soft); bloom.threshold = lerp(0.3, 0.6, soft);
     renderer.toneMappingExposure = 1.0;
 
     // Plan drawing.

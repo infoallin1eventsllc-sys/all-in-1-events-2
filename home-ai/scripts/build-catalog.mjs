@@ -45,14 +45,14 @@ const SCREENS = [
 async function capture(browser, finish, id) {
   const wrapper = path.join(demoDir, `_catalog-${finish.key}.html`);
   fs.writeFileSync(wrapper, `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>${fs.readFileSync(path.join(demoDir, `haven-${finish.look}.html`), "utf8")}</body></html>`);
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1, colorScheme: finish.scheme });
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, colorScheme: finish.scheme });
   await page.addInitScript(() => { try { localStorage.clear(); localStorage.setItem("haven.holoMotion", "still"); } catch {} });
   await page.goto(`file://${wrapper}#${id}`);
   await page.waitForSelector("#app:not([hidden])");
   // Let the hologram load and draw its first frame.
   await page.waitForFunction(() => !document.querySelector(".map.holo:not(.holo-ready)"), null, { timeout: 20000 }).catch(() => {});
   await page.waitForTimeout(1500);
-  const jpg = await page.screenshot({ type: "jpeg", quality: 70 });
+  const jpg = await page.screenshot({ type: "jpeg", quality: 84 }); // 2880x1800: crisp on any screen
   // The website (scripts/build-website.mjs) shows the same pictures as files.
   fs.mkdirSync(path.join(out, "shots"), { recursive: true });
   fs.writeFileSync(path.join(out, "shots", `${finish.key}-${id}.jpg`), jpg);

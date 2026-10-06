@@ -32,6 +32,8 @@ const swap = (html, from, to, where) => {
 for (const f of ["index.html", "site.css", "site.js"]) copyFileSync(need(`website/${f}`), `${OUT}/${f}`);
 copyFileSync(need("dist/film/meridian-film-merged-share.mp4"), `${OUT}/meridian-film.mp4`);
 copyFileSync(need("dist/film/meridian-film-merged-share.webm"), `${OUT}/meridian-film.webm`); // for browsers without H.264
+copyFileSync(need("dist/film/meridian-film-hero.mp4"), `${OUT}/meridian-film-hero.mp4`); // the landing page's short cut
+copyFileSync(need("dist/film/meridian-film-hero.webm"), `${OUT}/meridian-film-hero.webm`);
 copyFileSync(need("docs/poster.jpg"), `${OUT}/poster.jpg`);
 copyFileSync(need("film/refs/dusk.jpg"), `${OUT}/build.jpg`);
 copyFileSync(need("dist/site/stills/living-after.jpg"), `${OUT}/linden.jpg`);
