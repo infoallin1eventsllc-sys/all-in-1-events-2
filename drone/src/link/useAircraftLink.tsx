@@ -12,7 +12,7 @@ import { useOperator, ROLE_LABEL } from '../operator/operator';
 import { recorder } from '../record/recorder';
 import { chunkedWriter } from './writeQueue';
 import { HEALTH_STREAMS } from '../diagnostics/decode';
-import { uploadItems, startMission as startMissionOn, awaitAck as awaitAckOn, MISSION_TYPE, type MissionIO, type StartResult } from './missionClient';
+import { uploadItems, startMission as startMissionOn, awaitAck as awaitAckOn, MISSION_TYPE, MISSION_RESULT_TEXT, type MissionIO, type StartResult } from './missionClient';
 
 /**
  * Aircraft link: the one place the browser talks to real hardware.
@@ -139,6 +139,8 @@ interface LinkApi extends LinkState {
 export const SERIAL_RATES = [57600, 115200, 460800, 921600, 38400, 230400, 500000, 1500000];
 /** How long each rate is given to produce a whole MAVLink frame (an autopilot heartbeats at 1 Hz and streams faster). */
 const PROBE_MS = 1600;
+/** INAV refuses a new route while armed (src/main/telemetry/mavlink.c answers MAV_MISSION_ERROR). */
+const INAV_GROUND_ONLY = 'This flight controller (INAV) takes a new route only on the ground: land and disarm, upload, then launch from the radio.';
 
 const NUS_SERVICE = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
 const NUS_RX = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // write to bridge
@@ -183,8 +185,9 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     let last = 0;
     const t = setInterval(() => {
       const now = Date.now();
-      telem.current.msgsPerSec = last ? Math.round(msgCount.current / ((now - last) / 1000)) : 0;
-      msgCount.current = 0; last = now;
+      // Counted over a second or more: over 100 ms a burst (frames queued while the page was busy) reads as thousands.
+      if (!last) last = now;
+      else if (now - last >= 1000) { telem.current.msgsPerSec = Math.round(msgCount.current / ((now - last) / 1000)); msgCount.current = 0; last = now; }
       // Copied here, not in the updater: React may run an updater twice.
       const params = paramsPub.current === paramsRev.current ? null : { ...paramStore.current[primarySys.current] };
       paramsPub.current = paramsRev.current;
@@ -424,7 +427,8 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (c.level === 'no') throw new Error(`${FEATURE_LABEL[f]}: ${c.note}`);
   };
   /** The primary's COMMAND_ACK result for `command`, or null after `ms` (IN_PROGRESS keeps waiting). */
-  const ackFor = (command: number, ms = 1500) => new Promise<number | null>(resolve => {
+  // 3 s: a busy 57600-baud radio can take over a second each way.
+  const ackFor = (command: number, ms = 3000) => new Promise<number | null>(resolve => {
     const onFrame = (f: MavFrame) => { if (f.msgId === 77 && f.sysId === sysId() && f.payload.getUint16(0, true) === command && f.payload.getUint8(2) !== MAV_RESULT.IN_PROGRESS) done(f.payload.getUint8(2)); };
     const done = (r: number | null) => { clearTimeout(timer); frameListeners.current.delete(onFrame); resolve(r); };
     const timer = setTimeout(() => done(null), ms);
@@ -631,9 +635,8 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (ap() === 'GENERIC') {
       // INAV refuses a new route while armed (src/main/telemetry/mavlink.c answers MAV_MISSION_ERROR): say so first.
       if (telem.current.armed) {
-        const msg = 'This flight controller (INAV) takes a new route only on the ground: land and disarm, upload, then launch from the radio.';
-        setMissionUpload({ state: 'FAILED', sent: 0, total: 0, error: msg });
-        throw new Error(msg);
+        setMissionUpload({ state: 'FAILED', sent: 0, total: 0, error: INAV_GROUND_ONLY });
+        throw new Error(INAV_GROUND_ONLY);
       }
       // INAV: waypoints and return-home only, as MISSION_ITEM in GLOBAL_RELATIVE_ALT, no home item, started from the
       // radio. A takeoff item is the pilot's (they launch); anything else (a survey's camera and speed items) refused.
@@ -645,7 +648,12 @@ export const AircraftLinkProvider: React.FC<{ children: React.ReactNode }> = ({ 
       try {
         await uploadItems(io, legacy, { missionType: MISSION_TYPE.MISSION, firstCurrent: 0, legacy: true, onProgress: p => setMissionUpload(m => ({ ...m, sent: p.sent })) });
         setMissionUpload(m => ({ ...m, state: 'DONE', sent: legacy.length }));
-      } catch (e) { const msg = e instanceof Error ? e.message : String(e); setMissionUpload(m => ({ ...m, state: 'FAILED', error: msg })); throw e; }
+      } catch (e) {
+        // Armed before the dashboard heard it (the pilot launched a moment ago): INAV answers MAV_MISSION_ERROR.
+        const raw = e instanceof Error ? e.message : String(e);
+        const msg = raw.includes(MISSION_RESULT_TEXT[1]) ? INAV_GROUND_ONLY : raw;
+        setMissionUpload(m => ({ ...m, state: 'FAILED', error: msg })); throw new Error(msg);
+      }
       return; // `start`: the pilot starts it from the radio (capabilities MISSION_START says so on screen)
     }
     const t = telem.current;

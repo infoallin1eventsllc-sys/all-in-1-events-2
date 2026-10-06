@@ -273,8 +273,12 @@ through the GitHub commit-status API instead.
     the 10 Hz update (now carried on and eased); lower quality never shrank post-processing (also Light show);
     a tap on a phone dropped Chase for good, and phones had no camera buttons; font-load ran after unmount;
     shadow map and site photo sized by screen; environment map was black; results measurement line now cased.
-- Verified: tsc, 23 test suites, build; desktop/dark/phone crawl 0 issues; benches survey-flight (ArduPilot,
-  PX4), inav-link (MAVLink 1 and 2), obstacle.
+- Found while re-running the benches: INAV's armed refusal read "generic error" when the dashboard had not yet
+  heard the aircraft arm (now the plain on-the-ground message); the go-to answer wait was 1.5 s (now 3 s, for
+  busy 57600 radios); msg/s was counted over 100 ms and spiked to ~1000 after a stall (now per second). Bench
+  harness: the bridge re-pins a new autopilot only after 3 s of silence, so inav-link.mjs now waits for the pin.
+- Verified: tsc, 23 test suites, build; desktop/dark/phone crawl 0 issues; benches (run one at a time) survey-flight (ArduPilot,
+  PX4), inav-link (MAVLink 1 and 2, 11 passes in a row), obstacle.
 
 ## Open next steps (not done)
 - **Before autonomy = auto:** port the runner send-path fixes above into the live runner.

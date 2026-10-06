@@ -30,10 +30,14 @@ process.on('exit', cleanup);
 let vlog = [];
 const fail = (msg) => { console.error(`FAIL: ${msg}`); console.error('flight controller said:\n  ' + vlog.slice(-20).join('\n  ')); cleanup(); process.exit(1); };
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
+const waitLog2 = async (test, ms, what) => { for (let t = 0; t < ms; t += 250) { if (test()) return; await new Promise(r => setTimeout(r, 250)); } fail(what); };
 const waitLog = async (re, ms, what) => { for (let t = 0; t < ms; t += 250) { if (vlog.some(l => re.test(l))) return; await new Promise(r => setTimeout(r, 250)); } fail(what); };
 
 const wsPort = process.env.BENCH_WS_PORT ?? '8772', udpPort = process.env.BENCH_UDP_PORT ?? '14553';
-run('python3', ['mavlink_ws.py', '--udp', `127.0.0.1:${udpPort}`, '--host', '127.0.0.1', '--port', wsPort, '--token', 'bench']);
+const bridge = run('python3', ['mavlink_ws.py', '--udp', `127.0.0.1:${udpPort}`, '--host', '127.0.0.1', '--port', wsPort, '--token', 'bench']);
+let pinned = 0;   // the bridge pins one autopilot, and takes a new one only after the old has been silent 3 s
+bridge.stderr.on('data', d => { pinned += (String(d).match(/\(pinned\)/g) ?? []).length; });
+bridge.stdout.on('data', d => { pinned += (String(d).match(/\(pinned\)/g) ?? []).length; });
 await new Promise(r => setTimeout(r, 1500));
 let fc = null;
 /** `flying`: armed in position hold, launched by the pilot from the radio (INAV arms only from there). */
@@ -42,8 +46,11 @@ const startFc = ({ flying = false, gcsNav = false } = {}) => {
   fc = run('python3', ['fake_inav.py', '--to', `127.0.0.1:${udpPort}`, ...(flying ? ['--flying'] : []), ...(gcsNav ? ['--gcs-nav'] : []), ...(v2 ? ['--v2'] : [])]);
   fc.stdout.on('data', d => vlog.push(...String(d).trim().split('\n')));
   fc.stderr.on('data', d => vlog.push(...String(d).trim().split('\n')));
+  // Wait until the bridge has pinned the new flight controller, then for two heartbeats to reach the dashboard.
+  const before = pinned;
+  return (async () => { await waitLog2(() => pinned > before, 20000, 'the bridge did not take the restarted flight controller'); await new Promise(r => setTimeout(r, 2500)); })();
 };
-startFc();   // on the ground first: INAV takes a route only there
+await startFc();   // on the ground first: INAV takes a route only there
 
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'], ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}) });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -51,10 +58,10 @@ page.on('pageerror', e => fail(`page error: ${e.message}`));
 await page.goto(`${url}?view=patrol`, { waitUntil: 'networkidle' });
 await page.click('#link-button');
 await page.getByLabel('Bridge address').fill(`ws://127.0.0.1:${wsPort}/?token=bench`);
-await page.getByRole('button', { name: 'Connect', exact: true }).click();
+await page.getByRole('button', { name: 'Connect', exact: true }).evaluate(b => b.click());
 
 // Named, versioned and shown live.
-await page.getByText(/MAVLink flight controller \(INAV, Betaflight or other\)/).waitFor({ timeout: 15000 }).catch(() => fail('the dashboard did not name the flight controller'));
+await page.getByText(/MAVLink flight controller \(INAV, Betaflight or other\)/).waitFor({ timeout: 30000 }).catch(() => fail('the dashboard did not name the flight controller'));
 await page.getByText(`MAVLink ${v2 ? 2 : 1}`, { exact: false }).first().waitFor({ timeout: 5000 }).catch(() => fail(`MAVLink ${v2 ? 2 : 1} not shown`));
 log(`connected: INAV stand-in on MAVLink ${v2 ? 2 : 1}`);
 // What it can do: the radio's commands stay off, with the reason.
@@ -72,35 +79,34 @@ await page.mouse.click(600, 900);
 await page.getByRole('tab', { name: 'Route' }).evaluate(b => b.click());   // the live screen re-renders at 10 Hz
 const upload = page.getByRole('button', { name: /Upload patrol/ });
 await upload.waitFor({ timeout: 10000 }).catch(() => fail('no Upload patrol for the live aircraft'));
-for (let i = 0; i < 40 && !(await upload.isEnabled()); i++) await page.waitForTimeout(250);
+for (let i = 0; i < 120 && !(await upload.isEnabled()); i++) await page.waitForTimeout(250);   // a software-rendered page can stall for seconds
 if (!(await upload.isEnabled())) fail('Upload patrol stayed disabled (pre-flight gate)');
-await upload.click({ timeout: 15000 }).catch(async e => { if (process.env.BENCH_SHOT) await page.screenshot({ path: process.env.BENCH_SHOT, timeout: 120000 }).catch(() => {}); fail(`Upload patrol could not be clicked: ${e.message.split('\n')[0]}`); });
+await upload.evaluate(b => b.click());   // the live screen re-renders at 10 Hz; a DOM click is not thrown off by that
 await waitLog(/MIS stored 5 waypoints/, 15000, 'the flight controller did not store the 5 patrol waypoints');
 if (vlog.some(l => /IGNORED MISSION_ITEM_INT|refused/.test(l))) fail('an item was sent in a form INAV does not take');
 await page.getByText(/Route on the aircraft · start the route from the radio/).waitFor({ timeout: 5000 }).catch(() => fail('the screen did not say the route is started from the radio'));
 log('on the ground: patrol uploaded as 5 MISSION_ITEMs; screen says start it from the radio');
 
 // In the air: INAV refuses a new route, and the dashboard says so before sending anything.
-startFc({ flying: true });
-await page.waitForTimeout(2500);
+await startFc({ flying: true });
 const countsBefore = vlog.filter(l => /^MIS count/.test(l)).length;
-for (let i = 0; i < 40 && !(await upload.isEnabled()); i++) await page.waitForTimeout(250);
-await upload.click({ timeout: 15000 }).catch(e => fail(`Upload patrol could not be clicked in the air: ${e.message.split('\n')[0]}`));
-await page.getByText(/takes a new route only on the ground/).first().waitFor({ timeout: 5000 }).catch(() => fail('the in-flight upload refusal did not reach the screen'));
+for (let i = 0; i < 120 && !(await upload.isEnabled()); i++) await page.waitForTimeout(250);   // a software-rendered page can stall for seconds
+if (!(await upload.isEnabled())) { if (process.env.BENCH_SHOT) await page.screenshot({ path: process.env.BENCH_SHOT }).catch(() => {}); fail(`Upload patrol stayed disabled in the air (${await upload.getAttribute('title')}; ${(await page.locator('#link-button').locator('..').innerText()).replace(/\s+/g, ' ').slice(0, 1500)})`); }
+await upload.evaluate(b => b.click());   // the live screen re-renders at 10 Hz; a DOM click is not thrown off by that
+await page.getByText(/takes a new route only on the ground/).first().waitFor({ timeout: 5000 }).catch(async () => { if (process.env.BENCH_SHOT) await page.screenshot({ path: process.env.BENCH_SHOT }).catch(() => {}); fail('the in-flight upload refusal did not reach the screen'); });
 if (vlog.filter(l => /^MIS count/.test(l)).length !== countsBefore) fail('a route was sent to an armed INAV');
 log('in the air: route upload refused on screen, nothing sent');
 
 // Go-to without GCS NAV (still flying): refused, and the refusal reaches the screen.
 const wp = page.getByRole('button', { name: /WP2/ });
-await wp.click();
+await wp.evaluate(b => b.click());
 await waitLog(/CMD reposition denied/, 8000, 'the go-to did not reach the flight controller');
 await page.getByRole('alert').filter({ hasText: /GCS NAV mode/ }).waitFor({ timeout: 5000 }).catch(() => fail('the go-to refusal did not reach the screen'));
 log('go-to without GCS NAV: refused, and the screen says why');
 
 // With GCS NAV mode on: accepted.
-startFc({ flying: true, gcsNav: true });
-await page.waitForTimeout(2500);
-await wp.click();
+await startFc({ flying: true, gcsNav: true });
+await wp.evaluate(b => b.click());
 await waitLog(/CMD reposition 33\.\d+,-118\.\d+ alt \d+/, 8000, 'the go-to was not accepted with GCS NAV on');
 log(`go-to with GCS NAV: ${vlog.filter(l => /CMD reposition \d/.test(l)).pop()}`);
 
