@@ -1,4 +1,4 @@
-// The Meridian Interface website: website/index.html (the film as the landing page, then
+// The Meridian Interface website: website/index.html, site.css and site.js (the film as the landing page, then
 // a screen for every room, the live panel, Haven, security, homes, builders, FAQ and the
 // contact form) with every page and asset it links to, in dist/website/:
 //   index.html                 the site
@@ -29,7 +29,7 @@ const swap = (html, from, to, where) => {
   return html.replace(from, () => to);
 };
 
-copyFileSync(need("website/index.html"), `${OUT}/index.html`);
+for (const f of ["index.html", "site.css", "site.js"]) copyFileSync(need(`website/${f}`), `${OUT}/${f}`);
 copyFileSync(need("dist/film/meridian-film-merged-share.mp4"), `${OUT}/meridian-film.mp4`);
 copyFileSync(need("dist/film/meridian-film-merged-share.webm"), `${OUT}/meridian-film.webm`); // for browsers without H.264
 copyFileSync(need("docs/poster.jpg"), `${OUT}/poster.jpg`);
@@ -41,9 +41,28 @@ for (const f of shots) copyFileSync(`dist/catalog/shots/${f}`, `${OUT}/shots/${f
 
 for (const finish of ["grounded", "futuristic", "vivid"]) writeFileSync(`${OUT}/panel-${finish}.html`, page(`dist/demo/haven-${finish}.html`));
 
-// The walk-through: its "Try the wall panel" goes to the site's live panel.
-writeFileSync(`${OUT}/meridian.html`, swap(page("dist/site/meridian.html"),
-  'href="https://claude.ai/artifact/J46Rus2S3KzY9CpbpYKyCk" data-showroom="panel"', 'href="index.html#live" data-showroom="panel"', "meridian.html"));
+// The walk-through, focused for the website: the build and the rooms before and after. Its
+// Haven, safety and builders sections repeat the home page, so they give way to one way back.
+{
+  let html = page("dist/site/meridian.html");
+  const from = html.indexOf('<section class="after" id="haven">'), to = html.indexOf("</main>");
+  if (from < 0 || to < from) throw new Error("meridian.html: can't find the sections to trim");
+  html = html.slice(0, from) + `<section class="after" id="next">
+    <div class="wrap">
+      <p class="eyebrow">Next</p>
+      <h3>That&rsquo;s how every Meridian home begins.</h3>
+      <p class="lede">The same plan becomes the hologram on Haven&rsquo;s wall panel. Choose a screen for each room, or see it in your own home.</p>
+      <div class="cta"><a class="btn solid" href="index.html#screens">Choose a screen for every room</a><a class="btn" href="index.html#contact">Book a walkthrough</a></div>
+    </div>
+  </section>
+` + html.slice(to);
+  html = swap(html, '<nav aria-label="Sections"><a href="#compare">Rooms</a><a href="#haven">Haven</a><a href="#builders">For builders</a></nav>',
+    '<nav aria-label="Sections"><a href="#compare">Rooms</a><a href="index.html">Back to the website</a></nav>', "meridian.html nav");
+  html = swap(html, "<p>Keep scrolling to see what Haven does.</p>", "<p>Keep scrolling to see every room, before and after.</p>", "meridian.html last chapter");
+  html = swap(html, '<nav aria-label="Footer"><a href="#compare">Rooms, before and after</a><a href="#haven">What Haven does</a><a href="#builders">For builders</a></nav>',
+    '<nav aria-label="Footer"><a href="index.html">Meridian Interface</a><a href="index.html#screens">Screens</a><a href="index.html#contact">Book a walkthrough</a></nav>', "meridian.html footer");
+  writeFileSync(`${OUT}/meridian.html`, html);
+}
 // Linden House: the footer's company name links home.
 writeFileSync(`${OUT}/residence.html`, swap(page("dist/site/residence.html"),
   "<span>&copy; 2026 Meridian Interface</span>", '<span>&copy; 2026 <a href="index.html">Meridian Interface</a></span>', "residence.html"));

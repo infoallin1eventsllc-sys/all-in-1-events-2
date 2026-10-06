@@ -12,211 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112,300;112,500;112,600;125,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-<style>
-  /* One dark world, the same one the film and the hologram live in: night ground, cyan light
-     for the hologram and for actions, amber for the guide's voice and for what needs you.
-     Layout: full-bleed film, then a 1180px column of sections, each opening with a label and a headline. */
-  :root {
-    color-scheme: dark;
-    --night: #05080e; --panel: #0b121c; --panel-2: #101a26; --line: rgba(90, 210, 255, 0.18); --line-2: rgba(233, 240, 245, 0.1);
-    --cyan: #5ad2ff; --on-cyan: #04121c; --amber: #ffb35c; --paper: #e9f0f5; --soft: #c9d6e0; --muted: #8ca2b4;
-    --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
-    --body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
-    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
-    --gutter: clamp(16px, 4vw, 56px);
-    --nav-h: 64px;
-  }
-  * { box-sizing: border-box; }
-  [hidden] { display: none !important; }
-  html { scroll-behavior: smooth; scroll-padding-top: calc(var(--nav-h) + 12px); }
-  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
-  body { margin: 0; background: var(--night); color: var(--paper); font: 400 17px/1.6 var(--body); }
-  a { color: inherit; }
-  img, video, iframe { max-width: 100%; }
-  :focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
-  .skip { position: absolute; left: 12px; top: -60px; z-index: 50; padding: 10px 14px; border-radius: 8px; background: var(--cyan); color: var(--on-cyan); font-weight: 600; text-decoration: none; }
-  .skip:focus { top: 12px; }
-
-  /* Navigation */
-  .nav { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; height: var(--nav-h); display: flex; align-items: center; gap: 20px; padding-inline: var(--gutter);
-    background: rgba(5, 8, 14, 0.86); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line-2); }
-  .brand { font: 700 13px/1 var(--display); font-stretch: 125%; letter-spacing: 0.3em; text-transform: uppercase; text-decoration: none; white-space: nowrap; }
-  .brand span { color: var(--cyan); }
-  .nav ul { list-style: none; display: flex; gap: 4px; margin: 0 0 0 auto; padding: 0; }
-  .nav ul a { display: block; padding: 9px 11px; border-radius: 8px; font: 500 14px/1 var(--body); color: var(--soft); text-decoration: none; }
-  .nav ul a:hover, .nav ul a[aria-current="true"] { color: var(--paper); background: rgba(90, 210, 255, 0.1); }
-  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; padding: 0 20px; border-radius: 999px; border: 1px solid var(--cyan);
-    background: none; color: var(--paper); font: 600 15px/1 var(--body); text-decoration: none; cursor: pointer; white-space: nowrap; }
-  .btn.solid { background: var(--cyan); color: var(--on-cyan); }
-  .btn.quiet { border-color: var(--line); color: var(--soft); }
-  .btn:hover { filter: brightness(1.12); }
-  .btn.small { min-height: 38px; padding: 0 14px; font-size: 14px; }
-  .menu { display: none; margin-left: auto; }
-  @media (max-width: 1040px) {
-    .menu { display: inline-flex; }
-    .nav ul { position: absolute; top: var(--nav-h); left: 0; right: 0; display: none; flex-direction: column; gap: 0; margin: 0; padding: 8px var(--gutter) 16px; background: var(--night); border-bottom: 1px solid var(--line-2); }
-    .nav ul.open { display: flex; }
-    .nav ul a { padding: 14px 4px; font-size: 16px; border-bottom: 1px solid var(--line-2); border-radius: 0; }
-    .nav > .btn.solid { display: none; }
-  }
-
-  /* The film */
-  .hero { position: relative; background: #000; overflow: hidden; }
-  .hero video { display: block; width: 100%; aspect-ratio: 16 / 9; max-height: calc(88vh - var(--nav-h)); object-fit: cover; }
-  .hero .shade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(5, 8, 14, 0.82) 0%, rgba(5, 8, 14, 0.45) 38%, rgba(5, 8, 14, 0) 62%), linear-gradient(0deg, rgba(5, 8, 14, 0.92) 0%, rgba(5, 8, 14, 0.4) 34%, rgba(5, 8, 14, 0) 58%); }
-  .hero-copy { position: absolute; left: var(--gutter); right: var(--gutter); bottom: clamp(20px, 5vw, 56px); display: grid; gap: 14px; max-width: 760px; }
-  .eyebrow { margin: 0; font: 500 12px/1.3 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--cyan); }
-  h1 { margin: 0; font: 300 clamp(34px, 5.6vw, 76px)/1.02 var(--display); font-stretch: 112%; letter-spacing: -0.015em; text-wrap: balance; }
-  h1 em, h2 em { font-style: normal; font-weight: 600; color: var(--cyan); }
-  .hero-copy p.lede { margin: 0; max-width: 56ch; color: var(--soft); font-size: clamp(15px, 1.4vw, 18px); }
-  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-  .film-ctl { position: absolute; right: var(--gutter); top: 16px; display: flex; gap: 8px; }
-  .film-ctl .btn { background: rgba(5, 8, 14, 0.6); backdrop-filter: blur(6px); }
-  @media (max-width: 720px) {
-    .hero { display: grid; }
-    .hero video { aspect-ratio: 16 / 9; max-height: none; }
-    .hero .shade { display: none; }
-    .hero-copy { position: static; padding: 24px var(--gutter) 8px; max-width: none; background: var(--night); }
-    .film-ctl { top: 10px; right: 10px; }
-  }
-
-  /* Sections */
-  main > section { padding-block: clamp(64px, 9vw, 120px); padding-inline: var(--gutter); border-top: 1px solid var(--line-2); }
-  main > section:first-of-type { border-top: 0; }
-  .wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 28px; }
-  .head { display: grid; gap: 14px; max-width: 760px; }
-  h2 { margin: 0; font: 300 clamp(30px, 4vw, 52px)/1.06 var(--display); font-stretch: 112%; letter-spacing: -0.01em; text-wrap: balance; }
-  h3 { margin: 0; font: 600 19px/1.3 var(--body); }
-  .head p { margin: 0; color: var(--soft); max-width: 64ch; }
-  .muted { color: var(--muted); }
-
-  /* Choose a screen for every room */
-  .chooser { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 28px; align-items: start; }
-  .rooms { display: grid; gap: 4px; }
-  .rooms button { display: grid; gap: 2px; text-align: left; padding: 12px 14px; border: 1px solid transparent; border-radius: 10px; background: none; color: var(--soft); font: inherit; cursor: pointer; }
-  .rooms button b { font: 600 16px/1.3 var(--body); color: var(--paper); }
-  .rooms button span { font: 400 13px/1.3 var(--mono); color: var(--muted); }
-  .rooms button:hover { background: var(--panel); }
-  .rooms button[aria-selected="true"] { background: var(--panel-2); border-color: var(--line); }
-  .rooms button[aria-selected="true"] span { color: var(--cyan); }
-  .pick { display: grid; gap: 18px; min-width: 0; }
-  .shot { position: relative; margin: 0; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); aspect-ratio: 16 / 10; }
-  .shot img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
-  .finishes { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); }
-  .finishes button { border: 0; background: none; color: var(--muted); font: 500 14px/1 var(--body); padding: 9px 14px; border-radius: 999px; cursor: pointer; min-height: 36px; }
-  .finishes button[aria-pressed="true"] { background: var(--cyan); color: var(--on-cyan); font-weight: 600; }
-  .pick-info { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px 32px; }
-  .pick-info .best { margin: 0; font: 500 13px/1.4 var(--mono); letter-spacing: 0.04em; color: var(--amber); }
-  .pick-info p { margin: 0; color: var(--soft); }
-  .pick-info ul { margin: 0; padding-left: 1.1em; color: var(--muted); display: grid; gap: 4px; font-size: 15.5px; }
-  .set { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-  .set button { display: grid; gap: 8px; padding: 0; border: 0; background: none; color: var(--soft); font: 500 14px/1.3 var(--body); text-align: left; cursor: pointer; }
-  .set img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: top left; border-radius: 8px; border: 1px solid var(--line-2); }
-  .set button[aria-pressed="true"] img { border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan); }
-  .set button[aria-pressed="true"] { color: var(--paper); }
-  @media (max-width: 900px) {
-    .chooser { grid-template-columns: 1fr; }
-    .rooms { grid-auto-flow: column; grid-auto-columns: max-content; overflow-x: auto; padding-bottom: 6px; }
-    .pick-info { grid-template-columns: 1fr; }
-    .finishes { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; }
-    .finishes button { flex: none; padding-inline: 12px; }
-    .set { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  }
-
-  /* Live panel */
-  .live-bar { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .chips button { border: 1px solid var(--line); background: none; color: var(--soft); font: 500 13px/1 var(--body); padding: 8px 12px; border-radius: 999px; cursor: pointer; min-height: 34px; }
-  .chips button[aria-pressed="true"] { background: var(--cyan); border-color: var(--cyan); color: var(--on-cyan); font-weight: 600; }
-  .frame { position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); aspect-ratio: 16 / 10; }
-  .frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
-  .frame .start { position: absolute; inset: 0; display: grid; place-content: center; gap: 14px; text-align: center; padding: 24px; background: linear-gradient(rgba(5, 8, 14, 0.55), rgba(5, 8, 14, 0.8)), var(--poster) center / cover; }
-  .frame .start p { margin: 0; color: var(--soft); max-width: 46ch; }
-  @media (max-width: 720px) { .frame { aspect-ratio: 9 / 14; } }
-
-  /* Haven */
-  .features { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--line); }
-  .features li { padding: 24px 28px 26px 0; border-bottom: 1px solid var(--line); display: grid; gap: 6px; align-content: start; }
-  .features p { margin: 0; color: var(--muted); font-size: 15.5px; }
-  @media (max-width: 900px) { .features { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  @media (max-width: 560px) { .features { grid-template-columns: 1fr; } }
-
-  /* Security */
-  .security { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(28px, 5vw, 64px); align-items: start; }
-  .security blockquote { margin: 0; font: 300 clamp(26px, 3.2vw, 40px)/1.2 var(--display); font-stretch: 112%; color: #ffe2bd; }
-  .security pre { margin: 0; padding: 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); font: 400 13px/1.75 var(--mono); color: #bcd3e3; overflow-x: auto; }
-  .security pre b { color: var(--cyan); font-weight: 500; }
-  .checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
-  .checks li { display: grid; grid-template-columns: 10px minmax(0, 1fr); gap: 4px 14px; }
-  .checks li::before { content: ""; width: 10px; height: 10px; margin-top: 8px; border-radius: 50%; background: var(--cyan); grid-row: span 2; }
-  .checks p { margin: 0; color: var(--muted); font-size: 15.5px; }
-  @media (max-width: 900px) { .security { grid-template-columns: 1fr; } }
-
-  /* Homes */
-  .homes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
-  .home-card { display: grid; grid-template-rows: auto 1fr; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--panel); text-decoration: none; }
-  .home-card img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
-  .home-card div { display: grid; gap: 8px; align-content: start; padding: 20px 22px 24px; }
-  .home-card p { margin: 0; color: var(--muted); }
-  .home-card .go { color: var(--cyan); font-weight: 600; }
-  .home-card:hover { border-color: var(--cyan); }
-  @media (max-width: 760px) { .homes { grid-template-columns: 1fr; } }
-
-  /* Builders */
-  .steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; counter-reset: step; }
-  .steps li { counter-increment: step; display: grid; gap: 8px; align-content: start; padding: 20px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--panel); }
-  .steps li::before { content: "Step " counter(step); font: 500 12px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--cyan); }
-  .steps p { margin: 0; color: var(--muted); font-size: 15.5px; }
-  .styles { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; }
-  .styles li { font: 500 13px/1 var(--mono); padding: 10px 14px; border: 1px solid var(--line); border-radius: 999px; color: #cfe6f5; }
-  @media (max-width: 960px) { .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  @media (max-width: 560px) { .steps { grid-template-columns: 1fr; } }
-
-  /* FAQ */
-  .faq { display: grid; border-top: 1px solid var(--line); max-width: 860px; }
-  .faq details { border-bottom: 1px solid var(--line); }
-  .faq summary { list-style: none; display: flex; justify-content: space-between; gap: 16px; padding: 20px 0; font: 600 18px/1.35 var(--body); cursor: pointer; }
-  .faq summary::-webkit-details-marker { display: none; }
-  .faq summary::after { content: "+"; font: 300 26px/1 var(--display); color: var(--cyan); }
-  .faq details[open] summary::after { content: "\2212"; }
-  .faq details p { margin: 0 0 22px; color: var(--soft); max-width: 70ch; }
-
-  /* Contact */
-  .contact { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: clamp(28px, 5vw, 72px); align-items: start; }
-  form { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  label { display: grid; gap: 7px; font: 500 12px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
-  label.full, .form-foot, .result { grid-column: 1 / -1; }
-  label small { font: 400 12px/1 var(--body); letter-spacing: 0; text-transform: none; }
-  input, select, textarea { font: 400 16px/1.4 var(--body); color: var(--paper); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; min-height: 48px; width: 100%; }
-  textarea { min-height: 120px; resize: vertical; }
-  input:focus, select:focus, textarea:focus { outline: 2px solid var(--cyan); outline-offset: 1px; border-color: transparent; }
-  input[aria-invalid="true"], textarea[aria-invalid="true"] { border-color: var(--amber); }
-  .trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
-  .form-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
-  .form-foot p { margin: 0; font-size: 14px; color: var(--muted); }
-  .result { margin: 0; padding: 16px 18px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); display: grid; gap: 10px; }
-  .result.ok { border-color: var(--cyan); }
-  .result.warn { border-color: var(--amber); }
-  .result p { margin: 0; }
-  .result pre { margin: 0; white-space: pre-wrap; font: 400 13px/1.6 var(--mono); color: var(--soft); max-height: 220px; overflow: auto; }
-  .contact-side { display: grid; gap: 18px; }
-  .contact-side dl { margin: 0; display: grid; gap: 14px; }
-  .contact-side dt { font: 500 12px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
-  .contact-side dd { margin: 0; color: var(--soft); }
-  @media (max-width: 900px) { .contact { grid-template-columns: 1fr; } form { grid-template-columns: 1fr; } }
-
-  /* Footer */
-  footer { padding: 48px var(--gutter) calc(40px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line-2); color: var(--muted); font-size: 14px; }
-  footer .wrap { grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr)); gap: 28px; }
-  footer h4 { margin: 0 0 10px; font: 500 12px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--soft); }
-  footer ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-  footer a { text-decoration: none; }
-  footer a:hover { color: var(--paper); }
-  footer .brand { color: var(--paper); }
-  footer .about p { margin: 12px 0 0; max-width: 40ch; }
-  footer small { grid-column: 1 / -1; font-size: 13px; padding-top: 18px; border-top: 1px solid var(--line-2); }
-  @media (max-width: 860px) { footer .wrap { grid-template-columns: repeat(2, minmax(0, 1fr)); } footer .about { grid-column: 1 / -1; } }
-</style>
+<link rel="stylesheet" href="site.css">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -238,7 +34,7 @@
 </header>
 
 <main id="main">
-  <section class="hero" id="top" aria-label="The Meridian Interface film" style="padding:0; border:0">
+  <section class="hero" id="top" aria-label="The Meridian Interface film">
     <video id="film" poster="poster.jpg" muted playsinline loop preload="metadata" aria-label="The Meridian Interface film: a home designs itself as a hologram, becomes real, and its guide walks the owners through to the wall panel">
       <source src="meridian-film.mp4" type="video/mp4">
       <source src="meridian-film.webm" type="video/webm">
@@ -269,14 +65,14 @@
         <div class="rooms" role="tablist" aria-label="Rooms" aria-orientation="vertical" id="rooms"></div>
         <div class="pick" role="tabpanel" id="pick" aria-live="polite">
           <figure class="shot"><img id="pick-img" alt="" width="1440" height="900"></figure>
-          <div class="row" style="justify-content:space-between">
+          <div class="row spread">
             <div class="finishes" role="group" aria-label="Finish" id="finishes"></div>
             <div class="row">
               <button class="btn small" id="pick-live" type="button">Try this screen live</button>
             </div>
           </div>
           <div class="pick-info">
-            <div style="display:grid; gap:8px">
+            <div class="stack">
               <h3 id="pick-name"></h3>
               <p class="best" id="pick-best"></p>
               <p id="pick-about"></p>
@@ -285,7 +81,8 @@
           </div>
         </div>
       </div>
-      <div class="head" style="margin-top:12px">
+      <noscript><p class="muted">The room chooser needs JavaScript. The <a href="library.html">screen library</a> shows every screen in every finish without it.</p></noscript>
+      <div class="head set-head">
         <h3>The whole set</h3>
       </div>
       <div class="set" id="set"></div>
@@ -306,13 +103,12 @@
       <div class="frame" id="frame" style="--poster: url('shots/grounded-signature.jpg')">
         <div class="start" id="frame-start">
           <p>The panel loads here: about a megabyte.</p>
-          <div class="row" style="justify-content:center">
+          <div class="row center">
             <button class="btn solid" id="frame-load" type="button">Start the live panel</button>
-            <a class="btn quiet" href="tour.html">Take the guided tour</a>
+            <a class="btn quiet" href="tour.html">Take the guided tour instead</a>
           </div>
         </div>
       </div>
-      <p class="muted" style="margin:0">Prefer to be walked through it? <a href="tour.html">Take the guided tour</a>: eleven short steps, about ten minutes.</p>
     </div>
   </section>
 
@@ -321,14 +117,14 @@
       <div class="head">
         <p class="eyebrow">Haven &middot; the AI home agent</p>
         <h2 id="haven-h">Everything the guide promised is <em>something Haven does.</em></h2>
-        <p>Haven runs on a small server in the home and a wall panel in each room you choose. It talks with the family, watches the house, learns what people like, and keeps a rulebook it can&rsquo;t argue its way around.</p>
+        <p>Haven runs on a small server in the home and a wall panel in each room you choose. It talks with the family, watches the house and learns what each person likes.</p>
       </div>
       <ul class="features">
-        <li><h3>Talks and listens</h3><p>Push to talk on any panel, or ask from your phone or watch. It answers in its own voice.</p></li>
+        <li><h3>Talks and listens</h3><p>Push to talk on any panel. It answers in its own voice.</p></li>
         <li><h3>Stops a leak in seconds</h3><p>A wet sensor shuts off the water and the water heater, and tells you where.</p></li>
         <li><h3>Learns your comfort</h3><p>Say &ldquo;I&rsquo;m cold&rdquo; and it warms the room now, and remembers it for that time of day.</p></li>
         <li><h3>Briefs you</h3><p>A morning and evening summary: the house, the forecast once a weather source is connected, and anything that needs you.</p></li>
-        <li><h3>Shows the whole house</h3><p>A live hologram of your own home on the panel. Tap a room to fly in and use its controls.</p></li>
+        <li><h3>Goes where you go</h3><p>Talk to Haven, run scenes and hear its briefings from an iPhone, an Apple Watch or the car, through Siri.</p></li>
         <li><h3>Keeps working offline</h3><p>Safety rules and automations run on the server in the house, with or without the internet.</p></li>
       </ul>
     </div>
@@ -341,7 +137,7 @@
         <h2 id="security-h">A rule in the code, <em>not the brochure.</em></h2>
       </div>
       <div class="security">
-        <div style="display:grid; gap:24px">
+        <div class="stack wide">
           <blockquote>&ldquo;I&rsquo;ll never unlock a door or open the garage unless you say so.&rdquo;</blockquote>
           <pre>// The AI's tools have no way to set this
 <b>unlock</b>       &rarr; waits for a person's yes
@@ -353,7 +149,7 @@
           <li><h3>Ready, at a glance</h3><p>Every security card leads with one line: Ready, or exactly what&rsquo;s open, or where the leak is.</p></li>
           <li><h3>Home, Night or Away</h3><p>The panel shows the mode the house is in, from who&rsquo;s home and the hour.</p></li>
           <li><h3>Every zone, grouped</h3><p>Entry points, water and motion, each with a plain state word. Color is never the only signal.</p></li>
-          <li><h3>Learning never acts alone</h3><p>Habits Haven notices become suggestions. Nothing it learns runs until someone says yes, and routines still pass the same safety checks.</p></li>
+          <li><h3>Leaks handled first</h3><p>A wet sensor closes the main water and turns off the water heater before anyone has to read a message.</p></li>
         </ul>
       </div>
     </div>
@@ -364,7 +160,7 @@
       <div class="head">
         <p class="eyebrow">Homes</p>
         <h2 id="homes-h">Every home starts as <em>a line of light.</em></h2>
-        <p>The same plan draws the hologram on the panel, the floor plans in the listing and the walk-through on the website. Here are two ways a home looks before anyone moves in.</p>
+        <p>Two ways a client sees a Meridian home before anyone moves in.</p>
       </div>
       <div class="homes">
         <a class="home-card" href="meridian.html">
@@ -407,13 +203,11 @@
         <h2 id="faq-h">What people ask <em>before they buy.</em></h2>
       </div>
       <div class="faq">
-        <details><summary>Can Haven unlock a door or open the garage on its own?</summary><p>No. Unlocking a door, opening the garage and turning the water back on always wait for a person to say yes. The rule lives in the one part of the software that touches hardware, and the AI&rsquo;s tools have no way around it.</p></details>
         <details><summary>Does it need the internet?</summary><p>For conversation, yes. Without it, Haven keeps running its safety rules and automations on the server in the house, still stops a leak, and still understands simple commands like &ldquo;goodnight&rdquo;.</p></details>
         <details><summary>What devices does it work with?</summary><p>Haven connects through a Home Assistant hub, so it works with the lights, locks, thermostats, garage doors, water valves and sensors that Home Assistant supports.</p></details>
-        <details><summary>What does it learn about us, and can we delete it?</summary><p>Comfort preferences by time of day, likes and dislikes, and routines you&rsquo;ve accepted. All of it is listed on the panel under About you, and you can forget one item or everything.</p></details>
+        <details><summary>What does it learn about us, and can we delete it?</summary><p>Comfort preferences by time of day, likes and dislikes, and routines you&rsquo;ve accepted. Habits it notices only become suggestions; nothing it learns runs until someone says yes. All of it is listed on the panel under About you, and you can forget one item or everything.</p></details>
         <details><summary>What leaves the house?</summary><p>Conversations go to the AI service that powers Haven&rsquo;s understanding. If you choose the premium voice, the sentences Haven speaks go to the voice service. Weather requests send only the home&rsquo;s location. Nothing else leaves.</p></details>
-        <details><summary>Can each room have a different screen and finish?</summary><p>Yes. Every panel picks its own screen and finish, and the family can change either later from the panel itself.</p></details>
-        <details><summary>Does it work with an iPhone or Apple Watch?</summary><p>Yes, through Siri Shortcuts: talk to Haven, run scenes and get its briefings from your phone, your watch or the car.</p></details>
+        <details><summary>Can we change a room&rsquo;s screen later?</summary><p>Yes. Every panel picks its own screen and finish, and the family can change either at any time from the panel itself.</p></details>
       </div>
     </div>
   </section>
@@ -464,156 +258,6 @@
   </div>
 </footer>
 
-<script>
-(() => {
-  const $ = (s, r = document) => r.querySelector(s);
-  const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  // ---- The film: plays muted on arrival; "with sound" restarts it with the voice.
-  const film = $("#film"), pause = $("#film-pause");
-  const setPaused = (p) => { pause.textContent = p ? "Play" : "Pause"; pause.setAttribute("aria-pressed", String(p)); };
-  if (!reduce) film.play().then(() => setPaused(false)).catch(() => setPaused(true)); else setPaused(true);
-  pause.addEventListener("click", () => { if (film.paused) film.play().then(() => setPaused(false)).catch(() => {}); else { film.pause(); setPaused(true); } });
-  $("#film-sound").addEventListener("click", () => {
-    film.muted = false; film.loop = false; film.controls = true; film.currentTime = 0;
-    film.play().then(() => setPaused(false)).catch(() => setPaused(true));
-    $("#film-sound").textContent = "Playing with sound";
-  });
-
-  // ---- Menu (narrow screens) and the current section in the nav.
-  const menu = $("#menu"), links = $("#nav-links");
-  menu.addEventListener("click", () => { const open = links.classList.toggle("open"); menu.setAttribute("aria-expanded", String(open)); });
-  links.addEventListener("click", (e) => { if (e.target.closest("a")) { links.classList.remove("open"); menu.setAttribute("aria-expanded", "false"); } });
-  const navFor = Object.fromEntries([...links.querySelectorAll("a")].map((a) => [a.getAttribute("href").slice(1), a]));
-  const sectionIO = new IntersectionObserver((es) => es.forEach((e) => {
-    if (!e.isIntersecting) return;
-    Object.values(navFor).forEach((a) => a.removeAttribute("aria-current"));
-    if (navFor[e.target.id]) navFor[e.target.id].setAttribute("aria-current", "true");
-  }), { rootMargin: "-45% 0px -50% 0px" });
-  document.querySelectorAll("main > section[id]").forEach((s) => sectionIO.observe(s));
-
-  // ---- Screens and rooms.
-  const SCREENS = {
-    signature: { name: "Signature", best: "Great room or main entry", about: "The flagship. A live hologram of the house beside the room you're in, with every control on glass.", has: ["Hologram of the house: orbit, zoom, tap a room to fly in", "Rooms glow when lit and pulse on alerts", "Room tabs, scenes, device tiles, climate dial", "Electricity today, suggestions and confirmations"] },
-    wallpaper: { name: "Wallpaper", best: "Living room or a large wall display", about: "The home's own photo behind frosted tiles. The photo follows the time of day, or the family uses a picture of their own house.", has: ["Photo backdrop for morning, day, evening and night", "Weather now and ahead, once a source is connected", "Temperature, humidity and electricity with a live line", "Every light, doors, locks, garage and water"] },
-    studio: { name: "Studio", best: "Living room or kitchen; the model-home showpiece", about: "Haven at the center. A large orb listens and speaks, and underneath it Haven's agents light up as they work, together.", has: ["Tap the orb to talk; a waveform follows the voice", "Lighting, Climate, Security and Energy agents", "Lines between agents light when they work together", "Big clock, climate, lighting, electricity, doors"] },
-    "command-center": { name: "Command Center", best: "Office or a large wall display", about: "Everything at once, for the person who runs the house.", has: ["Hologram that filters the lights by room", "Climate dial and electricity chart", "Every light, door, lock, garage and the main water", "Room conditions, scenes and the latest updates"] },
-    "family-hub": { name: "Family Hub", best: "Kitchen", about: "Big and friendly for everyone in the house, not just the owner.", has: ["Large clock and date", "Today's briefing, with Brief me now", "Big scene cards", "Too cold, too warm, too bright, too dark, just right"] },
-    nightstand: { name: "Nightstand", best: "Bedroom", about: "Dim, quiet and easy to use half-asleep. Talk to it in the dark.", has: ["Large clock on a dark screen", "Goodnight: lock up, lights off, 68°F", "Warmer and cooler, learned as a preference", "Each bedroom's own photo behind the clock"] },
-    rooms: { name: "Rooms", best: "Large or busy households", about: "Every room as its own card. One tap per device.", has: ["A card per room with big device buttons", "The thermostat in its own room", "Each room's sensors: motion, leaks, doors, light"] },
-    entry: { name: "Entry", best: "Mudroom or garage door", about: "Built for the moment you walk in or out.", has: ["I'm leaving, I'm home, Lock up", "Security first: Ready, or what's open", "What's still on, with Turn off", "Doors, locks, garage and water in one tap"] },
-  };
-  const ROOMS = [
-    ["great-room", "Great room", "signature"], ["living", "Living room", "wallpaper"], ["model", "Model home", "studio"], ["kitchen", "Kitchen", "family-hub"],
-    ["bedroom", "Bedroom", "nightstand"], ["mudroom", "Mudroom", "entry"], ["office", "Office", "command-center"], ["landing", "Upstairs landing", "rooms"],
-  ];
-  const FINISHES = [["grounded", "Grounded"], ["futuristic", "Futuristic"], ["vivid", "Vivid light"], ["vivid-dark", "Vivid dark"]];
-  const pick = { room: store.get("site.room") || "great-room", finish: store.get("site.finish") || "grounded" };
-  if (!ROOMS.some((r) => r[0] === pick.room)) pick.room = "great-room";
-  if (!FINISHES.some((f) => f[0] === pick.finish)) pick.finish = "grounded";
-  const shot = (finish, id) => `shots/${finish}-${id}.jpg`;
-  const screenOf = (room) => ROOMS.find((r) => r[0] === room)[2];
-
-  const roomsEl = $("#rooms");
-  roomsEl.innerHTML = ROOMS.map(([id, name, scr]) => `<button role="tab" type="button" id="room-${id}" data-room="${id}" aria-controls="pick"><b>${name}</b><span>${SCREENS[scr].name}</span></button>`).join("");
-  $("#finishes").innerHTML = FINISHES.map(([k, l]) => `<button type="button" data-finish="${k}">${l}</button>`).join("");
-  $("#set").innerHTML = Object.entries(SCREENS).map(([id, s]) => `<button type="button" data-screen="${id}"><img data-shot="${id}" alt="" loading="lazy" width="1440" height="900">${s.name}</button>`).join("");
-
-  function renderPick() {
-    const id = screenOf(pick.room), s = SCREENS[id], room = ROOMS.find((r) => r[0] === pick.room)[1];
-    roomsEl.querySelectorAll("[role=tab]").forEach((b) => { const on = b.dataset.room === pick.room; b.setAttribute("aria-selected", String(on)); b.tabIndex = on ? 0 : -1; });
-    $("#pick").setAttribute("aria-labelledby", `room-${pick.room}`);
-    $("#finishes").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.finish === pick.finish)));
-    const img = $("#pick-img"); img.src = shot(pick.finish, id); img.alt = `The ${s.name} screen for the ${room.toLowerCase()}, in the ${FINISHES.find((f) => f[0] === pick.finish)[1]} finish`;
-    $("#pick-name").textContent = `${room}: ${s.name}`;
-    $("#pick-best").textContent = `Best for: ${s.best}`;
-    $("#pick-about").textContent = s.about;
-    $("#pick-has").innerHTML = s.has.map((h) => `<li>${h}</li>`).join("");
-    $("#set").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.screen === id)));
-    $("#set").querySelectorAll("img").forEach((im) => { im.src = shot(pick.finish, im.dataset.shot); im.alt = `${SCREENS[im.dataset.shot].name} screen`; });
-    store.set("site.room", pick.room); store.set("site.finish", pick.finish);
-  }
-  roomsEl.addEventListener("click", (e) => { const b = e.target.closest("[data-room]"); if (b) { pick.room = b.dataset.room; renderPick(); } });
-  roomsEl.addEventListener("keydown", (e) => {
-    const tabs = [...roomsEl.querySelectorAll("[role=tab]")], i = tabs.indexOf(document.activeElement);
-    const next = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
-    if (i < 0 || !next) return;
-    e.preventDefault(); const t = tabs[(i + next + tabs.length) % tabs.length]; t.focus(); t.click();
-  });
-  $("#finishes").addEventListener("click", (e) => { const b = e.target.closest("[data-finish]"); if (b) { pick.finish = b.dataset.finish; renderPick(); } });
-  $("#set").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-screen]"); if (!b) return;
-    pick.room = ROOMS.find((r) => r[2] === b.dataset.screen)[0]; renderPick();
-    $(`#room-${pick.room}`).scrollIntoView({ block: "nearest", inline: "nearest" });
-  });
-  renderPick();
-
-  // ---- The live panel: loads on request, switches screens in place.
-  const LIVE_FINISHES = [["grounded", "Grounded"], ["futuristic", "Futuristic"], ["vivid", "Vivid"]];
-  const live = { finish: "grounded", screen: "signature", loaded: false };
-  $("#live-finishes").innerHTML = LIVE_FINISHES.map(([k, l]) => `<button type="button" data-finish="${k}">${l}</button>`).join("");
-  $("#live-screens").innerHTML = Object.entries(SCREENS).map(([id, s]) => `<button type="button" data-screen="${id}">${s.name}</button>`).join("");
-  let frame = null;
-  function renderLive() {
-    $("#live-finishes").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.finish === live.finish)));
-    $("#live-screens").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.screen === live.screen)));
-    $("#frame").style.setProperty("--poster", `url('${shot(live.finish, live.screen)}')`);
-    if (!live.loaded) return;
-    const src = `panel-${live.finish}.html#${live.screen}`;
-    if (!frame) {
-      frame = document.createElement("iframe");
-      frame.title = "The Haven wall panel, running on a simulated house";
-      $("#frame").append(frame); $("#frame-start").hidden = true;
-    }
-    const cur = frame.getAttribute("src") || "";
-    if (cur.split("#")[0] === src.split("#")[0]) { try { frame.contentWindow.location.hash = live.screen; } catch { frame.setAttribute("src", src); } }
-    else frame.setAttribute("src", src);
-  }
-  $("#frame-load").addEventListener("click", () => { live.loaded = true; renderLive(); });
-  $("#live-finishes").addEventListener("click", (e) => { const b = e.target.closest("[data-finish]"); if (b) { live.finish = b.dataset.finish; renderLive(); } });
-  $("#live-screens").addEventListener("click", (e) => { const b = e.target.closest("[data-screen]"); if (b) { live.screen = b.dataset.screen; renderLive(); } });
-  $("#pick-live").addEventListener("click", () => {
-    live.screen = screenOf(pick.room); live.finish = pick.finish.startsWith("vivid") ? "vivid" : pick.finish; live.loaded = true; renderLive();
-    $("#live").scrollIntoView({ behavior: reduce ? "auto" : "smooth" });
-  });
-  renderLive();
-
-  // ---- Contact: posts to Meridian's CRM intake.
-  const INTAKE = "https://glzodwhyavexpuusbqjy.supabase.co/functions/v1/intake";
-  const form = $("#contact-form"), result = $("#f-result"), send = $("#f-send");
-  const field = (id) => $(id).value.trim();
-  function show(kind, html) { result.className = `result ${kind}`; result.innerHTML = html; result.hidden = false; }
-  const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (field("#f-trap")) return;
-    const name = field("#f-name"), email = field("#f-email"), phone = field("#f-phone");
-    $("#f-name").setAttribute("aria-invalid", String(!name));
-    const badEmail = email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    $("#f-email").setAttribute("aria-invalid", String(!!badEmail || (!email && !phone)));
-    if (!name) { show("warn", "<p>Add your name so we know who to reply to.</p>"); $("#f-name").focus(); return; }
-    if (badEmail) { show("warn", "<p>That email address doesn&rsquo;t look complete. Check it and send again.</p>"); $("#f-email").focus(); return; }
-    if (!email && !phone) { show("warn", "<p>Add an email address or a phone number so we can reach you.</p>"); $("#f-email").focus(); return; }
-    const message = [`Role: ${$("#f-role").value}`, field("#f-where") && `Project: ${field("#f-where")}`, field("#f-note")].filter(Boolean).join("\n");
-    const body = { name, email: email || undefined, phone: phone || undefined, company: field("#f-company") || undefined, message, source: "meridian-website:haven" };
-    send.disabled = true; send.textContent = "Sending…";
-    try {
-      const res = await fetch(INTAKE, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      const out = await res.json().catch(() => ({}));
-      if (!res.ok || out.ok === false) throw Object.assign(new Error(out.error || `HTTP ${res.status}`), { server: true });
-      show("ok", `<p><b>Thanks, ${esc(name)}.</b> Your request is with Meridian. We&rsquo;ll reply to ${esc(email || phone)} to set up your walkthrough.</p>`);
-      form.reset();
-    } catch (err) {
-      const text = `${name}\n${[email, phone].filter(Boolean).join(" · ")}\n${message}`;
-      show("warn", `<p>This page couldn&rsquo;t reach Meridian just now, so your request wasn&rsquo;t sent. Your details are below. Try again in a moment, or copy them.</p><pre id="f-copy-text">${esc(text)}</pre><div class="row"><button class="btn small" type="button" id="f-copy">Copy my request</button><button class="btn small quiet" type="submit">Try again</button></div>`);
-      $("#f-copy").addEventListener("click", async () => {
-        try { await navigator.clipboard.writeText(text); $("#f-copy").textContent = "Copied"; }
-        catch { const r = document.createRange(); r.selectNodeContents($("#f-copy-text")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); $("#f-copy").textContent = "Selected: press copy"; }
-      });
-    } finally { send.disabled = false; send.textContent = "Request a walkthrough"; }
-  });
-})();
-</script>
+<script src="site.js" defer></script>
 </body>
 </html>
