@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Linden House</title>
+<meta name="description" content="Linden House: oak, glass and stone on two floors, with Haven, the AI home agent, built in. A Meridian Interface property-site template.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500&family=Manrope:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
@@ -41,6 +42,11 @@
   .top nav { display: flex; gap: 22px; font: 500 13px/1 var(--body); letter-spacing: 0.04em; }
   .top nav a { text-decoration: none; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5); }
   .top .book { padding: 11px 18px; border-radius: 999px; background: rgba(244, 241, 236, 0.94); color: #18201c; text-shadow: none; }
+  /* Over the light sections the header turns dark (main.js sets data-tone from the section under it). */
+  .top[data-tone="light"] { color: var(--ink); }
+  .top[data-tone="light"] nav a { text-shadow: none; }
+  .top[data-tone="light"] .book { background: var(--ink); color: var(--bg); }
+  .top, .top .book { transition: color 0.25s, background-color 0.25s; }
 
   .track { position: relative; height: 520vh; }
   .stage { position: sticky; top: 0; height: 100vh; height: 100dvh; overflow: hidden; background: #0d110f; color: #f4f1ec; }
@@ -61,7 +67,7 @@
   .sample { position: absolute; left: var(--gutter); top: calc(70px + env(safe-area-inset-top, 0px)); font: 500 11px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; padding: 7px 10px; border: 1px solid rgba(244, 241, 236, 0.45); border-radius: 999px; }
   .loading { position: absolute; inset: 0; display: grid; place-items: center; font: 500 12px/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; opacity: 0.7; }
 
-  section { padding-block: clamp(72px, 11vw, 140px); padding-inline: var(--gutter); }
+  section { padding-block: clamp(72px, 11vw, 140px); padding-inline: var(--gutter); scroll-margin-top: 16px; }
   .wrap { max-width: 1180px; margin: 0 auto; }
   .eyebrow { font: 500 12px/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--oak); margin: 0 0 16px; }
   h3 { margin: 0 0 18px; font: 400 clamp(34px, 4.6vw, 60px)/1.04 var(--display); text-wrap: balance; max-width: 18ch; }
@@ -121,7 +127,7 @@
 </header>
 
 <main id="top">
-  <div class="track" id="track">
+  <div class="track" id="track" data-tone="dark">
     <div class="stage">
       <canvas id="canvas" aria-label="Linden House as a hologram: the exterior, the rooms being staged, the walk in, and the house lit for the evening, driven by scrolling"></canvas>
       <div class="shade"></div>
@@ -155,7 +161,7 @@
     </div>
   </div>
 
-  <section class="compare" id="rooms">
+  <section class="compare" id="rooms" data-tone="dark">
     <div class="wrap compare-head">
       <p class="eyebrow">Room by room</p>
       <h3>Every room, before and after.</h3>
@@ -164,7 +170,7 @@
     <!--__COMPARE__-->
   </section>
 
-  <section id="house">
+  <section id="house" data-tone="light">
     <div class="wrap intro">
       <div>
         <p class="eyebrow">The house</p>
@@ -176,7 +182,7 @@
     </div>
   </section>
 
-  <section id="plans" style="padding-top: 0">
+  <section id="plans" style="padding-top: 0" data-tone="light">
     <div class="wrap">
       <p class="eyebrow">Floor plans</p>
       <h3>Two floors, nine rooms.</h3>
@@ -185,21 +191,21 @@
     </div>
   </section>
 
-  <section class="haven" id="haven">
+  <section class="haven" id="haven" data-tone="dark">
     <div class="wrap">
       <p class="eyebrow">Built in: Haven</p>
       <h3>A home that looks out for you.</h3>
-      <p class="lede">A wall panel in the hall and in any room you choose. Haven talks with the family, watches the house and follows rules it can&rsquo;t argue its way around.</p>
+      <p class="lede">Linden House comes with Haven installed: a wall panel in the hall, and one in any room you choose. It knows this house from the plan, and it never touches a lock, the garage or the water without you.</p>
       <ul class="points">
-        <li><h4>Asks before anything risky</h4><p>Unlocking the door, opening the garage or turning the water back on waits for your yes.</p></li>
-        <li><h4>Stops leaks</h4><p>A wet sensor under the sink or by the water heater shuts off the water and tells you where.</p></li>
-        <li><h4>Learns your comfort</h4><p>Say &ldquo;I&rsquo;m cold&rdquo; and it warms the room now, and remembers for that time of day.</p></li>
-        <li><h4>Shows the whole house</h4><p>A live hologram of Linden House on the panel. Tap a room for its controls.</p></li>
+        <li><h4>Nothing risky without your say-so</h4><p>The front door stays locked, the garage stays shut and the water stays off until you say otherwise.</p></li>
+        <li><h4>A leak is caught, not found</h4><p>Sensors under the sink and by the water heater shut off the supply and tell you where.</p></li>
+        <li><h4>Each room, the way you like it</h4><p>Tell it you&rsquo;re cold and it warms the room now, and remembers for that time of day.</p></li>
+        <li><h4>The whole house on one panel</h4><p>A live hologram of Linden House. Tap a room for its lights, climate and doors.</p></li>
       </ul>
     </div>
   </section>
 
-  <section id="book">
+  <section id="book" data-tone="light">
     <div class="wrap book-grid">
       <div>
         <p class="eyebrow">Private preview</p>
@@ -220,9 +226,9 @@
     </div>
   </section>
 </main>
-<footer>
-  <span>Linden House is a sample listing: a Meridian Interface property-site template, shown with the hologram of the house from our film.</span>
-  <span>Meridian Interface</span>
+<footer data-tone="light">
+  <span>Linden House is a sample listing. A Meridian Interface property-site template, shown with the hologram from our film.</span>
+  <span>&copy; 2026 Meridian Interface</span>
 </footer>
 <script type="module" src="main.js"></script>
 </body>

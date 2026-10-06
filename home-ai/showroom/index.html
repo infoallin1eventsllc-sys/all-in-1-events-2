@@ -146,6 +146,8 @@
     const j = e.key === "ArrowRight" ? (i + 1) % tabs.length : e.key === "ArrowLeft" ? (i - 1 + tabs.length) % tabs.length : -1;
     if (j >= 0) { e.preventDefault(); tabs[j].focus(); tabs[j].click(); }
   });
+  // A page inside the app can ask for a tab (the website's "Try the wall panel").
+  window.addEventListener("message", (e) => { const t = e.data && e.data.showroom; if (t in views || t === "panel") { state.tab = t; show(); } });
   // Deep links: #panel/vivid/studio, #live, #site, #residence, #library.
   const h = location.hash.slice(1).split("/");
   if (h[0] === "live") { state.tab = "film"; state.film = "live"; }

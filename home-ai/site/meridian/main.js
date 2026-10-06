@@ -48,3 +48,10 @@ scrollFilm({ canvas: $("#canvas"), track: $("#track"), segments: SEGMENTS, onFra
   .catch((err) => { $("#loading").textContent = "This page needs WebGL to draw the house."; console.error(err); });
 
 setupCompare(document.querySelector("#compare"));
+
+// Inside the showroom, "Try the wall panel" switches to the panel tab instead of leaving the page.
+document.querySelectorAll("[data-showroom]").forEach((a) => a.addEventListener("click", (e) => {
+  if (window.parent === window) return;
+  e.preventDefault();
+  window.parent.postMessage({ showroom: a.dataset.showroom }, "*");
+}));
