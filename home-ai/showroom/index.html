@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Haven Showroom</title>
+<meta name="description" content="Meridian Interface's client showroom: the film, the Haven wall panel in every finish, the website and the property site, in one app.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112,300;112,600;125,700&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #05080e; --bar: #0a1119; --line: rgba(90, 210, 255, 0.18); --cyan: #5ad2ff; --ink: #e9f0f5; --muted: #8ca2b4;
+    --display: "Archivo", "Helvetica Neue", Arial, sans-serif; --body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 15px/1.4 var(--body); display: flex; flex-direction: column; overflow: hidden; }
+  :focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  .bar { flex: none; display: flex; align-items: center; gap: 12px; padding: 0 16px; padding-top: env(safe-area-inset-top); min-height: 56px; background: var(--bar); border-bottom: 1px solid var(--line); }
+  .brand { font: 700 11px/1 var(--display); font-stretch: 125%; letter-spacing: 0.3em; text-transform: uppercase; color: var(--cyan); white-space: nowrap; }
+  .brand small { display: block; margin-top: 4px; font: 400 11px/1 var(--body); letter-spacing: 0.04em; text-transform: none; color: var(--muted); }
+  nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; margin-left: auto; }
+  nav::-webkit-scrollbar { display: none; }
+  nav button { flex: none; appearance: none; border: 0; background: none; color: var(--muted); font: 500 14px/1 var(--body); padding: 10px 12px; border-radius: 8px; cursor: pointer; }
+  nav button:hover { color: var(--ink); }
+  nav button[aria-selected="true"] { color: var(--ink); background: rgba(90, 210, 255, 0.12); }
+  .sub { flex: none; display: none; align-items: center; gap: 6px; padding: 8px 16px; background: var(--bar); border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+  .sub::-webkit-scrollbar { display: none; }
+  .sub[data-on] { display: flex; }
+  .sub .l { font: 500 11px/1 var(--body); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-right: 4px; white-space: nowrap; }
+  .sub .gap { width: 14px; flex: none; }
+  .chip { flex: none; appearance: none; border: 1px solid var(--line); background: none; color: var(--muted); font: 500 13px/1 var(--body); padding: 7px 11px; border-radius: 999px; cursor: pointer; }
+  .chip:hover { color: var(--ink); border-color: var(--cyan); }
+  .chip[aria-pressed="true"] { color: #05080e; background: var(--cyan); border-color: var(--cyan); }
+  main { flex: 1; min-height: 0; position: relative; background: #000; }
+  main > * { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: none; }
+  main > [data-on] { display: block; }
+  .film { display: none; align-items: center; justify-content: center; background: #000; }
+  .film[data-on] { display: flex; }
+  .film video { width: 100%; height: 100%; object-fit: contain; }
+  .note { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 16px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, rgba(5, 8, 14, 0.9)); color: var(--muted); font-size: 13px; pointer-events: none; }
+  .vis { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+  <header class="bar">
+    <div class="brand">Meridian Interface<small>Haven, the home that looks out for you</small></div>
+    <nav role="tablist" aria-label="Showroom">
+      <button role="tab" data-tab="film" aria-selected="true">Film</button>
+      <button role="tab" data-tab="panel" aria-selected="false">Wall panel</button>
+      <button role="tab" data-tab="site" aria-selected="false">Website</button>
+      <button role="tab" data-tab="residence" aria-selected="false">Property site</button>
+      <button role="tab" data-tab="library" aria-selected="false">Screen library</button>
+    </nav>
+  </header>
+
+  <div class="sub" id="sub-film">
+    <span class="l">Watch</span>
+    <button class="chip" data-film="cut" aria-pressed="true">The film</button>
+    <button class="chip" data-film="live" aria-pressed="false">Live hologram</button>
+  </div>
+  <div class="sub" id="sub-panel">
+    <span class="l">Finish</span>
+    <button class="chip" data-finish="grounded" aria-pressed="true">Grounded</button>
+    <button class="chip" data-finish="futuristic" aria-pressed="false">Futuristic</button>
+    <button class="chip" data-finish="vivid" aria-pressed="false">Vivid</button>
+    <span class="gap"></span>
+    <span class="l">Screen</span>
+    <button class="chip" data-screen="signature" aria-pressed="true">Home</button>
+    <button class="chip" data-screen="studio" aria-pressed="false">Studio</button>
+    <button class="chip" data-screen="rooms" aria-pressed="false">Rooms</button>
+    <button class="chip" data-screen="command-center" aria-pressed="false">Command Center</button>
+    <button class="chip" data-screen="family-hub" aria-pressed="false">Family Hub</button>
+    <button class="chip" data-screen="nightstand" aria-pressed="false">Nightstand</button>
+    <button class="chip" data-screen="wallpaper" aria-pressed="false">Wallpaper</button>
+    <button class="chip" data-screen="entry" aria-pressed="false">Entry</button>
+  </div>
+
+  <main>
+    <div class="film" id="view-film" data-on>
+      <video controls playsinline preload="metadata" poster="poster.jpg" src="meridian-film.mp4" aria-label="The Meridian Interface film"></video>
+    </div>
+    <iframe id="view-live" title="The live hologram film" loading="lazy" data-src="film.html"></iframe>
+    <iframe id="view-panel" title="The Haven wall panel" loading="lazy" data-src="panel-grounded.html#signature"></iframe>
+    <iframe id="view-site" title="Meridian Interface website" loading="lazy" data-src="meridian.html"></iframe>
+    <iframe id="view-residence" title="Linden House property site" loading="lazy" data-src="residence.html"></iframe>
+    <iframe id="view-library" title="Haven screen library" loading="lazy" data-src="library.html"></iframe>
+    <p class="note" id="note"></p>
+  </main>
+  <p class="vis" aria-live="polite" id="live"></p>
+
+<script>
+(() => {
+  const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const NOTES = {
+    film: "The house designs itself as a hologram, becomes real, and the guide walks the client through to the panel.",
+    live: "The same film, rendered live in the browser. Press play on the page.",
+    panel: "The wall panel, running on a simulated house. Everything on it works: talk to Haven, run scenes, open rooms, change screens.",
+    site: "Scrolling builds the home. Then every room before and after, and what Haven does.",
+    residence: "A property site made from the same plan. Scroll walk-through, specs, floor plans, a booking form.",
+    library: "Every screen in every finish, with a link to open each one live.",
+  };
+  const state = { tab: "film", film: "cut", finish: "grounded", screen: "signature" };
+  const views = { film: $("#view-film"), live: $("#view-live"), panel: $("#view-panel"), site: $("#view-site"), residence: $("#view-residence"), library: $("#view-library") };
+  function load(frame, src) { if (frame.getAttribute("src") !== src) frame.setAttribute("src", src); }
+  function show() {
+    const key = state.tab === "film" ? state.film === "cut" ? "film" : "live" : state.tab;
+    for (const [k, el] of Object.entries(views)) { if (k === key) el.setAttribute("data-on", ""); else el.removeAttribute("data-on"); }
+    if (key !== "film") { const v = $("video"); v.pause(); }
+    if (key === "live") load(views.live, "film.html");
+    if (key === "panel") load(views.panel, `panel-${state.finish}.html#${state.screen}`);
+    if (key === "site") load(views.site, "meridian.html");
+    if (key === "residence") load(views.residence, "residence.html");
+    if (key === "library") load(views.library, "library.html");
+    $$("[role=tab]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === state.tab)));
+    $("#sub-film").toggleAttribute("data-on", state.tab === "film");
+    $("#sub-panel").toggleAttribute("data-on", state.tab === "panel");
+    $$("[data-film]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.film === state.film)));
+    $$("[data-finish]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.finish === state.finish)));
+    $$("[data-screen]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.screen === state.screen)));
+    $("#note").textContent = NOTES[key];
+    $("#live").textContent = $(`[role=tab][data-tab="${state.tab}"]`).textContent;
+    try { localStorage.setItem("showroom", JSON.stringify(state)); } catch {}
+    location.hash = state.tab === "panel" ? `${state.tab}/${state.finish}/${state.screen}` : state.tab === "film" && state.film === "live" ? "live" : state.tab;
+  }
+  function changeScreen(screen) {
+    state.screen = screen;
+    const f = views.panel;
+    // Same page, new screen: a hash change inside the frame keeps the panel's state.
+    try { if (f.contentWindow && f.getAttribute("src")?.startsWith(`panel-${state.finish}.html`)) { f.contentWindow.location.hash = screen; } } catch {}
+    show();
+  }
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.tab) state.tab = b.dataset.tab;
+    else if (b.dataset.film) state.film = b.dataset.film;
+    else if (b.dataset.finish) state.finish = b.dataset.finish;
+    else if (b.dataset.screen) return changeScreen(b.dataset.screen);
+    else return;
+    show();
+  });
+  $("nav").addEventListener("keydown", (e) => {
+    const tabs = $$("[role=tab]"), i = tabs.indexOf(document.activeElement); if (i < 0) return;
+    const j = e.key === "ArrowRight" ? (i + 1) % tabs.length : e.key === "ArrowLeft" ? (i - 1 + tabs.length) % tabs.length : -1;
+    if (j >= 0) { e.preventDefault(); tabs[j].focus(); tabs[j].click(); }
+  });
+  // Deep links: #panel/vivid/studio, #live, #site, #residence, #library.
+  const h = location.hash.slice(1).split("/");
+  if (h[0] === "live") { state.tab = "film"; state.film = "live"; }
+  else if (h[0] in views || h[0] === "panel") { state.tab = h[0]; if (h[1]) state.finish = h[1]; if (h[2]) state.screen = h[2]; }
+  else { try { Object.assign(state, JSON.parse(localStorage.getItem("showroom") || "{}")); } catch {} }
+  if (!(state.finish in { grounded: 1, futuristic: 1, vivid: 1 })) state.finish = "grounded";
+  show();
+})();
+</script>
+</body>
+</html>
