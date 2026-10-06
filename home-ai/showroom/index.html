@@ -41,6 +41,33 @@
   .film[data-on] { display: flex; }
   .film video { width: 100%; height: 100%; object-fit: contain; }
   .note { position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 16px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, rgba(5, 8, 14, 0.9)); color: var(--muted); font-size: 13px; pointer-events: none; }
+  /* Welcome screen */
+  .welcome { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 24px; background: rgba(5, 8, 14, 0.82); backdrop-filter: blur(10px); }
+  .welcome[hidden] { display: none; }
+  .welcome .card { width: min(560px, 100%); padding: 32px 32px 28px; border: 1px solid var(--line); border-radius: 16px; background: var(--bar); }
+  .welcome .k { font: 700 11px/1 var(--display); font-stretch: 125%; letter-spacing: 0.3em; text-transform: uppercase; color: var(--cyan); margin: 0 0 18px; }
+  .welcome h1 { margin: 0 0 12px; font: 300 clamp(28px, 4vw, 40px)/1.08 var(--display); font-stretch: 112%; text-wrap: balance; }
+  .welcome h1 em { font-style: normal; font-weight: 600; }
+  .welcome p { margin: 0 0 22px; color: var(--muted); }
+  .welcome .row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .btn { appearance: none; display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--cyan); background: none; color: var(--ink); font: 600 14px/1 var(--body); cursor: pointer; }
+  .btn.solid { background: var(--cyan); color: #04121c; }
+  .btn.quiet { border-color: var(--line); color: var(--muted); }
+  .btn:hover { filter: brightness(1.1); }
+  /* Tour card */
+  .tour { position: absolute; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 15; width: min(400px, calc(100% - 32px)); padding: 18px 18px 16px; border: 1px solid var(--cyan); border-radius: 14px; background: rgba(10, 17, 25, 0.94); backdrop-filter: blur(10px); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45); }
+  .tour[hidden] { display: none; }
+  .tour .step { font: 500 11px/1 var(--body); letter-spacing: 0.16em; text-transform: uppercase; color: var(--cyan); margin: 0 0 8px; }
+  .tour h2 { margin: 0 0 6px; font: 600 17px/1.3 var(--body); }
+  .tour p { margin: 0; font-size: 14px; color: var(--muted); }
+  .tour .try { margin-top: 10px; padding: 10px 12px; border-left: 2px solid var(--amber); background: rgba(255, 179, 92, 0.08); font-size: 14px; color: #ffe2bd; }
+  .tour .try b { font-weight: 600; }
+  .tour .row { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+  .tour .row .spacer { flex: 1; }
+  .tour .btn { min-height: 38px; padding: 0 14px; font-size: 13px; }
+  .tour .prog { height: 2px; margin: 14px -18px -16px; background: rgba(90, 210, 255, 0.15); border-radius: 0 0 14px 14px; overflow: hidden; }
+  .tour .prog i { display: block; height: 100%; width: 0; background: var(--cyan); transition: width 0.3s; }
+  @media (max-width: 600px) { .tour { right: 8px; left: 8px; width: auto; } }
   .vis { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
 </head>
@@ -54,6 +81,7 @@
       <button role="tab" data-tab="residence" aria-selected="false">Property site</button>
       <button role="tab" data-tab="library" aria-selected="false">Screen library</button>
     </nav>
+    <button class="btn quiet" id="tour-btn" type="button" style="margin-left:8px; min-height:36px; padding:0 14px; font-size:13px">Guided tour</button>
   </header>
 
   <div class="sub" id="sub-film">
@@ -89,6 +117,30 @@
     <iframe id="view-library" title="Haven screen library" loading="lazy" data-src="library.html"></iframe>
     <p class="note" id="note"></p>
   </main>
+  <div class="welcome" id="welcome" role="dialog" aria-modal="true" aria-labelledby="welcome-h">
+    <div class="card">
+      <p class="k">Meridian Interface</p>
+      <h1 id="welcome-h">Meet Haven, <em>the home that looks out for you.</em></h1>
+      <p>A short guided demo: the film, then the wall panel you can actually use, then the website and a property site. About ten minutes, and you can leave the tour at any point.</p>
+      <div class="row">
+        <button class="btn solid" id="start-tour" type="button">Start the guided demo</button>
+        <button class="btn quiet" id="skip-tour" type="button">Explore on my own</button>
+      </div>
+    </div>
+  </div>
+  <aside class="tour" id="tour" hidden aria-live="polite" aria-label="Guided demo">
+    <p class="step" id="tour-step"></p>
+    <h2 id="tour-title"></h2>
+    <p id="tour-text"></p>
+    <div class="try" id="tour-try" hidden></div>
+    <div class="row">
+      <button class="btn quiet" id="tour-back" type="button">Back</button>
+      <span class="spacer"></span>
+      <button class="btn quiet" id="tour-end" type="button">End tour</button>
+      <button class="btn solid" id="tour-next" type="button">Next</button>
+    </div>
+    <div class="prog"><i id="tour-bar"></i></div>
+  </aside>
   <p class="vis" aria-live="polite" id="live"></p>
 
 <script>
@@ -146,6 +198,51 @@
     const j = e.key === "ArrowRight" ? (i + 1) % tabs.length : e.key === "ArrowLeft" ? (i - 1 + tabs.length) % tabs.length : -1;
     if (j >= 0) { e.preventDefault(); tabs[j].focus(); tabs[j].click(); }
   });
+  // The guided demo: each step sets the app's state and says what to try.
+  const TOUR = [
+    { tab: "film", film: "cut", title: "The film", text: "The house designs itself as a hologram, becomes real, and its guide walks the client through to the panel. Press play; it runs a minute and a half.", go: () => $("video").play().catch(() => {}) },
+    { tab: "panel", finish: "grounded", screen: "signature", title: "The wall panel", text: "This is the panel a family sees in the hall. Everything on it works; it is running on a simulated house.", tip: "Type <b>I'm cold</b> in the bar at the bottom. Haven warms the room and remembers it for this time of day." },
+    { tab: "panel", finish: "grounded", screen: "signature", title: "It asks before anything risky", text: "Haven never unlocks a door or opens the garage on its own. The rule is in the code, not the brochure.", tip: "Type <b>open the garage</b>. It asks you to confirm first." },
+    { tab: "panel", finish: "grounded", screen: "studio", title: "Studio", text: "Haven's orb, and under it the four agents: lighting, climate, security and energy. They light up only when something real happens.", tip: "Press <b>Goodnight</b> under the orb and watch the agents hand off to each other." },
+    { tab: "panel", finish: "grounded", screen: "rooms", title: "Rooms", text: "Every room and every device, with the sensors that feed Haven: motion, leaks, doors.", tip: "Tap a light's switch, or slide its brightness." },
+    { tab: "panel", finish: "grounded", screen: "command-center", title: "Command Center", text: "The whole house as a hologram, the day's energy, and the activity feed.", tip: "Tap a room on the hologram to fly in." },
+    { tab: "panel", finish: "grounded", screen: "entry", title: "Entry", text: "The screen by the front door: who's home, the locks, and one tap to say you're leaving.", tip: "Press <b>I'm leaving</b>. Lights off, doors locked, the house set back." },
+    { tab: "panel", finish: "vivid", screen: "signature", title: "Three finishes", text: "The same panel in Vivid. Grounded and Futuristic are the other two; a builder picks per home, and the family can change it.", tip: "Try the <b>Futuristic</b> chip above." },
+    { tab: "site", title: "The website", text: "Scrolling builds the home, chapter by chapter. Further down, every room before and after, and what Haven does.", tip: "Scroll slowly through the first screen." },
+    { tab: "residence", title: "A property site", text: "The Linden House template: a listing made from the same plan, with its floor plans and a preview booking form.", tip: "Scroll to the floor plans. They are drawn from the plan itself." },
+    { tab: "library", title: "Every screen", text: "The screen library: every screen in every finish, for choosing what goes in each room.", tip: "That's the demo. Use the tabs to go anywhere, or start over for the next client." },
+  ];
+  let step = -1;
+  const tour = $("#tour"), welcome = $("#welcome");
+  function showStep(i) {
+    step = i; const t = TOUR[i];
+    Object.assign(state, { tab: t.tab }, t.film ? { film: t.film } : {}, t.finish ? { finish: t.finish } : {}, t.screen ? { screen: t.screen } : {});
+    if (t.screen && views.panel.getAttribute("src")?.startsWith(`panel-${t.finish}.html`)) changeScreen(t.screen); else show();
+    if (t.go) t.go();
+    $("#tour-step").textContent = `Step ${i + 1} of ${TOUR.length}`;
+    $("#tour-title").textContent = t.title; $("#tour-text").textContent = t.text;
+    const tip = $("#tour-try"); tip.hidden = !t.tip; tip.innerHTML = t.tip ? `Try it: ${t.tip}` : "";
+    $("#tour-back").disabled = i === 0;
+    $("#tour-next").textContent = i === TOUR.length - 1 ? "Start over" : "Next";
+    $("#tour-bar").style.width = `${((i + 1) / TOUR.length) * 100}%`;
+    tour.hidden = false;
+  }
+  function endTour() { step = -1; tour.hidden = true; $("#tour-btn").focus(); }
+  function resetDemo() {
+    // A clean house for the next client: the panels' saved state and this app's own.
+    try { Object.keys(localStorage).forEach((k) => localStorage.removeItem(k)); } catch {}
+    Object.values(views).forEach((v) => { if (v.tagName === "IFRAME") v.removeAttribute("src"); });
+    Object.assign(state, { tab: "film", film: "cut", finish: "grounded", screen: "signature" });
+    const v = $("video"); v.pause(); v.currentTime = 0;
+    show(); tour.hidden = true; welcome.hidden = false; $("#start-tour").focus();
+  }
+  $("#start-tour").addEventListener("click", () => { welcome.hidden = true; showStep(0); $("#tour-next").focus(); });
+  $("#skip-tour").addEventListener("click", () => { welcome.hidden = true; });
+  $("#tour-btn").addEventListener("click", () => showStep(0));
+  $("#tour-next").addEventListener("click", () => step === TOUR.length - 1 ? resetDemo() : showStep(step + 1));
+  $("#tour-back").addEventListener("click", () => showStep(Math.max(0, step - 1)));
+  $("#tour-end").addEventListener("click", endTour);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !tour.hidden) endTour(); });
   // A page inside the app can ask for a tab (the website's "Try the wall panel").
   window.addEventListener("message", (e) => { const t = e.data && e.data.showroom; if (t in views || t === "panel") { state.tab = t; show(); } });
   // Deep links: #panel/vivid/studio, #live, #site, #residence, #library.
@@ -154,6 +251,7 @@
   else if (h[0] in views || h[0] === "panel") { state.tab = h[0]; if (h[1]) state.finish = h[1]; if (h[2]) state.screen = h[2]; }
   else { try { Object.assign(state, JSON.parse(localStorage.getItem("showroom") || "{}")); } catch {} }
   if (!(state.finish in { grounded: 1, futuristic: 1, vivid: 1 })) state.finish = "grounded";
+  if (location.hash.length > 1) welcome.hidden = true;
   show();
 })();
 </script>

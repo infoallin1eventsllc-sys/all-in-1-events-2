@@ -64,6 +64,7 @@ const ICON = {
   door: "M6 2h12v20H6V2Zm2 2v16h8V4H8Zm6 7h1.5v2H14v-2Z",
   home: "M12 3 2 11.5h3V20h5.5v-5.5h3V20H19v-8.5h3L12 3Z",
   sparkle: "M11 2l2.3 6.2L19.5 10.5 13.3 12.8 11 19l-2.3-6.2L2.5 10.5l6.2-2.3L11 2Zm8 11 1 2.5 2.5 1-2.5 1L19 20l-1-2.5-2.5-1 2.5-1L19 13Z",
+  motion: "M13.5 5.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM9.8 8.9 7 22h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3a7.3 7.3 0 0 0 5.5 2.5v-2a5.3 5.3 0 0 1-4.6-2.6l-1-1.6a2 2 0 0 0-1.7-.9 2 2 0 0 0-.7.1L5 7.3V12h2V8.6l1.8-.7-1 1Z",
   bell: "M12 22a2.5 2.5 0 0 0 2.5-2.5h-5A2.5 2.5 0 0 0 12 22Zm7-6v-5a7 7 0 0 0-5.5-6.84V3a1.5 1.5 0 0 0-3 0v1.16A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z",
 };
 
@@ -734,6 +735,12 @@ function initialScreen() {
 }
 let screen = initialScreen();
 
+// A screen named in the address after load (the showroom's tour, a link tapped on the panel) switches the panel live.
+window.addEventListener("hashchange", () => {
+  const id = location.hash.replace("#", "");
+  if (id !== screen && SCREENS.some((x) => x.id === id)) setScreen(id);
+});
+
 function setScreen(id) {
   screen = id;
   safeSet("haven.screen", id);
@@ -843,23 +850,56 @@ function lightsBlock(filterRoom = null) {
     lit.length ? el("button", { class: "ghost", onclick: () => Promise.all(lit.map((l) => api(`/api/devices/${l.id}`, { command: { on: false } }))).then(() => showResult({ message: "All lights off." })) }, `Turn off ${lit.length === 1 ? "the light" : `all ${lit.length}`}`) : null);
 }
 
-function securityBlock() {
-  const items = [];
-  for (const d of [...byType("garage"), ...byType("lock"), ...byType("contact"), ...byType("water_valve")]) {
-    const s = d.state;
-    let action = null;
-    if (d.type === "garage") action = [s.door === "closed" ? "Open" : "Close", () => send(d.id, { door: s.door === "closed" ? "open" : "closed" })];
-    if (d.type === "lock") action = [s.locked ? "Unlock" : "Lock", () => send(d.id, { locked: !s.locked })];
-    if (d.type === "water_valve") action = [s.open ? "Shut off" : "Turn on", () => send(d.id, { open: !s.open })];
-    const icon = d.type === "garage" ? ICON.garage : d.type === "water_valve" ? ICON.water : d.type === "contact" ? ICON.door : ICON.lock;
-    items.push(el("li", { class: `sec-item${isAlert(d) ? " alert" : ""}`, "data-device": d.id },
-      el("span", { class: "tile-icon" }, svg(icon)),
-      el("div", {}, el("span", { class: "ll-name" }, d.name.replace(/ Lock$/, "")), el("span", { class: "ll-state" }, describe(d)[0].toUpperCase() + describe(d).slice(1))),
-      action ? el("button", { class: d.type === "water_valve" && s.open ? "danger" : "", onclick: action[1] }, action[0]) : null));
+// The security card, laid out the way alarm panels are: one status line (ready, or what's
+// open), the mode the house is in, then every zone grouped as entry points, water and
+// motion. State is a word and a dot, never a color alone.
+const SEC_ICON = { garage: "garage", lock: "lock", contact: "door", water_valve: "water", leak: "water", motion: "motion" };
+function secState(d) {
+  const s = d.state;
+  switch (d.type) {
+    case "lock": return s.locked ? ["ok", "Locked"] : ["warn", "Unlocked"];
+    case "garage": return s.door === "closed" ? ["ok", "Closed"] : ["warn", s.door[0].toUpperCase() + s.door.slice(1)];
+    case "contact": return s.open ? ["warn", "Open"] : ["ok", "Closed"];
+    case "water_valve": return s.open ? ["ok", "On"] : ["warn", "Shut off"];
+    case "leak": return s.wet ? ["bad", "Leak"] : ["ok", "Dry"];
+    case "motion": return s.motion ? ["info", "Motion now"] : ["ok", s.lastMotion ? `Clear · ${timeAgo(s.lastMotion)}` : "Clear"];
+    default: return ["ok", describe(d)];
   }
-  const secure = !issues().length;
-  return block("Doors & water", "security-card", el("ul", { class: "sec-list" }, ...items),
-    secure ? null : el("button", { class: "primary", onclick: lockUp }, "Lock up"));
+}
+function secRow(d) {
+  const s = d.state, [level, word] = secState(d);
+  let action = null;
+  if (d.type === "garage") action = [s.door === "closed" ? "Open" : "Close", () => send(d.id, { door: s.door === "closed" ? "open" : "closed" })];
+  if (d.type === "lock") action = [s.locked ? "Unlock" : "Lock", () => send(d.id, { locked: !s.locked })];
+  if (d.type === "water_valve") action = [s.open ? "Shut off" : "Turn on", () => send(d.id, { open: !s.open })];
+  const room = state.rooms.find((r) => r.id === d.room);
+  return el("li", { class: `sec-item${isAlert(d) ? " alert" : ""}`, "data-device": d.id, "data-level": level },
+    el("span", { class: "tile-icon" }, svg(ICON[SEC_ICON[d.type]] || ICON.shield)),
+    el("div", {}, el("span", { class: "ll-name" }, d.name.replace(/ (Lock|Leak Sensor|Motion)$/, "")), el("span", { class: "ll-state" }, room && !d.name.includes(room.name) ? room.name : "")),
+    el("span", { class: `sec-state ${level}` }, el("i", { "aria-hidden": "true" }), word),
+    action ? el("button", { class: d.type === "water_valve" && s.open ? "danger" : "", onclick: action[1] }, action[0]) : null);
+}
+function securityBlock() {
+  const entry = [...byType("lock"), ...byType("contact"), ...byType("garage")];
+  const water = [...byType("water_valve"), ...byType("leak")];
+  const motion = byType("motion");
+  const open = entry.filter(isAlert), wet = byType("leak").filter((l) => l.state.wet);
+  const away = state.people.length > 0 && state.people.every((p) => !p.home);
+  const night = (() => { const h = new Date().getHours(); return h >= 22 || h < 6; })();
+  const mode = away ? ["away", "Away", "Guarding the house"] : night ? ["night", "Night", "Watching the doors"] : ["home", "Home", "Watching"];
+  const level = wet.length ? "bad" : open.length || !byType("water_valve").every((v) => v.state.open) ? "warn" : "ok";
+  const headline = wet.length ? `Leak at ${wet.map((w) => w.name.replace(/ Leak Sensor$/, "")).join(", ")}`
+    : open.length ? `Not ready · ${open.map((d) => `${d.name.replace(/ Lock$/, "")} ${secState(d)[1].toLowerCase()}`).join(", ")}`
+    : "Ready · every entry point secured";
+  const group = (title, items) => items.length ? el("div", { class: "sec-group" }, el("h3", {}, title), el("ul", { class: "sec-list" }, ...items.map(secRow))) : null;
+  return block(null, "security-card",
+    el("div", { class: "sec-head", "data-level": level },
+      el("div", { class: "sec-title" }, el("span", { class: "tile-icon" }, svg(ICON.shield)), el("h2", {}, "Security"), el("span", { class: `sec-mode ${mode[0]}` }, el("b", {}, mode[1]), ` · ${mode[2]}`)),
+      el("p", { class: "sec-headline" }, el("i", { class: `sec-dot ${level}`, "aria-hidden": "true" }), headline),
+      el("div", { class: "sec-strip", role: "img", "aria-label": `${entry.length - open.length} of ${entry.length} entry points secured` },
+        ...entry.map((d) => el("span", { class: `sec-seg ${secState(d)[0]}`, title: `${d.name}: ${secState(d)[1]}` }))),
+      level === "ok" ? null : el("button", { class: "primary", onclick: lockUp }, "Lock up")),
+    group("Entry points", entry), group("Water", water), group("Motion", motion));
 }
 
 function conditionsBlock() {
