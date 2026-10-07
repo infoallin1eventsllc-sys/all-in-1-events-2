@@ -1,21 +1,37 @@
-# Showcase backdrop (glass panes)
+# Showcase backdrop (the Higgsfield glass panes)
 
-Otis's Higgsfield clip (three glass panes, threads of light, slow camera swing)
-rebuilt from real screens, 7 Oct 2026. Large pane: meridianinterface.com. Phone
-and tablet panes: all ten products, cutting every 1.2 s. 12 s seamless loop.
+The homepage hero is Otis's own Higgsfield clip (three aluminium-rimmed glass
+panes, threads of light, a slow camera swing), untouched except for what shows
+inside the three glass faces: the large pane shows meridianinterface.com, and
+the phone and tablet panes cut through all ten products, one every 0.8 s. The
+8 s clip is played forward then back, so the 16 s loop has no jump.
+
+Nothing in the clip is redrawn. Every pixel outside the glass faces is the
+original frame; inside them, the original threads, their pulses and the sheen
+are laid back over the screens, and the car interior that Higgsfield printed on
+the glass is subtracted first so it does not ghost over the website.
 
 Rebuild (after the site or a demo changes):
 
 1. Serve the website build: `npx vite preview --port 4799` in meridian-interface-website.
 2. Capture: `node tools/capture.mjs http://localhost:4799 shots` (phone + tablet of
-   every demo). The site screenshot `shots/site.png` is a 1440x900 capture of the
-   home page at 1.333x with the demo bar hidden (see the session log).
-3. Put three.js next to scene.html (`three.module.js` and `three.core.js`, r186).
-4. Serve this folder (`python3 -m http.server 4811`) and render:
-   `node tools/render.mjs http://127.0.0.1:4811/scene.html frames 24 12`
-5. Encode: `ffmpeg -framerate 24 -i frames/f%04d.jpg -c:v libx264 -pix_fmt yuv420p
-   -crf 22 -preset slow -tune animation -movflags +faststart -an showcase.mp4`
+   every demo). `shots/site.png` is a 1440x900 capture of the home page at 1.333x
+   with the demo bar hidden.
+3. Extract the clip's frames (the source mp4 is in Otis's Higgsfield history,
+   `hf_20261007_021215_3cdc7ab7`): `ffmpeg -i clip.mp4 -pix_fmt rgb24 full/%03d.png`
+4. `clip/track2.json` already holds the tracked pane corners for this clip, and
+   `clip/faces.json` the face proportions, so steps 5 and 6 only run again if the
+   clip itself changes: `python clip/track.py <dir>`, `python clip/post.py <dir>`,
+   `python clip/faces.py <dir>` (then set the corner radii by eye in faces.json).
+5. `python clip/still.py <dir>` builds each pane's printed-glass picture.
+6. Render: `python clip/composite.py <dir> shots out` (pass frame numbers to preview
+   a few first; run several copies with different frame lists to use every core).
+7. Encode:
+   `ffmpeg -framerate 24 -i out/%03d.png -c:v libx264 -preset veryslow -crf 24 -maxrate 1700k -bufsize 3400k -pix_fmt yuv420p -profile:v high -movflags +faststart -an hero-showcase.mp4`
+   `ffmpeg -framerate 24 -i out/%03d.png -c:v libvpx-vp9 -b:v 1100k -pass 1 -an -f null /dev/null` then `-pass 2 -row-mt 1 hero-showcase.webm`
+   Poster: frame 149 as webp, quality 80.
 
-`tools/measure.mjs` reports where the panes reach across the loop; keep them
-between 0.50 and 0.97 of the width so they never sit behind the headline.
-Chromium needs `--use-angle=swiftshader` in a sandbox with no GPU.
+Needs Python with opencv-python-headless and numpy (OpenCV 5: the ECC mask
+marks the target image). The earlier three.js rebuild (scene.html, tools/render.mjs,
+tools/measure.mjs) is kept for reference; it was replaced because its panes did not
+match the clip.
