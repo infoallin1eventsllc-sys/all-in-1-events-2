@@ -1,0 +1,191 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>html,body{margin:0;background:#070b16;overflow:hidden}canvas{display:block}</style>
+</head>
+<body>
+<script type="module">
+import * as THREE from './three.module.js';
+
+/*
+ * Meridian showcase, after Otis's Higgsfield clip (three glass panes in a row,
+ * threads of light between them, a slow camera swing):
+ *   small pane  -> his products at tablet size, cutting fast
+ *   phone pane  -> his products at phone size, cutting fast
+ *   large pane  -> the Meridian Interface website (it held a car interior)
+ * Time is driven from outside (window.renderAt) so every frame is reproducible,
+ * and every motion repeats on LOOP seconds so the clip loops without a jump.
+ */
+const W = 1920, H = 1080, LOOP = 12;
+const P = new URLSearchParams(location.search);
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setSize(W, H);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(30, W / H, 0.1, 300);
+const TAU = Math.PI * 2;
+
+const loader = new THREE.TextureLoader();
+const load = (src) => new Promise((res, rej) => loader.load(src, (t) => {
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  t.minFilter = THREE.LinearMipmapLinearFilter;
+  t.generateMipmaps = true;
+  res(t);
+}, undefined, rej));
+
+function canvasTex(w, h, draw) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+
+// Backdrop, fixed to the screen: near-black on the left (where the headline
+// sits), deep navy on the right with a soft glow behind the panes.
+scene.background = canvasTex(1920, 1080, (g, w, h) => {
+  const lin = g.createLinearGradient(0, 0, w, 0);
+  lin.addColorStop(0, '#03060c'); lin.addColorStop(0.42, '#060e1d'); lin.addColorStop(1, '#0b1e3c');
+  g.fillStyle = lin; g.fillRect(0, 0, w, h);
+  const rad = g.createRadialGradient(w * 0.72, h * 0.45, 0, w * 0.72, h * 0.45, w * 0.36);
+  rad.addColorStop(0, 'rgba(34,82,160,0.42)'); rad.addColorStop(1, 'rgba(34,82,160,0)');
+  g.fillStyle = rad; g.fillRect(0, 0, w, h);
+  const vg = g.createLinearGradient(0, 0, 0, h);
+  vg.addColorStop(0, 'rgba(0,0,0,0.35)'); vg.addColorStop(0.5, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.45)');
+  g.fillStyle = vg; g.fillRect(0, 0, w, h);
+});
+
+// A faint floor grid, as in the clip.
+{
+  const pts = [];
+  for (let i = -40; i <= 40; i++) pts.push(new THREE.Vector3(i * 1.5, 0, -60), new THREE.Vector3(i * 1.5, 0, 25));
+  for (let j = 0; j <= 57; j++) pts.push(new THREE.Vector3(-60, 0, 25 - j * 1.5), new THREE.Vector3(60, 0, 25 - j * 1.5));
+  const grid = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color: '#2d5bb0', transparent: true, opacity: 0.2 }));
+  grid.position.y = -2.6;
+  scene.add(grid);
+}
+
+const GLOW = canvasTex(128, 128, (g) => {
+  const r = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.2, 'rgba(150,200,255,0.9)'); r.addColorStop(0.55, 'rgba(70,140,255,0.25)'); r.addColorStop(1, 'rgba(40,100,255,0)');
+  g.fillStyle = r; g.fillRect(0, 0, 128, 128);
+});
+const SHEEN = canvasTex(512, 512, (g, w, h) => {
+  const lin = g.createLinearGradient(0, 0, w, h);
+  lin.addColorStop(0, 'rgba(255,255,255,0.20)'); lin.addColorStop(0.35, 'rgba(255,255,255,0.05)');
+  lin.addColorStop(0.36, 'rgba(255,255,255,0)'); lin.addColorStop(1, 'rgba(255,255,255,0.03)');
+  g.fillStyle = lin; g.fillRect(0, 0, w, h);
+});
+
+/**
+ * A slab of glass with a screen in it: two screen layers (so one picture can
+ * cut to the next), a frosted body, bright edges and a sheen across the front.
+ */
+function pane(w, h, depth) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(w + 0.12, h + 0.12, depth),
+    new THREE.MeshBasicMaterial({ color: '#a9c4ff', transparent: true, opacity: 0.13, depthWrite: false }));
+  g.add(body);
+  const edges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(w + 0.12, h + 0.12, depth)),
+    new THREE.LineBasicMaterial({ color: '#e6efff', transparent: true, opacity: 0.95 }));
+  g.add(edges);
+  const mk = (z) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false })); m.position.z = z; g.add(m); return m; };
+  const a = mk(depth / 2 + 0.002), b = mk(depth / 2 + 0.004);
+  const sheen = new THREE.Mesh(new THREE.PlaneGeometry(w + 0.12, h + 0.12), new THREE.MeshBasicMaterial({ map: SHEEN, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+  sheen.position.z = depth / 2 + 0.006; g.add(sheen);
+  const halo = new THREE.Mesh(new THREE.PlaneGeometry(w * 2.2, h * 1.8), new THREE.MeshBasicMaterial({ map: GLOW, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false }));
+  halo.position.z = -depth; g.add(halo);
+  g.userData = { a, b, w, h, depth, sheen };
+  return g;
+}
+
+/** Show `cur`, cutting to `next` over the last part of its slot: a quick push and fade. */
+function setScreens(p, cur, next, mix) {
+  const { a, b } = p.userData;
+  a.material.map = cur; a.material.opacity = 1; a.material.needsUpdate = true;
+  b.material.map = next; b.material.opacity = mix; b.material.needsUpdate = true;
+  const s = 1.035 - 0.035 * mix; b.scale.set(s, s, 1);
+  a.visible = true; b.visible = mix > 0.001;
+  p.userData.sheen.material.opacity = 1 + 1.6 * Math.sin(Math.PI * mix);   // a glint as it cuts
+}
+
+const ORDER = ['drone', 'carepulse', 'frameshop', 'bigboy', 'fogcity', 'finsight', 'crm', 'planner', 'analytics', 'modernstreet'];
+const [site, phones, tablets] = await Promise.all([
+  load('shots/site.png'),
+  Promise.all(ORDER.map((n) => load(`shots/phone-${n}.png`))),
+  Promise.all(ORDER.map((n) => load(`shots/tablet-${n}.png`))),
+]);
+
+// The three panes in a row, faces turned toward the camera on the left.
+const TURN = +(P.get('turn') || -0.65);
+const DIST0 = +(P.get('dist') || 35), SHIFT = +(P.get('shift') || 0.255);
+const card = pane(2.6, 2.6 * 4 / 3, 0.14);    card.position.set(0, 0.25, 0);
+const phone = pane(2.3, 2.3 * 844 / 390, 0.16); phone.position.set(+(P.get('px') || 3.5), 0.25, 0);
+const big = pane(7.4, 7.4 * 900 / 1440, 0.18);   big.position.set(+(P.get('bx') || 9.8), 0.25, 0);
+for (const p of [card, phone, big]) { p.rotation.y = TURN; scene.add(p); }
+window.__panes = { card, phone, big }; window.__THREE = THREE; window.__camera = camera;
+setScreens(big, site, site, 0);
+
+// Threads of light between the panes, each with a bright dot at both ends
+// and a pulse running along it.
+const threads = [];
+const threadMat = new THREE.MeshBasicMaterial({ color: '#6fa6ff', transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false });
+const dotMat = new THREE.SpriteMaterial({ map: GLOW, color: '#bcd6ff', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+function anchor(p, fx, fy) {
+  const v = new THREE.Vector3(fx * p.userData.w / 2, fy * p.userData.h / 2, p.userData.depth / 2 + 0.01);
+  p.updateMatrixWorld(true); return v.applyMatrix4(p.matrixWorld);
+}
+function thread(from, to, sag, pulsePhase) {
+  const mid = from.clone().lerp(to, 0.5); mid.y += sag; mid.z += 0.25;
+  const curve = new THREE.CatmullRomCurve3([from, from.clone().lerp(mid, 0.5), mid, mid.clone().lerp(to, 0.5), to]);
+  scene.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 64, 0.009, 6, false), threadMat));
+  for (const at of [from, to]) { const d = new THREE.Sprite(dotMat); d.position.copy(at); d.scale.setScalar(0.32); scene.add(d); }
+  const pulse = new THREE.Sprite(dotMat.clone()); pulse.scale.setScalar(0.42); scene.add(pulse);
+  threads.push({ curve, pulse, pulsePhase });
+}
+[0.55, 0, -0.55].forEach((fy, i) => {
+  thread(anchor(card, 0.55, fy), anchor(phone, -0.45, fy * 0.8), 0.06 * (i - 1), i / 3);
+  thread(anchor(phone, 0.5, fy * 0.8), anchor(big, -0.62, fy * 0.55), -0.05 * (i - 1), (i + 0.5) / 3);
+});
+
+const SLOT = LOOP / ORDER.length;     // 1.2 s per product
+const CUT = 0.28;                     // seconds spent cutting to the next one
+function screenAt(p, list, t, offsetSlots) {
+  const s = (t / SLOT + offsetSlots) % list.length;
+  const i = Math.floor(s), f = (s - i) * SLOT;
+  const mix = f > SLOT - CUT ? (f - (SLOT - CUT)) / CUT : 0;
+  setScreens(p, list[i], list[(i + 1) % list.length], mix * mix * (3 - 2 * mix));
+}
+
+window.renderAt = (time) => {
+  const t = ((time % LOOP) + LOOP) % LOOP, u = t / LOOP;
+  // The camera arcs round the panes and back, as in the clip: oblique at the
+  // ends of the loop, turning toward the screens mid-loop. Same place at 0 and LOOP.
+  const k = 0.5 - 0.5 * Math.cos(u * TAU);
+  const target = new THREE.Vector3(+(P.get('tx') || 6.4), 0.25, 0);
+  const phi = -0.08 - 0.34 * k;                  // camera bearing: in front of the row, swinging left
+  const dist = DIST0 - 2.6 * k;
+  camera.position.set(target.x + Math.sin(phi) * dist, 1.15 - 0.3 * k, target.z + Math.cos(phi) * dist);
+  camera.lookAt(target);
+  camera.setViewOffset(W, H, -W * SHIFT, 0, W, H);   // the panes sit right of centre, the left stays clear
+
+  screenAt(phone, phones, t, 0);
+  screenAt(card, tablets, t + SLOT / 2, ORDER.length / 2);   // half a slot out of step, a different product
+
+  for (const th of threads) {
+    const f = (u * 3 + th.pulsePhase) % 1;
+    th.pulse.position.copy(th.curve.getPointAt(f));
+    th.pulse.material.opacity = Math.sin(Math.PI * f);
+  }
+  renderer.render(scene, camera);
+  return true;
+};
+window.ready = true;
+renderAt(+(P.get('t') || 0));
+</script>
+</body>
+</html>
