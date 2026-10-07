@@ -3040,3 +3040,10 @@ is still refused, and the probe left no rows. Advisor re-run: both WARNs gone.
 "RLS enabled, no policy" on all 22 tables means deny-by-default: no policy, no
 access through the API. Only `service_role` (which bypasses RLS) can read
 them, and it lives in the edge functions. Adding policies would loosen it.
+
+## 7 Oct 2026: hero backdrop samples (preview only, live site unchanged)
+
+- Otis's Higgsfield clips: Video 1 `4e780037` ("Meridian interface, we put the future in your hands", file not received yet), Video 2 `7a0a3c5a`. The two clips Claude generated first (`75e487d5`, `3cdc7ab7`, 192 credits) were not what he asked for: when Otis says he already made something, take it from his Higgsfield history first. He wants videos generated from this chat from now on.
+- Higgsfield saves HEVC (Main 10). Chrome and Firefox often cannot play it, so re-encode to H.264 before any clip goes on the site. The sandbox cannot reach Higgsfield's CDN; Otis has to attach the file.
+- Branch `preview/backdrop-samples` on the website repo (never merge). Self-hosted clips in `public/backdrop-samples/`, switch for Current / Video 2 / Video 2 polished. Polished = navy grade, highlights held back, glow, forward-then-backward 10 s loop; on wide screens it sits behind the demo cards so no line crosses the headline. Hotlinking the CDN by widening the CSP was refused by the permission check; do not retry that.
+- Preview: https://meridian-interfac-git-0cccd5-infoallin1eventsllc-7684s-projects.vercel.app (READY at e491d64).
