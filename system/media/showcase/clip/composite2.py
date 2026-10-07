@@ -1,0 +1,200 @@
+"""The homepage hero: Otis's Higgsfield clip with real, scrolling screens in its glass.
+
+  python composite2.py <hf dir> <shots dir> <out dir> [output frame numbers...]
+
+Nothing in the clip is redrawn. Every pixel outside the three glass faces is the
+clip's own (between source frames, optical flow blends its two neighbours), and the
+clip's threads and pulses are laid back over the screens.
+
+Timeline (T output frames, 24 fps, loops seamlessly):
+  camera   source frames 1..190 forward then back, easing to a stop at each end
+           instead of bouncing (cosine ramps of RAMP frames, full speed between)
+  phone    six products, one after another, each scrolling gently and dissolving
+           into the next
+  tablet   four dashboards, the same way, timed into the part of the loop where
+           that pane faces the camera
+  website  the homepage, scrolling slowly down and back once per loop
+"""
+import cv2, numpy as np, json, sys, os
+D, SHOTS, OUT = sys.argv[1:4]
+ONLY = {int(x) for x in sys.argv[4:]}
+F = json.load(open(f'{D}/faces.json'))
+TR = json.load(open(f'{D}/track2.json'))
+SS = 2                                     # screens are drawn supersampled, then area-averaged
+
+# ---- timeline -------------------------------------------------------------------
+S0, S1, RAMP = 1, 190, 30                  # 191-193 stutter in the source; left out
+L = S1 - S0; HALF = L + RAMP; T = 2 * HALF # 438 frames = 18.25 s
+START = 163                                # output frame 0 = source frame 149: the poster
+def dist(u):
+    """Source frames travelled after u output frames of one half (speed eases 0 -> 1 -> 0)."""
+    R = RAMP
+    if u <= R: return u / 2 - R / (2 * np.pi) * np.sin(np.pi * u / R)
+    if u <= HALF - R: return R / 2 + (u - R)
+    return L - dist(HALF - u)
+def source_pos(n):
+    c = (n + START) % T
+    return S0 + (dist(c) if c <= HALF else dist(T - c))
+
+# ---- frames of the clip, including in-between ones -------------------------------
+_frames, _flows = {}, {}
+def frame(i):
+    if i not in _frames:
+        if len(_frames) > 8: _frames.pop(next(iter(_frames)))
+        _frames[i] = cv2.imread(f'{D}/full/{i:03d}.png').astype(np.float32)
+    return _frames[i]
+DIS = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
+def flow(a):
+    if a not in _flows:
+        if len(_flows) > 4: _flows.pop(next(iter(_flows)))
+        g0 = cv2.cvtColor(frame(a).astype(np.uint8), cv2.COLOR_BGR2GRAY); g1 = cv2.cvtColor(frame(a + 1).astype(np.uint8), cv2.COLOR_BGR2GRAY)
+        _flows[a] = DIS.calc(g0, g1, None)
+    return _flows[a]
+YY, XX = np.mgrid[0:1080, 0:1920].astype(np.float32)
+def clip_at(s):
+    a = int(np.floor(s)); t = s - a
+    if t < 1e-3 or a >= S1: return frame(min(a, S1))
+    f = flow(a); t = np.float32(t)
+    ia = cv2.remap(frame(a), XX - t * f[..., 0], YY - t * f[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+    ib = cv2.remap(frame(a + 1), XX + (1 - t) * f[..., 0], YY + (1 - t) * f[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+    return ia * (1 - t) + ib * t
+def quad_at(k, s):
+    a = int(np.floor(s)); t = s - a; b = min(a + 1, S1)
+    qa, qb = np.array(TR[k][str(a)]['q']), np.array(TR[k][str(b)]['q'])
+    va, vb = TR[k][str(a)]['v'], TR[k][str(b)]['v']
+    return (qa * (1 - t) + qb * t).astype(np.float32), va * (1 - t) + vb * t
+
+# ---- screens ----------------------------------------------------------------------
+SZ = {k: (F[k]['w'], F[k]['h']) for k in 'ABC'}
+def load_page(name, w):
+    """The page scaled to the face width, and its pinned layer split into a top part and
+    a bottom part (so bars stay at the top and bottom of a face taller than the viewport)."""
+    page = cv2.imread(f'{SHOTS}/{name}.png')
+    sc = w * SS / page.shape[1]
+    page = cv2.resize(page, (w * SS, int(round(page.shape[0] * sc))), interpolation=cv2.INTER_AREA)
+    pin = None
+    if os.path.exists(f'{SHOTS}/{name}-pin.png'):
+        p = cv2.imread(f'{SHOTS}/{name}-pin.png', cv2.IMREAD_UNCHANGED)
+        p = cv2.resize(p, (w * SS, int(round(p.shape[0] * sc))), interpolation=cv2.INTER_AREA)
+        pin = p
+    return page, pin
+def view(page, pin, w, h, off):
+    """What the face shows with the page scrolled by off (pixels at SS scale)."""
+    H = h * SS; off = int(np.clip(off, 0, max(page.shape[0] - H, 0)))
+    v = page[off:off + H].astype(np.float32)
+    if v.shape[0] < H: v = np.vstack([v, np.repeat(v[-1:], H - v.shape[0], 0)])
+    if pin is not None:
+        ph = pin.shape[0]; half = ph // 2
+        for part, y in ((pin[:half], 0), (pin[half:], H - (ph - half))):
+            a = part[..., 3:4].astype(np.float32) / 255; y0 = max(y, 0); part = part[y0 - y:]; a = a[y0 - y:]
+            hh = min(part.shape[0], H - y0)
+            v[y0:y0 + hh] = v[y0:y0 + hh] * (1 - a[:hh]) + part[:hh, :, :3] * a[:hh]
+    return v
+def smooth(x): x = np.clip(x, 0, 1); return x * x * (3 - 2 * x)
+
+class Sequence:
+    """Products one after another inside one face. Each scrolls gently (it never stops,
+    and eases at its ends); at the end of its turn the next product rises up from below
+    it, as one continuous scroll, over SLIDE frames. No two pages are ever overlaid.
+    span = (start, length) of the part of the loop the sequence plays in; outside it
+    the last product holds where it is."""
+    SLIDE = 20
+    GAP = 6                                         # a thin line of the scene's navy between pages
+    def __init__(self, kind, names, face, span):
+        self.w, self.h = SZ[face]; self.items = [load_page(f'{kind}-{n}', self.w) for n in names]
+        self.start, self.length = span; self.slot = self.length / len(names)
+    def look(self, j, x):
+        page, pin = self.items[j % len(self.items)]
+        rng = max(page.shape[0] - self.h * SS, 0); travel = min(rng, 1.15 * self.h * SS)
+        tau = np.clip((x + self.SLIDE / 2) / (self.slot + self.SLIDE), 0, 1)
+        pos = 0.55 * tau + 0.45 * (1 - np.cos(np.pi * tau)) / 2          # steady flow, soft ends
+        return view(page, pin, self.w, self.h, travel * pos)
+    def at(self, n):
+        local = (n - self.start) % T
+        if local >= self.length: local = self.length - 1e-3            # hidden part of the loop: hold
+        j = int(local // self.slot); x = local - j * self.slot
+        H = self.h * SS; g = self.GAP * SS
+        if x > self.slot - self.SLIDE / 2 and j + 1 < len(self.items):   a, b, m = j, j + 1, (x - (self.slot - self.SLIDE / 2)) / self.SLIDE
+        elif x < self.SLIDE / 2 and j > 0:                               a, b, m = j - 1, j, (x + self.SLIDE / 2) / self.SLIDE
+        else: return self.look(j, x)
+        m = smooth(m); xa = x + (self.slot if b == j else 0); xb = x - (self.slot if a == j else 0)
+        stack = np.vstack([self.look(a, xa), np.tile(np.float32([32, 18, 11]), (g, self.w * SS, 1)), self.look(b, xb)])
+        y = int(round(m * (H + g)))
+        return stack[y:y + H]
+
+# tablet pane (A): the part of the loop where it faces the camera
+vis = np.array([quad_at('A', source_pos(n))[1] for n in range(T)])
+hid = vis < 0.05
+# longest cyclic run of visible frames
+best, cur, s0 = (0, 0), 0, 0
+for n in range(2 * T):
+    if not hid[n % T]:
+        if cur == 0: s0 = n
+        cur += 1
+        if cur > best[1]: best = (s0 % T, min(cur, T))
+    else: cur = 0
+A_SPAN = best
+B_SPAN = (0, T)
+PHONE = Sequence('phone', ['bigboy', 'fogcity', 'frameshop', 'modernstreet', 'carepulse', 'drone'], 'B', B_SPAN)
+TABLET = Sequence('tablet', ['finsight', 'crm', 'analytics', 'planner'], 'A', A_SPAN)
+SITE = load_page('site', SZ['C'][0])
+def site_at(n):
+    w, h = SZ['C']; page, pin = SITE
+    rng = max(page.shape[0] - h * SS, 0)
+    return view(page, pin, w, h, 0.9 * rng * (1 - np.cos(2 * np.pi * n / T)) / 2)
+
+# ---- faces ------------------------------------------------------------------------
+def rounded(w, h, rad, grow=0.0):
+    g = int(round(grow * w)); W, H = w + 2 * g, h + 2 * g; r = int(rad + g)
+    m = np.zeros((H * SS, W * SS), np.uint8); r *= SS
+    cv2.rectangle(m, (r, 0), (W * SS - 1 - r, H * SS - 1), 255, -1); cv2.rectangle(m, (0, r), (W * SS - 1, H * SS - 1 - r), 255, -1)
+    for cx, cy in [(r, r), (W * SS - 1 - r, r), (W * SS - 1 - r, H * SS - 1 - r), (r, H * SS - 1 - r)]: cv2.circle(m, (cx, cy), r, 255, -1, cv2.LINE_AA)
+    return m, g
+FACE = {k: rounded(*SZ[k], 0.8 * F[k]['r'] * SZ[k][0], 0.004) for k in 'ABC'}      # a hair past the rim's inner edge...
+CORE = {k: rounded(*SZ[k], F[k]['r'] * SZ[k][0], -0.03) for k in 'ABC'}           # ...cut back by the rim's own pixels in this band
+SIL = {k: rounded(*SZ[k], F[k]['r'] * SZ[k][0], F['_rim']) for k in 'ABC'}
+PRINTED = {}
+for k in 'ABC':
+    st = cv2.imread(f'{D}/still-{k}.png').astype(np.float32)
+    d = np.clip(st - cv2.GaussianBlur(st, (0, 0), 6), 0, None)
+    d[cv2.dilate((d.max(2) > 60).astype(np.uint8), np.ones((25, 25), np.uint8)) > 0] = 0
+    PRINTED[k] = cv2.resize(d, (SZ[k][0] * SS, SZ[k][1] * SS))
+def warp(img, H, g=0):
+    """Draw a face-space image (SS scale, optionally grown by g) into the frame."""
+    Hs = np.diag([SS, SS, 1.0]) @ H @ np.array([[1, 0, -g], [0, 1, -g], [0, 0, 1]], float) @ np.diag([1 / SS, 1 / SS, 1.0])
+    big = cv2.warpPerspective(img, Hs, (1920 * SS, 1080 * SS), flags=cv2.INTER_LINEAR)
+    return cv2.resize(big, (1920, 1080), interpolation=cv2.INTER_AREA)
+
+os.makedirs(OUT, exist_ok=True)
+for n in range(T):
+    if ONLY and n not in ONLY: continue
+    s = source_pos(n); orig = clip_at(s)
+    hsv = cv2.cvtColor(np.clip(orig, 0, 255).astype(np.uint8), cv2.COLOR_BGR2HSV)
+    rimpx = ((hsv[..., 2] > 105) & (hsv[..., 1] < 95)).astype(np.uint8)
+    rim_soft = cv2.GaussianBlur(cv2.dilate(rimpx, np.ones((3, 3), np.uint8)).astype(np.float32), (0, 0), 0.7)
+    pics = {'A': TABLET.at(n), 'B': PHONE.at(n), 'C': site_at(n)}
+    face, sil = {}, {}
+    for k in 'ABC':
+        q, v = quad_at(k, s); w, h = SZ[k]
+        H = cv2.getPerspectiveTransform(np.float32([[0, 0], [w, 0], [w, h], [0, h]]), q).astype(np.float64)
+        fm, g = FACE[k]; cm, gc = CORE[k]
+        m = warp(fm.astype(np.float32) / 255, H, g); core = warp(cm.astype(np.float32) / 255, H, gc)
+        m = m * (1 - (1 - core) * rim_soft) * v          # outside the core, the rim's own pixels stay rim
+        face[k] = [warp(pics[k], H), m, warp(PRINTED[k], H)]
+        sm, gs = SIL[k]; sil[k] = warp(sm.astype(np.float32) / 255, H, gs)
+    for k in 'AB':                                       # a nearer pane stays in front: its face and its lit rim
+        sil[k] = np.maximum(face[k][1] > 0.01, sil[k] * rim_soft).astype(np.float32)
+    face['C'][1] *= (1 - sil['B']) * (1 - sil['A']); face['B'][1] *= (1 - sil['A'])
+    out = orig.copy(); cov = np.zeros((1080, 1920), np.float32); printed = np.zeros_like(orig)
+    for k in 'CBA':
+        img, m, pr = face[k]; m3 = m[..., None]
+        out = out * (1 - m3) + img * m3; cov = np.maximum(cov, m); printed = printed * (1 - m3) + pr * m3
+    c3 = cov[..., None]
+    # the glass over the screens: its soft sheen (low-pass only, so nothing printed on the
+    # glass shows), then the clip's own threads and pulses, pixel for pixel
+    out = out * (1 - c3 * F['_glass']) + cv2.GaussianBlur(orig, (0, 0), 14) * c3 * F['_glass']
+    hl = np.clip(orig - cv2.GaussianBlur(orig, (0, 0), 6), 0, None)
+    back = np.clip((hl.max(2, keepdims=True) - 2.2 * printed.max(2, keepdims=True)) / 90.0, 0, 1)
+    a = c3 * back * F['_lines']; out = out * (1 - a) + orig * a
+    cv2.imwrite(f'{OUT}/{n:03d}.png', np.clip(out, 0, 255).astype(np.uint8))
+if not ONLY: print('frames', T, 'tablet span', A_SPAN)
