@@ -211,6 +211,13 @@ if (ONLY !== 'site') {
   // 3D demos render in software in a sandbox with no GPU: a click there can
   // take ~5 s. Give them room instead of reporting "0 controls clicked".
   const SLOW = { 'drone-command': 9000 };
+  // The one button a visitor presses first, pressed on a phone, with what must
+  // happen. Drone Command's Start show once stayed greyed out until a second
+  // button was found, with the reason only in a hover tooltip (7 Oct).
+  const PRIMARY = {
+    'drone-command': { open: 'Light show', press: '#ls-play', what: 'Start show does not start the light show',
+      ok: async (p) => /Hold/.test(await p.locator('#ls-play').textContent({ timeout: 5000 }).catch(() => '')) },
+  };
   for (const d of demos) {
     const base = `${BASE}/demos/${d}/`;
     const ctx = await b.newContext({ viewport: { width: 1366, height: 850 }, acceptDownloads: true }); await prod(ctx);
@@ -263,6 +270,16 @@ if (ONLY !== 'site') {
     const ov = await overflowX(q); if (ov > 0) FAIL(`demo ${d} phone: scrolls sideways by ${ov}px`);
     const under = await q.evaluate(() => [...document.querySelectorAll('*')].filter(e => { const s = getComputedStyle(e); if (!['fixed', 'sticky'].includes(s.position) || e.closest('#meridian-demo-bar') || s.display === 'none' || s.visibility === 'hidden') return false; const r = e.getBoundingClientRect(); return r.top < 45 && r.bottom > 0 && r.height > 0 && r.height < 300; }).length);
     if (under) FAIL(`demo ${d} phone: ${under} pinned element(s) sit under the Meridian bar`);
+    if (PRIMARY[d]) {
+      const t = PRIMARY[d];
+      try {
+        await q.locator('#demo-tour button[aria-label="Close tour"]').click({ timeout: 5000 }).catch(() => {});
+        await q.getByRole('button', { name: t.open }).first().click({ timeout: 60000 });
+        await q.locator(t.press).click({ timeout: 60000 });
+        await q.waitForTimeout(6000);
+        if (!(await t.ok(q))) FAIL(`demo ${d} phone: ${t.what}`);
+      } catch (e) { FAIL(`demo ${d} phone: ${t.what} (${e.message.split('\n')[0].slice(0, 100)})`); }
+    }
     await q.screenshot({ path: `${OUT}/demo-${d}-phone.png` });
     await pc.close();
     OK(`demo ${d}: ${clicks} controls clicked` + (MENUS[d] ? `, ${menuOk}/${MENUS[d].length} menu items` : ''));
