@@ -8,7 +8,7 @@ import { existsSync } from "node:fs";
 
 // The short cut runs from the walls rising to the pull-back, and stops before the end card, so
 // its words never sit under the page's own headline while it loops.
-const FF = process.env.FFMPEG || "ffmpeg", IN = "dist/film/meridian-film-merged.mp4", HERO_FROM = 24.0;
+const FF = process.env.FFMPEG || "ffmpeg", IN = "dist/film/meridian-film-merged.mp4", HERO_FROM = 24.0 / 1.7; // the walls rising, at the build's 1.7x pace
 if (!existsSync(IN)) throw new Error(`${IN} missing: run npm run assemble:film first`);
 const run = (args) => execFileSync(FF, ["-v", "error", "-y", ...args], { stdio: "inherit" });
 // The film's length, from the file itself; the end card is its last 6 s (assemble-film's "end" piece).

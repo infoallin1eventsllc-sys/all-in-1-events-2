@@ -10,8 +10,11 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 const FF = process.env.FFMPEG || "ffmpeg";
 const OUT = "dist/film", TMP = `${OUT}/cut`;
 mkdirSync(TMP, { recursive: true });
-// The engine pieces: a full render (npm run render:film), or the two partial renders
-// FROM=0 TO=44 OUT=dist/film/engine-head.mp4 and FROM=86 TO=92 OUT=dist/film/engine-end.mp4.
+// The engine pieces: the design-and-build, rendered at ENGINE_SPEED so it moves quickly
+// (FROM=0 TO=44 SPEED=1.7 OUT=dist/film/engine-head.mp4), and the end card
+// (FROM=86 TO=92 OUT=dist/film/engine-end.mp4). With only a full 1x render
+// (npm run render:film), the build is sped up by dropping frames instead.
+const ENGINE_SPEED = 1.7, ENGINE_END = 44.0;
 const FULL = `${OUT}/meridian-film.mp4`, HEAD = `${OUT}/engine-head.mp4`, END = `${OUT}/engine-end.mp4`;
 const partial = existsSync(HEAD) && existsSync(END);
 if (!partial && !existsSync(FULL)) throw new Error(`${FULL} missing: run npm run render:film first`);
@@ -20,19 +23,20 @@ const XF = 0.6; // crossfade between pieces
 
 // The pieces, in order. speed > 1 slows a clip down (setpts).
 const PIECES = [
-  { id: "engine", src: partial ? HEAD : FULL, ss: 0, t: 44.0 },
+  partial ? { id: "engine", src: HEAD, ss: 0, t: ENGINE_END / ENGINE_SPEED } : { id: "engine", src: FULL, ss: 0, t: ENGINE_END, speed: 1 / ENGINE_SPEED },
   { id: "C", src: clip("C-becomes-real"), ss: 0, t: 10.0 },
   { id: "D", src: clip("D-welcome"), ss: 0, t: 10.0 },
   { id: "E", src: clip("E-walkthrough"), ss: 0, t: 10.0 },
-  { id: "F", src: clip("F-panel"), ss: 0, t: 10.0, speed: 1.5 }, // slowed so the panel passage fits under it
+  { id: "F", src: clip("F-panel"), ss: 0, t: 10.0, speed: 1.6, interp: true }, // slowed so the panel passage fits; motion-interpolated so it stays smooth
   { id: "tail", src: clip("B-real"), ss: 5.5, t: 4.5 },
   { id: "end", src: partial ? END : FULL, ss: partial ? 0 : 86.0, t: 6.0 },
 ];
-// Normalize each piece: same size, rate and pixel format, no audio.
+// Normalize each piece: same size, rate and pixel format, no audio. A slowed piece with interp gets
+// motion-interpolated frames (minterpolate) instead of repeated ones, so nothing stutters under the voice.
 for (const p of PIECES) {
   p.len = p.t * (p.speed || 1);
   p.file = `${TMP}/${p.id}.mp4`;
-  const vf = `${p.speed ? `setpts=${p.speed}*PTS,` : ""}scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,fps=24,format=yuv420p`;
+  const vf = `${p.speed ? `setpts=${p.speed}*PTS,` : ""}${p.interp ? "minterpolate=fps=24:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1," : ""}scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,fps=24,format=yuv420p`;
   execFileSync(FF, ["-v", "error", "-y", "-ss", String(p.ss), "-t", String(p.t), "-i", p.src, "-an", "-vf", vf, "-c:v", "libx264", "-preset", "fast", "-crf", "16", p.file], { stdio: "inherit" });
 }
 // Where each piece starts on the final timeline (crossfades overlap by XF).
@@ -47,10 +51,10 @@ const cues = {
   duration: DUR,
   // The take (film/guide-voice.mp3): the four passages sit at 0, 3.0, 11.0 and 28.0 s.
   segments: [[0.0, 1.6, S.D + 5.3], [3.0, 9.6, S.E + 0.8], [11.0, 26.6, S.F + 0.3], [28.0, 33.6, S.tail + 0.6]],
-  chords: [0, 13, 24, 33, S.C, S.E, S.F, S.end],
-  level: [[0, 0], [4, 0.7], [13, 0.8], [24, 1.0], [33, 0.8], [S.C, 0.9], [S.D, 0.6], [S.tail, 0.7], [S.end + 0.5, 1.15], [S.end + 3, 1.0], [DUR, 0]],
-  bells: [5.4, 13.4, 24.4, 33.4, S.C + 0.4],
-  swells: [[22.4, 26.2], [S.C - 0.6, S.C + 3.2], [S.tail - 1.2, S.tail + 1.6]],
+  chords: [0, 13, 24, 33].map((t) => t / ENGINE_SPEED).concat([S.C, S.E, S.F, S.end]),
+  level: [[0, 0], [4, 0.7], [13, 0.8], [24, 1.0], [33, 0.8]].map(([t, v]) => [t / ENGINE_SPEED, v]).concat([[S.C, 0.9], [S.D, 0.6], [S.tail, 0.7], [S.end + 0.5, 1.15], [S.end + 3, 1.0], [DUR, 0]]),
+  bells: [5.4, 13.4, 24.4, 33.4].map((t) => t / ENGINE_SPEED).concat([S.C + 0.4]),
+  swells: [[22.4 / ENGINE_SPEED, 26.2 / ENGINE_SPEED], [S.C - 0.6, S.C + 3.2], [S.tail - 1.2, S.tail + 1.6]],
   door: S.D + 4.6, lock: S.D + 5.4, tap: null, end: S.end + 0.2,
   voice_frames: [S.D, S.end + 2],
 };
