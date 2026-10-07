@@ -18,6 +18,7 @@
     "render:film": "node scripts/render-film.mjs",
     "build:sites": "node scripts/build-sites.mjs",
     "assemble:film": "node scripts/assemble-film.mjs",
+    "music:variants": "node scripts/music-variants.mjs",
     "build:showroom": "node scripts/build-showroom.mjs",
     "build:website": "node scripts/build-website.mjs",
     "encode:film": "node scripts/encode-film.mjs"

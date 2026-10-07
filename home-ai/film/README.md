@@ -70,3 +70,18 @@ The single-shot technique from the "one photo to a cinematic website" workflow: 
 > Smooth gimbal motion, no shake, natural parallax, realistic materials, warm 2700K interior light against cool blue hour, volumetric haze, photoreal, 4K, no text, no people other than the guide.
 
 The Linden House site (`site/residence/`) scrubs the hologram engine as you scroll; once this clip exists, the same scroll can scrub the clip instead (a `<video>` whose `currentTime` follows the scroll), keeping the rest of the page as it is.
+
+## Music beds
+
+`film/music/` holds alternative instrumental scores (ElevenLabs Music, 80 s each), confirmed to have no vocals:
+
+| File | Character |
+| --- | --- |
+| `warm-piano.mp3` | Felt piano, slow strings, soft pad; hushed, grows to a tender swell, resolves calm. |
+| `sleek-electronic.mp3` | Soft sub bass, shimmering arpeggios, airy pads, light pulse; premium, futuristic. |
+| `uplifting-orchestral.mp3` | Solo cello, string ensemble, heartbeat percussion, quiet choir; builds to a bright crescendo. |
+
+`npm run music:variants film/music/<bed>.mp3 ...` remixes the finished film with each bed
+(same voice, chime, lock and captions; the bed is level-shaped and ducked under the voice)
+into `dist/film/variants/<bed>.mp4`. To make one the film's score, run `film/audio.py` with
+`MUSIC=film/music/<bed>.mp3` (and `MUSIC_GAIN` to taste) when assembling.

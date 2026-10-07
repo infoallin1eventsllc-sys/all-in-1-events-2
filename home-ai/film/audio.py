@@ -60,6 +60,20 @@ for idx, (start, freqs) in enumerate(CHORDS):
         lfo = 1 + 0.15 * np.sin(2 * np.pi * (0.07 + k * 0.03) * t + k)
         music_l += w * amp * lfo * (np.sin(2 * np.pi * f * t) + 0.3 * np.sin(2 * np.pi * f * 2.003 * t))
         music_r += w * amp * lfo * (np.sin(2 * np.pi * f * 1.002 * t + 0.4) + 0.3 * np.sin(2 * np.pi * f * 1.997 * t))
+# A real music bed (MUSIC=path) replaces the synthesized chords: trimmed or looped to the film,
+# with a short fade at each end, then shaped by the same level envelope and ducked under the voice.
+import os
+MUSIC = os.environ.get("MUSIC")
+if MUSIC:
+    raw_m = subprocess.run([FF, "-v", "error", "-i", MUSIC, "-f", "f32le", "-ac", "2", "-ar", str(SR), "-"], capture_output=True, check=True).stdout
+    m = np.frombuffer(raw_m, dtype=np.float32).reshape(-1, 2).astype(np.float64)
+    if len(m) < N:
+        m = np.concatenate([m] * (N // len(m) + 1))
+    m = m[:N]
+    f = int(1.5 * SR); m[:f] *= np.linspace(0, 1, f)[:, None]; m[-int(2.5 * SR):] *= np.linspace(1, 0, int(2.5 * SR))[:, None]
+    rms = np.sqrt(np.mean(m ** 2)) or 1
+    m *= float(os.environ.get("MUSIC_GAIN", "0.085")) / rms
+    music_l, music_r = m[:, 0].copy(), m[:, 1].copy()
 level = env([tuple(x) for x in CUES.get("level", [(0, 0), (4, 0.7), (13, 0.8), (24, 1.0), (33, 0.8), (44, 0.75), (50, 0.6), (82, 0.7), (86.5, 1.15), (89, 1.0), (92, 0)])])
 # Duck the score under the voice.
 v_env = np.convolve(np.abs(voice), np.ones(int(0.25 * SR)) / int(0.25 * SR), mode="same")
