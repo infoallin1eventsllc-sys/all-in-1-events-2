@@ -3047,3 +3047,15 @@ them, and it lives in the edge functions. Adding policies would loosen it.
 - Higgsfield saves HEVC (Main 10). Chrome and Firefox often cannot play it, so re-encode to H.264 before any clip goes on the site. The sandbox cannot reach Higgsfield's CDN; Otis has to attach the file.
 - Branch `preview/backdrop-samples` on the website repo (never merge). Self-hosted clips in `public/backdrop-samples/`, switch for Current / Video 2 / Video 2 polished. Polished = navy grade, highlights held back, glow, forward-then-backward 10 s loop; on wide screens it sits behind the demo cards so no line crosses the headline. Hotlinking the CDN by widening the CSP was refused by the permission check; do not retry that.
 - Preview: https://meridian-interfac-git-0cccd5-infoallin1eventsllc-7684s-projects.vercel.app (READY at e491d64).
+
+## 7 Oct 2026 (later): debug pass, Drone Command Start show, every button on desktop and phone
+
+Website commit 9aaac0d on main.
+
+- **Drone Command Start show "did not work":** it was disabled until Arm fleet was pressed, the reason only in a hover tooltip (invisible on a phone). Now one press arms (all gates pass) and starts; a hold reason prints on screen. Drone source lives on `claude/ecstatic-turing-1k9bjs` (another session's branch, not pushed to); the fix is `system/patches/drone-start-show-arms-and-starts.patch` against e8beb6b, which was confirmed to build byte-identical to the hosted bundle. Apply it there before the next drone rebuild or the fix is lost.
+- QA skill now presses Start show on a phone and requires the show to run (`PRIMARY` in browser.mjs).
+- Button sweep (fresh page per button, 1440 and 390px, every page and demo) found: Fog City Share threw on a blocked clipboard and claimed "copied"; Stack Planner x4 and CRM x3 copy buttons the same; ORCHESTRA Download Report alerted "generated" with no file; CarePulse "Connecting live VOIP link". All fixed.
+- Phone layout: CRM Quick Capture card (h-full) overflowed and the Ops Log covered Register Event and workspace links; CarePulse header ran off a 390px screen; Stack Planner title ran under its buttons (phone) and spilled under the bar (820px); Frame Shop tabs, CRM header controls and Drone toolbar ran off 320px. All fixed. Built-bundle edits logged in public/demos/README.txt.
+- npm audit fix (source-map-js high, proxy-addr critical) in six folders; demos rebuild byte-identical.
+- QA: static 0 FAIL (7 known WARN: xlsx x2, ORCHESTRA orphan + 4 images, honest-demo confirmations, AI badges), browser 0 FAIL / 0 WARN.
+- Backdrop samples: preview branch `preview/backdrop-samples` now offers Current / Video 2 (polished) / Globe; live site unchanged.
