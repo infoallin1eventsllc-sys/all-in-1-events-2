@@ -59,7 +59,10 @@ const cues = {
   voice_frames: [S.D, S.end + 2],
 };
 writeFileSync(`${TMP}/cues.json`, JSON.stringify(cues, null, 1));
-execFileSync("python3", ["film/audio.py", FF, TMP, `${TMP}/cues.json`], { stdio: "inherit" });
+// The score: the warm piano bed (film/music/warm-piano.mp3, chosen by the client from three).
+// MUSIC=<file> tries another bed; MUSIC= (empty) falls back to the synthesized chords.
+const MUSIC = process.env.MUSIC ?? "film/music/warm-piano.mp3";
+execFileSync("python3", ["film/audio.py", FF, TMP, `${TMP}/cues.json`], { stdio: "inherit", env: { ...process.env, MUSIC } });
 
 // Captions for the guide's words (SRT, burned in).
 const LINES = [

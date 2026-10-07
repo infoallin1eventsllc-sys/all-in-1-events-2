@@ -73,7 +73,7 @@ The Linden House site (`site/residence/`) scrubs the hologram engine as you scro
 
 ## Music beds
 
-`film/music/` holds alternative instrumental scores (ElevenLabs Music, 80 s each), confirmed to have no vocals:
+`film/music/` holds three instrumental scores (ElevenLabs Music, 80 s each), confirmed to have no vocals. The film's score is `warm-piano.mp3`, chosen by the client: `assemble:film` uses it by default (`MUSIC=<file>` tries another, `MUSIC=` falls back to the synthesized chords).
 
 | File | Character |
 | --- | --- |

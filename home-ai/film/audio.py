@@ -63,7 +63,7 @@ for idx, (start, freqs) in enumerate(CHORDS):
 # A real music bed (MUSIC=path) replaces the synthesized chords: trimmed or looped to the film,
 # with a short fade at each end, then shaped by the same level envelope and ducked under the voice.
 import os
-MUSIC = os.environ.get("MUSIC")
+MUSIC = os.environ.get("MUSIC") or None
 if MUSIC:
     raw_m = subprocess.run([FF, "-v", "error", "-i", MUSIC, "-f", "f32le", "-ac", "2", "-ar", str(SR), "-"], capture_output=True, check=True).stdout
     m = np.frombuffer(raw_m, dtype=np.float32).reshape(-1, 2).astype(np.float64)
