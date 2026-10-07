@@ -1,0 +1,41 @@
+name: Fetch media into the repo
+
+# Downloads a media file from a URL (for example a finished render in the
+# agency's Higgsfield library) and commits it to the branch the workflow runs
+# on. Used when a cloud session cannot reach the media host itself.
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "HTTPS URL of the file to fetch"
+        required: true
+        type: string
+      dest:
+        description: "Path inside the repository to write it to"
+        required: true
+        type: string
+        default: marketing/film/higgsfield/master.mp4
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+      - name: Download
+        run: |
+          mkdir -p "$(dirname "${{ inputs.dest }}")"
+          curl -fsSL --retry 3 -o "${{ inputs.dest }}" "${{ inputs.url }}"
+          ls -la "${{ inputs.dest }}"
+          file "${{ inputs.dest }}"
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "${{ inputs.dest }}"
+          git commit -m "Fetch ${{ inputs.dest }} from its media host" || echo "nothing to commit"
+          git push
