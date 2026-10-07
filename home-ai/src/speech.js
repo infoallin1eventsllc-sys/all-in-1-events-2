@@ -8,9 +8,9 @@
 // Only the words Haven is about to say are sent to ElevenLabs.
 const API = "https://api.elevenlabs.io/v1/text-to-speech";
 
-// "River" (ElevenLabs built-in voice): relaxed, neutral, American. Built-in
-// voices work on every ElevenLabs plan. Change it with HAVEN_VOICE_ID.
-export const DEFAULT_VOICE = "SAz9YHcvj6GT2YYXdXww";
+// "Lily D" (ElevenLabs library voice): clear, calm, warm and unhurried; the guide's voice in the
+// film. Change it with HAVEN_VOICE_ID (a sample of the old "River" default is in docs/voice/).
+export const DEFAULT_VOICE = "LtYRTlMfWU5Q6Me90AIR";
 const MAX_CHARS = 1000;
 const CACHE_SIZE = 40;
 

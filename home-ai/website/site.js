@@ -21,7 +21,7 @@
     if (!fullFilm) return;
     fullFilm = false; film.innerHTML = HERO_SOURCES; film.load();
     film.muted = true; film.loop = true; film.controls = false;
-    $("#film-note").textContent = "Playing a short cut of the film. The full film is 1:32, with the guide\u2019s voice.";
+    $("#film-note").textContent = "Playing a short cut of the film. The full film is 1:36, with the guide\u2019s voice.";
     if (!reduce) film.play().catch(() => setPaused(true)); else setPaused(true);
   });
   setPaused(true);
@@ -33,7 +33,7 @@
       fullFilm = true;
       film.innerHTML = '<source src="meridian-film.mp4" type="video/mp4"><source src="meridian-film.webm" type="video/webm">';
       film.load();
-      $("#film-note").textContent = "The full film, 1:32.";
+      $("#film-note").textContent = "The full film, 1:36.";
     }
     film.muted = false; film.loop = false; film.controls = true; film.currentTime = 0;
     film.play().catch(() => setPaused(true));

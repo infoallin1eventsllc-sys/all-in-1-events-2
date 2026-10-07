@@ -3,17 +3,22 @@
 //   dist/film/meridian-film-hero.mp4 / .webm           the landing page's short cut: from HERO_FROM
 //                                                     (the walls rising) to the end, with a fade in
 // FFMPEG=/path/to/ffmpeg if it isn't on PATH.
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 
 // The short cut runs from the walls rising to the pull-back, and stops before the end card, so
 // its words never sit under the page's own headline while it loops.
-const FF = process.env.FFMPEG || "ffmpeg", IN = "dist/film/meridian-film-merged.mp4", HERO_FROM = 24.0, HERO_TO = 85.6;
+const FF = process.env.FFMPEG || "ffmpeg", IN = "dist/film/meridian-film-merged.mp4", HERO_FROM = 24.0;
 if (!existsSync(IN)) throw new Error(`${IN} missing: run npm run assemble:film first`);
 const run = (args) => execFileSync(FF, ["-v", "error", "-y", ...args], { stdio: "inherit" });
+// The film's length, from the file itself; the end card is its last 6 s (assemble-film's "end" piece).
+const probe = spawnSync(FF, ["-i", IN], { encoding: "utf8" }).stderr.match(/Duration: (\d+):(\d+):([\d.]+)/);
+if (!probe) throw new Error(`${IN}: can't read its duration`);
+const FULL = (+probe[1]) * 3600 + (+probe[2]) * 60 + (+probe[3]), HERO_TO = FULL - 6.3;
 // Every file stays under 15 MB (the host's limit per file): the video bitrate is capped by length.
 const cap = (seconds, audioK) => `${Math.floor((14.2 * 8192 / seconds) - audioK)}k`; // kbit/s of video for ~14.2 MB
-const FULL = 92, HERO = HERO_TO - HERO_FROM;
+const HERO = HERO_TO - HERO_FROM;
+console.log(`film ${FULL.toFixed(1)}s, short cut ${HERO_FROM}-${HERO_TO.toFixed(1)}s`);
 const mp4 = (kb) => ["-c:v", "libx264", "-preset", "slow", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-b:v", kb, "-maxrate", kb, "-bufsize", "2M", "-c:a", "aac", "-b:a", "128k"];
 const webm = (kb) => ["-c:v", "libvpx-vp9", "-b:v", kb, "-maxrate", kb, "-row-mt", "1", "-deadline", "good", "-cpu-used", "3", "-c:a", "libopus", "-b:a", "96k"];
 run(["-i", IN, ...mp4(cap(FULL, 128)), "dist/film/meridian-film-merged-share.mp4"]);

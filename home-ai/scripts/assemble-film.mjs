@@ -24,8 +24,8 @@ const PIECES = [
   { id: "C", src: clip("C-becomes-real"), ss: 0, t: 10.0 },
   { id: "D", src: clip("D-welcome"), ss: 0, t: 10.0 },
   { id: "E", src: clip("E-walkthrough"), ss: 0, t: 10.0 },
-  { id: "F", src: clip("F-panel"), ss: 0, t: 10.0, speed: 1.25 },
-  { id: "tail", src: clip("B-real"), ss: 7.0, t: 3.04 },
+  { id: "F", src: clip("F-panel"), ss: 0, t: 10.0, speed: 1.5 }, // slowed so the panel passage fits under it
+  { id: "tail", src: clip("B-real"), ss: 5.5, t: 4.5 },
   { id: "end", src: partial ? END : FULL, ss: partial ? 0 : 86.0, t: 6.0 },
 ];
 // Normalize each piece: same size, rate and pixel format, no audio.
@@ -45,26 +45,27 @@ console.log("timeline:", PIECES.map((p) => `${p.id}@${p.start.toFixed(1)}`).join
 // The soundtrack on this timeline.
 const cues = {
   duration: DUR,
-  segments: [[0.0, 2.3, S.D + 5.3], [3.0, 8.4, S.E + 0.8], [8.5, 20.6, S.F + 0.3], [20.6, 25.87, S.tail - 0.2]],
+  // The take (film/guide-voice.mp3): the four passages sit at 0, 3.0, 11.0 and 28.0 s.
+  segments: [[0.0, 1.6, S.D + 5.3], [3.0, 9.6, S.E + 0.8], [11.0, 26.6, S.F + 0.3], [28.0, 33.6, S.tail + 0.6]],
   chords: [0, 13, 24, 33, S.C, S.E, S.F, S.end],
   level: [[0, 0], [4, 0.7], [13, 0.8], [24, 1.0], [33, 0.8], [S.C, 0.9], [S.D, 0.6], [S.tail, 0.7], [S.end + 0.5, 1.15], [S.end + 3, 1.0], [DUR, 0]],
   bells: [5.4, 13.4, 24.4, 33.4, S.C + 0.4],
   swells: [[22.4, 26.2], [S.C - 0.6, S.C + 3.2], [S.tail - 1.2, S.tail + 1.6]],
   door: S.D + 4.6, lock: S.D + 5.4, tap: null, end: S.end + 0.2,
-  voice_frames: [S.D, S.end],
+  voice_frames: [S.D, S.end + 2],
 };
 writeFileSync(`${TMP}/cues.json`, JSON.stringify(cues, null, 1));
 execFileSync("python3", ["film/audio.py", FF, TMP, `${TMP}/cues.json`], { stdio: "inherit" });
 
 // Captions for the guide's words (SRT, burned in).
 const LINES = [
-  [S.D + 5.2, S.D + 6.4, "Welcome home."], [S.D + 6.7, S.D + 7.7, "Come on in."],
-  [S.E + 0.9, S.E + 3.2, "I was here from the first line of the sketch."], [S.E + 3.4, S.E + 6.2, "I know every wall, every window, every pipe."],
-  [S.F + 0.4, S.F + 1.7, "This is where we’ll talk."], [S.F + 2.0, S.F + 5.9, "I watch the doors, the water, the heat and the air, day and night."],
-  [S.F + 6.3, S.F + 8.7, "If something’s wrong, I’ll tell you right away."], [S.F + 9.0, S.F + 12.3, "And I’ll never unlock a door or open the garage unless you say so."],
-  [S.tail - 0.1, S.tail + 1.5, "You’re not just living in a house."], [S.tail + 1.6, S.tail + 3.9, "You’re living with something that looks out for you."], [S.tail + 4.1, S.tail + 5.2, "Welcome home."],
+  [S.D + 5.3, S.D + 5.95, "Welcome home."], [S.D + 6.1, S.D + 6.7, "Come on in."],
+  [S.E + 0.8, S.E + 2.9, "I was here from the first line of the sketch."], [S.E + 3.5, S.E + 6.8, "I know every wall, every window, every pipe."],
+  [S.F + 0.3, S.F + 1.25, "This is where we’ll talk."], [S.F + 1.85, S.F + 7.5, "I watch the doors, the water, the heat and the air, day and night."],
+  [S.F + 8.2, S.F + 10.4, "If something’s wrong, I’ll tell you right away."], [S.F + 11.2, S.F + 15.45, "And I’ll never unlock a door or open the garage unless you say so."],
+  [S.tail + 0.6, S.tail + 2.1, "You’re not just living in a house."], [S.tail + 2.1, S.tail + 3.9, "You’re living with something that looks out for you."], [S.tail + 5.1, S.tail + 5.7, "Welcome home."],
 ];
-const ts = (x) => { const h = Math.floor(x / 3600), m = Math.floor((x % 3600) / 60), s = Math.floor(x % 60), ms = Math.round((x % 1) * 1000); return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")},${String(ms).padStart(3, "0")}`; };
+const ts = (x) => { const t = Math.round(x * 1000), h = Math.floor(t / 3600000), m = Math.floor((t % 3600000) / 60000), s = Math.floor((t % 60000) / 1000), ms = t % 1000; return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")},${String(ms).padStart(3, "0")}`; };
 writeFileSync(`${TMP}/captions.srt`, LINES.map(([a, b, text], i) => `${i + 1}\n${ts(a)} --> ${ts(b)}\n${text}\n`).join("\n"));
 
 // Crossfade the pieces, burn the captions, add the soundtrack.

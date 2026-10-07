@@ -44,7 +44,7 @@ Refusal fallbacks are enabled (`fallbacks: "default"`): if the model declines a 
 
 ## Give Haven a natural voice
 
-Set `ELEVENLABS_API_KEY` in `.env` and every panel speaks with an ElevenLabs voice instead of the browser's built-in one ("River" by default; change it with `HAVEN_VOICE_ID`). The key stays on the home server; panels get audio from `/api/speech`. If ElevenLabs is unreachable or out of credits, panels fall back to the browser's voice. Samples: `docs/voice/`.
+Set `ELEVENLABS_API_KEY` in `.env` and every panel speaks with an ElevenLabs voice instead of the browser's built-in one ("Lily D" by default, the guide's voice in the film; change it with `HAVEN_VOICE_ID`). The key stays on the home server; panels get audio from `/api/speech`. If ElevenLabs is unreachable or out of credits, panels fall back to the browser's voice. Samples: `docs/voice/`.
 
 ## Weather
 

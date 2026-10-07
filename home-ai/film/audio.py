@@ -1,4 +1,5 @@
-"""The film's soundtrack: the guide's voice (ElevenLabs "River", film/guide-voice.mp3)
+"""The film's soundtrack: the guide's voice (ElevenLabs "Lily D", film/guide-voice.mp3: four
+passages at 0, 3.0, 11.0 and 28.0 s)
 placed on its cues, over a quiet synthesized score and a few effects (the door
 chime, the lock, the panel tap). Also writes the voice's loudness per frame, so
 the guide glows with its own voice.
@@ -23,7 +24,7 @@ raw = subprocess.run([FF, "-v", "error", "-i", "film/guide-voice.mp3", "-f", "f3
 src = np.frombuffer(raw, dtype=np.float32)
 
 # (start, end) in the take -> where it goes in the film
-SEGMENTS = [tuple(x) for x in CUES.get("segments", [(0.0, 2.3, 51.0), (3.0, 8.4, 56.0), (8.5, 20.6, 63.2), (20.6, 25.87, 76.2)])]
+SEGMENTS = [tuple(x) for x in CUES.get("segments", [(0.0, 1.6, 51.0), (3.0, 9.6, 56.0), (11.0, 26.6, 63.2), (28.0, 33.6, 79.4)])]
 voice = np.zeros(N, dtype=np.float64)
 for a, b, at in SEGMENTS:
     seg = src[int(a * SR):int(b * SR)].astype(np.float64)
@@ -105,9 +106,9 @@ with wave.open(f"{OUT}/film-audio.wav", "wb") as wf:
     wf.setnchannels(2); wf.setsampwidth(2); wf.setframerate(SR)
     wf.writeframes((np.stack([L, R], axis=1) * 32767).astype(np.int16).tobytes())
 
-# The voice's loudness per frame from 51 s, 0..1.
+# The voice's loudness per frame over the guide's scenes, 0..1.
 frames = []
-vf0, vf1 = CUES.get("voice_frames", (51, 82))
+vf0, vf1 = CUES.get("voice_frames", (51, 86))
 for k in range(int((vf1 - vf0) * FPS)):
     a = int((vf0 + k / FPS) * SR); b = a + SR // FPS
     frames.append(float(np.sqrt(np.mean(voice[a:b] ** 2))))

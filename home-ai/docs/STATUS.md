@@ -25,7 +25,7 @@ _Last updated: September 27, 2026 (debug pass after the any-home hologram). Bran
 - **The browser run is slow** (about 15 minutes per target) because WebGL runs in software here.
 
 ## Added September 27: the Meridian Interface film
-"The future, in your hands" (`film/`, film/README.md) is a 1:32 film in which an AI sketches a home as a hologram and builds it through to paint, floors, furniture and lights. It then becomes a holographic guide who welcomes the client in, walks them through the house and explains the control panel. It is a hologram from start to finish (a solid, textured version of the house was tried on September 28 and dropped: it read as a cartoon), with the house laid out by `web/building.js` and the guide voiced by ElevenLabs "River". `npm run build:film` makes the page; `npm run render:film` makes the MP4. The photoreal version is written up as ten shot prompts in film/README.md, blocked on a paid video plan (ElevenLabs video needs one; Higgsfield has 0.6 credits).
+"The future, in your hands" (`film/`, film/README.md) is a 1:32 film in which an AI sketches a home as a hologram and builds it through to paint, floors, furniture and lights. It then becomes a holographic guide who welcomes the client in, walks them through the house and explains the control panel. It is a hologram from start to finish (a solid, textured version of the house was tried on September 28 and dropped: it read as a cartoon), with the house laid out by `web/building.js` and the guide voiced by ElevenLabs "Lily D" (clear, calm, warm; chosen October 7). `npm run build:film` makes the page; `npm run render:film` makes the MP4. The photoreal version is written up as ten shot prompts in film/README.md, blocked on a paid video plan (ElevenLabs video needs one; Higgsfield has 0.6 credits).
 
 ## Debug pass, September 27
 A code review of the hologram and any-home code, plus a sweep of every screen in every finish at wall-panel and phone width with five home styles (no script errors, no sideways scrolling, the hologram ready everywhere). Fixed:
@@ -103,7 +103,7 @@ Haven is being pitched to homebuilders as a standard feature in new construction
 - **Wallpaper screen** (7th in the library), modeled on the photo-backed dashboard reference: the home's photo behind frosted tiles, a weather card, indoor temperature and humidity, electricity with a live line, climate, fans, water heater, every light with an icon switch and pill dimmer, doors & water, scenes, updates. The photo follows the time of day; a homeowner can use their own photo (kept on that panel).
 - **Photos** made with the ElevenLabs connector (GPT Image 2): evening, then morning and day as edits of it (same house, same camera). The free plan's daily image limit blocked the fourth, so **night is a color grade of the evening photo**. Prompts are in DESIGN.md to regenerate them or to redo them from the client's house.
 - **Weather** (`src/weather.js`): Home Assistant weather entity or Open-Meteo (free, no key) once the home's latitude and longitude are in config/home.json. Used by the Wallpaper screen, screen headers, the conversation agent, the offline parser ("is it going to rain today?") and briefings. Without a source, everything says weather isn't connected. The demo shows sample weather, labeled.
-- **ElevenLabs voice** (`src/speech.js`): with `ELEVENLABS_API_KEY` on the home server, Haven speaks with a natural voice ("River" by default) on every panel; any failure falls back to the browser voice. Samples in `docs/voice/` (River and Eric).
+- **ElevenLabs voice** (`src/speech.js`): with `ELEVENLABS_API_KEY` on the home server, Haven speaks with a natural voice ("Lily D" by default, the guide's voice in the film) on every panel; any failure falls back to the browser voice. Samples in `docs/voice/` (Lily, and the earlier River and Eric).
 
 ## Fixed in the debug pass
 1. **Demo safety bypass:** the demo shared live device objects with the screen, so the new +/− buttons could push the water heater to 130°F past its 125°F limit. The demo now copies data both ways, like a real network.
@@ -132,7 +132,7 @@ Haven is being pitched to homebuilders as a standard feature in new construction
 The full enterprise roadmap is in [ENTERPRISE-PLAN.md](ENTERPRISE-PLAN.md). The immediate steps:
 
 1. Live Claude test with an API key: chat, "Review my day", and a briefing. Add the home's location for weather and an ElevenLabs key for the voice at the same time.
-2. Pick Haven's voice (River or Eric in `docs/voice/`, or any ElevenLabs voice) and, when the image limit resets, regenerate the night wallpaper (or all four from a photo of the client's house).
+2. If Lily D isn't the final voice, pick another (`docs/voice/`, or any ElevenLabs voice) and, when the image limit resets, regenerate the night wallpaper (or all four from a photo of the client's house).
 3. Try voice on a real tablet or phone over HTTPS.
 4. Choose the demo direction with the client (A or B), then a full room set in that style.
 5. Move `home-ai/` into its own repository. This repo auto-deploys the All in 1 Events site to Netlify, which would publish these files under that site.

@@ -15,11 +15,11 @@ const smooth = (a, b, x) => { const k = clamp01((x - a) / (b - a)); return k * k
 
 // The guide's words, timed to the voice track (seconds in the film).
 const CAPTIONS = [
-  [50.9, 52.0, "Welcome home."], [52.4, 53.4, "Come on in."],
-  [56.1, 58.35, "I was here from the first line of the sketch."], [58.6, 61.4, "I know every wall, every window, every pipe."],
-  [63.3, 64.55, "This is where we’ll talk."], [64.95, 68.85, "I watch the doors, the water, the heat and the air, day and night."],
-  [69.25, 71.65, "If something’s wrong, I’ll tell you right away."], [71.9, 75.2, "And I’ll never unlock a door or open the garage unless you say so."],
-  [76.3, 77.85, "You’re not just living in a house."], [78.0, 80.2, "You’re living with something that looks out for you."], [80.4, 81.5, "Welcome home."],
+  [51.0, 51.65, "Welcome home."], [51.8, 52.4, "Come on in."],
+  [56.0, 58.1, "I was here from the first line of the sketch."], [58.7, 62.0, "I know every wall, every window, every pipe."],
+  [63.2, 64.15, "This is where we’ll talk."], [64.75, 70.4, "I watch the doors, the water, the heat and the air, day and night."],
+  [71.1, 73.3, "If something’s wrong, I’ll tell you right away."], [74.1, 78.35, "And I’ll never unlock a door or open the garage unless you say so."],
+  [79.4, 80.9, "You’re not just living in a house."], [80.9, 82.7, "You’re living with something that looks out for you."], [83.9, 84.5, "Welcome home."],
 ];
 const CHAPTERS = [[5.4, 9.2, "01", "Design"], [13.4, 17.2, "02", "Structure"], [24.4, 28.2, "03", "Detail"], [33.4, 37.2, "04", "Furnish"], [44.4, 48.2, "05", "Welcome home"]];
 const bump = (t, c, w) => clamp01(1 - Math.abs(t - c) / w);

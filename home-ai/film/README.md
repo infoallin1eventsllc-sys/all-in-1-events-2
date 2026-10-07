@@ -20,7 +20,7 @@ Both need ffmpeg on PATH (or `FFMPEG=/path/to/ffmpeg`). The soundtrack also need
 - `film.js`: the whole film as a function of time. Its header lists every scene and when it happens.
 - `main.js` and `index.html`: the player page and its overlays (room labels, chapter marks, the guide's words, title and end cards).
 - `audio.py`: the soundtrack. It places the guide's voice on its cues over a synthesized score and adds the door chime, the lock and the panel tap. It also writes the voice's loudness per frame, so the guide glows with its own voice.
-- `guide-voice.mp3`: the guide's lines, spoken by the ElevenLabs "River" voice (one of the two voices proposed for Haven, `docs/voice/`).
+- `guide-voice.mp3`: the guide's lines, spoken by the ElevenLabs "Lily D" voice (clear, calm, warm; also Haven's default on the panel). Four passages at 0, 3.0, 11.0 and 28.0 s of the take; `docs/voice/haven-voice-lily.mp3` is the same take.
 
 ## The script
 | Time | Scene |

@@ -49,7 +49,7 @@ Republish after `npm run build:demo` by passing the Artifact URL:
 - Futuristic: https://claude.ai/artifact/NHSYrvBSADDcedguH3CBSm (`dist/demo/haven-futuristic.html`)
 - Grounded: https://claude.ai/artifact/J46Rus2S3KzY9CpbpYKyCk (`dist/demo/haven-grounded.html`)
 - Vivid: https://claude.ai/artifact/9SmqdXDppENdd3uGKZyWiV (`dist/demo/haven-vivid.html`)
-- The film: https://claude.ai/artifact/Md8dJzhNvV6ZM5Wbb39Mhu (`dist/film/meridian-film.artifact.html`, after `npm run build:film`)
+- The film (1:36; the guide is ElevenLabs "Lily D", `film/guide-voice.mp3`, also the panel's default voice): https://claude.ai/artifact/Md8dJzhNvV6ZM5Wbb39Mhu (`dist/film/meridian-film.artifact.html`, after `npm run build:film`)
 - Meridian Interface scroll site: https://claude.ai/artifact/Fv4i2cKycgoSzHW46MRuru (`dist/site/meridian.artifact.html`, after `npm run build:sites`)
 - Linden House property-site template: https://claude.ai/artifact/HaLXwEUshczLYYctJR5gxW (`dist/site/residence.artifact.html`)
 - The website (one page, the film as the landing page; for clients): https://claude.ai/artifact/DSiDLzQfDefZV6gTP78e3e (`dist/website/index.html` with `root: dist/website` and every other file in it as `files`)
