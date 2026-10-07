@@ -8,6 +8,7 @@ import cv2, numpy as np, json, sys, os
 D, SHOTS, OUT = sys.argv[1:4]
 ONLY = {int(x) for x in sys.argv[4:]}
 N = 193
+SS = 2          # supersampling factor for the screens
 TR = json.load(open(f'{D}/track2.json'))
 F = json.load(open(f'{D}/faces.json'))
 ORDER = ['drone', 'carepulse', 'frameshop', 'bigboy', 'fogcity', 'finsight', 'crm', 'planner', 'analytics', 'modernstreet']
@@ -29,7 +30,7 @@ def rounded(w, h, rad, grow=0.0):
 SZ = {k: (F[k]['w'], F[k]['h']) for k in 'ABC'}
 tabs = {n: cover(cv2.imread(f'{SHOTS}/tablet-{n}.png'), *SZ['A']) for n in ORDER}
 phones = {n: cover(cv2.imread(f'{SHOTS}/phone-{n}.png'), *SZ['B']) for n in ORDER}
-site = cover(cv2.imread(f'{SHOTS}/site.png'), *SZ['C'])
+site = cover(cv2.imread(f'{SHOTS}/{F.get("_site", "site")}.png'), *SZ['C'])
 FACE = {k: rounded(*SZ[k], F[k]['r'] * SZ[k][0])[0] for k in 'ABC'}
 # keep the screen a hair inside the rim, so the aluminium edge is never painted over
 FACE = {k: cv2.erode(m, np.ones((2 * int(F['_inset'] * SZ[k][0]) + 1,) * 2, np.uint8)) for k, m in FACE.items()}
@@ -64,10 +65,14 @@ for n, i in enumerate(seq):
     Hh, Ww = orig.shape[:2]
     pics = {'A': screen(tabs, n, 0), 'B': screen(phones, n, 5), 'C': site}
     face, sil = {}, {}
+    UP = np.diag([SS, SS, 1.0])
     for k in 'ABC':
         t = TR[k][str(i)]; w, h = SZ[k]
         H = cv2.getPerspectiveTransform(np.float32([[0, 0], [w, 0], [w, h], [0, h]]), np.float32(t['q']))
-        face[k] = (cv2.warpPerspective(pics[k], H, (Ww, Hh)).astype(np.float32),
+        # the screen is drawn at SS times the frame size and shrunk with area averaging,
+        # so small text lands crisp instead of shimmering
+        big = cv2.warpPerspective(pics[k], UP @ H, (Ww * SS, Hh * SS), flags=cv2.INTER_LINEAR)
+        face[k] = (cv2.resize(big, (Ww, Hh), interpolation=cv2.INTER_AREA).astype(np.float32),
                    cv2.warpPerspective(FACE[k], H, (Ww, Hh)).astype(np.float32) / 255 * t['v'],
                    cv2.warpPerspective(PRINTED[k], H, (Ww, Hh)).astype(np.float32))
         m, g = SIL[k]; Hs = H @ np.array([[1, 0, -g], [0, 1, -g], [0, 0, 1]], np.float64)

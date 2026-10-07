@@ -15,8 +15,9 @@ Rebuild (after the site or a demo changes):
 
 1. Serve the website build: `npx vite preview --port 4799` in meridian-interface-website.
 2. Capture: `node tools/capture.mjs http://localhost:4799 shots` (phone + tablet of
-   every demo). `shots/site.png` is a 1440x900 capture of the home page at 1.333x
-   with the demo bar hidden.
+   every demo) and `node tools/site-capture.mjs http://localhost:4799 shots` (the
+   home page at 1440x900, 1.333x, demo bar hidden; `site-poster.png` keeps the
+   hero's still frame and is the one `faces.json` names under `_site`).
 3. Extract the clip's frames (the source mp4 is in Otis's Higgsfield history,
    `hf_20261007_021215_3cdc7ab7`): `ffmpeg -i clip.mp4 -pix_fmt rgb24 full/%03d.png`
 4. `clip/track2.json` already holds the tracked pane corners for this clip, and
@@ -26,9 +27,11 @@ Rebuild (after the site or a demo changes):
 5. `python clip/still.py <dir>` builds each pane's printed-glass picture.
 6. Render: `python clip/composite.py <dir> shots out` (pass frame numbers to preview
    a few first; run several copies with different frame lists to use every core).
+   Screens are drawn at 2x and shrunk with area averaging so small text stays crisp;
+   `_glass` in faces.json is how much of the original glass shows through them.
 7. Encode:
-   `ffmpeg -framerate 24 -i out/%03d.png -c:v libx264 -preset veryslow -crf 24 -maxrate 1700k -bufsize 3400k -pix_fmt yuv420p -profile:v high -movflags +faststart -an hero-showcase.mp4`
-   `ffmpeg -framerate 24 -i out/%03d.png -c:v libvpx-vp9 -b:v 1100k -pass 1 -an -f null /dev/null` then `-pass 2 -row-mt 1 hero-showcase.webm`
+   `ffmpeg -framerate 24 -i out/%03d.png -c:v libx264 -preset veryslow -crf 22 -maxrate 2600k -bufsize 5200k -pix_fmt yuv420p -profile:v high -movflags +faststart -an hero-showcase.mp4`
+   `ffmpeg -framerate 24 -i out/%03d.png -c:v libvpx-vp9 -b:v 1700k -pass 1 -an -f null /dev/null` then `-pass 2 -row-mt 1 hero-showcase.webm`
    Poster: frame 149 as webp, quality 80.
 
 Needs Python with opencv-python-headless and numpy (OpenCV 5: the ECC mask
