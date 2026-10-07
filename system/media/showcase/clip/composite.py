@@ -43,11 +43,13 @@ PRINTED = {}
 for k in 'ABC':
     st = cv2.imread(f'{D}/still-{k}.png').astype(np.float32)
     d = np.clip(st - cv2.GaussianBlur(st, (0, 0), 6), 0, None)
-    bright = cv2.dilate((d.max(2) > 70).astype(np.uint8), np.ones((9, 9), np.uint8)) > 0   # threads, dots
+    bright = cv2.dilate((d.max(2) > 60).astype(np.uint8), np.ones((25, 25), np.uint8)) > 0   # threads, dots and their halos
     d[bright] = 0
     PRINTED[k] = d
 
 seq = list(range(1, N + 1)) + list(range(N - 1, 1, -1))   # 384 frames
+START = 149                                                # the loop opens on the poster frame
+seq = seq[START:] + seq[:START]
 T = len(seq); SLOT = T / 20; CUT = 5                        # 0.8 s a product, 5-frame cut
 def screen(pics, n, offset):
     s = n / SLOT; i = int(s); f = n - i * SLOT
@@ -93,6 +95,15 @@ for n, i in enumerate(seq):
     c3 = cov[..., None]
     # the original glass shows through a little, and everything bright that crosses it
     # (threads, their dots, the sheen) is laid back on top
-    hl = np.clip(orig - cv2.GaussianBlur(orig, (0, 0), 6) - 2.2 * printed, 0, None)
-    out = out * (1 - c3 * F['_glass']) + orig * c3 * F['_glass'] + hl * c3 * F['_lines']
+    # fine bright detail of the frame (threads, pulses, sheen), less the glass's own printed
+    # picture. The subtraction is done on brightness and the frame's colour is kept, so a
+    # white pulse stays white where the printed picture under it was blue.
+    hl = np.clip(orig - cv2.GaussianBlur(orig, (0, 0), 6), 0, None)
+    lum = hl.max(2, keepdims=True); plum = printed.max(2, keepdims=True)
+    # where the frame has such detail, the frame's own pixel comes back, with its own
+    # colour: a high-pass of a white pulse on a blue glow is orange, the pulse is not
+    back = np.clip((lum - 2.2 * plum) / 90.0, 0, 1)
+    out = out * (1 - c3 * F['_glass']) + orig * c3 * F['_glass']
+    a = c3 * back * F['_lines']
+    out = out * (1 - a) + orig * a
     cv2.imwrite(f'{OUT}/{n:03d}.png', np.clip(out, 0, 255).astype(np.uint8))

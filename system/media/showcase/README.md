@@ -23,7 +23,9 @@ Rebuild (after the site or a demo changes):
 4. `clip/track2.json` already holds the tracked pane corners for this clip, and
    `clip/faces.json` the face proportions, so steps 5 and 6 only run again if the
    clip itself changes: `python clip/track.py <dir>`, `python clip/post.py <dir>`,
-   `python clip/faces.py <dir>` (then set the corner radii by eye in faces.json).
+   `python clip/faces.py <dir>` (then set the corner radii by eye in faces.json), and
+   `python clip/edgeon.py <dir>` for the tablet pane's last 68 frames, where it turns
+   edge-on and the image tracker loses it: that one reads the face off the column profile.
 5. `python clip/still.py <dir>` builds each pane's printed-glass picture.
 6. Render: `python clip/composite.py <dir> shots out` (pass frame numbers to preview
    a few first; run several copies with different frame lists to use every core).
@@ -32,7 +34,7 @@ Rebuild (after the site or a demo changes):
 7. Encode:
    `ffmpeg -framerate 24 -i out/%03d.png -c:v libx264 -preset veryslow -crf 22 -maxrate 2600k -bufsize 5200k -pix_fmt yuv420p -profile:v high -movflags +faststart -an hero-showcase.mp4`
    `ffmpeg -framerate 24 -i out/%03d.png -c:v libvpx-vp9 -b:v 1700k -pass 1 -an -f null /dev/null` then `-pass 2 -row-mt 1 hero-showcase.webm`
-   Poster: frame 149 as webp, quality 80.
+   The loop is rotated to open on source frame 149, which is also the poster (frame 000 of the output), so the still and the first video frame agree.
 
 Needs Python with opencv-python-headless and numpy (OpenCV 5: the ECC mask
 marks the target image). The earlier three.js rebuild (scene.html, tools/render.mjs,
