@@ -36,14 +36,14 @@ copyFileSync(need("dist/film/meridian-film-hero.mp4"), `${OUT}/meridian-film-her
 copyFileSync(need("dist/film/meridian-film-hero.webm"), `${OUT}/meridian-film-hero.webm`);
 copyFileSync(need("docs/poster.jpg"), `${OUT}/poster.jpg`);
 copyFileSync(need("film/refs/dusk.jpg"), `${OUT}/build.jpg`);
-copyFileSync(need("dist/site/stills/living-after.jpg"), `${OUT}/linden.jpg`);
+copyFileSync(need("film/refs/golden-hour.jpg"), `${OUT}/linden.jpg`);
 const shots = readdirSync(need("dist/catalog/shots")).filter((f) => f.endsWith(".jpg"));
 if (shots.length !== 32) throw new Error(`expected 32 screen pictures, found ${shots.length}`);
 for (const f of shots) copyFileSync(`dist/catalog/shots/${f}`, `${OUT}/shots/${f}`);
 
 for (const finish of ["grounded", "futuristic", "vivid"]) writeFileSync(`${OUT}/panel-${finish}.html`, page(`dist/demo/haven-${finish}.html`));
 
-// The walk-through, focused for the website: the build and the rooms before and after. Its
+// The walk-through, focused for the website: the build itself. Its
 // Haven, safety and builders sections repeat the home page, so they give way to one way back.
 {
   let html = page("dist/site/meridian.html");
@@ -58,16 +58,22 @@ for (const finish of ["grounded", "futuristic", "vivid"]) writeFileSync(`${OUT}/
     </div>
   </section>
 ` + html.slice(to);
-  html = swap(html, '<nav aria-label="Sections"><a href="#compare">Rooms</a><a href="#haven">Haven</a><a href="#builders">For builders</a></nav>',
-    '<nav aria-label="Sections"><a href="#compare">Rooms</a><a href="index.html">Back to the website</a></nav>', "meridian.html nav");
-  html = swap(html, "<p>Keep scrolling to see what Haven does.</p>", "<p>Keep scrolling to see every room, before and after.</p>", "meridian.html last chapter");
-  html = swap(html, '<nav aria-label="Footer"><a href="#compare">Rooms, before and after</a><a href="#haven">What Haven does</a><a href="#builders">For builders</a></nav>',
+  html = swap(html, '<nav aria-label="Sections"><a href="#haven">Haven</a><a href="#builders">For builders</a></nav>',
+    '<nav aria-label="Sections"><a href="index.html">Back to the website</a></nav>', "meridian.html nav");
+  html = swap(html, "<p>Keep scrolling to see what Haven does.</p>", "<p>That is the whole build. Below, where it leads.</p>", "meridian.html last chapter");
+  html = swap(html, '<nav aria-label="Footer"><a href="#haven">What Haven does</a><a href="#builders">For builders</a></nav>',
     '<nav aria-label="Footer"><a href="index.html">Meridian Interface</a><a href="index.html#screens">Screens</a><a href="index.html#contact">Book a walkthrough</a></nav>', "meridian.html footer");
   writeFileSync(`${OUT}/meridian.html`, html);
 }
 // Linden House: the footer's company name links home.
-writeFileSync(`${OUT}/residence.html`, swap(page("dist/site/residence.html"),
-  "<span>&copy; 2026 Meridian Interface</span>", '<span>&copy; 2026 <a href="index.html">Meridian Interface</a></span>', "residence.html"));
+{
+  let html = swap(page("dist/site/residence.html"),
+    "<span>&copy; 2026 Meridian Interface</span>", '<span>&copy; 2026 <a href="index.html">Meridian Interface</a></span>', "residence.html footer");
+  // A way back to the website in the header, on every screen size.
+  html = swap(html, '<div class="lead"><a class="mark" href="#top">Linden House</a></div>',
+    '<div class="lead"><a class="back" href="index.html">Meridian Interface</a><a class="mark" href="#top">Linden House</a></div>', "residence.html header");
+  writeFileSync(`${OUT}/residence.html`, html);
+}
 // The guided tour: its brand links home.
 writeFileSync(`${OUT}/tour.html`, swap(page("showroom/index.html"),
   '<div class="brand">Meridian Interface<small>Haven, the home that looks out for you</small></div>',

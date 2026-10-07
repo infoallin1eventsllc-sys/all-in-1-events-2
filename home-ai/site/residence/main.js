@@ -1,7 +1,6 @@
 // Linden House: a property-site template. Scrolling walks through the house
 // (film/film.js); the facts and floor plans come from the same plan.
 import { scrollFilm } from "../scrollfilm.js";
-import { setupCompare } from "../compare.js";
 import { HOME } from "../../film/film.js";
 
 const $ = (s) => document.querySelector(s);
@@ -91,13 +90,10 @@ scrollFilm({ canvas: $("#canvas"), track: $("#track"), segments: SEGMENTS, onFra
   .then(() => { $("#loading").hidden = true; })
   .catch((err) => { $("#loading").textContent = "This page needs WebGL to show the house."; console.error(err); });
 
-setupCompare(document.querySelector("#rooms"));
 
 // The header takes the tone of whatever is under it: light text over the film and the green
 // section, dark text over the pale ones.
 const top = $(".top");
-// The rooms section is pale around its heading but dark once the sticky panes fill the view.
-$("#rooms .compare-track").setAttribute("data-tone", "dark");
 const io = new IntersectionObserver((entries) => {
   for (const e of entries) if (e.isIntersecting) top.dataset.tone = e.target.dataset.tone;
 }, { rootMargin: "-1px 0px -97% 0px" });

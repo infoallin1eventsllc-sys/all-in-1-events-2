@@ -16,7 +16,7 @@
     "build:vendor": "node scripts/build-vendor.mjs",
     "build:film": "node scripts/build-film.mjs",
     "render:film": "node scripts/render-film.mjs",
-    "build:sites": "node scripts/room-stills.mjs && node scripts/build-sites.mjs",
+    "build:sites": "node scripts/build-sites.mjs",
     "assemble:film": "node scripts/assemble-film.mjs",
     "build:showroom": "node scripts/build-showroom.mjs",
     "build:website": "node scripts/build-website.mjs",

@@ -1,7 +1,6 @@
 // Meridian Interface: scrolling builds the home (film/film.js), and each
 // chapter's drawing sheet fades in over its stretch of the scroll.
 import { scrollFilm } from "../scrollfilm.js";
-import { setupCompare } from "../compare.js";
 
 const $ = (s) => document.querySelector(s);
 const clamp01 = (x) => Math.min(1, Math.max(0, x));
@@ -47,7 +46,6 @@ scrollFilm({ canvas: $("#canvas"), track: $("#track"), segments: SEGMENTS, onFra
   .then((a) => { api = a; $("#loading").hidden = true; })
   .catch((err) => { $("#loading").textContent = "This page needs WebGL to draw the house."; console.error(err); });
 
-setupCompare(document.querySelector("#compare"));
 
 // Inside the showroom, "Try the wall panel" switches to the panel tab instead of leaving the page.
 document.querySelectorAll("[data-showroom]").forEach((a) => a.addEventListener("click", (e) => {

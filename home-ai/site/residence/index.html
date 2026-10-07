@@ -39,6 +39,10 @@
     padding: calc(16px + env(safe-area-inset-top, 0px)) var(--gutter) 16px; color: #f4f1ec; pointer-events: none; }
   .top > * { pointer-events: auto; }
   .mark { font: 500 20px/1 var(--display); letter-spacing: 0.02em; text-decoration: none; }
+  .top .lead { display: flex; align-items: baseline; gap: 14px; }
+  .top .back { font: 500 11px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; text-decoration: none; opacity: 0.85; white-space: nowrap; }
+  .top .back::before { content: "\2190\00a0"; }
+  .top .back:hover { opacity: 1; text-decoration: underline; }
   .top nav { display: flex; gap: 22px; font: 500 13px/1 var(--body); letter-spacing: 0.04em; }
   .top nav a { text-decoration: none; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5); }
   .top .book { padding: 11px 18px; border-radius: 999px; background: rgba(244, 241, 236, 0.94); color: #18201c; text-shadow: none; }
@@ -117,13 +121,12 @@
     .top nav a:not(.book) { display: none; }
     .scroll-note { display: none; }
   }
-/*__COMPARE_CSS__*/
 </style>
 </head>
 <body>
 <header class="top">
-  <a class="mark" href="#top">Linden House</a>
-  <nav aria-label="Sections"><a href="#rooms">Rooms</a><a href="#house">The house</a><a href="#plans">Plans</a><a href="#haven">Haven</a><a class="book" href="#book">Book a private preview</a></nav>
+  <div class="lead"><a class="mark" href="#top">Linden House</a></div>
+  <nav aria-label="Sections"><a href="#house">The house</a><a href="#plans">Plans</a><a href="#haven">Haven</a><a class="book" href="#book">Book a private preview</a></nav>
 </header>
 
 <main id="top">
@@ -160,15 +163,6 @@
       <span class="scroll-note">Scroll to walk through</span>
     </div>
   </div>
-
-  <section class="compare" id="rooms" data-tone="light">
-    <div class="wrap compare-head">
-      <p class="eyebrow">Room by room</p>
-      <h3>Every room, before and after.</h3>
-      <p class="lede" style="margin-bottom:0">The bare structure on the left; the room as it will be lived in on the right.</p>
-    </div>
-    <!--__COMPARE__-->
-  </section>
 
   <section id="house" data-tone="light">
     <div class="wrap intro">
