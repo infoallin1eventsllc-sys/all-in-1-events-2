@@ -211,16 +211,28 @@ b, strong { font-weight: 500; }
 .hero-scents a::after { content: ""; position: absolute; left: 0; right: 0; bottom: -3px; height: 1px; background: #f7f4ef; transform: scaleX(0); transform-origin: left; transition: transform 0.5s var(--ease); }
 .hero-scents a:hover { color: #f7f4ef; }
 .hero-scents a:hover::after { transform: scaleX(1); }
+/* While the film plays, the line follows it: the scent on screen is lit and underlined, the others step back (still 7:1 on black) */
+.hero-scents.live a { color: rgba(247, 244, 239, 0.62); transition: color 0.6s var(--ease); }
+.hero-scents.live a.is-on { color: #f7f4ef; }
+.hero-scents.live a.is-on::after { transform: scaleX(1); transition-duration: 0.9s; }
+.hero-scents.live a:hover { color: #f7f4ef; }
 .btn.ghost-light { --bg: transparent; --fg: #f7f4ef; border-color: rgba(247, 244, 239, 0.5); }
 .btn.ghost-light:hover { background: #f7f4ef; color: var(--ink); border-color: #f7f4ef; transform: translateY(-2px); }
 
 /* The film sits flat beside the copy, no frame */
-.hero-film { position: relative; margin: 0; height: min(72vh, 720px); transform: translateY(var(--drift, 0px)); will-change: transform; aspect-ratio: 9 / 16; border-radius: var(--radius); background: #000; }
-.hero-film video { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; transition: opacity 1.6s var(--ease); }
+.hero-film { position: relative; margin: 0; height: min(72vh, 720px); transform: translateY(var(--drift, 0px)); will-change: transform; aspect-ratio: 9 / 16; background: #000; }
+/* The film's own frame edges are graded to pure black; the mask feathers them again so no browser can draw a box around it */
+.hero-film video {
+  display: block; width: 100%; height: 100%; object-fit: cover; transition: opacity 1.6s var(--ease);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 5%, #000 95%, transparent), linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to bottom, transparent, #000 5%, #000 95%, transparent), linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+  mask-composite: intersect;
+}
 .js .hero-film video { opacity: 0; }   /* fades up on first play; without JS it is simply visible */
 .js .hero-film video.playing, .js .hero-film video[data-still] { opacity: 1; }
 .film-sound {
-  position: absolute; right: 14px; bottom: 14px; display: inline-flex; align-items: center; gap: 8px;
+  position: absolute; inset-inline: 0; margin-inline: auto; width: max-content; bottom: 14px; display: inline-flex; align-items: center; gap: 8px;   /* centred under the film, on its symmetric falloff */
   min-height: 44px; padding: 0 16px; border: 1px solid rgba(247, 244, 239, 0.32); border-radius: var(--radius);
   background: rgba(5, 5, 5, 0.45); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
   color: #f7f4ef; font: 400 10.5px/1 var(--sans); letter-spacing: 0.24em; text-transform: uppercase; cursor: pointer;

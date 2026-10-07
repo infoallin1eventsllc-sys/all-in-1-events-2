@@ -43,10 +43,16 @@ A second version of the same 15 seconds, shot with Higgsfield (Seedance 2.5, 720
 | 9.6–12.9 | **INFERNO DREAMS**: the flame sways, the camera pulls back, the light dims to black | job `1b6f62a9`, clip 1.3–5.0 s |
 | 12.9–15.0 | The **Secrets of Cint** logo (`cutouts/logo-on-black.png`) fades in over black with a slow 3% grow, then fades out | built in ffmpeg |
 
-Every join is a 0.4 s dissolve; every frame is forced to true grayscale with a touch more contrast. Four generations cost 140 credits.
+Four generations cost 140 credits.
+
+**Grade and flow (v2, the version on the site).** The raw shots did not match: Inferno Dreams averaged 135/255 with near-white frame edges, Brewed Elixir sat mid-grey, the strike and Exotic Peach were dark, and the frame read as a grey box on the hero's black. The master was regraded so the film sits *in* the page:
+- **One tonal family.** Per-shot curves bring the three product shots to 46–53 average brightness while the labels keep their whites.
+- **Edges fall to black.** An edge mask (full strength over the product, smooth falloff to pure black at every border) is multiplied over every frame; the frame edges measure 0–1/255, so the film has no visible boundary against the hero's `#000`.
+- **Joins dip through black.** 0.8 s fade-through-black transitions (was a 0.4 s cross-dissolve) on the same cut points: 3.0, 6.3, 9.6, 12.9 s. Each scent arrives out of the dark like the logo does.
+- The build script is `higgsfield/build_master.sh`; its inputs are the four shots above and `cutouts/logo-on-black.png`. The v1 master (plain dissolves, no mask) is media `afa4640e-…` in the Higgsfield library; v2 is `87d46a1e-2a57-4259-a1f5-5f7d15002bb2`.
 
 - **Master:** `higgsfield/master.mp4` (1080×1920, 24 fps, 15.0 s, H.264 crf 12, 17 MB), also in the agency's Higgsfield library as `secrets-of-cint-hero-film-master.mp4` (media id `afa4640e-1bc7-484c-84b3-6c7354a1ff7c`). It was assembled in the Higgsfield sandbox, which is where the shots could be fetched, and brought into the repo by the `Fetch media into the repo` workflow (`.github/workflows/fetch-media.yml`, dispatched with the file's URL) because the cloud session's network policy blocks Higgsfield's download hosts. Its own audio track is only a **preview mix** from the repo's SFX; the website files carry the licensed soundtrack.
-- **This cut is live on the website** (since 2026-10-07): `sh marketing/film/higgsfield/finish.sh higgsfield/master.mp4 <mix.wav>` wrote `assets/video/hero-film.mp4` (1.28 MB), `hero-film.webm` (1.12 MB) and `hero-film-poster.jpg`, with the agency's licensed mix (match strikes + Fairy Dust at 0.6 s) replacing the preview audio. To go back to the Clipkit cut, re-run `encode.sh` from the Clipkit frames.
+- **This cut is live on the website** (since 2026-10-07): `sh marketing/film/higgsfield/finish.sh higgsfield/master.mp4 <mix.wav>` wrote `assets/video/hero-film.mp4` (0.98 MB), `hero-film.webm` (0.87 MB; black edges compress to almost nothing) and `hero-film-poster.jpg` (Brewed Elixir with both wicks lit, at 7.9 s), with the agency's licensed mix (match strikes + Fairy Dust at 0.6 s) replacing the preview audio. To go back to the Clipkit cut, re-run `encode.sh` from the Clipkit frames.
 
 ## Generating real camera footage later
 See `ai-video-prompts.md` for ready-to-paste text-to-video prompts. They're written for Veo, Kling, Runway or Sora, and follow these rules: strictly monochrome, slow motion language only, and no lettering in the AI footage. The Higgsfield cut above is the first use of them.

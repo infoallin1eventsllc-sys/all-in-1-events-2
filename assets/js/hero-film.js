@@ -39,6 +39,24 @@
     }, { threshold: 0.2 }).observe(video);
   }
 
+  // The scent line follows the film: the scent on screen is lit, the others step back.
+  // Times live on the links (data-from / data-to, seconds into the film). Off under reduced motion,
+  // where the film holds a still and the line stays as plain links.
+  var line = document.querySelector(".hero-scents");
+  var chapters = line ? [].slice.call(line.querySelectorAll("a[data-from]")) : [];
+  if (chapters.length && !still) {
+    var lit = null;
+    video.addEventListener("timeupdate", function () {
+      if (!line.classList.contains("live")) line.classList.add("live");
+      var t = video.currentTime, on = null;
+      chapters.forEach(function (a) { if (t >= +a.getAttribute("data-from") && t < +a.getAttribute("data-to")) on = a; });
+      if (on === lit) return;
+      if (lit) lit.classList.remove("is-on");
+      if (on) on.classList.add("is-on");
+      lit = on;
+    });
+  }
+
   // Depth: the film drifts a little slower than the copy as the hero scrolls away.
   // Damped (lerped toward the true scroll) so it never feels twitchy; capped at 18px; transform only; off under reduced motion.
   var film = video.closest(".hero-film");

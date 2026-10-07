@@ -24,6 +24,6 @@ $FF -y -hide_banner -loglevel error -i "$MASTER" $AUD $MAP \
 $FF -y -hide_banner -loglevel error -i "$MASTER" $AUD $MAP \
   -vf "scale=720:1280:flags=lanczos,format=yuv420p" -c:v libvpx-vp9 -b:v 0 -crf 43 -row-mt 1 \
   -c:a libopus -b:a 64k -shortest "$OUT/hero-film.webm"
-# poster: the Inferno Dreams beat, just before the dissolve to the logo
-$FF -y -hide_banner -loglevel error -ss 11.5 -i "$MASTER" -frames:v 1 -vf "scale=720:1280:flags=lanczos" -q:v 4 "$OUT/hero-film-poster.jpg"
+# poster: Brewed Elixir with both wicks lit, the strongest single frame (shown for reduced motion and blocked autoplay)
+$FF -y -hide_banner -loglevel error -ss 7.9 -i "$MASTER" -frames:v 1 -vf "scale=720:1280:flags=lanczos" -q:v 4 "$OUT/hero-film-poster.jpg"
 ls -la "$OUT"
