@@ -32,5 +32,22 @@ Finish: vignette, fine film grain, deep blacks and luminous whites.
 - **9:16, 1080×1920:** use the editor's free in-browser export.
 - **4K or 16:9:** use Clipkit's cloud render (needs a free account; 4K is a paid render). For 16:9, change the canvas size in the editor.
 
+## The Higgsfield cut (2026-10-07)
+A second version of the same 15 seconds, shot with Higgsfield (Seedance 2.5, 720p, 9:16, 5 s per shot) from the client's real product photos instead of cut-outs. Each product shot starts on the actual photograph (`higgsfield/start-*.jpg`: the real photo, converted to grayscale and cover-cropped to 1080×1920), so the vessel and label are the real product and the lettering is the label's own, not drawn by AI. The prompts are the Cut B prompts from `ai-video-prompts.md`, with the style lock.
+
+| Time | Shot | Source |
+|---|---|---|
+| 0.0–3.0 | The strike: the match scrapes, sparks burst in slow motion, the flame settles and lights a small candle in a dark glass vessel | job `ac6db511` (text-to-video), clip 0.6–4.0 s |
+| 3.0–6.3 | **EXOTIC PEACH**: slow push-in and arc, a silver light sweep across the glass and label, a ribbon of smoke | job `51086d65`, clip 0–3.7 s |
+| 6.3–9.6 | **BREWED ELIXIR**: the two wicks ignite one after the other, light blooms over the wax and the coffee beans | job `a64c70f4`, clip 0.5–4.2 s |
+| 9.6–12.9 | **INFERNO DREAMS**: the flame sways, the camera pulls back, the light dims to black | job `1b6f62a9`, clip 1.3–5.0 s |
+| 12.9–15.0 | The **Secrets of Cint** logo (`cutouts/logo-on-black.png`) fades in over black with a slow 3% grow, then fades out | built in ffmpeg |
+
+Every join is a 0.4 s dissolve; every frame is forced to true grayscale with a touch more contrast. Four generations cost 140 credits.
+
+- **Master:** `secrets-of-cint-hero-film-master.mp4` (1080×1920, 24 fps, 15.0 s, H.264 crf 12, 17 MB) in the agency's Higgsfield library (media id `afa4640e-1bc7-484c-84b3-6c7354a1ff7c`). It was assembled in the Higgsfield sandbox, which is where the shots could be fetched. Its soundtrack is a **preview mix** from the repo's SFX (the two match strikes and `sfx-glitter-shimmer.mp3` standing in for the bell tree).
+- **To put it on the website:** download the master from the Higgsfield library, then run `sh marketing/film/higgsfield/finish.sh <master.mp4> <mix.wav>`, where `mix.wav` is the agency's licensed soundtrack (the Clipkit cut's mix, with Fairy Dust at 0.6 s). The script writes the three files in `assets/video/` at the same settings and weight budget as the Clipkit cut. The site needs no other change: it plays whatever is in `assets/video/`.
+- Why this last step is manual: the agency's cloud session cannot reach Higgsfield's download hosts (`d8j0ntlcm91z4.cloudfront.net`, `d2ol7oe51mr4n9.cloudfront.net`, `upload.higgsfield.ai`); they are outside the session's network policy. Allowing them in the environment's network settings would let the session finish on its own.
+
 ## Generating real camera footage later
-See `ai-video-prompts.md` for ready-to-paste text-to-video prompts. They're written for Veo, Kling, Runway or Sora once a paid video plan is available, and follow these rules: strictly monochrome, slow motion language only, and no lettering in the AI footage.
+See `ai-video-prompts.md` for ready-to-paste text-to-video prompts. They're written for Veo, Kling, Runway or Sora, and follow these rules: strictly monochrome, slow motion language only, and no lettering in the AI footage. The Higgsfield cut above is the first use of them.

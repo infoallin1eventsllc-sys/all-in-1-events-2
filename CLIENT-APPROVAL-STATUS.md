@@ -1,6 +1,6 @@
 # Secrets of Cint — Project Status & Client Approval Checklist
 
-_Last updated: 2026-10-04 · Branch: `claude/client-promo-website-5ct9i8` · Built by All in 1 Events LLC_
+_Last updated: 2026-10-07 · Branch: `claude/client-promo-website-5ct9i8` · Built by All in 1 Events LLC_
 
 A living record of what's done and **everything waiting on the client** before launch.
 
@@ -48,7 +48,7 @@ A living record of what's done and **everything waiting on the client** before l
 
 - [ ] **Approve the 15s monochrome product film** (match strike, then Exotic Peach, Brewed Elixir, Inferno Dreams, then the wordmark). Preview: https://www.clipkit.dev/public-editor?id=8ddbc285-b4cf-42a1-93ee-eb372fe2ec5d (see `marketing/film/README.md`)
 - [ ] Confirm the three featured scents and the tagline ("A new life candle experience") for the film
-- [ ] **Cinematic "Cut B" film** (orbits, speed ramps, smoke, flares): the shot prompts are ready in `marketing/film/ai-video-prompts.md`, but generating photoreal video needs credits on an AI video service (Higgsfield, Veo, Kling, Runway, ElevenLabs). Decide who pays, or generate the three clips on your own account and send them; assembly, sound and the logo card are done here at no cost
+- [ ] **Approve the Higgsfield cut of the hero film** (2026-10-07): the same 15 seconds shot with AI video from your real product photos: a slow-motion match strike, Exotic Peach, Brewed Elixir (its wicks ignite), Inferno Dreams, then the logo. The master is in the agency's Higgsfield library (`secrets-of-cint-hero-film-master.mp4`, with a preview soundtrack). Pick **Clipkit cut** (live now) or **Higgsfield cut**; the swap is one script (`marketing/film/higgsfield/finish.sh`, see `marketing/film/README.md`)
 
 ### Photos still needed (real product shots)
 - [ ] **Logo as a vector (SVG/AI/PDF) or a transparent PNG at 2000px+** — the only file on hand is a 480px JPG, too soft for the film's 4K logo card and for print
