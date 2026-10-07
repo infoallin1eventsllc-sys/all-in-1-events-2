@@ -3072,3 +3072,13 @@ Website commit 1cba122 on main (deploys meridianinterface.com).
 - Site code: `HeroBackdrop.tsx` plays only on lg+, still frame on reduced motion / Save-Data / 2G, nothing downloaded below lg (quiet navy ground; the demo cards carry the imagery there and are not rendered on lg+); `index.html` preloads the still for wide screens; `src/lib/stillness.ts` shared with the studio reel. Sizes: 3.4 MB webm, 4.2 MB mp4, 68 KB poster.
 - Skills Otis named: Impeccable and meridian-brand are installed and were applied; "Remotion video", "Apple Interface", "UI Pro Max", "Awesome design" and "Cinematic web" are not installed in this environment, so nothing from them was applied. Told him.
 - QA before the push: static 0 FAIL (7 known WARN), browser 0 FAIL / 1 WARN (Drone Command "Straight down" did not click during the full sweep; a drone-only re-run passed 6/6 and 15 controls, so it was timing under load, not the demo).
+
+## 7 Oct 2026 (night): hero clip corrections after Otis's review
+
+Otis on the live hero: screens "not landing properly within the frames", "the last frame has nothing on it at all", "the streaming line in the third frame is orange dots". Found and fixed, website commit on main after 1cba122:
+
+- **Empty tablet pane (frames 130-193 and their mirror).** The pane turns almost edge-on, the ECC tracker lost it at 129 and the extrapolated track was faded to nothing. `clip/edgeon.py` now reads the face off the column profile (grey glass strip left of the bright aluminium side, rim found as the tail of the bright run within 10% of its peak; the face inset kept at the same share of width as the last tracked frame, so no pop at the hand-off). The screen stays in the pane down to a 2 px sliver, which is as far as the original shows any face.
+- **Orange pulses.** The clip's highlights were laid back as a per-channel high-pass of the frame; a white dot on a blue glow comes out orange through that, and subtracting the blue printed-glass map made it worse. Now the frame's own pixels come back wherever the frame has bright fine detail (alpha from brightness only), so pulses are white and threads blue, as generated.
+- **Loop opens on the poster frame** (source 149), so the still and the first video frame agree; previously the video cut from the poster to frame 1.
+- **Sharper:** H.264 crf 21 / 3.2 Mbps cap (5.0 MB), VP9 2.4 Mbps `-tune-content screen` (4.8 MB), poster 71 KB. Desktop only, still frame first, so the weight is acceptable.
+- QA: static 0 FAIL (7 known WARN), browser 0 FAIL / 0 WARN, live hero test clean on desktop, reduced motion, tablet, phone.
