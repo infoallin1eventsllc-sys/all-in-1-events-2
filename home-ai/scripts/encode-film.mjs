@@ -1,7 +1,9 @@
 // Encodes the merged film for the web (after npm run assemble:film):
 //   dist/film/meridian-film-merged-share.mp4 / .webm   the full film, for the site and for sending
 //   dist/film/meridian-film-hero.mp4 / .webm           the landing page's short cut: from HERO_FROM
-//                                                     (the walls rising) to the end, with a fade in
+//                                                     (the walls rising) to the end, with a fade in.
+//                                                     Silent: the page always plays it muted, and the
+//                                                     voice and score live in the full film.
 // FFMPEG=/path/to/ffmpeg if it isn't on PATH.
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -23,7 +25,9 @@ const mp4 = (kb) => ["-c:v", "libx264", "-preset", "slow", "-pix_fmt", "yuv420p"
 const webm = (kb) => ["-c:v", "libvpx-vp9", "-b:v", kb, "-maxrate", kb, "-row-mt", "1", "-deadline", "good", "-cpu-used", "3", "-c:a", "libopus", "-b:a", "96k"];
 run(["-i", IN, ...mp4(cap(FULL, 128)), "dist/film/meridian-film-merged-share.mp4"]);
 run(["-i", IN, ...webm(cap(FULL, 96)), "dist/film/meridian-film-merged-share.webm"]);
-const cut = ["-ss", String(HERO_FROM), "-t", String(HERO), "-i", IN, "-vf", `fade=t=in:st=0:d=0.6,fade=t=out:st=${HERO - 0.8}:d=0.8`, "-af", `afade=t=in:st=0:d=0.6,afade=t=out:st=${HERO - 0.8}:d=0.8`];
-run([...cut, ...mp4(cap(HERO, 128)), "dist/film/meridian-film-hero.mp4"]);
-run([...cut, ...webm(cap(HERO, 96)), "dist/film/meridian-film-hero.webm"]);
+const cut = ["-ss", String(HERO_FROM), "-t", String(HERO), "-i", IN, "-vf", `fade=t=in:st=0:d=0.6,fade=t=out:st=${HERO - 0.8}:d=0.8`];
+// Same picture bitrate as before; no audio track, so every visitor downloads less.
+const silent = (args) => args.filter((a, i, all) => !["-c:a", "-b:a"].includes(a) && !["-c:a", "-b:a"].includes(all[i - 1])).concat("-an");
+run([...cut, ...silent(mp4(cap(HERO, 128))), "dist/film/meridian-film-hero.mp4"]);
+run([...cut, ...silent(webm(cap(HERO, 96))), "dist/film/meridian-film-hero.webm"]);
 console.log("film encodes ok");

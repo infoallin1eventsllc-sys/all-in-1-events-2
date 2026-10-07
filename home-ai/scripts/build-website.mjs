@@ -4,7 +4,7 @@
 //   index.html                 the site
 //   build.jpg, linden.jpg      the Homes cards, captured from meridian.html and residence.html
 //   meridian-film.mp4, poster  the merged film (npm run assemble:film)
-//   shots/<finish>-<screen>    the screen pictures (npm run build:catalog)
+//   shots/<finish>-<screen>    the screen pictures (npm run build:catalog), and 720px copies in shots/thumbs/
 //   panel-<finish>.html        the live panel in each finish (npm run build:demo)
 //   meridian.html              "Watch a home build itself" (npm run build:sites)
 //   residence.html             Linden House, the sample listing
@@ -12,6 +12,7 @@
 // Deploy the folder as it is to any static host. The contact form posts to the CRM intake.
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
+import { execFileSync } from "node:child_process";
 import { chromium } from "playwright";
 
 const OUT = "dist/website";
@@ -46,6 +47,17 @@ copyFileSync(need("docs/poster.jpg"), `${OUT}/poster.jpg`);
 const shots = readdirSync(need("dist/catalog/shots")).filter((f) => f.endsWith(".jpg"));
 if (shots.length !== 32) throw new Error(`expected 32 screen pictures, found ${shots.length}`);
 for (const f of shots) copyFileSync(`dist/catalog/shots/${f}`, `${OUT}/shots/${f}`);
+// Thumbnails for "The whole set": shown about 290px wide, so 720px is sharp on a 2x screen
+// and a fraction of the 2880px original.
+mkdirSync(`${OUT}/shots/thumbs`, { recursive: true });
+execFileSync("python3", ["-c", `
+import sys
+from PIL import Image
+for f in sys.argv[1:]:
+    im = Image.open(f"dist/catalog/shots/{f}").convert("RGB")
+    im.thumbnail((720, 720 * im.height // im.width), Image.LANCZOS)
+    im.save(f"${OUT}/shots/thumbs/{f}", quality=84, optimize=True, progressive=True)
+`, ...shots]);
 
 for (const finish of ["grounded", "futuristic", "vivid"]) writeFileSync(`${OUT}/panel-${finish}.html`, page(`dist/demo/haven-${finish}.html`));
 
@@ -83,10 +95,19 @@ for (const finish of ["grounded", "futuristic", "vivid"]) writeFileSync(`${OUT}/
   if (!html.includes("data-intake=")) throw new Error("residence.html: no <html lang=\"en\"> to carry the intake");
   writeFileSync(`${OUT}/residence.html`, html);
 }
-// The guided tour: its brand links home.
-writeFileSync(`${OUT}/tour.html`, swap(page("showroom/index.html"),
-  '<div class="brand">Meridian Interface<small>Haven, the home that looks out for you</small></div>',
-  '<a class="brand" href="index.html" style="text-decoration:none">Meridian Interface<small>Back to the website</small></a>', "tour.html"));
+// The guided tour: its brand links home, and inside the website its "Website" tab is the
+// walk-through, trimmed to the build (no "what Haven does" further down).
+{
+  let html = swap(page("showroom/index.html"),
+    '<div class="brand">Meridian Interface<small>Haven, the home that looks out for you</small></div>',
+    '<a class="brand" href="index.html">Meridian Interface<small>Back to the website</small></a>', "tour.html brand");
+  html = swap(html, '<button role="tab" data-tab="site" aria-selected="false">Website</button>', '<button role="tab" data-tab="site" aria-selected="false">Walk-through</button>', "tour.html tab");
+  html = swap(html, 'site: "Scrolling builds the home, chapter by chapter, then what Haven does.",', 'site: "Scrolling builds the home, chapter by chapter.",', "tour.html note");
+  html = swap(html, '{ tab: "site", title: "The website", text: "Scrolling builds the home, chapter by chapter. Further down, what Haven does."',
+    '{ tab: "site", title: "The walk-through", text: "Scrolling builds the home, chapter by chapter, from the first line of the plan to the lights coming on."', "tour.html step");
+  html = swap(html, "then the website and a property site.", "then the walk-through and a property site.", "tour.html welcome");
+  writeFileSync(`${OUT}/tour.html`, html);
+}
 writeFileSync(`${OUT}/film.html`, page("dist/film/meridian-film.html"));
 writeFileSync(`${OUT}/library.html`, page("dist/catalog/haven-screen-library.html"));
 
@@ -111,6 +132,8 @@ writeFileSync(`${OUT}/library.html`, page("dist/catalog/haven-screen-library.htm
 
 // Every local link and asset the site's pages name must exist.
 const files = new Set(readdirSync(OUT).concat(shots.map((f) => `shots/${f}`)));
+const thumbs = readdirSync(`${OUT}/shots/thumbs`);
+if (thumbs.length !== shots.length) throw new Error(`expected ${shots.length} thumbnails, found ${thumbs.length}`);
 const index = readFileSync(`${OUT}/index.html`, "utf8");
 const refs = [...index.matchAll(/(?:href|src|poster)="([^"#:]+)(?:#[^"]*)?"/g)].map((m) => m[1]).filter((r) => !r.startsWith("//"));
 const missing = refs.filter((r) => !files.has(r));

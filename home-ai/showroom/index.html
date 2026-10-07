@@ -54,6 +54,8 @@
   .btn.solid { background: var(--cyan); color: #04121c; }
   .btn.quiet { border-color: var(--line); color: var(--muted); }
   .btn:hover { filter: brightness(1.1); }
+  a.brand { text-decoration: none; }
+  .btn.tour-btn { margin-left: 8px; min-height: 36px; padding: 0 14px; font-size: 13px; }
   /* Tour card */
   .tour { position: absolute; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 15; width: min(400px, calc(100% - 32px)); padding: 18px 18px 16px; border: 1px solid var(--cyan); border-radius: 14px; background: rgba(10, 17, 25, 0.94); backdrop-filter: blur(10px); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45); }
   .tour[hidden] { display: none; }
@@ -81,7 +83,7 @@
       <button role="tab" data-tab="residence" aria-selected="false">Property site</button>
       <button role="tab" data-tab="library" aria-selected="false">Screen library</button>
     </nav>
-    <button class="btn quiet" id="tour-btn" type="button" style="margin-left:8px; min-height:36px; padding:0 14px; font-size:13px">Guided tour</button>
+    <button class="btn quiet tour-btn" id="tour-btn" type="button">Guided tour</button>
   </header>
 
   <div class="sub" id="sub-film">
@@ -96,7 +98,7 @@
     <button class="chip" data-finish="vivid" aria-pressed="false">Vivid</button>
     <span class="gap"></span>
     <span class="l">Screen</span>
-    <button class="chip" data-screen="signature" aria-pressed="true">Home</button>
+    <button class="chip" data-screen="signature" aria-pressed="true">Signature</button>
     <button class="chip" data-screen="studio" aria-pressed="false">Studio</button>
     <button class="chip" data-screen="rooms" aria-pressed="false">Rooms</button>
     <button class="chip" data-screen="command-center" aria-pressed="false">Command Center</button>
@@ -148,7 +150,7 @@
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const NOTES = {
     film: "The house designs itself as a hologram, becomes real, and the guide walks the client through to the panel.",
-    live: "The same film, rendered live in the browser. Press play on the page.",
+    live: "The hologram part of the film at full length, drawn live in your browser. Press play on the page.",
     panel: "The wall panel, running on a simulated house. Everything on it works: talk to Haven, run scenes, open rooms, change screens.",
     site: "Scrolling builds the home, chapter by chapter, then what Haven does.",
     residence: "A property site made from the same plan. Scroll walk-through, specs, floor plans, a booking form.",
@@ -200,7 +202,7 @@
   });
   // The guided demo: each step sets the app's state and says what to try.
   const TOUR = [
-    { tab: "film", film: "cut", title: "The film", text: "The house designs itself as a hologram, becomes real, and its guide walks the client through to the panel. Press play; it runs a minute and a half.", go: () => $("video").play().catch(() => {}) },
+    { tab: "film", film: "cut", title: "The film", text: "The house designs itself as a hologram, becomes real, and its guide walks the client through to the panel. Press play; it runs 1:19, with sound.", go: () => $("video").play().catch(() => {}) },
     { tab: "panel", finish: "grounded", screen: "signature", title: "The wall panel", text: "This is the panel a family sees in the hall. Everything on it works; it is running on a simulated house.", tip: "Type <b>I'm cold</b> in the bar at the bottom. Haven warms the room and remembers it for this time of day." },
     { tab: "panel", finish: "grounded", screen: "signature", title: "It asks before anything risky", text: "Haven never unlocks a door or opens the garage on its own. The rule is in the code, not the brochure.", tip: "Type <b>open the garage</b>. It asks you to confirm first." },
     { tab: "panel", finish: "grounded", screen: "studio", title: "Studio", text: "Haven's orb, and under it the four agents: lighting, climate, security and energy. They light up only when something real happens.", tip: "Press <b>Goodnight</b> under the orb and watch the agents hand off to each other." },
