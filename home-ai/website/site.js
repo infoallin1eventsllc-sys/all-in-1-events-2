@@ -11,8 +11,8 @@
   // The buttons follow the video itself, so its own controls and the end of the film keep them right.
   const hero = $(".hero");
   // With the full film playing, the page's words step aside; they come back when it pauses or ends.
-  film.addEventListener("play", () => { setPaused(false); if (fullFilm) hero.classList.add("watching"); });
-  film.addEventListener("pause", () => { setPaused(true); hero.classList.remove("watching"); });
+  film.addEventListener("play", () => { setPaused(false); if (fullFilm) { hero.classList.add("watching"); sound.textContent = "Playing with sound"; } });
+  film.addEventListener("pause", () => { setPaused(true); hero.classList.remove("watching"); if (fullFilm && !film.ended) sound.textContent = "Resume the film with sound"; });
   const HERO_SOURCES = '<source src="meridian-film-hero.mp4" type="video/mp4"><source src="meridian-film-hero.webm" type="video/webm">';
   // When the full film ends, the page goes back to its short, silent loop, so the film's end card
   // never sits frozen under the page's words.
@@ -21,7 +21,7 @@
     if (!fullFilm) return;
     fullFilm = false; film.innerHTML = HERO_SOURCES; film.load();
     film.muted = true; film.loop = true; film.controls = false;
-    $("#film-note").textContent = "Playing a short cut of the film. The full film is 1:19, with the guide\u2019s voice.";
+    $("#film-note").textContent = "This is a short cut of the film. The full film is 1:19, with the guide\u2019s voice.";
     if (!reduce) film.play().catch(() => setPaused(true)); else setPaused(true);
   });
   setPaused(true);
@@ -29,6 +29,7 @@
   pause.addEventListener("click", () => { if (film.paused) film.play().catch(() => {}); else { film.pause(); setPaused(true); } });
   // The hero plays a short cut. "With sound" loads the full film and plays it from the start.
   sound.addEventListener("click", () => {
+    if (fullFilm && film.paused && !film.ended && film.currentTime > 0) { film.play().catch(() => setPaused(true)); return; }
     if (!fullFilm) {
       fullFilm = true;
       film.innerHTML = '<source src="meridian-film.mp4" type="video/mp4"><source src="meridian-film.webm" type="video/webm">';
@@ -37,7 +38,6 @@
     }
     film.muted = false; film.loop = false; film.controls = true; film.currentTime = 0;
     film.play().catch(() => setPaused(true));
-    sound.textContent = "Playing with sound";
   });
 
   // ---- Menu (narrow screens) and the current section in the nav.
@@ -81,13 +81,15 @@
 
   // Swap the big picture: dim it, load the next one, then bring it up under one scan line.
   // The first render (and reduced motion) just sets it.
-  let firstPick = true;
+  let firstPick = true, wanted = "";
   function swapShot(img, src) {
     const frame = img.parentElement;
+    wanted = src;
     if (firstPick || reduce) { img.src = src; firstPick = false; return; }
     frame.classList.add("swap");
     const next = new Image();
     next.onload = next.onerror = () => {
+      if (src !== wanted) return;
       img.src = src;
       frame.classList.remove("swap", "scan"); void frame.offsetWidth; frame.classList.add("scan");
     };
@@ -102,7 +104,7 @@
     $("#finishes").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.finish === pick.finish)));
     const img = $("#pick-img"), src = shot(pick.finish, id);
     img.alt = `The ${s.name} screen for the ${room.toLowerCase()}, in the ${FINISHES.find((f) => f[0] === pick.finish)[1]} finish`;
-    if (img.getAttribute("src") !== src) swapShot(img, src);
+    if (wanted !== src) swapShot(img, src);
     $("#pick-name").textContent = `${room}: ${s.name}`;
     $("#pick-best").textContent = `Best for: ${s.best}`;
     $("#pick-about").textContent = s.about;

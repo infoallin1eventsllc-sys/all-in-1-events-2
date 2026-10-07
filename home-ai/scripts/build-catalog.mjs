@@ -128,6 +128,7 @@ ${FINISHES.map((f) => `body[data-finish="${f.key}"] .img-${f.key}`).join(", ")} 
 section.plan, section.note { padding: 22px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); display: grid; gap: 12px; }
 section h2.sec { margin: 0; font-size: 1.3rem; }
 .table-wrap { overflow-x: auto; }
+.table-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 table { border-collapse: collapse; width: 100%; min-width: 520px; }
 th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); }
 th { font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
@@ -164,7 +165,7 @@ footer { color: var(--muted); font-size: 0.85rem; }
   ${SCREENS.map(card).join("")}
   <section class="plan" aria-labelledby="plan-h">
     <h2 class="sec" id="plan-h">A typical home</h2>
-    <div class="table-wrap"><table>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="A typical home, room by room; scrolls sideways"><table>
       <thead><tr><th scope="col">Where</th><th scope="col">Screen</th><th scope="col">Why</th></tr></thead>
       <tbody>
         <tr><td>Great room</td><td>Signature</td><td>The showpiece: the whole house at a glance and every control</td></tr>

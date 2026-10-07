@@ -2,6 +2,7 @@
 // a screen for every room, the live panel, Haven, security, homes, builders, FAQ and the
 // contact form) with every page and asset it links to, in dist/website/:
 //   index.html                 the site
+//   build.jpg, linden.jpg      the Homes cards, captured from meridian.html and residence.html
 //   meridian-film.mp4, poster  the merged film (npm run assemble:film)
 //   shots/<finish>-<screen>    the screen pictures (npm run build:catalog)
 //   panel-<finish>.html        the live panel in each finish (npm run build:demo)
@@ -10,15 +11,22 @@
 //   tour.html (+ film.html, library.html)   the guided tour (showroom/index.html)
 // Deploy the folder as it is to any static host. The contact form posts to the CRM intake.
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
+import { chromium } from "playwright";
 
 const OUT = "dist/website";
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(`${OUT}/shots`, { recursive: true });
 
 const need = (f) => { if (!existsSync(f)) throw new Error(`${f} missing (run build:demo, build:film, assemble:film, build:sites, build:catalog)`); return f; };
+// Every page served on its own gets a doctype, a language, a viewport and the site's icon
+// (without one, browsers ask the host for /favicon.ico and log a 404).
+const ICON = readFileSync(need("website/index.html"), "utf8").match(/<link rel="icon"[^>]*>/)[0];
 const page = (f) => {
   let html = readFileSync(need(f), "utf8");
+  if (!/rel="icon"/.test(html)) html = `${ICON}\n${html}`;
   if (!/name="viewport"/.test(html)) html = `<meta name="viewport" content="width=device-width, initial-scale=1">\n${html}`;
+  if (!/<html[\s>]/i.test(html)) html = `<html lang="en">\n${html}`;
   if (!/^\s*<!doctype/i.test(html)) html = `<!doctype html>\n${html}`;
   return html;
 };
@@ -35,8 +43,6 @@ copyFileSync(need("dist/film/meridian-film-merged-share.webm"), `${OUT}/meridian
 copyFileSync(need("dist/film/meridian-film-hero.mp4"), `${OUT}/meridian-film-hero.mp4`); // the landing page's short cut
 copyFileSync(need("dist/film/meridian-film-hero.webm"), `${OUT}/meridian-film-hero.webm`);
 copyFileSync(need("docs/poster.jpg"), `${OUT}/poster.jpg`);
-copyFileSync(need("film/refs/dusk.jpg"), `${OUT}/build.jpg`);
-copyFileSync(need("film/refs/golden-hour.jpg"), `${OUT}/linden.jpg`);
 const shots = readdirSync(need("dist/catalog/shots")).filter((f) => f.endsWith(".jpg"));
 if (shots.length !== 32) throw new Error(`expected 32 screen pictures, found ${shots.length}`);
 for (const f of shots) copyFileSync(`dist/catalog/shots/${f}`, `${OUT}/shots/${f}`);
@@ -65,13 +71,16 @@ for (const finish of ["grounded", "futuristic", "vivid"]) writeFileSync(`${OUT}/
     '<nav aria-label="Footer"><a href="index.html">Meridian Interface</a><a href="index.html#screens">Screens</a><a href="index.html#contact">Book a walkthrough</a></nav>', "meridian.html footer");
   writeFileSync(`${OUT}/meridian.html`, html);
 }
-// Linden House: the footer's company name links home.
+// Linden House: the footer's company name links home, and its booking form reaches Meridian.
 {
   let html = swap(page("dist/site/residence.html"),
     "<span>&copy; 2026 Meridian Interface</span>", '<span>&copy; 2026 <a href="index.html">Meridian Interface</a></span>', "residence.html footer");
   // A way back to the website in the header, on every screen size.
   html = swap(html, '<div class="lead"><a class="mark" href="#top">Linden House</a></div>',
     '<div class="lead"><a class="back" href="index.html">Meridian Interface</a><a class="mark" href="#top">Linden House</a></div>', "residence.html header");
+  const intake = readFileSync("website/site.js", "utf8").match(/const INTAKE = "([^"]+)"/)[1];
+  html = html.replace(/<html lang="en"/, () => `<html lang="en" data-intake="${intake}"`);
+  if (!html.includes("data-intake=")) throw new Error("residence.html: no <html lang=\"en\"> to carry the intake");
   writeFileSync(`${OUT}/residence.html`, html);
 }
 // The guided tour: its brand links home.
@@ -80,6 +89,25 @@ writeFileSync(`${OUT}/tour.html`, swap(page("showroom/index.html"),
   '<a class="brand" href="index.html" style="text-decoration:none">Meridian Interface<small>Back to the website</small></a>', "tour.html"));
 writeFileSync(`${OUT}/film.html`, page("dist/film/meridian-film.html"));
 writeFileSync(`${OUT}/library.html`, page("dist/catalog/haven-screen-library.html"));
+
+// The Homes cards: one frame of each page they open, so the two pictures say what's behind them.
+{
+  const executablePath = process.env.CHROMIUM_PATH || (existsSync("/opt/pw-browsers/chromium") ? "/opt/pw-browsers/chromium" : undefined);
+  const browser = await chromium.launch({ ...(executablePath ? { executablePath } : {}), args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
+  const shoot = async (file, out, prepare) => {
+    const p = await browser.newPage({ viewport: { width: 1600, height: 900 } });
+    await p.goto(pathToFileURL(`${OUT}/${file}`).href);
+    await p.waitForFunction(() => { const l = document.querySelector("#loading"); return !l || l.hidden; }, null, { timeout: 60000 });
+    await prepare(p);
+    writeFileSync(`${OUT}/${out}`, await p.screenshot({ type: "jpeg", quality: 85 }));
+    await p.close();
+  };
+  // The walk-through as the plan is being drawn in light.
+  await shoot("meridian.html", "build.jpg", async (p) => { await p.evaluate(() => scrollTo(0, Math.round(document.documentElement.scrollHeight * 0.08))); await p.waitForTimeout(3000); });
+  // Linden House as it opens: the house under its name and its numbers.
+  await shoot("residence.html", "linden.jpg", async (p) => { await p.waitForTimeout(3000); });
+  await browser.close();
+}
 
 // Every local link and asset the site's pages name must exist.
 const files = new Set(readdirSync(OUT).concat(shots.map((f) => `shots/${f}`)));

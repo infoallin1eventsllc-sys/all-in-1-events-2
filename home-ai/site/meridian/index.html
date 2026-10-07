@@ -28,7 +28,7 @@
     padding: calc(14px + env(safe-area-inset-top, 0px)) var(--gutter) 14px; pointer-events: none;
     background: linear-gradient(rgba(5, 8, 14, 0.92), rgba(5, 8, 14, 0.6) 55%, rgba(5, 8, 14, 0)); }
   .top > * { pointer-events: auto; }
-  .brand { font: 700 13px/1 var(--display); font-stretch: 125%; letter-spacing: 0.32em; text-transform: uppercase; text-decoration: none; }
+  .brand { display: inline-flex; align-items: center; min-height: 32px; font: 700 13px/1 var(--display); font-stretch: 125%; letter-spacing: 0.32em; text-transform: uppercase; text-decoration: none; }
   .brand span { color: var(--cyan); }
   .top nav { display: flex; gap: 6px; }
   .top nav a { font: 500 13px/1 var(--body); text-decoration: none; padding: 10px 14px; border-radius: 999px; border: 1px solid var(--line); background: rgba(5, 8, 14, 0.55); backdrop-filter: blur(8px); }
@@ -82,8 +82,8 @@
   footer .wrap { display: grid; grid-template-columns: minmax(0, 1.4fr) auto; gap: 24px 48px; align-items: start; }
   footer .brand { color: var(--paper); }
   footer p { margin: 10px 0 0; max-width: 44ch; }
-  footer nav { display: grid; gap: 8px; justify-items: start; }
-  footer nav a { text-decoration: none; }
+  footer nav { display: grid; gap: 2px; justify-items: start; }
+  footer nav a { display: inline-flex; align-items: center; min-height: 28px; text-decoration: none; }
   footer nav a:hover { color: var(--paper); }
   footer small { grid-column: 1 / -1; font-size: 13px; }
   @media (max-width: 760px) { footer .wrap { grid-template-columns: 1fr; } }
@@ -118,13 +118,13 @@
         <div class="block"><b>A-01</b><span>Design &middot; ground floor plan</span></div>
         <h2>Every home starts as a <em>line of light.</em></h2>
         <p>Meridian&rsquo;s software lays out a home from a plan, a sketch, or just a list of rooms. This one is drawn room by room.</p>
-        <p class="dims">Garage <span>6.0 &times; 7.0 m</span> &middot; Kitchen <span>6.0 &times; 4.5 m</span> &middot; Living <span>7.0 &times; 5.5 m</span></p>
+        <p class="dims">Garage <span>20 &times; 23 ft</span> &middot; Kitchen <span>20 &times; 15 ft</span> &middot; Living <span>23 &times; 18 ft</span></p>
       </article>
       <article class="sheet" data-from="0.13" data-to="0.29">
         <div class="block"><b>A-02</b><span>Structure &middot; two floors</span></div>
         <h2>Walls rise <em>where rooms meet.</em></h2>
         <p>Inside walls get doorways. Outside walls get the windows the style calls for. The same engine draws Haven&rsquo;s live hologram of your own home.</p>
-        <p class="dims">Floors <span>2</span> &middot; Rooms <span>9</span> &middot; Interior <span>180 m&sup2;</span></p>
+        <p class="dims">Floors <span>2</span> &middot; Rooms <span>9</span> &middot; Interior <span>1,938 sq ft</span></p>
       </article>
       <article class="sheet" data-from="0.29" data-to="0.43">
         <div class="block"><b>A-03</b><span>Detail &middot; the shell</span></div>

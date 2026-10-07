@@ -51,7 +51,7 @@
         <button class="btn solid" id="film-sound" type="button">Watch the full film with sound</button>
         <a class="btn" href="#screens">Choose your screens</a>
       </div>
-      <p class="film-note" id="film-note">Playing a short cut of the film. The full film is 1:19, with the guide&rsquo;s voice.</p>
+      <p class="film-note" id="film-note">This is a short cut of the film. The full film is 1:19, with the guide&rsquo;s voice.</p>
     </div>
   </section>
 
@@ -98,12 +98,12 @@
         <p>This is the real panel software, running on a simulated house. Type &ldquo;I&rsquo;m cold&rdquo; or &ldquo;goodnight&rdquo;, tap a light, ask it to open the garage and watch it ask you first.</p>
       </div>
       <div class="live-bar">
-        <div class="chips" role="group" aria-label="Finish" id="live-finishes"></div>
-        <div class="chips" role="group" aria-label="Screen" id="live-screens"></div>
+        <div class="chip-set"><span class="chip-label" id="live-finishes-l">Finish</span><div class="chips" role="group" aria-labelledby="live-finishes-l" id="live-finishes"></div></div>
+        <div class="chip-set"><span class="chip-label" id="live-screens-l">Screen</span><div class="chips" role="group" aria-labelledby="live-screens-l" id="live-screens"></div></div>
       </div>
-      <div class="frame" id="frame" style="--poster: url('shots/grounded-signature.jpg')">
+      <div class="frame" id="frame">
         <div class="start" id="frame-start">
-          <p>The panel loads here: about a megabyte.</p>
+          <p>It runs right here in your browser, on a simulated house.</p>
           <div class="row center">
             <button class="btn solid" id="frame-load" type="button">Start the live panel</button>
             <a class="btn quiet" href="tour.html">Take the guided tour instead</a>
@@ -122,7 +122,7 @@
       </div>
       <ul class="features">
         <li><h3>Talks and listens</h3><p>Push to talk on any panel. It answers in its own voice.</p></li>
-        <li><h3>Stops a leak in seconds</h3><p>A wet sensor shuts off the water and the water heater, and tells you where.</p></li>
+        <li><h3>Watches the electricity</h3><p>Today&rsquo;s use on the panel, from an energy monitor or clearly marked as an estimate. On your way out, Entry shows what&rsquo;s still on.</p></li>
         <li><h3>Learns your comfort</h3><p>Say &ldquo;I&rsquo;m cold&rdquo; and it warms the room now, and remembers it for that time of day.</p></li>
         <li><h3>Briefs you</h3><p>A morning and evening summary: the house, the forecast once a weather source is connected, and anything that needs you.</p></li>
         <li><h3>Goes where you go</h3><p>Talk to Haven, run scenes and hear its briefings from an iPhone, an Apple Watch or the car, through Siri.</p></li>
@@ -160,16 +160,16 @@
     <div class="wrap">
       <div class="head">
         <p class="eyebrow">Homes</p>
-        <h2 id="homes-h">Every home starts as <em>a line of light.</em></h2>
+        <h2 id="homes-h">See the home <em>before it&rsquo;s built.</em></h2>
         <p>Two ways a client sees a Meridian home before anyone moves in.</p>
       </div>
       <div class="homes">
         <a class="home-card" href="meridian.html">
-          <img src="build.jpg" alt="The hologram of a two-story modern home on the projection table at dusk" loading="lazy" width="1920" height="1080">
+          <img src="build.jpg" alt="The ground floor plan of a Meridian home being drawn in light" loading="lazy" width="1600" height="900">
           <div><h3>Watch a home build itself</h3><p>Scroll, and the plan draws itself, the walls rise, the rooms furnish and the lights come on.</p><span class="go">Open the walk-through</span></div>
         </a>
         <a class="home-card" href="residence.html">
-          <img src="linden.jpg" alt="The hologram of Linden House at golden hour" loading="lazy" width="1920" height="1080">
+          <img src="linden.jpg" alt="The Linden House property site: the hologram of the house under its name and its numbers" loading="lazy" width="1600" height="900">
           <div><h3>Linden House, a sample listing</h3><p>A property site made from one plan: the walk-through, specs, floor plans to scale, and a booking form for private previews.</p><span class="go">Open the property site</span></div>
         </a>
       </div>
@@ -230,7 +230,7 @@
       <form id="contact-form" novalidate>
         <label>Name<input id="f-name" name="name" autocomplete="name" required maxlength="80"></label>
         <label>Email<input id="f-email" name="email" type="email" autocomplete="email" maxlength="120"></label>
-        <label>Phone <small>(optional if you give an email)</small><input id="f-phone" name="phone" type="tel" autocomplete="tel" maxlength="30"></label>
+        <label>Phone <small>or email, either is fine</small><input id="f-phone" name="phone" type="tel" autocomplete="tel" maxlength="30"></label>
         <label>You are<select id="f-role" name="role"><option>A homeowner</option><option>A builder or developer</option><option>An architect or designer</option><option>Something else</option></select></label>
         <label>Company <small>(optional)</small><input id="f-company" name="company" autocomplete="organization" maxlength="120"></label>
         <label>Where is the project?<input id="f-where" name="where" autocomplete="address-level2" maxlength="120"></label>
@@ -251,10 +251,10 @@
     <div class="about">
       <a class="brand" href="#top">Meridian<span>&nbsp;/&nbsp;</span>Interface</a>
       <p>Homes designed in light, with Haven, the AI home agent, built in from the first line of the plan.</p>
+      <a class="btn small" href="#contact">Book a walkthrough</a>
     </div>
-    <div><h4>Haven</h4><ul><li><a href="#screens">Screens</a></li><li><a href="#live">Live demo</a></li><li><a href="tour.html">Guided tour</a></li><li><a href="#security">Security</a></li></ul></div>
+    <div><h4>Haven</h4><ul><li><a href="#screens">Screens</a></li><li><a href="#live">Live demo</a></li><li><a href="tour.html">Guided tour</a></li><li><a href="#security">Security</a></li><li><a href="#faq">Questions</a></li></ul></div>
     <div><h4>Homes</h4><ul><li><a href="meridian.html">Watch a home build</a></li><li><a href="residence.html">Linden House</a></li><li><a href="#builders">For builders</a></li></ul></div>
-    <div><h4>Company</h4><ul><li><a href="#faq">FAQ</a></li><li><a href="#contact">Book a walkthrough</a></li></ul></div>
     <small>&copy; 2026 Meridian Interface. The homes shown are sample plans. The live panel runs on a simulated house, with sample weather.</small>
   </div>
 </footer>

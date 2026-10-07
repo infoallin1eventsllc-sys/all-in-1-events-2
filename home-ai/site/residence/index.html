@@ -38,9 +38,9 @@
   .top { position: fixed; inset: 0 0 auto 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 12px;
     padding: calc(16px + env(safe-area-inset-top, 0px)) var(--gutter) 16px; color: #f4f1ec; pointer-events: none; }
   .top > * { pointer-events: auto; }
-  .mark { font: 500 20px/1 var(--display); letter-spacing: 0.02em; text-decoration: none; }
+  .mark { display: inline-block; padding-block: 4px; font: 500 20px/1 var(--display); letter-spacing: 0.02em; text-decoration: none; }
   .top .lead { display: flex; align-items: baseline; gap: 14px; }
-  .top .back { font: 500 11px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; text-decoration: none; opacity: 0.85; white-space: nowrap; }
+  .top .back { display: inline-block; padding-block: 7px; font: 500 11px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; text-decoration: none; opacity: 0.85; white-space: nowrap; }
   .top .back::before { content: "\2190\00a0"; }
   .top .back:hover { opacity: 1; text-decoration: underline; }
   .top nav { display: flex; gap: 22px; font: 500 13px/1 var(--body); letter-spacing: 0.04em; }
@@ -87,6 +87,7 @@
   figcaption { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 14px; font: 500 12px/1.4 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
   figcaption b { color: var(--ink); font-weight: 500; }
   .plan-scroll { overflow-x: auto; }
+  .plan-scroll:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
   svg.plan { width: 100%; min-width: 360px; height: auto; display: block; }
   svg.plan .room { fill: var(--room); stroke: var(--room-line); stroke-width: 2.2; }
   svg.plan .room.garage { fill: var(--garage); }
@@ -180,7 +181,7 @@
     <div class="wrap">
       <p class="eyebrow">Floor plans</p>
       <h3>Two floors, nine rooms.</h3>
-      <p class="lede">Drawn from the same plan as the house above. Dimensions in metres; glass walls in oak.</p>
+      <p class="lede">Drawn from the same plan as the house above. Dimensions in feet; glass walls in oak.</p>
       <div class="plans" id="plan-figs"></div>
     </div>
   </section>

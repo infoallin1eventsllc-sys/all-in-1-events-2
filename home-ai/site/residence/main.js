@@ -20,16 +20,18 @@ const indoor = rooms.filter((r) => r.id !== "garage");
 const total = indoor.reduce((s, r) => s + area(r), 0);
 const bedrooms = rooms.filter((r) => /bed|primary/i.test(r.id)).length;
 const garage = rooms.find((r) => r.id === "garage");
+// The plan is in metres; the listing speaks in feet, with metres beside the totals.
 const m2 = (n) => `${Math.round(n)} m²`;
 const sqft = (n) => `${Math.round(n * 10.7639).toLocaleString("en-US")} sq ft`;
-$("#stats").innerHTML = [["Bedrooms", `${bedrooms}`], ["Study", "1"], ["Floors", "2"], ["Interior", m2(total)]]
+const ft = (m) => Math.round(m * 3.28084);
+$("#stats").innerHTML = [["Bedrooms", `${bedrooms}`], ["Study", "1"], ["Floors", "2"], ["Interior", sqft(total)]]
   .map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("");
 const facts = [
-  ["Interior", `${m2(total)} · ${sqft(total)}`],
-  ["Ground floor", `${m2(indoor.filter((r) => !r.floor).reduce((s, r) => s + area(r), 0))} + garage`],
-  ["Upstairs", m2(indoor.filter((r) => r.floor === "upper").reduce((s, r) => s + area(r), 0))],
+  ["Interior", `${sqft(total)} · ${m2(total)}`],
+  ["Ground floor", `${sqft(indoor.filter((r) => !r.floor).reduce((s, r) => s + area(r), 0))} + garage`],
+  ["Upstairs", sqft(indoor.filter((r) => r.floor === "upper").reduce((s, r) => s + area(r), 0))],
   ["Bedrooms", `${bedrooms}, and a study`],
-  ["Garage", `${garage.plan[2].toFixed(1)} × ${garage.plan[3].toFixed(1)} m`],
+  ["Garage", `${ft(garage.plan[2])} × ${ft(garage.plan[3])} ft`],
   ["Style", "Modern, flat roof with a deep overhang"],
   ["Finishes", "Oak siding and floors, white render, stone entry wall"],
   ["Smart home", "Haven, with a panel in the hall"],
@@ -50,7 +52,7 @@ function planSVG(floor, label) {
     const [x, z, w, d] = r.plan;
     body += `<rect class="room${r.id === "garage" ? " garage" : ""}" x="${X(x)}" y="${Y(z)}" width="${w * S}" height="${d * S}"/>`;
     body += `<text class="name" x="${X(x + w / 2)}" y="${Y(z + d / 2) - 2}" text-anchor="middle">${r.name}</text>`;
-    body += `<text class="dim" x="${X(x + w / 2)}" y="${Y(z + d / 2) + 14}" text-anchor="middle">${w.toFixed(1)} × ${d.toFixed(1)}</text>`;
+    body += `<text class="dim" x="${X(x + w / 2)}" y="${Y(z + d / 2) + 14}" text-anchor="middle">${ft(w)}′ × ${ft(d)}′</text>`;
   }
   // Glass walls: the living room and the study face the garden (south).
   for (const id of ["living", "study"]) {
@@ -58,20 +60,36 @@ function planSVG(floor, label) {
     if (r) body += `<line class="glass" x1="${X(r.plan[0] + 0.35)}" y1="${Y(r.plan[1] + r.plan[3])}" x2="${X(r.plan[0] + r.plan[2] - 0.35)}" y2="${Y(r.plan[1] + r.plan[3])}"/>`;
   }
   const sy = H - 16;
-  body += `<line class="scale" x1="${PAD}" y1="${sy}" x2="${PAD + 5 * S}" y2="${sy}"/><line class="scale" x1="${PAD}" y1="${sy - 5}" x2="${PAD}" y2="${sy + 5}"/><line class="scale" x1="${PAD + 5 * S}" y1="${sy - 5}" x2="${PAD + 5 * S}" y2="${sy + 5}"/>`;
-  body += `<text class="dim" x="${PAD + 5 * S + 8}" y="${sy + 4}">5 m</text>`;
+  const bar = 10 / 3.28084 * S; // a 10-foot scale bar
+  body += `<line class="scale" x1="${PAD}" y1="${sy}" x2="${PAD + bar}" y2="${sy}"/><line class="scale" x1="${PAD}" y1="${sy - 5}" x2="${PAD}" y2="${sy + 5}"/><line class="scale" x1="${PAD + bar}" y1="${sy - 5}" x2="${PAD + bar}" y2="${sy + 5}"/>`;
+  body += `<text class="dim" x="${PAD + bar + 8}" y="${sy + 4}">10 ft</text>`;
   const sum = rs.filter((r) => r.id !== "garage").reduce((s, r) => s + area(r), 0);
-  return `<figure><figcaption><b>${label}</b><span>${m2(sum)}</span></figcaption><div class="plan-scroll"><svg class="plan" viewBox="0 0 ${W} ${H}" role="img" aria-label="${label} floor plan">${body}</svg></div></figure>`;
+  return `<figure><figcaption><b>${label}</b><span>${sqft(sum)}</span></figcaption><div class="plan-scroll" tabindex="0" role="region" aria-label="${label} floor plan, scrolls sideways"><svg class="plan" viewBox="0 0 ${W} ${H}" role="img" aria-label="${label} floor plan">${body}</svg></div></figure>`;
 }
 $("#plan-figs").innerHTML = planSVG("ground", "Ground floor") + planSVG("upper", "Upstairs");
 
-// Preview requests: this is a template, so nothing is sent.
-$("#book-form").addEventListener("submit", (e) => {
+// Preview requests. As a template, nothing is sent. Where the page carries data-intake (the
+// Meridian website), the request goes to Meridian, and the reply says plainly that Linden House is
+// a sample, so what they'll get is a walkthrough of Haven.
+const INTAKE = document.documentElement.dataset.intake;
+$("#book-form").addEventListener("submit", async (e) => {
   e.preventDefault();
+  const form = e.currentTarget, button = form.querySelector("button[type=submit]");
   const name = $("#f-name").value.trim(), email = $("#f-email").value.trim();
   const status = $("#book-status");
-  if (!name || !/^\S+@\S+\.\S+$/.test(email)) { status.textContent = "Add your name and a valid email address."; return; }
-  status.textContent = `Thanks, ${name}. This is a template, so the request wasn't sent. On a live listing it goes straight to the builder.`;
+  if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { status.textContent = "Add your name and a valid email address."; return; }
+  if (!INTAKE) { status.textContent = `Thanks, ${name}. This is a template, so the request wasn't sent. On a live listing it goes straight to the builder.`; return; }
+  const message = ["Asked from the Linden House sample listing.", $("#f-date").value && `Preferred day: ${$("#f-date").value}`, `Time: ${$("#f-time").value}`, $("#f-note").value.trim()].filter(Boolean).join("\n");
+  button.disabled = true; status.textContent = "Sending…";
+  try {
+    const res = await fetch(INTAKE, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, email, message, source: "meridian-website:linden" }) });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok || out.ok === false) throw new Error(out.error || `HTTP ${res.status}`);
+    status.textContent = `Thanks, ${name}. Linden House is a sample listing, so Meridian will reply to ${email} to set up a walkthrough of Haven instead.`;
+    form.reset();
+  } catch {
+    status.textContent = "This page couldn't reach Meridian just now, so your request wasn't sent. Your details are still here: try again in a moment.";
+  } finally { button.disabled = false; }
 });
 
 // The walk-through.
