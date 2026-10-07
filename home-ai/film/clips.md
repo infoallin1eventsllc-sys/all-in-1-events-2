@@ -9,7 +9,7 @@ Download links are on Higgsfield's CDN, which this cloud container can't reach; 
 | A | Hologram flythrough (test) | Kling 3.0 pro, 1080p | `224b0bf4-b461-4e2e-a6bf-a0982a1ca966` | Wireframe house on the projection table, dolly in through the glass to the figure at the panel, pull back and rise. |
 | B | Photoreal flythrough (test) | Kling 3.0 pro, 1080p | `49b468d1-97df-4984-8a3c-4bffeaf214ed` | The house at dusk, across the patio, into the living room, back out. **The reference for every later clip.** |
 | C | Hologram becomes real | Seedance 2.5, 720p, refs A + B | `4943c9e6-f2cb-4790-b77d-312edea366ed` | A light sweep from the ground up turns the wireframe into the real house; the table becomes the lawn at dusk; dolly out. Good. |
-| D | Welcome at the door | Seedance 2.5, 720p, ref B | `fe835ee8-600d-4c66-b0f7-3e62d26ddc0d` | The couple walks up, the door opens, the guide welcomes them in. |
+| D | Welcome at the door | Seedance 2.5, 720p, refs B + F | `d0f4f8c4-958e-4aff-a91f-e26d3576e7c1` | The couple walks up, the door opens, and the guide, with a clear face, looks at them, smiles and gestures them in; the camera pushes in to her face. Replaces `fe835ee8…` (October 7: the guide had no face, `D-welcome-v1.mp4`). The other variant, `32f0dfd5…` (`D-welcome-alt.mp4`), opens wide on the house but keeps her small. |
 | E | Walkthrough, sensor lines | Seedance 2.5, 720p, refs B + F | `df5c2bec-6b15-431c-bed1-d8e6825152c6` | The adult guide walks beside the couple, cyan lines tracing the walls. (First try `14bcb0c5…` had a child-sized guide walking away.) |
 | F | The panel | Seedance 2.5, 720p, ref B | `9f7200bf-3910-488b-ad77-559739bb3174` | The guide at the wall panel, turns to the couple, gestures; data lines flow into the panel; dolly in. Good. |
 

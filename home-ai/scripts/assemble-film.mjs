@@ -50,12 +50,12 @@ console.log("timeline:", PIECES.map((p) => `${p.id}@${p.start.toFixed(1)}`).join
 const cues = {
   duration: DUR,
   // The take (film/guide-voice.mp3): the four passages sit at 0, 3.0, 11.0 and 28.0 s.
-  segments: [[0.0, 1.6, S.D + 5.3], [3.0, 9.6, S.E + 0.8], [11.0, 26.6, S.F + 0.3], [28.0, 33.6, S.tail + 0.6]],
+  segments: [[0.0, 1.6, S.D + 7.3], [3.0, 9.6, S.E + 0.8], [11.0, 26.6, S.F + 0.3], [28.0, 33.6, S.tail + 0.6]],
   chords: [0, 13, 24, 33].map((t) => t / ENGINE_SPEED).concat([S.C, S.E, S.F, S.end]),
   level: [[0, 0], [4, 0.7], [13, 0.8], [24, 1.0], [33, 0.8]].map(([t, v]) => [t / ENGINE_SPEED, v]).concat([[S.C, 0.9], [S.D, 0.6], [S.tail, 0.7], [S.end + 0.5, 1.15], [S.end + 3, 1.0], [DUR, 0]]),
   bells: [5.4, 13.4, 24.4, 33.4].map((t) => t / ENGINE_SPEED).concat([S.C + 0.4]),
   swells: [[22.4 / ENGINE_SPEED, 26.2 / ENGINE_SPEED], [S.C - 0.6, S.C + 3.2], [S.tail - 1.2, S.tail + 1.6]],
-  door: S.D + 4.6, lock: S.D + 5.4, tap: null, end: S.end + 0.2,
+  door: S.D + 1.8, lock: S.D + 2.6, tap: null, end: S.end + 0.2,
   voice_frames: [S.D, S.end + 2],
 };
 writeFileSync(`${TMP}/cues.json`, JSON.stringify(cues, null, 1));
@@ -63,7 +63,7 @@ execFileSync("python3", ["film/audio.py", FF, TMP, `${TMP}/cues.json`], { stdio:
 
 // Captions for the guide's words (SRT, burned in).
 const LINES = [
-  [S.D + 5.3, S.D + 5.95, "Welcome home."], [S.D + 6.1, S.D + 6.7, "Come on in."],
+  [S.D + 7.3, S.D + 7.95, "Welcome home."], [S.D + 8.1, S.D + 8.7, "Come on in."],
   [S.E + 0.8, S.E + 2.9, "I was here from the first line of the sketch."], [S.E + 3.5, S.E + 6.8, "I know every wall, every window, every pipe."],
   [S.F + 0.3, S.F + 1.25, "This is where we’ll talk."], [S.F + 1.85, S.F + 7.5, "I watch the doors, the water, the heat and the air, day and night."],
   [S.F + 8.2, S.F + 10.4, "If something’s wrong, I’ll tell you right away."], [S.F + 11.2, S.F + 15.45, "And I’ll never unlock a door or open the garage unless you say so."],
