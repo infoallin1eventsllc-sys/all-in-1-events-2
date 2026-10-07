@@ -5,17 +5,29 @@
 
   // ---- The film: plays muted on arrival; "with sound" restarts it with the voice.
   const film = $("#film"), pause = $("#film-pause");
+  let fullFilm = false;
   const setPaused = (p) => { pause.textContent = p ? "Play" : "Pause"; pause.setAttribute("aria-pressed", String(p)); };
   const sound = $("#film-sound");
   // The buttons follow the video itself, so its own controls and the end of the film keep them right.
-  film.addEventListener("play", () => setPaused(false));
-  film.addEventListener("pause", () => setPaused(true));
-  film.addEventListener("ended", () => { setPaused(true); sound.textContent = "Watch again with sound"; });
+  const hero = $(".hero");
+  // With the full film playing, the page's words step aside; they come back when it pauses or ends.
+  film.addEventListener("play", () => { setPaused(false); if (fullFilm) hero.classList.add("watching"); });
+  film.addEventListener("pause", () => { setPaused(true); hero.classList.remove("watching"); });
+  const HERO_SOURCES = '<source src="meridian-film-hero.mp4" type="video/mp4"><source src="meridian-film-hero.webm" type="video/webm">';
+  // When the full film ends, the page goes back to its short, silent loop, so the film's end card
+  // never sits frozen under the page's words.
+  film.addEventListener("ended", () => {
+    hero.classList.remove("watching"); sound.textContent = "Watch again with sound";
+    if (!fullFilm) return;
+    fullFilm = false; film.innerHTML = HERO_SOURCES; film.load();
+    film.muted = true; film.loop = true; film.controls = false;
+    $("#film-note").textContent = "Playing a short cut of the film. The full film is 1:32, with the guide\u2019s voice.";
+    if (!reduce) film.play().catch(() => setPaused(true)); else setPaused(true);
+  });
   setPaused(true);
   if (!reduce) film.play().catch(() => setPaused(true));
   pause.addEventListener("click", () => { if (film.paused) film.play().catch(() => {}); else { film.pause(); setPaused(true); } });
   // The hero plays a short cut. "With sound" loads the full film and plays it from the start.
-  let fullFilm = false;
   sound.addEventListener("click", () => {
     if (!fullFilm) {
       fullFilm = true;

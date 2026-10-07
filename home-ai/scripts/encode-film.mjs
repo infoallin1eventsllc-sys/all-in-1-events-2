@@ -6,17 +6,19 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 
-const FF = process.env.FFMPEG || "ffmpeg", IN = "dist/film/meridian-film-merged.mp4", HERO_FROM = 24.0;
+// The short cut runs from the walls rising to the pull-back, and stops before the end card, so
+// its words never sit under the page's own headline while it loops.
+const FF = process.env.FFMPEG || "ffmpeg", IN = "dist/film/meridian-film-merged.mp4", HERO_FROM = 24.0, HERO_TO = 85.6;
 if (!existsSync(IN)) throw new Error(`${IN} missing: run npm run assemble:film first`);
 const run = (args) => execFileSync(FF, ["-v", "error", "-y", ...args], { stdio: "inherit" });
 // Every file stays under 15 MB (the host's limit per file): the video bitrate is capped by length.
 const cap = (seconds, audioK) => `${Math.floor((14.2 * 8192 / seconds) - audioK)}k`; // kbit/s of video for ~14.2 MB
-const FULL = 92, HERO = FULL - HERO_FROM;
+const FULL = 92, HERO = HERO_TO - HERO_FROM;
 const mp4 = (kb) => ["-c:v", "libx264", "-preset", "slow", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-b:v", kb, "-maxrate", kb, "-bufsize", "2M", "-c:a", "aac", "-b:a", "128k"];
 const webm = (kb) => ["-c:v", "libvpx-vp9", "-b:v", kb, "-maxrate", kb, "-row-mt", "1", "-deadline", "good", "-cpu-used", "3", "-c:a", "libopus", "-b:a", "96k"];
 run(["-i", IN, ...mp4(cap(FULL, 128)), "dist/film/meridian-film-merged-share.mp4"]);
 run(["-i", IN, ...webm(cap(FULL, 96)), "dist/film/meridian-film-merged-share.webm"]);
-const cut = ["-ss", String(HERO_FROM), "-i", IN, "-vf", "fade=t=in:st=0:d=0.6", "-af", "afade=t=in:st=0:d=0.6"];
+const cut = ["-ss", String(HERO_FROM), "-t", String(HERO), "-i", IN, "-vf", `fade=t=in:st=0:d=0.6,fade=t=out:st=${HERO - 0.8}:d=0.8`, "-af", `afade=t=in:st=0:d=0.6,afade=t=out:st=${HERO - 0.8}:d=0.8`];
 run([...cut, ...mp4(cap(HERO, 128)), "dist/film/meridian-film-hero.mp4"]);
 run([...cut, ...webm(cap(HERO, 96)), "dist/film/meridian-film-hero.webm"]);
 console.log("film encodes ok");

@@ -56,6 +56,12 @@ h1 em, h2 em { font-style: normal; font-weight: 600; color: var(--cyan); }
 .hero-copy p.lede { margin: 0; max-width: 56ch; color: var(--soft); font-size: clamp(15px, 1.4vw, 18px); }
 .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .film-note { margin: 0; font: 400 13px/1.5 var(--body); color: var(--muted); }
+/* While the full film plays, the page's words step aside so the film's own titles are clear. */
+.hero-copy, .hero .shade { transition: opacity 0.5s ease; }
+.hero.watching .hero-copy, .hero.watching .shade { opacity: 0; pointer-events: none; }
+.hero.watching .film-ctl { opacity: 0; }
+.hero.watching:hover .film-ctl, .hero.watching:focus-within .film-ctl { opacity: 1; }
+.film-ctl { transition: opacity 0.3s; }
 .film-ctl { position: absolute; right: var(--gutter); top: 16px; display: flex; gap: 8px; }
 .film-ctl .btn { background: rgba(5, 8, 14, 0.6); backdrop-filter: blur(6px); }
 @media (max-width: 720px) {
