@@ -1,0 +1,38 @@
+diff --git a/drone/src/dashboards/LightShowDashboard.tsx b/drone/src/dashboards/LightShowDashboard.tsx
+index b2bc0e4..7c0b258 100644
+--- a/drone/src/dashboards/LightShowDashboard.tsx
++++ b/drone/src/dashboards/LightShowDashboard.tsx
+@@ -169,6 +169,16 @@ export const LightShowDashboard: React.FC = () => {
+   const statusLabel = { PRE_FLIGHT: 'Pre-flight', ARMED: 'Armed', RUNNING: 'Running', PAUSED: 'Holding', ABORTING: 'Aborting', ABORTED: 'Aborted · landed', SHOW_COMPLETE: 'Complete' }[status];
+   // The show starts only once the fleet is armed (the gates are checked at arming) and resumes only from a hold.
+   const canPlay = status === 'ARMED' || status === 'PAUSED' || status === 'RUNNING';
++  // From pre-flight, Start show arms and starts in one press, but only when every gate passes:
++  // a visitor who presses the obvious button should see a show, not a greyed-out control.
++  const canArmAndStart = status === 'PRE_FLIGHT' && allGatesPass;
++  const startOrToggle = () => { if (canArmAndStart) armShow(); togglePlay(); };
++  // Why the show cannot start, said on the page: a tooltip never reaches a phone.
++  const playHold = canPlay || canArmAndStart ? null
++    : status === 'PRE_FLIGHT' ? `Pre-flight hold: ${gates.filter(g => !g.ok).map(g => g.label).join('; ')}. Open the Pre-flight tab to see each check.`
++    : status === 'ABORTING' ? 'Aborting: every aircraft is landing.'
++    : status === 'SHOW_COMPLETE' ? 'Show complete. Rewind to fly it again.'
++    : 'Rewind to reset after an abort.';
+   const fmt = (secs: number) => { const m = Math.floor(secs / 60), s = Math.floor(secs % 60), t = Math.floor((secs % 1) * 10); return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${t}`; };
+   const cueMarks = useMemo(() => { const total = SHOW_FORMATIONS.reduce((s, f) => s + f.durationSeconds, 0) || 1; let acc = 0; return SHOW_FORMATIONS.map((f, i) => { const start = acc / total; acc += f.durationSeconds; return { i, f, start }; }); }, []);
+ 
+@@ -199,7 +209,7 @@ export const LightShowDashboard: React.FC = () => {
+             <div className="flex flex-wrap items-center gap-3">
+               <div className="flex items-center gap-2">
+                 <IconButton icon={<RotateCcw />} label="Rewind to start" onClick={rewind} />
+-                <ToolButton command="fly" id="ls-play" icon={status === 'RUNNING' ? <Pause /> : <Play />} label={status === 'RUNNING' ? 'Hold' : status === 'PAUSED' ? 'Resume' : 'Start show'} primary disabled={!canPlay} onClick={togglePlay} title={canPlay ? undefined : status === 'PRE_FLIGHT' ? 'Arm the fleet first' : 'Rewind to reset after an abort'} />
++                <ToolButton command="fly" id="ls-play" icon={status === 'RUNNING' ? <Pause /> : <Play />} label={status === 'RUNNING' ? 'Hold' : status === 'PAUSED' ? 'Resume' : 'Start show'} primary disabled={!canPlay && !canArmAndStart} onClick={startOrToggle} title={canArmAndStart ? 'Arms the fleet and starts the show' : playHold ?? undefined} />
+                 {status === 'PRE_FLIGHT' && <ToolButton command="fly" id="ls-arm" icon={<ShieldCheck />} label="Arm fleet" disabled={!allGatesPass} onClick={armShow} title={allGatesPass ? 'All pre-flight gates pass' : `Hold: ${gates.filter(g => !g.ok).map(g => g.label).join('; ')}`} />}
+               </div>
+               <div className="flex-1 min-w-[260px]">
+@@ -217,6 +227,7 @@ export const LightShowDashboard: React.FC = () => {
+               </div>
+               <ToolButton command="abort" id="ls-abort" icon={<AlertOctagon />} label="Abort" danger onClick={abortAll} title="Lights out, vertical descent, all aircraft" />
+             </div>
++            {playHold && <p id="ls-hold" role="status" className="mt-2 text-[12px] text-ink-3">{playHold}</p>}
+           </Card>
+         </div>
+ 
