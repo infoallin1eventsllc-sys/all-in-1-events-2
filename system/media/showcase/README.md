@@ -30,10 +30,11 @@ Rebuild (after the site or a demo changes):
    the rim sits still in every crop, the screen will too.
 5. `python clip/still.py <dir>` builds each pane's printed-glass picture.
 6. Render: `python clip/composite2.py <dir> shots out` (frame numbers to preview a few;
-   several copies with different frame lists to use every core). The loop is 438
-   frames (18.25 s at 24 fps): the camera runs source frames 1-190 forward then back,
-   easing to a stop at each end (in-between frames are blended from their neighbours
-   by optical flow); the phone pane scrolls through six products and the tablet pane
+   several copies with different frame lists to use every core). The loop is 442
+   frames (18.4 s at 24 fps): the camera runs source frames 1-190 forward then back,
+   easing to a stop at each end, at an even speed (the generated clip drops a frame
+   at 68-69 and 128-129; `SKIP` gives each frame its true moment, and every in-between
+   frame is blended from its neighbours by optical flow); the phone pane scrolls through six products and the tablet pane
    four, each rising into the next as one continuous scroll; the large pane scrolls
    down the home page and back. Output frame 0 is the poster.
 7. Encode:

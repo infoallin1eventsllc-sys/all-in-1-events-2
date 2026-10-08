@@ -8,7 +8,8 @@ clip's threads and pulses are laid back over the screens.
 
 Timeline (T output frames, 24 fps, loops seamlessly):
   camera   source frames 1..190 forward then back, easing to a stop at each end
-           instead of bouncing (cosine ramps of RAMP frames, full speed between)
+           instead of bouncing (cosine ramps of RAMP frames, full speed between),
+           at an even speed: the two frames the generated clip drops are blended back
   phone    six products, one after another, each scrolling gently and dissolving
            into the next
   tablet   four dashboards, the same way, timed into the part of the loop where
@@ -24,17 +25,26 @@ SS = 2                                     # screens are drawn supersampled, the
 
 # ---- timeline -------------------------------------------------------------------
 S0, S1, RAMP = 1, 190, 30                  # 191-193 stutter in the source; left out
-L = S1 - S0; HALF = L + RAMP; T = 2 * HALF # 438 frames = 18.25 s
-START = 163                                # output frame 0 = source frame 149: the poster
+# The generated clip drops a frame in two places: the camera moves two frames' worth
+# between these source frames (measured with optical flow against its steady speed).
+# Each source frame gets its true moment, and the missing frame is blended back in.
+SKIP = {68: 2, 128: 2}
+TT = {S0: 0.0}
+for i in range(S0, S1): TT[i + 1] = TT[i] + SKIP.get(i, 1)
+L = TT[S1]; HALF = L + RAMP; T = int(2 * HALF)   # 442 frames = 18.4 s
+START = int(round(TT[149] + RAMP / 2))           # output frame 0 = source frame 149: the poster
 def dist(u):
-    """Source frames travelled after u output frames of one half (speed eases 0 -> 1 -> 0)."""
+    """True frames travelled after u output frames of one half (speed eases 0 -> 1 -> 0)."""
     R = RAMP
     if u <= R: return u / 2 - R / (2 * np.pi) * np.sin(np.pi * u / R)
     if u <= HALF - R: return R / 2 + (u - R)
     return L - dist(HALF - u)
 def source_pos(n):
     c = (n + START) % T
-    return S0 + (dist(c) if c <= HALF else dist(T - c))
+    tau = dist(c) if c <= HALF else dist(T - c)
+    for a in range(S0, S1):
+        if TT[a] <= tau < TT[a + 1]: return a + (tau - TT[a]) / (TT[a + 1] - TT[a])
+    return float(S1)
 
 # ---- frames of the clip, including in-between ones -------------------------------
 _frames, _flows = {}, {}
