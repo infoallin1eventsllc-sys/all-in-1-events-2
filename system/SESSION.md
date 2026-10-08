@@ -3101,3 +3101,12 @@ What changed (tools in `system/media/showcase/clip/`, steps in its README):
 - Screens scroll: `capture-scroll.mjs` + `pins.py` capture full-height pages with pinned bars on their own layer; phone pane Big Boy, Fog City, Frame Shop, Modern Street, CarePulse, Drone; tablet pane FinSight, CRM, Analytics, Stack Planner, timed into the part of the loop it faces the camera; each rises into the next as one scroll. Big pane scrolls the homepage down and back.
 - Car removed: `bgmodel.py` models the glass print per frame (the car drifts against the glass), subtracted; only light connected to a tracked anchor dot (`dots.py`), coming in from outside, or pulse-bright comes back, and near each dot only a 30-degree cone on its thread's side.
 - Checks: camera speed on the decoded loop, screens masked out: max frame-to-frame change 0.38 px, no frame off rhythm, seam continuous. White-screen proof across the loop clean. Live test clean (desktop, reduced motion, tablet, phone); static QA 0 FAIL / 7 known WARN. Full browser QA not yet run on this build: run it before the main push.
+
+## 8 Oct 2026 (afternoon): threads removed, screens seated (preview branch, still NOT live)
+
+Otis: "remove the lines that connect the panels... they just don't connect right"; screens should "sit better within the frame". Website `preview/hero-flow` at 285ac7b (live still d16fce6).
+- `clip/clean.py` erases the threads, pulses and anchor dots from every source frame (long near-horizontal lights + compact round lights; every pane's top/bottom edges and corners guarded; filled from above and below; the edge-on tablet strip cleaned with a vertical median). Compositor reads `clean/` (`FRAMES=full` for the original); `_lines` is 0, nothing is laid back over the screens.
+- `seat()` in composite2.py: thin dark bezel inside the aluminium, edges 10% darker, faint diagonal glass sheen.
+- Homepage capture hides the hero backdrop (no copy of the clip inside the big pane).
+- Checks: camera max frame-to-frame speed change 0.51 px, nothing off rhythm, seam continuous; live test clean on 4 modes; static 0 FAIL / 7 known WARN.
+- Proposed next (Otis to choose): curated hero screens instead of whole scrolling pages, plate matching (grain/softness/colour), fewer products with longer holds, or a regenerated clean base clip.
