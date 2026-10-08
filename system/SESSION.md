@@ -3082,3 +3082,22 @@ Otis on the live hero: screens "not landing properly within the frames", "the la
 - **Loop opens on the poster frame** (source 149), so the still and the first video frame agree; previously the video cut from the poster to frame 1.
 - **Sharper:** H.264 crf 21 / 3.2 Mbps cap (5.0 MB), VP9 2.4 Mbps `-tune-content screen` (4.8 MB), poster 71 KB. Desktop only, still frame first, so the weight is acceptable.
 - QA: static 0 FAIL (7 known WARN), browser 0 FAIL / 0 WARN, live hero test clean on desktop, reduced motion, tablet, phone.
+
+## 8 Oct 2026: hero rebuilt to flow, car removed (preview branch, NOT live)
+
+Otis on the live hero (d16fce6): "broken, not flowing right", "images moving too fast... flow gradually as they scroll", "the background with the vehicle is still showing", "smooth and clear... floating in the wind", "save everything for tomorrow".
+
+Saved, not shipped: website branch `preview/hero-flow` (Vercel builds a preview of it). Live site still runs d16fce6. To ship after Otis approves: merge `preview/hero-flow` into main, run meridian-prelaunch-qa, push, confirm Vercel READY.
+
+What was wrong, measured on the decoded video:
+- Ping-pong reversed at full camera speed (~4 px/frame) twice per loop; the generated clip also drops a frame at 68-69 and 128-129 (double step) and stutters at 191-193.
+- Products hard-cut every 0.8 s (20 cuts per pane per loop).
+- Big pane's screen slid 15-20 px against its rim (reference corners had been set by eye; the ECC tracker re-anchored every 3rd frame, a sawtooth).
+- The car interior printed on the big pane ghosted through the website (edges laid back with the threads, plus a 5% glass tint). Proven with `DIAG=white` renders.
+
+What changed (tools in `system/media/showcase/clip/`, steps in its README):
+- `rimlock.py`: each face locked to its own rim edges every frame; `anchorcheck.py` proves it (rim still under an anchored cross).
+- `composite2.py`: camera glides to rest over 2 s at each end, even speed (`SKIP` retimes the dropped frames; optical-flow in-betweens); loop 478 frames = 19.9 s, output frame 0 = poster.
+- Screens scroll: `capture-scroll.mjs` + `pins.py` capture full-height pages with pinned bars on their own layer; phone pane Big Boy, Fog City, Frame Shop, Modern Street, CarePulse, Drone; tablet pane FinSight, CRM, Analytics, Stack Planner, timed into the part of the loop it faces the camera; each rises into the next as one scroll. Big pane scrolls the homepage down and back.
+- Car removed: `bgmodel.py` models the glass print per frame (the car drifts against the glass), subtracted; only light connected to a tracked anchor dot (`dots.py`), coming in from outside, or pulse-bright comes back, and near each dot only a 30-degree cone on its thread's side.
+- Checks: camera speed on the decoded loop, screens masked out: max frame-to-frame change 0.38 px, no frame off rhythm, seam continuous. White-screen proof across the loop clean. Live test clean (desktop, reduced motion, tablet, phone); static QA 0 FAIL / 7 known WARN. Full browser QA not yet run on this build: run it before the main push.
