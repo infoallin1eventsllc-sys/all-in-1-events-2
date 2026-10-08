@@ -36,7 +36,9 @@ Rebuild (after the site or a demo changes):
    tracks the six anchor dots (tablet and big pane) into `dots.json`. The compositor
    subtracts the per-frame print, so nothing of the car shows through the screens, and
    lays back only the light that crosses the glass: threads, pulses and the tracked
-   dots. `DIAG=white python clip/composite2.py ...` renders plain white screens: any
+   dots. A light is kept only if it is connected to a dot, comes in from outside the
+   glass, or is as bright as a pulse; and within 100 px of a dot only the dot and a
+   30-degree cone on its thread's side (the car's steering wheel touches the lower dot). `DIAG=white python clip/composite2.py ...` renders plain white screens: any
    trace of the car left would show there.
 6. Render: `python clip/composite2.py <dir> shots out` (frame numbers to preview a few;
    several copies with different frame lists to use every core). The loop is 478

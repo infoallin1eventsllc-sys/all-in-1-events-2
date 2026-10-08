@@ -177,20 +177,31 @@ def printed_at(k, s):
         if key not in _bg:
             if len(_bg) > 12: _bg.pop(next(iter(_bg)))
             im = cv2.imread(f'{D}/bg/{k}-{i:03d}.png')
-            im = cv2.dilate(im, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7)))
+            g = 17 if k == 'C' else 9          # the big pane's car needs the wider margin
+            im = cv2.dilate(im, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (g, g)))
             size = (SZ[k][0] * SS, SZ[k][1] * SS)
             _bg[key] = cv2.resize(im, size).astype(np.float32)
         return _bg[key]
     return load(a) if t < 1e-3 else load(a) * (1 - t) + load(b) * t
+THREAD_FROM = {'A': +1, 'C': -1}     # the side each pane's threads arrive from: the tablet's leave to the right, the big pane's come from the left
 def dots_at(s):
-    """Soft discs on the tracked anchor dots of the tablet and big panes, in the frame."""
+    """Soft discs on the tracked anchor dots of the tablet and big panes, and a mask that,
+    within 100 px of each dot, allows only the dot and a 30-degree cone on the side its
+    thread arrives from (the car's steering wheel touches the big pane's lower dot)."""
     a = int(np.floor(s)); t = s - a; b = min(a + 1, S1); m = np.zeros((1080, 1920), np.float32)
+    allow = np.ones((1080, 1920), np.float32)
     for k, r in DOT_R.items():
         for pa, pb in zip(DOTS[k][str(a)], DOTS[k][str(b)]):
             if pa is None or pb is None or max(pa[2], pb[2]) <= 170: continue
             x, y = pa[0] * (1 - t) + pb[0] * t, pa[1] * (1 - t) + pb[1] * t
             cv2.circle(m, (int(round(x)), int(round(y))), r, 1.0, -1, cv2.LINE_AA)
-    return cv2.GaussianBlur(m, (0, 0), 3)
+            x0, y0, x1, y1 = int(max(x - 100, 0)), int(max(y - 100, 0)), int(min(x + 100, 1920)), int(min(y + 100, 1080))
+            dx, dy = XX[y0:y1, x0:x1] - x, YY[y0:y1, x0:x1] - y
+            near = dx * dx + dy * dy < 100 * 100
+            cone = (dx * THREAD_FROM[k] > 0) & (np.abs(dy) < 0.58 * np.abs(dx))
+            disc = dx * dx + dy * dy < (r + 4) ** 2
+            allow[y0:y1, x0:x1] = np.where(near & ~(cone | disc), 0, allow[y0:y1, x0:x1])
+    return cv2.GaussianBlur(m, (0, 0), 3), cv2.GaussianBlur(allow, (0, 0), 1.5)
 def warp(img, H, g=0):
     """Draw a face-space image (SS scale, optionally grown by g) into the frame."""
     Hs = np.diag([SS, SS, 1.0]) @ H @ np.array([[1, 0, -g], [0, 1, -g], [0, 0, 1]], float) @ np.diag([1 / SS, 1 / SS, 1.0])
@@ -223,16 +234,29 @@ for n in range(T):
     for k in 'CBA':
         img, m, pr = face[k]; m3 = m[..., None]
         out = out * (1 - m3) + img * m3; cov = np.maximum(cov, m); printed = printed * (1 - m3) + pr * m3
-    dots = dots_at(s)
+    dots, allow = dots_at(s)
     c3 = cov[..., None]
     # Over the screens, only light that moves across the glass comes back: the clip's
     # threads, their pulses and anchor dots, pixel for pixel in their own colour. It is
     # found as what is brighter than the pane's printed picture, so nothing printed on
     # the glass (the car) can show through.
     lum = orig.max(2); plum = printed.max(2)
-    moving = np.clip((lum - plum - 12) / 45.0, 0, 1)                 # threads and pulses: brighter than the print
-    light = np.clip((lum - 90) / 40.0, 0, 1)                         # and only real light, never the car's shading
-    a = (np.maximum(moving, dots) * light)[..., None] * c3 * F['_lines']   # anchor dots are fixed: kept by position
+    moving = np.clip((lum - plum - 20) / 45.0, 0, 1)                 # threads and pulses: clearly brighter than the print
+    light = np.clip((lum - 105) / 40.0, 0, 1)                        # and only real light, never the car's shading
+    cand = np.maximum(moving, dots) * light
+    # Threads are connected: each runs unbroken into an anchor dot, and a pulse is a very
+    # bright compact light. Anything else that got this far (a fragment of the car's edge
+    # left by a pixel of misregistration) touches neither, and is dropped.
+    on = (cand > 0.15).astype(np.uint8)
+    n_, lab, stt, _ = cv2.connectedComponentsWithStats(cv2.dilate(on, np.ones((3, 3), np.uint8)), connectivity=8)
+    if n_ > 1:
+        hits_dot = np.zeros(n_, bool); hits_dot[np.unique(lab[dots > 0.3])] = True
+        peak = np.zeros(n_, np.float32); np.maximum.at(peak, lab.ravel(), lum.ravel())
+        outside = np.zeros(n_, bool); outside[np.unique(lab[cov < 0.5])] = True   # threads come in from outside the glass
+        keep = hits_dot | (peak > 215) | outside; keep[0] = False
+        cand = cand * keep[lab]
+    cand = cand * allow
+    a = cand[..., None] * c3 * F['_lines']
     out = out * (1 - a) + orig * a
     cv2.imwrite(f'{OUT}/{n:03d}.png', np.clip(out, 0, 255).astype(np.uint8))
 if not ONLY: print('frames', T, 'tablet span', A_SPAN)
