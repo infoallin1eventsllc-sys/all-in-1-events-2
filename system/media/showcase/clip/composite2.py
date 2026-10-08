@@ -22,6 +22,7 @@ ONLY = {int(x) for x in sys.argv[4:]}
 F = json.load(open(f'{D}/faces.json'))
 TR = json.load(open(f'{D}/track2.json'))
 SS = 2                                     # screens are drawn supersampled, then area-averaged
+FRAMES = os.environ.get('FRAMES', 'clean')  # 'clean': the clip with its threads erased (clean.py); 'full': as generated
 
 # ---- timeline -------------------------------------------------------------------
 S0, S1, RAMP = 1, 190, 48                  # 2 s to glide to a stop and away again                  # 191-193 stutter in the source; left out
@@ -51,7 +52,7 @@ _frames, _flows = {}, {}
 def frame(i):
     if i not in _frames:
         if len(_frames) > 8: _frames.pop(next(iter(_frames)))
-        _frames[i] = cv2.imread(f'{D}/full/{i:03d}.png').astype(np.float32)
+        _frames[i] = cv2.imread(f'{D}/{FRAMES}/{i:03d}.png').astype(np.float32)
     return _frames[i]
 DIS = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
 def flow(a):
@@ -102,6 +103,28 @@ def view(page, pin, w, h, off):
             v[y0:y0 + hh] = v[y0:y0 + hh] * (1 - a[:hh]) + part[:hh, :, :3] * a[:hh]
     return v
 def smooth(x): x = np.clip(x, 0, 1); return x * x * (3 - 2 * x)
+
+# ---- a screen seated in its frame ---------------------------------------------------
+_SEAT = {}
+def seat(k, img):
+    """Seat a page in its pane like a real display: a thin dark bezel inside the aluminium,
+    the screen's edges falling off a touch into it, and a faint diagonal sheen of glass."""
+    if k not in _SEAT:
+        h, w = img.shape[:2]; short = min(w, h)
+        bz = int(round(0.022 * short)); r = int(round(F[k]['r'] * w * 0.8))
+        inner = np.zeros((h, w), np.uint8)
+        cv2.rectangle(inner, (bz + r, bz), (w - 1 - bz - r, h - 1 - bz), 255, -1); cv2.rectangle(inner, (bz, bz + r), (w - 1 - bz, h - 1 - bz - r), 255, -1)
+        for cx, cy in ((bz + r, bz + r), (w - 1 - bz - r, bz + r), (w - 1 - bz - r, h - 1 - bz - r), (bz + r, h - 1 - bz - r)):
+            cv2.circle(inner, (cx, cy), r, 255, -1, cv2.LINE_AA)
+        screen = cv2.GaussianBlur(inner.astype(np.float32) / 255, (0, 0), 0.8)[..., None]
+        d = cv2.distanceTransform((inner > 127).astype(np.uint8), cv2.DIST_L2, 5)
+        fall = (0.90 + 0.10 * np.clip(d / (0.06 * short), 0, 1))[..., None]          # edges 10% darker, over 6% of the width
+        yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+        sheen = np.clip(1 - (xx / w * 0.65 + yy / h * 0.35) / 0.55, 0, 1) ** 2 * 0.06 * 255   # top-left glass light
+        _SEAT[k] = (screen, fall, sheen[..., None])
+    screen, fall, sheen = _SEAT[k]
+    bezel = np.float32([14, 9, 6])                                                    # near-black, a hint of the scene's navy
+    return (img * fall + sheen) * screen + bezel * (1 - screen)
 
 class Sequence:
     """Products one after another inside one face. Each scrolls gently (it never stops,
@@ -215,7 +238,7 @@ for n in range(T):
     hsv = cv2.cvtColor(np.clip(orig, 0, 255).astype(np.uint8), cv2.COLOR_BGR2HSV)
     rimpx = ((hsv[..., 2] > 105) & (hsv[..., 1] < 95)).astype(np.uint8)
     rim_soft = cv2.GaussianBlur(cv2.dilate(rimpx, np.ones((3, 3), np.uint8)).astype(np.float32), (0, 0), 0.7)
-    pics = {'A': TABLET.at(n), 'B': PHONE.at(n), 'C': site_at(n)}
+    pics = {k: seat(k, v) for k, v in (('A', TABLET.at(n)), ('B', PHONE.at(n)), ('C', site_at(n)))}
     if os.environ.get('DIAG') == 'white':             # diagnostic: plain white screens show anything left of the glass print
         pics = {k: np.full_like(v, 245) for k, v in pics.items()}
     face, sil = {}, {}

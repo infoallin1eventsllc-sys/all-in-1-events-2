@@ -30,6 +30,9 @@ for (const [name, path, w, h, dpr, wait, act, maxScreens] of JOBS) {
   await p.goto(base + path, { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(wait);
   if (act) await act(p);
   await p.addStyleTag({ content: HIDE }).catch(() => {});
+  // The homepage is shown inside the hero's own big pane: hide the hero backdrop there,
+  // or the pane would show a smaller copy of the clip inside itself.
+  if (name === 'site') await p.addStyleTag({ content: 'section [aria-hidden="true"] img, section [aria-hidden="true"] video{display:none!important}' });
   // Unroll an app that scrolls inside a panel instead of the page (the page is one screen
   // tall but some element holds much more): let that element and its ancestors grow.
   const unrolled = await p.evaluate((h) => {

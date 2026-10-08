@@ -40,6 +40,13 @@ Rebuild (after the site or a demo changes):
    glass, or is as bright as a pulse; and within 100 px of a dot only the dot and a
    30-degree cone on its thread's side (the car's steering wheel touches the lower dot). `DIAG=white python clip/composite2.py ...` renders plain white screens: any
    trace of the car left would show there.
+5b. `python clip/clean.py <dir>` erases the clip's glowing threads, their pulses and
+   anchor dots (Otis, 8 Oct: "remove the lines that connect the panels") into `clean/`;
+   the compositor reads `clean/` by default (`FRAMES=full` for the clip as generated).
+   Threads are found as long near-horizontal lights and dots as compact round lights,
+   with every pane's top and bottom edges and corners guarded so the rims stay intact,
+   and filled from the pixels above and below. The homepage capture hides the hero
+   backdrop, so the big pane never shows a copy of the clip inside itself.
 6. Render: `python clip/composite2.py <dir> shots out` (frame numbers to preview a few;
    several copies with different frame lists to use every core). The loop is 478
    frames (19.9 s at 24 fps): the camera runs source frames 1-190 forward then back,
