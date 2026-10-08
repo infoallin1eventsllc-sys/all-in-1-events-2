@@ -28,11 +28,20 @@ Rebuild (after the site or a demo changes):
    edge-on frames), then `rimlock.py <dir> track2.json track3.json` and copy track3
    over track2. `anchorcheck.py` crops the frames anchored on a tracked corner: if
    the rim sits still in every crop, the screen will too.
-5. `python clip/still.py <dir>` builds each pane's printed-glass picture.
+5. `python clip/still.py <dir>` builds each pane's median picture; then
+   `python clip/bgmodel.py <dir> A` (and `B`, `C`) builds the per-frame model of what
+   Higgsfield printed on each pane's glass (the car on the big pane drifts against the
+   glass, so it is modelled frame by frame from its neighbours; threads and pulses,
+   which slide across the glass, drop out of it), into `bg/`. `python clip/dots.py <dir>`
+   tracks the six anchor dots (tablet and big pane) into `dots.json`. The compositor
+   subtracts the per-frame print, so nothing of the car shows through the screens, and
+   lays back only the light that crosses the glass: threads, pulses and the tracked
+   dots. `DIAG=white python clip/composite2.py ...` renders plain white screens: any
+   trace of the car left would show there.
 6. Render: `python clip/composite2.py <dir> shots out` (frame numbers to preview a few;
-   several copies with different frame lists to use every core). The loop is 442
-   frames (18.4 s at 24 fps): the camera runs source frames 1-190 forward then back,
-   easing to a stop at each end, at an even speed (the generated clip drops a frame
+   several copies with different frame lists to use every core). The loop is 478
+   frames (19.9 s at 24 fps): the camera runs source frames 1-190 forward then back,
+   gliding to a stop over 2 s at each end, at an even speed (the generated clip drops a frame
    at 68-69 and 128-129; `SKIP` gives each frame its true moment, and every in-between
    frame is blended from its neighbours by optical flow); the phone pane scrolls through six products and the tablet pane
    four, each rising into the next as one continuous scroll; the large pane scrolls
