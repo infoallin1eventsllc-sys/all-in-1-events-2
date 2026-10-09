@@ -38,7 +38,11 @@ const swap = (html, from, to, where) => {
   return html.replace(from, () => to);
 };
 
-for (const f of ["index.html", "site.css", "site.js"]) copyFileSync(need(`website/${f}`), `${OUT}/${f}`);
+for (const f of ["site.css", "site.js"]) copyFileSync(need(`website/${f}`), `${OUT}/${f}`);
+// The page, with the film's captions filled in (the guide's words; the film itself carries no words on
+// its picture, and some hosts won't serve a .vtt file).
+writeFileSync(`${OUT}/index.html`, swap(readFileSync(need("website/index.html"), "utf8"), '<script type="text/vtt" id="film-captions"></script>',
+  `<script type="text/vtt" id="film-captions">\n${readFileSync(need("dist/film/meridian-film-captions.vtt"), "utf8").trim()}\n</script>`, "index.html captions"));
 // The security package's pictures: the package and camera pictures, the house map, and each
 // piece on a white studio sweep for "Every piece, up close".
 mkdirSync(`${OUT}/img`, { recursive: true });
@@ -46,7 +50,6 @@ const imgs = readdirSync(need("website/img")).filter((f) => f.endsWith(".webp"))
 for (const f of imgs) copyFileSync(`website/img/${f}`, `${OUT}/img/${f}`);
 copyFileSync(need("dist/film/meridian-film-merged-share.mp4"), `${OUT}/meridian-film.mp4`);
 copyFileSync(need("dist/film/meridian-film-merged-share.webm"), `${OUT}/meridian-film.webm`); // for browsers without H.264
-copyFileSync(need("dist/film/meridian-film-captions.vtt"), `${OUT}/meridian-film-captions.vtt`); // the guide's words, a captions track the viewer can turn on
 copyFileSync(need("dist/film/meridian-film-hero.mp4"), `${OUT}/meridian-film-hero.mp4`); // the landing page's short cut
 copyFileSync(need("dist/film/meridian-film-hero.webm"), `${OUT}/meridian-film-hero.webm`);
 copyFileSync(need("docs/poster.jpg"), `${OUT}/poster.jpg`);

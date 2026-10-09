@@ -8,6 +8,13 @@
   let fullFilm = false;
   const setPaused = (p) => { pause.textContent = p ? "Play" : "Pause"; pause.setAttribute("aria-pressed", String(p)); };
   const sound = $("#film-sound");
+  const cc = $("#film-cc"), ccLine = $("#cc-line");
+  let ccOn = false;
+  const secs = (h, m, s) => +h * 3600 + +m * 60 + +s;
+  const cues = ($("#film-captions")?.textContent || "").split(/\n\s*\n/).map((b) => {
+    const m = b.match(/(\d+):(\d+):([\d.]+)\s*-->\s*(\d+):(\d+):([\d.]+)[^\n]*\n([\s\S]+)/);
+    return m && { a: secs(m[1], m[2], m[3]), b: secs(m[4], m[5], m[6]), text: m[7].trim() };
+  }).filter(Boolean);
   // The buttons follow the video itself, so its own controls and the end of the film keep them right.
   const hero = $(".hero");
   // With the full film playing, the page's words step aside; they come back when it pauses or ends.
@@ -19,7 +26,7 @@
   film.addEventListener("ended", () => {
     hero.classList.remove("watching"); sound.textContent = "Watch again with sound";
     if (!fullFilm) return;
-    fullFilm = false; film.innerHTML = HERO_SOURCES; film.load();
+    fullFilm = false; film.innerHTML = HERO_SOURCES; film.load(); cc.hidden = true; showCue();
     film.muted = true; film.loop = true; film.controls = false;
     $("#film-note").textContent = "This is a short cut of the film. The full film is 1:19, with the guide\u2019s voice.";
     if (!reduce) film.play().catch(() => setPaused(true)); else setPaused(true);
@@ -32,14 +39,24 @@
     if (fullFilm && film.paused && !film.ended && film.currentTime > 0) { film.play().catch(() => setPaused(true)); return; }
     if (!fullFilm) {
       fullFilm = true;
-      // The guide's words come as a captions track (off until the viewer turns it on), never on the picture.
-      film.innerHTML = '<source src="meridian-film.mp4" type="video/mp4"><source src="meridian-film.webm" type="video/webm"><track kind="captions" src="meridian-film-captions.vtt" srclang="en" label="English">';
+      film.innerHTML = '<source src="meridian-film.mp4" type="video/mp4"><source src="meridian-film.webm" type="video/webm">';
+      cc.hidden = !cues.length;
       film.load();
       $("#film-note").textContent = "The full film, 1:19.";
     }
     film.muted = false; film.loop = false; film.controls = true; film.currentTime = 0;
     film.play().catch(() => setPaused(true));
   });
+
+  // ---- Captions for the full film. The film carries no words on its picture; the guide's words are in
+  // the page (the build fills #film-captions from the film's WebVTT), shown only when the viewer turns
+  // them on, in a strip under the film.
+  function showCue() {
+    const on = ccOn && fullFilm, t = film.currentTime, c = on && cues.find((q) => t >= q.a && t <= q.b);
+    ccLine.hidden = !on; ccLine.textContent = c ? c.text : "";
+  }
+  film.addEventListener("timeupdate", showCue);
+  cc.addEventListener("click", () => { ccOn = !ccOn; cc.setAttribute("aria-pressed", String(ccOn)); cc.textContent = ccOn ? "Captions on" : "Captions"; showCue(); });
 
   // ---- Menu (narrow screens) and the current section in the nav.
   const menu = $("#menu"), links = $("#nav-links");

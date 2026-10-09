@@ -61,6 +61,8 @@ h1 em, h2 em { font-style: normal; font-weight: 600; color: var(--cyan); }
 .hero-copy p.lede { margin: 0; max-width: 56ch; color: var(--soft); font-size: clamp(15px, 1.4vw, 18px); }
 .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .film-note { margin: 0; font: 400 13px/1.5 var(--body); color: var(--muted); }
+/* Captions for the full film, when the viewer turns them on: a strip under the picture, never on it. */
+.cc-line { margin: 0; min-height: calc(2 * 1.4em + 20px); padding: 10px var(--gutter); display: grid; place-items: center; text-align: center; background: #000; color: #fff; font: 500 clamp(15px, 1.6vw, 19px)/1.4 var(--body); }
 @media (max-width: 860px) { .hero-copy { grid-template-columns: 1fr; align-items: start; } }
 
 /* Sections */

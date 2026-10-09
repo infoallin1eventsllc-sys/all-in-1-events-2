@@ -39,6 +39,7 @@
       <source src="meridian-film-hero.mp4" type="video/mp4">
       <source src="meridian-film-hero.webm" type="video/webm">
     </video>
+    <p class="cc-line" id="cc-line" hidden></p>
     <div class="hero-copy">
       <div class="hero-title">
         <p class="eyebrow">A Meridian Interface build, with Haven inside</p>
@@ -50,6 +51,7 @@
           <button class="btn solid" id="film-sound" type="button">Watch the full film with sound</button>
           <a class="btn" href="#screens">Choose your screens</a>
           <button class="btn quiet small" id="film-pause" type="button" aria-pressed="false">Pause</button>
+          <button class="btn quiet small" id="film-cc" type="button" aria-pressed="false" hidden>Captions</button>
         </div>
         <p class="film-note" id="film-note">This is a short cut of the film. The full film is 1:19, with the guide&rsquo;s voice.</p>
       </div>
@@ -334,6 +336,8 @@
   </div>
 </footer>
 
+<!-- The guide's words, filled in by the build from the film's captions (dist/film/meridian-film-captions.vtt). -->
+<script type="text/vtt" id="film-captions"></script>
 <script src="site.js" defer></script>
 </body>
 </html>
