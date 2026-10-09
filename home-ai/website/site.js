@@ -142,13 +142,11 @@
   if (!ROOMS.some((r) => r[0] === pick.room)) pick.room = "great-room";
   if (!FINISHES.some((f) => f[0] === pick.finish)) pick.finish = "grounded";
   const shot = (finish, id) => `shots/${finish}-${id}.jpg`;
-  const thumb = (finish, id) => `shots/thumbs/${finish}-${id}.jpg`;
   const screenOf = (room) => ROOMS.find((r) => r[0] === room)[2];
 
   const roomsEl = $("#rooms");
   roomsEl.innerHTML = ROOMS.map(([id, name, scr]) => `<button role="tab" type="button" id="room-${id}" data-room="${id}" aria-controls="pick"><b>${name}</b><span>${SCREENS[scr].name}</span></button>`).join("");
   $("#finishes").innerHTML = FINISHES.map(([k, l]) => `<button type="button" data-finish="${k}">${l}</button>`).join("");
-  $("#set").innerHTML = Object.entries(SCREENS).map(([id, s]) => `<button type="button" data-screen="${id}"><img data-shot="${id}" alt="" loading="lazy" width="720" height="450">${s.name}</button>`).join("");
 
   // Swap the big picture: dim it, load the next one, then bring it up under one scan line.
   // The first render (and reduced motion) just sets it.
@@ -180,8 +178,6 @@
     $("#pick-best").textContent = `Best for: ${s.best}`;
     $("#pick-about").textContent = s.about;
     $("#pick-has").innerHTML = s.has.map((h) => `<li>${h}</li>`).join("");
-    $("#set").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.screen === id)));
-    $("#set").querySelectorAll("img").forEach((im) => { im.src = thumb(pick.finish, im.dataset.shot); im.alt = `${SCREENS[im.dataset.shot].name} screen`; });
     store.set("site.room", pick.room); store.set("site.finish", pick.finish);
   }
   roomsEl.addEventListener("click", (e) => { const b = e.target.closest("[data-room]"); if (b) { pick.room = b.dataset.room; renderPick(); } });
@@ -192,11 +188,6 @@
     e.preventDefault(); const t = tabs[(i + next + tabs.length) % tabs.length]; t.focus(); t.click();
   });
   $("#finishes").addEventListener("click", (e) => { const b = e.target.closest("[data-finish]"); if (b) { pick.finish = b.dataset.finish; renderPick(); } });
-  $("#set").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-screen]"); if (!b) return;
-    pick.room = ROOMS.find((r) => r[2] === b.dataset.screen)[0]; renderPick();
-    $(`#room-${pick.room}`).scrollIntoView({ block: "nearest", inline: "nearest" });
-  });
   renderPick();
 
   // ---- The live panel: loads on request, switches screens in place.

@@ -21,11 +21,10 @@
   <button class="btn quiet small menu" id="menu" type="button" aria-expanded="false" aria-controls="nav-links">Menu</button>
   <nav aria-label="Main">
     <ul id="nav-links">
+      <li><a href="#haven">Haven</a></li>
       <li><a href="#screens">Screens</a></li>
       <li><a href="#live">Live demo</a></li>
-      <li><a href="#haven">Haven</a></li>
       <li><a href="#security">Security</a></li>
-      <li><a href="#protection">Protection</a></li>
       <li><a href="#homes">Homes</a></li>
       <li><a href="#builders">Builders</a></li>
       <li><a href="#faq">FAQ</a></li>
@@ -42,7 +41,7 @@
     </video>
     <div class="hero-copy">
       <div class="hero-title">
-        <p class="eyebrow">A Meridian Interface build &middot; Security &middot; Home system &middot; Haven</p>
+        <p class="eyebrow">A Meridian Interface build, with Haven inside</p>
         <h1>We put the future <em>in your hands.</em></h1>
       </div>
       <div class="hero-act">
@@ -54,6 +53,28 @@
         </div>
         <p class="film-note" id="film-note">This is a short cut of the film. The full film is 1:19, with the guide&rsquo;s voice.</p>
       </div>
+    </div>
+  </section>
+
+  <section id="haven" aria-labelledby="haven-h">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">Haven &middot; the AI home agent</p>
+        <h2 id="haven-h">Everything the guide promised is <em>something Haven does.</em></h2>
+        <p>Haven runs on a small server in the home and a wall panel in each room you choose. It talks with the family, watches the house and learns what each person likes.</p>
+      </div>
+      <figure class="shot-wide">
+        <img src="img/every-screen.webp" alt="Haven on an iPad showing the thermostat and lights, a laptop showing the front porch camera and every door and sensor, an Apple Watch showing the front door locked, and a phone showing a doorbell alert." width="1344" height="752" loading="lazy">
+        <figcaption>One house on every screen: the wall panels, a laptop, an iPad, an iPhone and an Apple Watch, in any browser.</figcaption>
+      </figure>
+      <ul class="features">
+        <li><h3>Talks and listens</h3><p>Push to talk on any panel. It answers in its own voice.</p></li>
+        <li><h3>Watches the electricity</h3><p>Today&rsquo;s use on the panel, from an energy monitor or clearly marked as an estimate. On your way out, Entry shows what&rsquo;s still on.</p></li>
+        <li><h3>Learns your comfort</h3><p>Say &ldquo;I&rsquo;m cold&rdquo; and it warms the room now, and remembers it for that time of day.</p></li>
+        <li><h3>Briefs you</h3><p>A morning and evening summary: the house, the forecast once a weather source is connected, and anything that needs you.</p></li>
+        <li><h3>Goes where you go</h3><p>Talk to Haven, run scenes and hear its briefings from an iPhone, an Apple Watch or the car, through Siri.</p></li>
+        <li><h3>Shows off the model home</h3><p>On a model-home panel, Haven runs its scenes on its own between visitors, and stops the moment someone touches the screen.</p></li>
+      </ul>
     </div>
   </section>
 
@@ -85,10 +106,6 @@
         </div>
       </div>
       <noscript><p class="muted">The room chooser needs JavaScript. The <a href="library.html">screen library</a> shows every screen in every finish without it.</p></noscript>
-      <div class="head set-head">
-        <h3>The whole set</h3>
-      </div>
-      <div class="set" id="set"></div>
     </div>
   </section>
 
@@ -115,54 +132,11 @@
     </div>
   </section>
 
-  <section id="haven" aria-labelledby="haven-h">
-    <div class="wrap">
-      <div class="head">
-        <p class="eyebrow">Haven &middot; the AI home agent</p>
-        <h2 id="haven-h">Everything the guide promised is <em>something Haven does.</em></h2>
-        <p>Haven runs on a small server in the home and a wall panel in each room you choose. It talks with the family, watches the house and learns what each person likes.</p>
-      </div>
-      <ul class="features">
-        <li><h3>Talks and listens</h3><p>Push to talk on any panel. It answers in its own voice.</p></li>
-        <li><h3>Watches the electricity</h3><p>Today&rsquo;s use on the panel, from an energy monitor or clearly marked as an estimate. On your way out, Entry shows what&rsquo;s still on.</p></li>
-        <li><h3>Learns your comfort</h3><p>Say &ldquo;I&rsquo;m cold&rdquo; and it warms the room now, and remembers it for that time of day.</p></li>
-        <li><h3>Briefs you</h3><p>A morning and evening summary: the house, the forecast once a weather source is connected, and anything that needs you.</p></li>
-        <li><h3>Goes where you go</h3><p>Talk to Haven, run scenes and hear its briefings from an iPhone, an Apple Watch or the car, through Siri.</p></li>
-        <li><h3>Shows off the model home</h3><p>On a model-home panel, Haven runs its scenes on its own between visitors, and stops the moment someone touches the screen.</p></li>
-      </ul>
-    </div>
-  </section>
-
-  <section id="security" aria-labelledby="security-h">
+  <section id="security" class="protection" aria-labelledby="security-h">
     <div class="wrap">
       <div class="head">
         <p class="eyebrow">Security</p>
-        <h2 id="security-h">A rule in the code, <em>not the brochure.</em></h2>
-      </div>
-      <div class="security">
-        <div class="stack wide">
-          <blockquote>&ldquo;I&rsquo;ll never unlock a door or open the garage unless you say so.&rdquo;</blockquote>
-          <pre>// The AI's tools have no way to set this
-<b>unlock</b>       &rarr; waits for a person's yes
-<b>garage open</b>  &rarr; waits for a person's yes
-<b>water on</b>     &rarr; waits for a person's yes
-<b>water heater</b> &rarr; never above 125&deg;F</pre>
-        </div>
-        <ul class="checks">
-          <li><h3>Ready, at a glance</h3><p>Every security card leads with one line: Ready, or exactly what&rsquo;s open, or where the leak is.</p></li>
-          <li><h3>Home, Night or Away</h3><p>The panel shows the mode the house is in, from who&rsquo;s home and the hour.</p></li>
-          <li><h3>Every zone, grouped</h3><p>Entry points, water and motion, each with a plain state word. Color is never the only signal.</p></li>
-          <li><h3>Leaks handled first</h3><p>A wet sensor closes the main water and turns off the water heater before anyone has to read a message.</p></li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <section id="protection" class="protection" aria-labelledby="protection-h">
-    <div class="wrap">
-      <div class="head">
-        <p class="eyebrow">The security package</p>
-        <h2 id="protection-h">Everything that protects the home, <em>on one panel.</em></h2>
+        <h2 id="security-h">Everything that protects the home, <em>on one panel.</em></h2>
         <p class="lede">Cameras inside and out, the video doorbell, keypad locks, door, window and motion sensors, and leak protection. Installed with the home, and all on the same wall panel, phone and watch.</p>
       </div>
 
@@ -197,6 +171,25 @@
         </div>
       </div>
 
+      <div class="rule">
+        <h3>A rule in the code, not the brochure</h3>
+        <div class="security">
+          <div class="stack wide">
+            <blockquote>&ldquo;I&rsquo;ll never unlock a door or open the garage unless you say so.&rdquo;</blockquote>
+            <pre>// The AI's tools have no way to set this
+<b>unlock</b>       &rarr; waits for a person's yes
+<b>garage open</b>  &rarr; waits for a person's yes
+<b>water on</b>     &rarr; waits for a person's yes
+<b>water heater</b> &rarr; never above 125&deg;F</pre>
+          </div>
+          <ul class="checks">
+            <li><h3>Ready, at a glance</h3><p>Every security card leads with one line: Ready, or exactly what&rsquo;s open, or where the leak is.</p></li>
+            <li><h3>Home, Night or Away</h3><p>The panel shows the mode the house is in, from who&rsquo;s home and the hour.</p></li>
+            <li><h3>Every zone, grouped</h3><p>Entry points, water and motion, each with a plain state word. Color is never the only signal.</p></li>
+          </ul>
+        </div>
+      </div>
+
       <div class="house-map">
         <div class="sub">
           <h3>One system covers the whole house</h3>
@@ -205,16 +198,7 @@
         <figure class="map-fig" role="img" aria-label="A cutaway of the home with a numbered marker where each device goes; the list below names each one.">
           <img src="img/house.webp" alt="" width="1600" height="905"><span class="mark" style="--x:49%;--y:79%" aria-hidden="true">1</span><span class="mark" style="--x:24%;--y:84%" aria-hidden="true">2</span><span class="mark" style="--x:45.5%;--y:56%" aria-hidden="true">3</span><span class="mark fire" style="--x:47%;--y:41%" aria-hidden="true">4</span><span class="mark" style="--x:23%;--y:24%" aria-hidden="true">5</span><span class="mark" style="--x:64%;--y:9%" aria-hidden="true">6</span><span class="mark" style="--x:73%;--y:29%" aria-hidden="true">7</span><span class="mark" style="--x:43%;--y:27%" aria-hidden="true">8</span><span class="mark" style="--x:88.5%;--y:54%" aria-hidden="true">9</span><span class="mark" style="--x:80%;--y:64%" aria-hidden="true">10</span><span class="mark" style="--x:36.5%;--y:43%" aria-hidden="true">11</span><span class="mark" style="--x:13%;--y:56%" aria-hidden="true">12</span>
         </figure>
-        <ol class="legend"><li><b>Front door</b><span>A keypad lock and the video doorbell. A ring puts the picture on the panel, your phone and your watch.</span></li><li><b>Garage door</b><span>Open or close it from anywhere. If it&rsquo;s left open and nobody is home, it closes itself.</span></li><li><b>Wall panel</b><span>The whole house at a glance: one line says Ready, or exactly what&rsquo;s open.</span></li><li><b>Smoke and CO alarm</b><span>Coming soon: smoke and carbon monoxide alerts on every panel, phone and watch.</span></li><li><b>Leak sensor and water shutoff</b><span>A leak closes the main water before anyone reads a message.</span></li><li><b>Outdoor camera</b><span>Watches the garden and the back doors, live on the panel and any screen.</span></li><li><b>Motion sensor</b><span>Knows which rooms are in use, and turns the lights on after dark.</span></li><li><b>Thermostat</b><span>Learns what each person likes, and sets the house back when you leave.</span></li><li><b>Window sensors</b><span>Every window and door, in one status line.</span></li><li><b>Lights</b><span>Scenes for morning, night and leaving, by touch or by voice.</span></li><li><b>Home server</b><span>Runs Haven inside the home, and keeps working if the internet drops.</span></li><li><b>Energy</b><span>Today&rsquo;s electricity use, and what&rsquo;s still on when you head out.</span></li></ol>
-      </div>
-
-      <div class="cover">
-        <article><p class="kicker">Security</p><h3>Every way in, watched</h3><ul><li>Door, window and motion sensors</li><li>Home, Night and Away, from who&rsquo;s home and the hour</li><li>One status line: Ready, or exactly what&rsquo;s open</li></ul></article>
-        <article><p class="kicker">Video</p><h3>Cameras inside and out</h3><ul><li>Outdoor and indoor cameras, live on every screen</li><li>A video doorbell that sends its picture to your phone</li><li>Pictures saved in the home, never sent to the AI</li></ul></article>
-        <article><p class="kicker">Water</p><h3>Leaks stopped at the source</h3><ul><li>Sensors at the sinks, water heater, washer and fridge line</li><li>The main water closes by itself</li><li>The water heater never goes above 125&deg;F</li></ul></article>
-        <article><p class="kicker">Access</p><h3>Doors and the garage</h3><ul><li>Keypad smart locks on the outside doors</li><li>The garage door, from anywhere</li><li>Unlocking always waits for a person&rsquo;s yes</li></ul></article>
-        <article><p class="kicker">Every screen</p><h3>Wherever you are</h3><ul><li>Wall panels in the rooms you choose</li><li>iPhone, iPad, Android, Mac and Windows, in the browser</li><li>Doorbell pictures on your Apple Watch, and Haven by Siri</li></ul></article>
-        <article><p class="kicker">Coming soon</p><h3>Smoke and carbon monoxide</h3><ul><li>Alarms that reach every panel, phone and watch</li><li>Every light on to light the way out</li><li>Ask about it on your walkthrough</li></ul></article>
+        <ol class="legend"><li><b>Front door</b><span>A keypad lock and the video doorbell. A ring puts the picture on the panel, your phone and your watch.</span></li><li><b>Garage door</b><span>Open or close it from anywhere. If it&rsquo;s left open and nobody is home, it closes itself.</span></li><li><b>Wall panel</b><span>The whole house at a glance: one line says Ready, or exactly what&rsquo;s open.</span></li><li><b>Smoke and CO alarm</b><span>Coming soon: smoke and carbon monoxide alerts on every panel, phone and watch.</span></li><li><b>Leak sensor and water shutoff</b><span>A leak closes the main water and turns off the water heater before anyone reads a message.</span></li><li><b>Outdoor camera</b><span>Watches the garden and the back doors, live on the panel and any screen.</span></li><li><b>Motion sensor</b><span>Knows which rooms are in use, and turns the lights on after dark.</span></li><li><b>Thermostat</b><span>Learns what each person likes, and sets the house back when you leave.</span></li><li><b>Window sensors</b><span>Every window and door, in one status line. Home, Night or Away follows who&rsquo;s home and the hour.</span></li><li><b>Lights</b><span>Scenes for morning, night and leaving, by touch or by voice.</span></li><li><b>Home server</b><span>Runs Haven inside the home, and keeps working if the internet drops.</span></li><li><b>Energy</b><span>Today&rsquo;s electricity use, and what&rsquo;s still on when you head out.</span></li></ol>
       </div>
 
       <div class="feature-row">
@@ -224,30 +208,9 @@
           <p>Cameras cover the yard, the drive and every door, and the pictures they take stay in the house.</p>
           <ul>
             <li><span><b>Live on any screen.</b> The wall panels, your phone, a tablet or a computer.</span></li>
-            <li><span><b>The doorbell shows who&rsquo;s there.</b> The panel by the door opens the camera, and your phone and watch get the picture.</span></li>
+            <li><span><b>The doorbell shows who&rsquo;s there.</b> The panel by the door opens the camera, and your phone and Apple Watch get the picture, even in quiet hours.</span></li>
             <li><span><b>Private by design.</b> Pictures are kept in the home and never go to the AI.</span></li>
           </ul>
-        </div>
-      </div>
-
-      <div class="feature-row flip">
-        <figure><img src="img/every-screen.webp" alt="Haven on an iPad showing the thermostat and lights, a laptop showing the front porch camera and every door and sensor, an Apple Watch showing the front door locked, and a phone showing a doorbell alert." width="1344" height="752"></figure>
-        <div class="txt">
-          <h3>One house. <em>Every screen you own.</em></h3>
-          <p>The wall panel, your laptop, your iPad, your phone and your Apple Watch all show the same home, as it is right now.</p>
-          <ul>
-            <li><span><b>Every camera at once</b> on a laptop or the panel.</span></li>
-            <li><span><b>Doors, locks and sensors,</b> each with a plain word: Locked, Closed, Normal.</span></li>
-            <li><span><b>The alerts that matter</b> on your phone and wrist, and nothing else.</span></li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="feature-row">
-        <figure><img src="img/camera-wall.webp" alt="A laptop showing nine live camera views around a home, beside a phone showing the front door camera with a delivery driver holding a package, and a watch showing the doorbell." width="1344" height="752"></figure>
-        <div class="txt">
-          <h3>Someone at the door? <em>You already know.</em></h3>
-          <p>When the doorbell rings, the picture reaches your phone and your Apple Watch, even in quiet hours, and the panel by the door opens the camera on its own.</p>
         </div>
       </div>
 
@@ -365,7 +328,7 @@
       <p>The hologram, the wall panels and Haven, all made from one plan.</p>
       <a class="btn small" href="#contact">Book a walkthrough</a>
     </div>
-    <div><h4>Haven</h4><ul><li><a href="#screens">Screens</a></li><li><a href="#live">Live demo</a></li><li><a href="tour.html">Guided tour</a></li><li><a href="#security">Security</a></li><li><a href="#protection">The security package</a></li><li><a href="#faq">Questions</a></li></ul></div>
+    <div><h4>Haven</h4><ul><li><a href="#haven">What Haven does</a></li><li><a href="#screens">Screens</a></li><li><a href="#live">Live demo</a></li><li><a href="tour.html">Guided tour</a></li><li><a href="#security">Security</a></li><li><a href="#faq">Questions</a></li></ul></div>
     <div><h4>Homes</h4><ul><li><a href="meridian.html">Watch a home build</a></li><li><a href="residence.html">Linden House</a></li><li><a href="#builders">For builders</a></li></ul></div>
     <small>&copy; 2026 Meridian Interface. The homes shown are sample plans. The live panel runs on a simulated house, with sample weather.</small>
   </div>
