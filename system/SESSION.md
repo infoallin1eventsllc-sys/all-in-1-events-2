@@ -3110,3 +3110,9 @@ Otis: "remove the lines that connect the panels... they just don't connect right
 - Homepage capture hides the hero backdrop (no copy of the clip inside the big pane).
 - Checks: camera max frame-to-frame speed change 0.51 px, nothing off rhythm, seam continuous; live test clean on 4 modes; static 0 FAIL / 7 known WARN.
 - Proposed next (Otis to choose): curated hero screens instead of whole scrolling pages, plate matching (grain/softness/colour), fewer products with longer holds, or a regenerated clean base clip.
+
+## 9 Oct 2026: Video 2 landing-page preview (branch preview/hero-video2, NOT live)
+
+Otis attached his Higgsfield clip 7a0a3c5a ("make a preview with this in the background") and asked not to spend credits; none were. Website branch `preview/hero-video2` (f825e9e), Vercel preview; live still d16fce6; the glass-panes rework stays on `preview/hero-flow`.
+- The clip has hard cuts at 40-41 and 77-78, so the loop uses the settled square only (79-121), graded with the navy LUT learned from the earlier approved polish, half speed, eased forward-back: 9 s, VP9 1.5 MB. Tools: `system/media/video2/`.
+- With the earlier layout the demo cards covered the square completely at 1440 wide, so on wide screens the cards are not rendered and the square holds the right half beside the headline. Live test: plays at 1440 and 1920, phone unchanged, 0 errors.
