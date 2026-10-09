@@ -646,6 +646,12 @@ async function houseViewFallback(page) {
   await Promise.all([page.waitForEvent("load"), page.locator('[data-house-view="hologram"]').click()]);
   await page.waitForSelector("#app:not([hidden])", { timeout: 10_000 });
   await check("House view: the hologram replaces it", async () => (await page.locator("#map.holo:not(.cgi) canvas").count()) === 1, 8000);
+  await openLib();
+  await check("House view: a gallery of six views, each with its picture", async () => (await page.locator("#house-gallery .house-pick img").count()) === 6);
+  await Promise.all([page.waitForEvent("load"), page.locator('[data-house-view="ai-evening-1"]').click()]);
+  await page.waitForSelector("#app:not([hidden])", { timeout: 10_000 });
+  await check("House view: a photoreal render, with every room a button", async () =>
+    (await page.locator("#map.house-still[data-mood='evening'] .still-wrap img").count()) === 1 && (await page.locator("#map .map-room").count()) === 6 && (await page.locator("#map canvas").count()) === 0, 8000);
   await page.evaluate(() => localStorage.setItem("haven.houseView", "still"));
   await Promise.all([page.waitForEvent("load"), page.reload()]);
   await page.waitForSelector("#app:not([hidden])", { timeout: 10_000 });

@@ -10,6 +10,7 @@ import { enableMapZoom } from "./mapzoom.js";
 import { createHologram, hologramSupported, moodNow } from "./holo.js";
 import { normalizeHome, mainRect, homeSignature } from "./building.js";
 import { HOUSE_STILLS } from "./house-stills/index.js";
+import { HOUSE_RENDERS, HOUSE_THUMBS } from "./house-stills/gallery.js";
 import { SAMPLE_HOMES } from "./homes.js";
 import { renderEnergyChart } from "./energy-chart.js";
 
@@ -957,13 +958,15 @@ function mapBlock() {
     room !== "all" ? el("button", { class: "ghost", onclick: () => { room = "all"; render(); } }, "Show every room") : null);
 }
 
-// The house in 3D (web/holo.js): the realistic CGI floor plan ("cgi", the default) or the
-// hologram. Screens → House view picks (an old "model" choice reads as "cgi"). Where the
-// panel can't draw 3D at all, it falls back to the drawn model (web/map.js). Choosing a
-// room flies the camera into it. Without 3D, this home's pre-rendered CGI picture
-// (web/house-stills/) stands in, with its rooms as buttons; "still" forces it (tests and
-// the catalog use it).
-let houseViewPref = ({ hologram: "hologram", still: "still" })[safeGet("haven.houseView")] || "cgi";
+// The house view, from the gallery in Screens → House view (haven.houseView): live 3D
+// ("cgi", the default: the real model of this home, web/holo.js), the hologram, or one of the
+// photoreal AI renders (web/house-stills/gallery.js), shown as a picture with every room a
+// button. A render shows this home only, so for any other home (Screens → Home style, or a
+// home it wasn't made for) the panel uses live 3D instead. An old "model" choice reads as
+// "cgi". Without 3D at all, this home's pre-rendered CGI picture stands in ("still" forces it;
+// tests use it), and only a different home without 3D falls back to the drawn model.
+const savedView = safeGet("haven.houseView");
+let houseViewPref = HOUSE_RENDERS.some((r) => r.id === savedView) ? savedView : ({ hologram: "hologram", still: "still" })[savedView] || "cgi";
 // Which home the house view shows: this home (from its config), or a sample
 // home in another style (Screens → Home style) with this home's devices.
 let homePreview = safeGet("haven.homePreview") || "";
@@ -976,10 +979,13 @@ let explorerFloor = null;
 function houseView(box, { selected, onSelect, onExpand, explorer = false }) {
   const home = currentHome();
   box.dataset.homeSig = homeSignature(home);
+  const thisHome = HOUSE_STILLS?.sig === box.dataset.homeSig;
+  const chosen = thisHome && HOUSE_RENDERS.find((r) => r.id === houseViewPref);
+  if (chosen) return houseStill(box, chosen, { selected, onSelect, onExpand });
   const holo = houseViewPref !== "still" && hologramSupported() && !box.__holo?.failed;
   if (holo) {
     let h = box.__holo;
-    if (!h) h = box.__holo = createHologram(box, { look: houseViewPref, onSelect, onExpand, explorer, describe, fallback: () => { if (state) render(); }, onBuilt: explorer ? renderExplorerFloors : null });
+    if (!h) h = box.__holo = createHologram(box, { look: houseViewPref === "hologram" ? "hologram" : "cgi", onSelect, onExpand, explorer, describe, fallback: () => { if (state) render(); }, onBuilt: explorer ? renderExplorerFloors : null });
     h.opts.onSelect = onSelect;
     h.update({ building: home.building, rooms: home.rooms, devices: allDevices(), selected });
     if (box.__lastSel !== undefined && box.__lastSel !== selected && h.ready) selected ? h.focusRoom(selected) : h.reset();
@@ -987,7 +993,7 @@ function houseView(box, { selected, onSelect, onExpand, explorer = false }) {
     $("#explorer").classList.toggle("holo-mode", Boolean($("#explorer-map").__holo && !$("#explorer-map").__holo.failed));
     return h;
   }
-  const still = HOUSE_STILLS?.sig === box.dataset.homeSig && HOUSE_STILLS[moodNow()];
+  const still = thisHome && HOUSE_STILLS[moodNow()];
   if (still) return houseStill(box, still, { selected, onSelect, onExpand });
   // The drawn model shows one floor at a time: the explorer's, the selected
   // room's, or the ground floor. It draws rectangles, so an L-shaped or odd
@@ -1004,7 +1010,7 @@ function houseView(box, { selected, onSelect, onExpand, explorer = false }) {
 // picture: the same tags, states and taps as the 3D view, for panels that can't draw 3D.
 function houseStill(box, still, { selected, onSelect, onExpand }) {
   box.classList.add("house-still");
-  box.dataset.mood = moodNow();
+  box.dataset.mood = still.mood || moodNow();   // a render carries its own day or evening
   let wrap = box.querySelector(":scope > .still-wrap");
   if (!wrap || wrap.dataset.src !== still.src) {
     wrap?.remove();
@@ -1158,8 +1164,18 @@ $("#explorer").addEventListener("close", () => {
   $("#explorer-map").__holo?.setFloor?.(null);
   $("#explorer-spin").setAttribute("aria-pressed", "false");
 });
-// Screens → House view: realistic 3D or the hologram. Reloads, so each panel builds
-// only the one it uses.
+// Screens → House view: a gallery of every view, each with its picture. Reloads, so each
+// panel builds only the one it uses.
+{
+  const views = [
+    { id: "cgi", name: "Live 3D", note: "Turns and zooms", thumb: HOUSE_THUMBS.cgi },
+    ...HOUSE_RENDERS.map((r) => ({ id: r.id, name: r.name, note: r.mood === "evening" ? "Photoreal, evening" : "Photoreal, daylight", thumb: r.thumb })),
+    { id: "hologram", name: "Hologram", note: "Turns and zooms", thumb: HOUSE_THUMBS.hologram },
+  ];
+  $("#house-gallery").replaceChildren(...views.map((v) => el("button", { type: "button", class: "house-pick", "data-house-view": v.id },
+    el("img", { src: v.thumb, alt: "", width: "240", height: "136", loading: "lazy" }),
+    el("span", { class: "house-pick-name" }, v.name), el("span", { class: "house-pick-note" }, v.note))));
+}
 for (const b of document.querySelectorAll("[data-house-view]")) {
   b.setAttribute("aria-pressed", String(b.dataset.houseView === houseViewPref));
   b.addEventListener("click", () => {
