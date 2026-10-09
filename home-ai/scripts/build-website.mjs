@@ -46,6 +46,7 @@ const imgs = readdirSync(need("website/img")).filter((f) => f.endsWith(".webp"))
 for (const f of imgs) copyFileSync(`website/img/${f}`, `${OUT}/img/${f}`);
 copyFileSync(need("dist/film/meridian-film-merged-share.mp4"), `${OUT}/meridian-film.mp4`);
 copyFileSync(need("dist/film/meridian-film-merged-share.webm"), `${OUT}/meridian-film.webm`); // for browsers without H.264
+copyFileSync(need("dist/film/meridian-film-captions.vtt"), `${OUT}/meridian-film-captions.vtt`); // the guide's words, a captions track the viewer can turn on
 copyFileSync(need("dist/film/meridian-film-hero.mp4"), `${OUT}/meridian-film-hero.mp4`); // the landing page's short cut
 copyFileSync(need("dist/film/meridian-film-hero.webm"), `${OUT}/meridian-film-hero.webm`);
 copyFileSync(need("docs/poster.jpg"), `${OUT}/poster.jpg`);

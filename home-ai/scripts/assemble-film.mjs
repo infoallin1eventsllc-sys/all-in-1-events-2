@@ -1,7 +1,9 @@
 // Cuts the merged film: the hologram design-and-build from our engine, then
 // the generated clips (film/clips/*.mp4, see film/clips.md), with the guide's
-// voice, the score, captions and the end card.
+// voice, the score and the end card. No words are burned into the picture: the guide's words are a
+// captions track the player can show (off by default).
 //   dist/film/meridian-film-merged.mp4   1280x720, 24 fps
+//   dist/film/meridian-film-captions.vtt the guide's words, timed to the film
 // Needs dist/film/meridian-film.mp4 (npm run render:film) and the six clips.
 // FFMPEG=/path/to/ffmpeg if it isn't on PATH.
 import { execFileSync } from "node:child_process";
@@ -64,7 +66,7 @@ writeFileSync(`${TMP}/cues.json`, JSON.stringify(cues, null, 1));
 const MUSIC = process.env.MUSIC ?? "film/music/warm-piano.mp3";
 execFileSync("python3", ["film/audio.py", FF, TMP, `${TMP}/cues.json`], { stdio: "inherit", env: { ...process.env, MUSIC } });
 
-// Captions for the guide's words (SRT, burned in).
+// The guide's words, as a WebVTT captions track (never burned into the picture).
 const LINES = [
   [S.D + 7.3, S.D + 7.95, "Welcome home."], [S.D + 8.1, S.D + 8.7, "Come on in."],
   [S.E + 0.8, S.E + 2.9, "I was here from the first line of the sketch."], [S.E + 3.5, S.E + 6.8, "I know every wall, every window, every pipe."],
@@ -72,10 +74,10 @@ const LINES = [
   [S.F + 8.2, S.F + 10.4, "If something’s wrong, I’ll tell you right away."], [S.F + 11.2, S.F + 15.45, "And I’ll never unlock a door or open the garage unless you say so."],
   [S.tail + 0.6, S.tail + 2.1, "You’re not just living in a house."], [S.tail + 2.1, S.tail + 3.9, "You’re living with something that looks out for you."], [S.tail + 5.1, S.tail + 5.7, "Welcome home."],
 ];
-const ts = (x) => { const t = Math.round(x * 1000), h = Math.floor(t / 3600000), m = Math.floor((t % 3600000) / 60000), s = Math.floor((t % 60000) / 1000), ms = t % 1000; return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")},${String(ms).padStart(3, "0")}`; };
-writeFileSync(`${TMP}/captions.srt`, LINES.map(([a, b, text], i) => `${i + 1}\n${ts(a)} --> ${ts(b)}\n${text}\n`).join("\n"));
+const ts = (x) => { const t = Math.round(x * 1000), h = Math.floor(t / 3600000), m = Math.floor((t % 3600000) / 60000), s = Math.floor((t % 60000) / 1000), ms = t % 1000; return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}.${String(ms).padStart(3, "0")}`; };
+writeFileSync(`${OUT}/meridian-film-captions.vtt`, "WEBVTT\n\n" + LINES.map(([a, b, text], i) => `${i + 1}\n${ts(a)} --> ${ts(b)}\n${text}\n`).join("\n"));
 
-// Crossfade the pieces, burn the captions, add the soundtrack.
+// Crossfade the pieces and add the soundtrack.
 const inputs = PIECES.flatMap((p) => ["-i", p.file]);
 let chain = "", prev = "[0:v]";
 for (let i = 1; i < PIECES.length; i++) {
@@ -83,7 +85,7 @@ for (let i = 1; i < PIECES.length; i++) {
   chain += `${prev}[${i}:v]xfade=transition=fade:duration=${XF}:offset=${off}${out};`;
   prev = out;
 }
-chain += `[xf]subtitles=${TMP}/captions.srt:force_style='FontName=DejaVu Sans,FontSize=20,PrimaryColour=&H00FFFFFF,OutlineColour=&H80000000,Outline=1,Shadow=0,MarginV=36'[v]`;
+chain += "[xf]format=yuv420p[v]";
 execFileSync(FF, ["-v", "error", "-y", ...inputs, "-i", `${TMP}/film-audio.wav`, "-filter_complex", chain, "-map", "[v]", "-map", `${PIECES.length}:a`,
   "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-c:a", "aac", "-b:a", "192k", "-shortest", `${OUT}/meridian-film-merged.mp4`], { stdio: "inherit" });
 console.log(`${OUT}/meridian-film-merged.mp4  ${DUR.toFixed(1)}s`);

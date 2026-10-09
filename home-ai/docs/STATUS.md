@@ -24,6 +24,9 @@ _Last updated: September 27, 2026 (debug pass after the any-home hologram). Bran
 - **Not measured:** hologram frame rate and battery use on a real wall tablet; how a 4,000 sq ft, three-floor home looks.
 - **The browser run is slow** (about 15 minutes per target) because WebGL runs in software here.
 
+## October 9: no words on the film, and a new headline
+The client asked for the words on the video to go, and for the headline to read "We protect the ones you love." The film no longer has the guide's words burned in, and the hologram part was re-rendered without its chapter marks ("03 Detail", "04 Furnish"). The guide's words are now a captions track (`meridian-film-captions.vtt`) on the full film, off until the viewer turns it on, so the film stays accessible to people who can't hear it. The landing page's short cut is silent and carries no words. The film's title and end cards are unchanged.
+
 ## October 9: the website, arranged
 The client asked for the website to be arranged with nothing said twice. One story now: the film, Haven, Screens, Live demo, Security, Homes, Builders, FAQ, booking; the menu lists those seven sections in page order. Security and the security package are one section (the package picture, "Every piece, up close", the rule in the code, the house map, one camera row, smoke and CO coming soon). Gone: the six "what the package covers" cards (each fact lives in the map, the pieces or the rule), a second camera row, the every-screen row (its picture now sits in Haven, beside "Goes where you go"), and the "whole set" grid of screens (the room tabs already name all eight; the build no longer makes thumbnails). The hero's dot-separated label is one plain line.
 

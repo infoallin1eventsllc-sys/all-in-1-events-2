@@ -32,7 +32,8 @@
     if (fullFilm && film.paused && !film.ended && film.currentTime > 0) { film.play().catch(() => setPaused(true)); return; }
     if (!fullFilm) {
       fullFilm = true;
-      film.innerHTML = '<source src="meridian-film.mp4" type="video/mp4"><source src="meridian-film.webm" type="video/webm">';
+      // The guide's words come as a captions track (off until the viewer turns it on), never on the picture.
+      film.innerHTML = '<source src="meridian-film.mp4" type="video/mp4"><source src="meridian-film.webm" type="video/webm"><track kind="captions" src="meridian-film-captions.vtt" srclang="en" label="English">';
       film.load();
       $("#film-note").textContent = "The full film, 1:19.";
     }

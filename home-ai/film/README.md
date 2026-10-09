@@ -82,6 +82,6 @@ The Linden House site (`site/residence/`) scrubs the hologram engine as you scro
 | `uplifting-orchestral.mp3` | Solo cello, string ensemble, heartbeat percussion, quiet choir; builds to a bright crescendo. |
 
 `npm run music:variants film/music/<bed>.mp3 ...` remixes the finished film with each bed
-(same voice, chime, lock and captions; the bed is level-shaped and ducked under the voice)
+(same voice, chime, lock and captions track; the bed is level-shaped and ducked under the voice)
 into `dist/film/variants/<bed>.mp4`. To make one the film's score, run `film/audio.py` with
 `MUSIC=film/music/<bed>.mp3` (and `MUSIC_GAIN` to taste) when assembling.

@@ -16,6 +16,7 @@ const FILES = {
   "panel-vivid.html": "dist/demo/haven-vivid.html",
   "film.html": "dist/film/meridian-film.html",
   "meridian-film.mp4": "dist/film/meridian-film-merged-share.mp4",
+  "meridian-film-captions.vtt": "dist/film/meridian-film-captions.vtt",
   "poster.jpg": "docs/poster.jpg",
   "meridian.html": "dist/site/meridian.html",
   "residence.html": "dist/site/residence.html",
