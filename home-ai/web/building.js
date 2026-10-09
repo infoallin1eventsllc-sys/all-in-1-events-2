@@ -253,3 +253,13 @@ export function sharedStretches(a, others, eps = 0.05) {
   }
   return res;
 }
+
+// A short fingerprint of a home's shape (the building and each room's plan, outline, floor
+// and kind): the pre-rendered house pictures (web/house-stills/) are used only for the home
+// they were made from.
+export function homeSignature({ building, rooms } = {}) {
+  const s = JSON.stringify({ b: building || null, r: (rooms || []).map((r) => [r.id, r.plan || null, r.shape || null, r.floor || null, r.kind || null]) });
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (Math.imul(h, 31) + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}

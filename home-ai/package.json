@@ -21,6 +21,7 @@
     "music:variants": "node scripts/music-variants.mjs",
     "build:showroom": "node scripts/build-showroom.mjs",
     "build:website": "node scripts/build-website.mjs",
+    "build:house-stills": "node scripts/build-house-stills.mjs",
     "encode:film": "node scripts/encode-film.mjs"
   },
   "engines": {

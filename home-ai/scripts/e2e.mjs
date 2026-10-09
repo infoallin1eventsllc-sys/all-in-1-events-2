@@ -635,20 +635,28 @@ async function exercise(page, { garageTravelMs, home }) {
   await audit(page, "phone width");
 }
 
-// Screens → House view → Drawn model: the panel uses the drawn model instead.
+// Screens → House view: realistic 3D (the default) or the hologram; and the CGI picture that
+// stands in where a panel can't draw 3D (forced here with haven.houseView = "still").
 async function houseViewFallback(page) {
   const openLib = async () => { await page.locator(".screens-open:visible").first().click(); await page.waitForSelector("#library[open]"); };
   const useSig = async () => { await openLib(); await page.locator('#library [data-screen="signature"]').click(); await page.locator("#library-close").click(); };
   await useSig();
-  await openLib();
-  await Promise.all([page.waitForEvent("load"), page.locator('[data-house-view="model"]').click()]);
-  await page.waitForSelector("#app:not([hidden])", { timeout: 10_000 });
-  await check("House view: the drawn model replaces the hologram", async () =>
-    (await page.locator("#map svg.map-svg .map-room").count()) === 6 && (await page.locator("#map canvas").count()) === 0, 8000);
+  await check("House view: realistic 3D by default", async () => (await page.locator("#map.holo.cgi canvas").count()) === 1);
   await openLib();
   await Promise.all([page.waitForEvent("load"), page.locator('[data-house-view="hologram"]').click()]);
   await page.waitForSelector("#app:not([hidden])", { timeout: 10_000 });
-  await check("House view: back to the hologram", async () => (await page.locator("#map canvas").count()) === 1, 8000);
+  await check("House view: the hologram replaces it", async () => (await page.locator("#map.holo:not(.cgi) canvas").count()) === 1, 8000);
+  await page.evaluate(() => localStorage.setItem("haven.houseView", "still"));
+  await Promise.all([page.waitForEvent("load"), page.reload()]);
+  await page.waitForSelector("#app:not([hidden])", { timeout: 10_000 });
+  await check("Without 3D: this home's CGI picture, with every room a button", async () =>
+    (await page.locator("#map.house-still .still-wrap img").count()) === 1 && (await page.locator("#map .map-room").count()) === 6 && (await page.locator("#map canvas, #map svg.map-svg").count()) === 0, 8000);
+  await page.locator('#map .map-room[data-room="kitchen"]').click();
+  await check("Without 3D: tapping a room on the picture selects it", async () => (await page.locator('#map .map-room[data-room="kitchen"][aria-pressed="true"]').count()) === 1);
+  await openLib();
+  await Promise.all([page.waitForEvent("load"), page.locator('[data-house-view="cgi"]').click()]);
+  await page.waitForSelector("#app:not([hidden])", { timeout: 10_000 });
+  await check("House view: back to realistic 3D", async () => (await page.locator("#map.holo.cgi canvas").count()) === 1, 8000);
 }
 
 async function runTarget(browser, target) {

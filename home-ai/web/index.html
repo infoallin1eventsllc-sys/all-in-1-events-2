@@ -148,13 +148,13 @@
     <div class="explorer-head">
       <div>
         <h2 id="explorer-title">The house</h2>
-        <p class="muted small">Drag to look around from any angle, pinch or use + and &minus; to zoom, and tap a room for its controls.</p>
+        <p class="muted small" id="explorer-hint">Drag to look around from any angle, pinch or use + and &minus; to zoom, and tap a room for its controls.</p>
       </div>
       <button type="button" id="explorer-close" class="ghost">Close</button>
     </div>
     <div class="explorer-body">
       <div id="explorer-map" class="map explorer-map">
-        <div class="explorer-views" role="toolbar" aria-label="Hologram view">
+        <div class="explorer-views" role="toolbar" aria-label="House view angle">
           <button type="button" data-hview="iso" aria-pressed="true">3D</button>
           <button type="button" data-hview="top" aria-pressed="false">Top</button>
           <button type="button" data-hview="front" aria-pressed="false">Front</button>
@@ -190,10 +190,10 @@
       </div>
     </div>
     <div class="library-settings library-house">
-      <p><strong>House view</strong> <span class="muted small">The hologram you can orbit from any angle, or the drawn model for panels that can't show 3D.</span></p>
+      <p><strong>House view</strong> <span class="muted small">The house in realistic 3D, with real materials and light, or as a hologram. Both orbit from any angle.</span></p>
       <div class="look-switch library-look" role="group" aria-label="House view">
+        <button type="button" data-house-view="cgi">Realistic 3D</button>
         <button type="button" data-house-view="hologram">Hologram</button>
-        <button type="button" data-house-view="model">Drawn model</button>
       </div>
     </div>
     <div class="library-settings library-home">

@@ -7,7 +7,8 @@ import { build } from "esbuild";
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 await build({
   stdin: {
-    contents: `export { ACESFilmicToneMapping, AdditiveBlending, BoxGeometry, BufferGeometry, CanvasTexture, Color, CylinderGeometry, DoubleSide, EdgesGeometry, ExtrudeGeometry, Float32BufferAttribute, Group, IcosahedronGeometry, LineSegments, MathUtils, Mesh, MeshBasicMaterial, PerspectiveCamera, PlaneGeometry, Points, PointsMaterial, Raycaster, RingGeometry, Scene, ShaderMaterial, Shape, ShapeGeometry, Spherical, TOUCH, Vector2, Vector3, WebGLRenderer } from "three";
+    contents: `export { ACESFilmicToneMapping, AdditiveBlending, AmbientLight, BoxGeometry, CircleGeometry, DirectionalLight, HemisphereLight, MeshStandardMaterial, PCFSoftShadowMap, PMREMGenerator, PointLight, RepeatWrapping, SRGBColorSpace, SphereGeometry, BufferGeometry, CanvasTexture, Color, CylinderGeometry, DoubleSide, EdgesGeometry, ExtrudeGeometry, Float32BufferAttribute, Group, IcosahedronGeometry, LineSegments, MathUtils, Mesh, MeshBasicMaterial, PerspectiveCamera, PlaneGeometry, Points, PointsMaterial, Raycaster, RingGeometry, Scene, ShaderMaterial, Shape, ShapeGeometry, Spherical, TOUCH, Vector2, Vector3, WebGLRenderer } from "three";
+export { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 export { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 export { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 export { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";

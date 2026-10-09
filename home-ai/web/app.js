@@ -7,8 +7,9 @@
 import { createVoice } from "./voice.js";
 import { renderMap } from "./map.js";
 import { enableMapZoom } from "./mapzoom.js";
-import { createHologram, hologramSupported } from "./holo.js";
-import { normalizeHome, mainRect } from "./building.js";
+import { createHologram, hologramSupported, moodNow } from "./holo.js";
+import { normalizeHome, mainRect, homeSignature } from "./building.js";
+import { HOUSE_STILLS } from "./house-stills/index.js";
 import { SAMPLE_HOMES } from "./homes.js";
 import { renderEnergyChart } from "./energy-chart.js";
 
@@ -956,11 +957,13 @@ function mapBlock() {
     room !== "all" ? el("button", { class: "ghost", onclick: () => { room = "all"; render(); } }, "Show every room") : null);
 }
 
-// The house: the hologram (web/holo.js) where the panel can draw 3D, or the
-// drawn model (web/map.js). Screens → House view picks; the hologram falls
-// back to the drawn model by itself if WebGL isn't there. Choosing a room
-// flies the hologram's camera into it.
-let houseViewPref = safeGet("haven.houseView") || "hologram";
+// The house in 3D (web/holo.js): the realistic CGI floor plan ("cgi", the default) or the
+// hologram. Screens → House view picks (an old "model" choice reads as "cgi"). Where the
+// panel can't draw 3D at all, it falls back to the drawn model (web/map.js). Choosing a
+// room flies the camera into it. Without 3D, this home's pre-rendered CGI picture
+// (web/house-stills/) stands in, with its rooms as buttons; "still" forces it (tests and
+// the catalog use it).
+let houseViewPref = ({ hologram: "hologram", still: "still" })[safeGet("haven.houseView")] || "cgi";
 // Which home the house view shows: this home (from its config), or a sample
 // home in another style (Screens → Home style) with this home's devices.
 let homePreview = safeGet("haven.homePreview") || "";
@@ -971,11 +974,12 @@ function currentHome() {
 }
 let explorerFloor = null;
 function houseView(box, { selected, onSelect, onExpand, explorer = false }) {
-  const holo = houseViewPref !== "model" && hologramSupported() && !box.__holo?.failed;
   const home = currentHome();
+  box.dataset.homeSig = homeSignature(home);
+  const holo = houseViewPref !== "still" && hologramSupported() && !box.__holo?.failed;
   if (holo) {
     let h = box.__holo;
-    if (!h) h = box.__holo = createHologram(box, { onSelect, onExpand, explorer, describe, fallback: () => { if (state) render(); }, onBuilt: explorer ? renderExplorerFloors : null });
+    if (!h) h = box.__holo = createHologram(box, { look: houseViewPref, onSelect, onExpand, explorer, describe, fallback: () => { if (state) render(); }, onBuilt: explorer ? renderExplorerFloors : null });
     h.opts.onSelect = onSelect;
     h.update({ building: home.building, rooms: home.rooms, devices: allDevices(), selected });
     if (box.__lastSel !== undefined && box.__lastSel !== selected && h.ready) selected ? h.focusRoom(selected) : h.reset();
@@ -983,6 +987,8 @@ function houseView(box, { selected, onSelect, onExpand, explorer = false }) {
     $("#explorer").classList.toggle("holo-mode", Boolean($("#explorer-map").__holo && !$("#explorer-map").__holo.failed));
     return h;
   }
+  const still = HOUSE_STILLS?.sig === box.dataset.homeSig && HOUSE_STILLS[moodNow()];
+  if (still) return houseStill(box, still, { selected, onSelect, onExpand });
   // The drawn model shows one floor at a time: the explorer's, the selected
   // room's, or the ground floor. It draws rectangles, so an L-shaped or odd
   // room shows its largest rectangle rather than covering its neighbours.
@@ -992,6 +998,48 @@ function houseView(box, { selected, onSelect, onExpand, explorer = false }) {
   renderMap(box, { rooms: flat, devicesIn: (id) => allDevices().filter((d) => d.room === id), selected, onSelect, pinInfo });
   if (explorer) renderExplorerFloors(hm, floor);
   return enableMapZoom(box, { onExpand, wheel: explorer });
+}
+
+// The house as a pre-rendered CGI picture, with each room a button where it sits in the
+// picture: the same tags, states and taps as the 3D view, for panels that can't draw 3D.
+function houseStill(box, still, { selected, onSelect, onExpand }) {
+  box.classList.add("house-still");
+  box.dataset.mood = moodNow();
+  let wrap = box.querySelector(":scope > .still-wrap");
+  if (!wrap || wrap.dataset.src !== still.src) {
+    wrap?.remove();
+    wrap = el("div", { class: "still-wrap" }, el("img", { src: still.src, alt: "", draggable: "false" }));
+    wrap.dataset.src = still.src;
+    wrap.style.setProperty("--ratio", String(still.w / still.h));
+    box.style.background = still.bg || "";
+    box.prepend(wrap);
+  }
+  if (onExpand && !box.querySelector(":scope > .still-expand")) {
+    box.append(el("button", { type: "button", class: "still-expand", "aria-label": "Open the house full screen", onclick: onExpand }, "Full screen"));
+  }
+  wrap.querySelectorAll(".map-room").forEach((b) => b.remove());
+  for (const r of state.rooms) {
+    const at = still.rooms[r.id];
+    if (!at) continue;
+    const ds = allDevices().filter((d) => d.room === r.id);
+    const alert = ds.find((d) => (d.type === "leak" && d.state.wet) || (d.type === "water_valve" && !d.state.open) || (d.type === "garage" && d.state.door !== "closed"));
+    const watch = !alert && ds.some((d) => (d.type === "lock" && !d.state.locked) || (d.type === "contact" && d.state.open));
+    const lights = ds.filter((d) => d.type === "light" && d.state.on).length;
+    const th = ds.find((d) => d.type === "thermostat");
+    const note = alert ? (alert.type === "garage" ? "Door open" : alert.type === "leak" ? "Leak" : "Water off") : watch ? "Unlocked or open" : lights ? `${lights} light${lights === 1 ? "" : "s"} on` : "";
+    const text = [note, th ? `${Math.round(th.state.current)}°` : ""].filter(Boolean).join(" · ");
+    const name = r.name.replace(/ Room$/, "");
+    const b = el("button", {
+      type: "button", class: `holo-tag map-room${alert ? " alert" : ""}${lights ? " lit" : ""}${selected === r.id ? " selected" : ""}`,
+      "data-room": r.id, "data-level": alert ? "FAULT" : watch ? "WATCH" : lights ? "LIT" : "OK",
+      "aria-pressed": String(selected === r.id), "aria-label": [r.name, text].filter(Boolean).join(", "),
+      onclick: () => onSelect?.(r.id),
+    }, el("b", {}, name), text ? el("span", {}, text) : null);
+    b.style.left = `${at[0] * 100}%`;
+    b.style.top = `${at[1] * 100}%`;
+    wrap.append(b);
+  }
+  return (box.__still ||= { update: null, focusRoom() {}, reset() {} });
 }
 
 // A device's pin on the zoomed-in house model.
@@ -1022,6 +1070,9 @@ function renderExplorer() {
   if (!dlg.open || !state) return;
   const box = $("#explorer-map");
   const z = houseView(box, { selected: explorerRoom, onSelect: (id) => selectExplorerRoom(explorerRoom === id ? null : id), explorer: true });
+  if (z && "showRoof" in z) $("#explorer-roof").setAttribute("aria-pressed", String(z.showRoof));
+  // The picture fallback can't be turned or zoomed, so the hint says only what it does.
+  $("#explorer-hint").textContent = box.classList.contains("house-still") ? "Tap a room for its controls." : "Drag to look around from any angle, pinch or use + and \u2212 to zoom, and tap a room for its controls.";
   const r = explorerRoom && state.rooms.find((x) => x.id === explorerRoom);
   const aside = $("#explorer-room");
   aside.hidden = !r;
@@ -1107,8 +1158,8 @@ $("#explorer").addEventListener("close", () => {
   $("#explorer-map").__holo?.setFloor?.(null);
   $("#explorer-spin").setAttribute("aria-pressed", "false");
 });
-// Screens → House view: the hologram or the drawn model. Reloads, so each
-// panel builds only the one it uses.
+// Screens → House view: realistic 3D or the hologram. Reloads, so each panel builds
+// only the one it uses.
 for (const b of document.querySelectorAll("[data-house-view]")) {
   b.setAttribute("aria-pressed", String(b.dataset.houseView === houseViewPref));
   b.addEventListener("click", () => {
