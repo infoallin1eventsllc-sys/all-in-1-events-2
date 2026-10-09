@@ -1,4 +1,4 @@
-# Apple Setup: iPhone, iPad, Apple Watch and the Car
+# Apple Setup: iPhone, iPad, Apple Watch, the Car and Cameras
 
 Everything here uses built-in Apple apps (Shortcuts, Safari) plus one free notification app. No App Store app is required.
 
@@ -101,3 +101,16 @@ If you use Home Assistant as the hub, turn on its **HomeKit Bridge** integration
 - **CarPlay**, which offers the garage door automatically as you approach home
 
 Haven still sees every change, logs it, and keeps its safety rules and briefings. With **Apple Home Key** locks (e.g. Schlage Encode Plus), your iPhone or Apple Watch unlocks the front door with a tap.
+
+## 7. Cameras and the doorbell
+
+Haven shows the cameras Home Assistant already has, so add the cameras there first: UniFi Protect, Reolink, Axis, Hikvision, Amcrest, ONVIF and most video doorbells each have a Home Assistant integration. With `HAVEN_ADAPTER=homeassistant`, every `camera.*` entity then appears on its own.
+
+- **On the panels:** a Cameras card on the Entry and Command Center screens, with a fresh picture every 10 seconds. Tap a camera for live video. A camera without live video shows a new picture every 2 seconds instead, and says so.
+- **On iPhone, iPad and computers:** the same, in the Haven app.
+- **The doorbell:** link it in `config/home.json` under `cameras` (the `_cameras` note there has an example): `"doorbell"` is the doorbell's `event.*` entity (newer integrations) or its `binary_sensor.*`. A ring opens the camera on any Entry panel, Haven says someone's at the door, and ntfy or Pushover sends the alert **with the picture** to your phone and Apple Watch, even during quiet hours.
+- **Motion:** link a camera's person or motion sensor as `"motion"`, and Haven saves a picture when it trips (at most one a minute), without an alert.
+- **Where pictures go:** saved on the Haven computer in `data/cameras/` (the last 200, for up to 14 days), never a cloud. Live video passes through the Haven computer, so Home Assistant's key never reaches a phone or panel. Nothing from a camera is ever sent to the AI.
+- **What a ring can't do:** unlock a door. Opening it is always a person's tap, as everywhere else in Haven.
+
+The camera's own recorder (UniFi Protect, a Reolink NVR) keeps doing the continuous recording; Haven shows live video and keeps the doorbell and motion pictures.

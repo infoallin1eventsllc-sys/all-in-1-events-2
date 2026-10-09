@@ -9,6 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
+import { Readable } from "node:stream";
 import { createRoutes } from "./api.js";
 
 const WEB_DIR = fileURLToPath(new URL("../web/", import.meta.url));
@@ -73,12 +74,25 @@ export function createServer(home, { token }) {
       if (!authorized(req, url)) { noteFailure(ip); return send(res, 401, { error: "unauthorized" }); }
     }
 
+    // Ends a long response (a camera's live video) when the viewer goes away.
+    const ended = new AbortController();
+    res.on("close", () => ended.abort());
     try {
       const body = req.method === "POST" ? await readJson(req) : {};
-      const result = await handler(url, body, url.pathname.match(re));
-      if (result?.audio instanceof Uint8Array) {
-        res.writeHead(200, { "Content-Type": result.contentType, "Content-Length": result.audio.length, "Cache-Control": "no-store" });
-        return res.end(result.audio);
+      const result = await handler(url, body, url.pathname.match(re), { signal: ended.signal });
+      const bytes = result?.audio ?? result?.image;
+      if (bytes instanceof Uint8Array) {
+        res.writeHead(200, { "Content-Type": result.contentType, "Content-Length": bytes.length, "Cache-Control": "no-store" });
+        return res.end(bytes);
+      }
+      if (result?.stream) {
+        res.writeHead(200, { "Content-Type": result.contentType, "Cache-Control": "no-store" });
+        const out = Readable.fromWeb(result.stream);
+        const stop = () => { result.release?.(); out.destroy(); };
+        out.on("error", stop);
+        out.on("end", () => { result.release?.(); res.end(); });
+        res.on("close", stop);
+        return out.pipe(res);
       }
       const status = typeof result?.status === "number" ? result.status : 200;
       send(res, status, result);
@@ -121,7 +135,7 @@ function serveStatic(pathname, res) {
   }
   res.writeHead(200, {
     "Content-Type": MIME[path.extname(file)] || "application/octet-stream",
-    "Content-Security-Policy": "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; media-src 'self' blob:",
+    "Content-Security-Policy": "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:",
     "Cache-Control": "no-cache",
   });
   fs.createReadStream(file).pipe(res);

@@ -31,12 +31,15 @@ export class Notifier {
     return inWindow(localParts(this.config.home.timezone).hhmm, s.quietHoursStart, s.quietHoursEnd);
   }
 
-  // message: { title, body, priority, actions?: [{label, url|confirmId}], tag? }
+  // message: { title, body, priority, actions?: [{label, url|confirmId}], tag?, image? (JPEG bytes,
+  // attached on phones: the doorbell's picture), bypassQuiet? }
   async send(message) {
     const msg = { priority: PRIORITY.NORMAL, ...message };
-    const quiet = msg.priority !== PRIORITY.URGENT && this.isQuietHours();
+    // bypassQuiet: someone at the door matters at any hour, without being an alarm.
+    const quiet = msg.priority !== PRIORITY.URGENT && !msg.bypassQuiet && this.isQuietHours();
     const pushed = msg.priority !== PRIORITY.INFO && !quiet;
-    this.bus.publish("notification", { ...msg, held: quiet, pushed });
+    const { image, bypassQuiet, ...logged } = msg; // a picture goes to phones, never into the event log
+    this.bus.publish("notification", { ...logged, held: quiet, pushed });
     if (quiet) {
       this.held.push(msg);
       return { delivered: ["app"], held: true };
@@ -70,8 +73,10 @@ function ntfyChannel(env) {
       };
       if (env.NTFY_TOKEN) headers.Authorization = `Bearer ${env.NTFY_TOKEN}`;
       if (msg.clickUrl) headers.Click = msg.clickUrl;
+      // With a picture, the picture is the body and the words go in a header (ntfy attachments).
+      if (msg.image) Object.assign(headers, { Filename: "camera.jpg", Message: ascii(msg.body) });
       const res = await fetch(`${base}/${encodeURIComponent(env.NTFY_TOPIC)}`, {
-        method: "POST", headers, body: msg.body, signal: AbortSignal.timeout(10_000),
+        method: msg.image ? "PUT" : "POST", headers, body: msg.image || msg.body, signal: AbortSignal.timeout(10_000),
       });
       if (!res.ok) throw new Error(`ntfy ${res.status}`);
     },
@@ -87,6 +92,7 @@ function pushoverChannel(env) {
         title: msg.title, message: msg.body,
         priority: msg.priority === PRIORITY.URGENT ? "1" : "0",
         ...(msg.clickUrl ? { url: msg.clickUrl } : {}),
+        ...(msg.image ? { attachment_base64: Buffer.from(msg.image).toString("base64"), attachment_type: "image/jpeg" } : {}),
       });
       const res = await fetch("https://api.pushover.net/1/messages.json", { method: "POST", body, signal: AbortSignal.timeout(10_000) });
       if (!res.ok) throw new Error(`pushover ${res.status}`);

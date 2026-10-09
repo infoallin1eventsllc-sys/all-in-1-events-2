@@ -24,6 +24,9 @@ _Last updated: September 27, 2026 (debug pass after the any-home hologram). Bran
 - **Not measured:** hologram frame rate and battery use on a real wall tablet; how a 4,000 sq ft, three-floor home looks.
 - **The browser run is slow** (about 15 minutes per target) because WebGL runs in software here.
 
+## Added October 9: cameras and the doorbell
+Haven now shows the home's cameras from Home Assistant: a Cameras card on the Entry and Command Center screens, live video in a full-screen viewer, and the doorbell. A ring opens the camera on Entry panels, says someone's at the door, saves a still on the home server and pushes it to phones and the Apple Watch with the picture, even during quiet hours. Setup: docs/APPLE-SETUP.md, section 7. Code: `src/cameras.js`, tests in `test/cameras.test.js` and the e2e camera checks. **Not yet verified:** a real camera and doorbell (the tests use a stand-in Home Assistant), and how many live views a wall tablet and the home server handle at once (capped at 6).
+
 ## Added September 27: the Meridian Interface film
 "The future, in your hands" (`film/`, film/README.md) is a 1:32 film in which an AI sketches a home as a hologram and builds it through to paint, floors, furniture and lights. It then becomes a holographic guide who welcomes the client in, walks them through the house and explains the control panel. It is a hologram from start to finish (a solid, textured version of the house was tried on September 28 and dropped: it read as a cartoon), with the house laid out by `web/building.js` and the guide voiced by ElevenLabs "Lily D" (clear, calm, warm; chosen October 7). `npm run build:film` makes the page; `npm run render:film` makes the MP4. The photoreal version is written up as ten shot prompts in film/README.md, blocked on a paid video plan (ElevenLabs video needs one; Higgsfield has 0.6 credits).
 

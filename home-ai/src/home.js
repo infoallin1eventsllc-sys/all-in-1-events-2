@@ -16,6 +16,7 @@ import { Reflection } from "./reflection.js";
 import { Energy } from "./energy.js";
 import { Weather } from "./weather.js";
 import { Speech } from "./speech.js";
+import { Cameras } from "./cameras.js";
 import { createAgent } from "./agent/index.js";
 
 export function loadConfig(path = new URL("../config/home.json", import.meta.url)) {
@@ -45,6 +46,7 @@ export async function createHome({ config = loadConfig(), env = process.env, dat
   home.energy = new Energy(home);
   home.weather = new Weather({ config, adapter });
   home.speech = new Speech({ env });
+  home.cameras = new Cameras({ config, adapter, bus, notifier: home.notifier, dataDir });
   home.learner = new Learner(home);
   home.automations = new Automations(home);
   home.agent = await createAgent(home, env);
@@ -52,6 +54,7 @@ export async function createHome({ config = loadConfig(), env = process.env, dat
   home.reflection = new Reflection({ home });
 
   home.start = async () => {
+    home.cameras.start();
     await adapter.start();
     home.energy.start();
     home.weather.start();

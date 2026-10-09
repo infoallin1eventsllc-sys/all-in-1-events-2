@@ -22,6 +22,7 @@ let feed = [];
 let profile = { items: [], suggestions: [] };
 let energy = null;
 let weather = null;
+let cams = null; // /api/cameras: { available, cameras, recent, reason }
 let room = "all";
 let tab = "home";
 let speakAloud = safeGet("haven.speak") !== "off";
@@ -909,6 +910,124 @@ function securityBlock() {
     group("Entry points", entry), group("Water", water), group("Motion", motion));
 }
 
+// ---------- cameras ----------
+// Cameras come from Home Assistant through the home server, which holds its key: pictures are
+// fetched with the owner token and shown from memory, and live video plays in the viewer.
+// With no cameras (the demo, a home without them) the card says so: never a placeholder feed.
+const camPictures = new Map(); // "/api/cameras/…" -> { url, at }
+const CAM_REFRESH_MS = 10_000;
+async function cameraPicture(path) {
+  const res = await fetch(path, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error(`camera ${res.status}`);
+  return URL.createObjectURL(await res.blob());
+}
+function camStatus(c) {
+  const recent = (iso, mins) => iso && Date.now() - Date.parse(iso) < mins * 60_000;
+  if (!c.online) return ["warn", "Offline"];
+  if (recent(c.lastRing, 10)) return ["info", `Doorbell rang ${timeAgo(c.lastRing)}`];
+  if (recent(c.lastMotion, 10)) return ["info", `Motion ${timeAgo(c.lastMotion)}`];
+  return ["ok", c.doorbell ? "Doorbell · watching" : "Watching"];
+}
+function camerasBlock() {
+  if (!cams?.available) {
+    return block("Cameras", "cameras-card", el("p", { class: "muted cam-none" }, cams?.reason || "No cameras connected."));
+  }
+  const name = (id) => cams.cameras.find((c) => c.id === id)?.name || id;
+  const recent = cams.recent.slice(0, 4);
+  return block("Cameras", "cameras-card",
+    el("ul", { class: "cam-grid" }, ...cams.cameras.map((c) => {
+      const [level, word] = camStatus(c);
+      const pic = camPictures.get(`/api/cameras/${c.id}/snapshot`)?.url;
+      return el("li", {},
+        el("button", { type: "button", class: "cam-tile", "data-camera": c.id, onclick: () => openCamera(c.id) },
+          el("span", { class: "cam-frame" },
+            el("img", { "data-cam-src": `/api/cameras/${c.id}/snapshot`, alt: "", ...(pic ? { src: pic } : { hidden: "" }) }),
+            pic ? null : el("span", { class: "cam-wait" }, c.online ? "Loading picture" : "No picture")),
+          el("span", { class: "cam-name" }, c.name),
+          el("span", { class: `sec-state ${level}` }, el("i", { "aria-hidden": "true" }), word)));
+    })),
+    recent.length ? el("div", { class: "cam-recent" }, el("h3", {}, "Saved on the home server"),
+      el("ul", {}, ...recent.map((r) => {
+        const pic = camPictures.get(`/api/cameras/stills/${r.id}`)?.url;
+        const when = new Date(r.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+        return el("li", {}, el("button", { type: "button", class: "cam-still", "data-still": r.id, onclick: () => openCamera(r.camera, { still: r }) },
+          el("img", { "data-cam-src": `/api/cameras/stills/${r.id}`, "data-keep": "", alt: "", ...(pic ? { src: pic } : { hidden: "" }) }),
+          el("span", {}, `${r.kind === "doorbell" ? "Doorbell" : "Motion"} · ${name(r.camera)}`), el("span", { class: "muted" }, when)));
+      }))) : null);
+}
+// Fill every camera picture on screen: snapshots every 10 seconds while the panel is visible,
+// saved stills once (they never change).
+let camLoading = false;
+async function loadCameraPictures() {
+  if (demo || !cams?.available || camLoading || document.hidden) return;
+  camLoading = true;
+  try {
+    const paths = new Set([...document.querySelectorAll("#alt img[data-cam-src]")].map((i) => i.dataset.camSrc));
+    for (const path of paths) {
+      const had = camPictures.get(path);
+      const keep = path.includes("/stills/");
+      if (had && (keep || Date.now() - had.at < CAM_REFRESH_MS)) continue;
+      let url = null;
+      try { url = await cameraPicture(path); } catch { /* offline camera: keep the last picture */ }
+      if (!url) continue;
+      camPictures.set(path, { url, at: Date.now() });
+      for (const img of document.querySelectorAll(`img[data-cam-src="${CSS.escape(path)}"]`)) {
+        img.src = url; img.hidden = false; img.nextElementSibling?.classList.contains("cam-wait") && img.nextElementSibling.remove();
+      }
+      if (had) setTimeout(() => URL.revokeObjectURL(had.url), 1000);
+    }
+  } finally {
+    camLoading = false;
+  }
+}
+setInterval(loadCameraPictures, CAM_REFRESH_MS);
+
+// The viewer: live video while it's open (motion JPEG through the home server), or a saved still.
+// A camera without live video gets a fresh picture every 2 seconds instead, and says so.
+const camView = { timer: 0, url: null };
+function stopCameraView() {
+  clearInterval(camView.timer);
+  const img = $("#camera-img");
+  img.onerror = null;
+  img.removeAttribute("src"); // ends the live stream
+  if (camView.url) { URL.revokeObjectURL(camView.url); camView.url = null; }
+}
+async function openCamera(id, { still = null } = {}) {
+  const c = cams?.cameras.find((x) => x.id === id);
+  if (!c) return;
+  stopCameraView();
+  const img = $("#camera-img"), dlg = $("#camera-view");
+  $("#camera-title").textContent = c.name;
+  $("#camera-note").textContent = "";
+  if (!dlg.open) dlg.showModal();
+  const showPicture = async (path) => {
+    const url = await cameraPicture(path);
+    if (camView.url) URL.revokeObjectURL(camView.url);
+    camView.url = url;
+    img.src = url;
+  };
+  if (still) {
+    $("#camera-state").textContent = `${still.kind === "doorbell" ? "Doorbell" : "Motion"} · ${new Date(still.at).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" })} · saved picture`;
+    img.alt = `${c.name}, saved picture`;
+    showPicture(`/api/cameras/stills/${still.id}`).catch(() => { $("#camera-note").textContent = "That picture is no longer on the home server."; });
+    return;
+  }
+  img.alt = `${c.name}, live view`;
+  $("#camera-state").textContent = "Live";
+  img.onerror = () => {
+    img.onerror = null;
+    $("#camera-state").textContent = "A new picture every 2 seconds";
+    $("#camera-note").textContent = "This camera has no live video right now, so Haven shows a fresh picture every 2 seconds.";
+    const tick = () => showPicture(`/api/cameras/${id}/snapshot`).catch(() => { $("#camera-note").textContent = `${c.name} isn't answering. Check that it has power and is online.`; });
+    tick();
+    camView.timer = setInterval(tick, 2000);
+  };
+  img.src = `/api/cameras/${encodeURIComponent(id)}/live?token=${encodeURIComponent(token)}`;
+}
+$("#camera-close").addEventListener("click", () => $("#camera-view").close());
+$("#camera-view").addEventListener("close", stopCameraView);
+document.addEventListener("visibilitychange", () => { if (document.hidden && $("#camera-view").open) $("#camera-view").close(); else loadCameraPictures(); });
+
 function conditionsBlock() {
   const rows = [];
   for (const r of state.rooms) {
@@ -1647,7 +1766,7 @@ function renderAlt() {
   } else if (screen === "command-center") {
     nodes.push(altHeader(), asksBlock(),
       el("div", { class: "grid-cc" },
-        mapBlock(), climateTile(th), energyTile(), lightsBlock(room === "all" ? null : room), securityBlock(), conditionsBlock(), scenesBlock(), updatesBlock(6)));
+        mapBlock(), climateTile(th), energyTile(), lightsBlock(room === "all" ? null : room), securityBlock(), camerasBlock(), conditionsBlock(), scenesBlock(), updatesBlock(6)));
   } else if (screen === "family-hub") {
     nodes.push(altHeader({ big: true }), asksBlock(),
       el("div", { class: "grid-family" }, briefingBlock(), climateTile(th), scenesBlock("Scenes"), feelBlock(), lightsBlock(panelRoom || null)));
@@ -1679,6 +1798,7 @@ function renderAlt() {
         bigButton("I'm home", "Lights on, comfortable temperature", () => api("/api/scenes/home", {}).then(showResult)),
         bigButton("Lock up", "Every door, and the garage", lockUp)),
       el("div", { class: "grid-entry" },
+        camerasBlock(),
         securityBlock(),
         block("Still on", "stillon-card",
           on.length ? el("ul", { class: "lights-list" }, ...on.map((d) => el("li", { class: "on", "data-device": d.id },
@@ -1689,6 +1809,7 @@ function renderAlt() {
         conditionsBlock()));
   }
   alt.replaceChildren(...nodes.filter(Boolean));
+  loadCameraPictures();
   const slot = alt.querySelector(".chart-slot");
   if (slot && energy) renderEnergyChart(slot, energy, slot.clientWidth || 600);
 }
@@ -1778,7 +1899,7 @@ let refreshTimer;
 function refresh() {
   clearTimeout(refreshTimer);
   refreshTimer = setTimeout(async () => {
-    [state, energy, weather] = await Promise.all([api("/api/state"), api("/api/energy"), api("/api/weather")]);
+    [state, energy, weather, cams] = await Promise.all([api("/api/state"), api("/api/energy"), api("/api/weather"), api("/api/cameras")]);
     for (const [id, p] of pendingTarget) if (p.settled) pendingTarget.delete(id);
     render();
     if (tab === "you") loadProfile();
@@ -1793,6 +1914,11 @@ function onEvent(e) {
     // Haven speaks up for briefings and anything urgent.
     if (e.type === "briefing") reply(`${e.title}. ${e.body}`);
     else if (e.type === "notification" && e.priority === "urgent") reply(`${e.title}. ${e.body}`);
+    else if (e.type === "doorbell") {
+      reply(`Someone's at the door. The ${e.name} camera is showing who.`);
+      // The panel by the front door shows them right away; the others say so.
+      if (screen === "entry" && !$("#camera-view").open) openCamera(e.camera);
+    }
   }
   refresh();
 }
@@ -1812,7 +1938,7 @@ function connect() {
 async function start() {
   if (!token) return showLogin();
   try {
-    [state, feed, energy, weather] = await Promise.all([api("/api/state"), api("/api/events?limit=150"), api("/api/energy"), api("/api/weather")]);
+    [state, feed, energy, weather, cams] = await Promise.all([api("/api/state"), api("/api/events?limit=150"), api("/api/energy"), api("/api/weather"), api("/api/cameras")]);
   } catch {
     return;
   }

@@ -14,6 +14,8 @@
     "longitude": null
   },
 
+  "_cameras": "Every camera in Home Assistant appears on its own when HAVEN_ADAPTER=homeassistant. Entries here are optional: rename one, put it in a room, hide it, or link its doorbell (an event.* or binary_sensor.* entity) and motion sensor, e.g. {\"ha_entity\": \"camera.front_door\", \"name\": \"Front door\", \"room\": \"exterior\", \"doorbell\": \"event.front_door_ding\", \"motion\": \"binary_sensor.front_door_person\"}. Without Home Assistant, the panels say no cameras are connected.",
+  "cameras": [],
   "settings": {
     "units": "F",
     "motionLightsOffAfterMinutes": 5,

@@ -47,6 +47,12 @@ export function createRoutes(home) {
     ["GET", /^\/api\/energy$/, true, () => home.energy.report()],
     ["GET", /^\/api\/weather$/, true, () => home.weather.report()],
 
+    // Cameras (from Home Assistant): the list, a picture now, live video, and saved stills.
+    ["GET", /^\/api\/cameras$/, true, () => home.cameras.report()],
+    ["GET", /^\/api\/cameras\/stills\/([\w-]+)$/, true, (url, body, m) => home.cameras.still(m[1])],
+    ["GET", /^\/api\/cameras\/([\w-]+)\/snapshot$/, true, (url, body, m) => home.cameras.snapshot(m[1])],
+    ["GET", /^\/api\/cameras\/([\w-]+)\/live$/, true, (url, body, m, ctx) => home.cameras.liveView(m[1], ctx?.signal)],
+
     // What Haven has learned about the homeowner.
     ["GET", /^\/api\/profile$/, true, () => home.learner.view()],
     ["POST", /^\/api\/feedback$/, true, (url, body) => home.learner.feedback(body.feeling, { room: body.room, origin: "owner" })],

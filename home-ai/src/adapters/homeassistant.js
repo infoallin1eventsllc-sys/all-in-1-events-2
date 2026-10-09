@@ -14,6 +14,12 @@ export class HomeAssistantAdapter {
     this.url = url.replace(/\/$/, "");
     this.token = token;
     this.name = "homeassistant";
+    this.watchers = [];
+  }
+
+  // Called with every poll's states (a Map of entity_id -> state), for cameras and doorbells.
+  watchStates(fn) {
+    this.watchers.push(fn);
   }
 
   async start() {
@@ -71,6 +77,26 @@ export class HomeAssistantAdapter {
     return { state, hourly: hourly ?? [], daily: daily ?? state.attributes?.forecast ?? [] };
   }
 
+  // A camera's picture now: { image, contentType }.
+  async cameraImage(entity) {
+    const res = await fetch(`${this.url}/api/camera_proxy/${encodeURIComponent(entity)}`, {
+      headers: { Authorization: `Bearer ${this.token}` },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) throw new Error(`Home Assistant ${entity} returned ${res.status}`);
+    return { image: Buffer.from(await res.arrayBuffer()), contentType: res.headers.get("content-type") || "image/jpeg" };
+  }
+
+  // A camera's live video as motion JPEG: { stream, contentType }. Ends when signal aborts.
+  async cameraStream(entity, signal) {
+    const res = await fetch(`${this.url}/api/camera_proxy_stream/${encodeURIComponent(entity)}`, {
+      headers: { Authorization: `Bearer ${this.token}` },
+      signal,
+    });
+    if (!res.ok || !res.body) throw new Error(`Home Assistant ${entity} stream returned ${res.status}`);
+    return { stream: res.body, contentType: res.headers.get("content-type") || "multipart/x-mixed-replace" };
+  }
+
   async poll() {
     const res = await fetch(`${this.url}/api/states`, {
       headers: { Authorization: `Bearer ${this.token}` },
@@ -78,6 +104,7 @@ export class HomeAssistantAdapter {
     });
     if (!res.ok) throw new Error(`Home Assistant /api/states returned ${res.status}`);
     const states = new Map((await res.json()).map((s) => [s.entity_id, s]));
+    for (const fn of this.watchers) { try { fn(states); } catch { /* one watcher can't stop the poll */ } }
     for (const device of this.registry.all()) {
       const s = states.get(device.ha_entity);
       if (!s || s.state === "unavailable" || s.state === "unknown") continue;

@@ -27,5 +27,7 @@ export const writeFileSync = unavailable;
 export const renameSync = unavailable;
 export const mkdirSync = () => {};
 export const appendFile = () => {};
+export const readdirSync = () => [];
+export const rm = () => {};
 export const join = (...parts) => parts.join("/");
-export default { existsSync, readFileSync, writeFileSync, renameSync, mkdirSync, appendFile, join };
+export default { existsSync, readFileSync, writeFileSync, renameSync, mkdirSync, appendFile, readdirSync, rm, join };

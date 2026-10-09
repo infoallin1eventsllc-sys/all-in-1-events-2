@@ -703,6 +703,40 @@ footer { text-align: center; }
 .chart-hit { cursor: crosshair; }
 .chart-tip { position: absolute; transform: translate(-50%, calc(-100% - 10px)); padding: 4px 8px; border-radius: 8px; font-size: 0.8rem; font-variant-numeric: tabular-nums; white-space: nowrap; background: var(--ink); color: var(--bg); pointer-events: none; }
 
+/* ---------- cameras ---------- */
+/* Pictures sit on a dark frame in every finish (a camera image is never tinted); state is a
+   word and a dot, as on the security card. */
+.cameras-card { gap: 12px; }
+.cam-none { margin: 0; }
+.cam-grid, .cam-recent ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.cam-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.cam-tile, .cam-still { display: grid; gap: 6px; width: 100%; min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.cam-frame { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; background: #0b0d10; border: 1px solid var(--line); }
+.cam-frame img, .cam-still img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.cam-wait { font-size: 0.8rem; color: #c9ced6; }
+.cam-tile:hover .cam-frame, .cam-still:hover img { border-color: var(--accent); }
+.cam-name { font-weight: 600; }
+.cam-tile .sec-state { justify-self: start; }
+.cam-recent { display: grid; gap: 8px; }
+.cam-recent h3 { margin: 0; font-size: 0.74rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.cam-recent ul { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.cam-still { gap: 2px; font-size: 0.78rem; }
+.cam-still img { aspect-ratio: 16 / 9; height: auto; border-radius: 8px; border: 1px solid var(--line); background: #0b0d10; }
+.camera-view {
+  width: min(1120px, calc(100% - 24px)); max-height: calc(100dvh - 24px); overflow: auto;
+  padding: 16px; border-radius: var(--radius); border: 1px solid var(--line);
+  background: var(--glass); color: var(--ink); box-shadow: var(--shadow);
+  backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+}
+.camera-view::backdrop { background: rgba(5, 6, 8, 0.7); }
+.camera-view[open] { display: grid; gap: 12px; }
+.cv-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.cv-head h2 { margin: 0; font-size: 1.3rem; text-transform: none; letter-spacing: -0.01em; color: var(--ink); }
+.cv-state { margin: 2px 0 0; font-size: 0.85rem; color: var(--muted); }
+.cv-frame { display: grid; place-items: center; aspect-ratio: 16 / 9; max-width: 100%; border-radius: 12px; overflow: hidden; background: #0b0d10; }
+.cv-frame img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.camera-view p.small { margin: 0; }
+
 /* ---------- screen library ---------- */
 .screens-open { min-height: 36px; padding: 4px 14px; border-radius: 999px; font-size: 0.85rem; }
 .stage-tools .screens-open { color: var(--stage-ink); background: rgba(255, 255, 255, 0.18); border-color: rgba(255, 255, 255, 0.3); }

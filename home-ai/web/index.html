@@ -167,6 +167,17 @@
       <aside id="explorer-room" class="explorer-room" aria-label="Room controls" hidden></aside>
     </div>
   </dialog>
+  <dialog id="camera-view" class="camera-view" aria-labelledby="camera-title">
+    <div class="cv-head">
+      <div>
+        <h2 id="camera-title">Camera</h2>
+        <p class="cv-state" id="camera-state"></p>
+      </div>
+      <button type="button" id="camera-close" class="ghost">Close</button>
+    </div>
+    <div class="cv-frame"><img id="camera-img" alt=""></div>
+    <p class="muted small" id="camera-note"></p>
+  </dialog>
   <dialog id="library" class="library" aria-labelledby="library-title">
     <div class="library-head">
       <div>

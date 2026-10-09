@@ -665,6 +665,53 @@ async function houseViewFallback(page) {
   await check("House view: back to realistic 3D", async () => (await page.locator("#map.holo.cgi canvas").count()) === 1, 8000);
 }
 
+// Cameras. The demo has none and must say so. On the server, Home Assistant's cameras are
+// stood in for at the network edge (one doorbell camera and a saved still), so the card, the
+// live viewer, a saved picture and a doorbell ring are exercised in a real browser.
+async function cameraChecks(page, { home }) {
+  const openLib = async () => { await page.locator(".screens-open:visible").first().click(); await page.waitForSelector("#library[open]"); };
+  const useScreen = async (id) => { await openLib(); await page.locator(`#library [data-screen="${id}"]`).click(); await page.locator("#library-close").click(); };
+  if (!home) {
+    await useScreen("entry");
+    await check("Cameras: the demo says none are connected, with no placeholder feed", async () =>
+      /none are connected/.test(await page.textContent(".cameras-card")) && (await page.locator(".cameras-card img").count()) === 0);
+    await useScreen("signature");
+    return;
+  }
+  const jpeg = fs.readFileSync(path.join(root, "docs/poster.jpg"));
+  const at = new Date(Date.now() - 5 * 60_000).toISOString();
+  const list = { available: true, cameras: [{ id: "front_door", name: "Front door", room: "exterior", online: true, doorbell: true, motion: true, lastRing: at, lastMotion: null }],
+    recent: [{ id: "front_door-20261009-120000-doorbell", camera: "front_door", kind: "doorbell", at }] };
+  const seen = [];
+  await page.route("**/api/cameras", (r) => r.fulfill({ json: list }));
+  await page.route(/\/api\/cameras\/.+/, (r) => { seen.push(new URL(r.request().url()).pathname + (new URL(r.request().url()).searchParams.has("token") ? "?token" : "")); r.fulfill({ body: jpeg, contentType: "image/jpeg" }); });
+  await Promise.all([page.waitForEvent("load"), page.reload()]);
+  await page.waitForSelector("#app:not([hidden])", { timeout: 10_000 });
+  await useScreen("entry");
+  await check("Cameras: the Entry screen shows the doorbell camera's picture", async () =>
+    page.evaluate(() => { const i = document.querySelector('.cam-tile[data-camera="front_door"] img'); return !!i && !i.hidden && i.naturalWidth > 0; }), 8000);
+  await check("Cameras: it says the doorbell rang, in words", async () => /Doorbell rang/.test(await page.textContent('.cam-tile[data-camera="front_door"]')));
+  await check("Cameras: the saved still is listed", async () => (await page.locator(".cam-recent [data-still]").count()) === 1);
+  await check("Cameras: pictures come with the owner token in the header, not the address", async () => seen.includes("/api/cameras/front_door/snapshot"));
+  await audit(page, "Entry with a camera");
+  await page.locator('.cam-tile[data-camera="front_door"]').click();
+  await check("Cameras: tapping it opens live video", async () =>
+    (await page.evaluate(() => document.querySelector("#camera-view").open)) && /\/api\/cameras\/front_door\/live\?token=/.test(await page.getAttribute("#camera-img", "src")) && (await page.textContent("#camera-state")) === "Live");
+  await audit(page, "Camera live view");
+  await page.locator("#camera-close").click();
+  await check("Cameras: closing the viewer ends the video", async () => !(await page.evaluate(() => document.querySelector("#camera-view").open)) && (await page.getAttribute("#camera-img", "src")) === null);
+  await page.locator(".cam-recent [data-still]").click();
+  await check("Cameras: a saved still opens from the home server", async () => /saved picture/.test(await page.textContent("#camera-state")) && seen.includes("/api/cameras/stills/front_door-20261009-120000-doorbell"));
+  await page.keyboard.press("Escape");
+  home.bus.publish("doorbell", { camera: "front_door", name: "Front door", still: null });
+  await check("Cameras: a ring opens the door camera on the Entry panel and says so", async () =>
+    (await page.evaluate(() => document.querySelector("#camera-view").open)) && /Someone's at the door/.test(await page.textContent("#chat-log")), 8000);
+  await page.keyboard.press("Escape");
+  await page.unroute("**/api/cameras");
+  await page.unroute(/\/api\/cameras\/.+/);
+  await useScreen("signature");
+}
+
 async function runTarget(browser, target) {
   console.log(`\n${target === "server" ? "Panel on the home server" : "Browser-only demo"}`);
   const errors = [];
@@ -706,6 +753,7 @@ async function runTarget(browser, target) {
   try {
     await exercise(page, { garageTravelMs: target === "server" ? 400 : 4000, home });
     await houseViewFallback(page);
+    await cameraChecks(page, { home });
   } catch (err) {
     report(false, "Run finished", err.message.split("\n")[0]);
   }
