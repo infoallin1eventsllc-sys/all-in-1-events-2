@@ -1,5 +1,6 @@
-/* One dark world, the same one the film and the hologram live in: night ground, cyan light
-   for the hologram and for actions, amber for the guide's voice and for what needs you.
+/* Porcelain & Navy (the client's pick): cool white pages, navy type and buttons, and a dark
+   band for the film. The base tokens below are the original dark world; the Porcelain & Navy
+   block at the end of this file sets the site's colors, plus the few colors written as literals.
    Layout: full-bleed film, then a 1180px column of sections, each opening with a label and a headline. */
 :root {
   color-scheme: dark;
@@ -239,3 +240,139 @@ footer small { grid-column: 1 / -1; font-size: 13px; padding-top: 18px; border-t
 .home-card { overflow: hidden; }
 .home-card > img { transform-origin: center; }
 @media (max-width: 900px) { .rooms button::before { left: 10px; right: 10px; top: auto; bottom: 0; width: auto; height: 2px; } }
+
+/* The security package. Product pictures sit on their own grounds (white studio, night navy);
+   everything around them takes the site's tokens. */
+.protection .wrap { gap: clamp(40px, 6vw, 72px); }
+.protection .lede { margin: 0; color: var(--soft); max-width: 64ch; }
+.protection h3 { margin: 0; }
+.shot-wide { margin: 0; display: grid; gap: 12px; }
+.shot-wide img { display: block; width: 100%; height: auto; aspect-ratio: 1344 / 752; object-fit: cover; border-radius: 18px; border: 1px solid var(--line); background: #f4f4f4; }
+.shot-wide figcaption { margin: 0; color: var(--muted); font-size: 14.5px; max-width: 80ch; }
+
+/* One system, the whole house: the render with a numbered marker where each device goes */
+.house-map { display: grid; gap: 22px; }
+.house-map .sub { display: grid; gap: 10px; max-width: 64ch; }
+.house-map .sub p { margin: 0; color: var(--soft); }
+.map-fig { position: relative; margin: 0; border-radius: 18px; overflow: hidden; border: 1px solid var(--line); background: #d1d1d3; aspect-ratio: 1600 / 905; max-width: 100%; }
+.map-fig img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.mark { position: absolute; left: var(--x); top: var(--y); transform: translate(-50%, -50%); width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+  font: 600 14px/1 var(--body); color: #fff; background: #0f1c2e; border: 2px solid #fff; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); }
+.mark.fire { background: #b3261e; }
+.legend { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 28px; counter-reset: dev; }
+.legend li { counter-increment: dev; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 2px 12px; padding: 12px 0; border-bottom: 1px solid var(--line-2); align-content: start; }
+.legend li::before { content: counter(dev); grid-row: span 2; width: 26px; height: 26px; margin-top: 1px; border-radius: 50%; display: grid; place-items: center; font: 600 12px/1 var(--body); color: var(--on-cyan); background: var(--cyan); }
+.legend b { font-weight: 600; color: var(--paper); }
+.legend span { color: var(--muted); font-size: 14.5px; }
+@media (max-width: 980px) { .legend { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .legend { grid-template-columns: 1fr; } .mark { width: 22px; height: 22px; font-size: 10.5px; border-width: 1.5px; } }
+
+/* What the package covers */
+.cover { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.cover article { display: grid; gap: 12px; align-content: start; padding: 22px 24px 24px; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); min-width: 0; }
+.protection .kicker { margin: 0; font: 500 12px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--cyan); }
+.cover ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.cover li { display: grid; grid-template-columns: 8px minmax(0, 1fr); gap: 12px; color: var(--soft); font-size: 15.5px; }
+.cover li::before { content: ""; width: 8px; height: 8px; margin-top: 9px; border-radius: 2px; background: var(--cyan); }
+@media (max-width: 1000px) { .cover { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .cover { grid-template-columns: 1fr; } }
+
+/* Feature rows: a picture and what it means, alternating sides */
+.feature-row { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: clamp(24px, 4vw, 56px); align-items: center; }
+.feature-row.flip { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); }
+.feature-row.flip figure { order: 2; }
+.feature-row figure { margin: 0; }
+.feature-row img { display: block; width: 100%; height: auto; aspect-ratio: 1344 / 752; object-fit: cover; border-radius: 18px; border: 1px solid var(--line); background: #071226; }
+.feature-row .txt { display: grid; gap: 14px; }
+.feature-row h3 { font: 300 clamp(26px, 3vw, 38px)/1.12 var(--display); font-stretch: 112%; letter-spacing: -0.01em; text-wrap: balance; }
+.feature-row h3 em { font-style: normal; font-weight: 600; color: var(--cyan); }
+.feature-row .txt > p { margin: 0; color: var(--soft); }
+.feature-row ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.feature-row li { display: grid; grid-template-columns: 8px minmax(0, 1fr); gap: 12px; color: var(--soft); }
+.feature-row li::before { content: ""; width: 8px; height: 8px; margin-top: 10px; border-radius: 2px; background: var(--cyan); }
+.feature-row li b { color: var(--paper); font-weight: 600; }
+@media (max-width: 900px) { .feature-row, .feature-row.flip { grid-template-columns: 1fr; } .feature-row.flip figure { order: 0; } }
+.pkg-cta { display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: center; justify-content: space-between; padding: 24px 26px; border-radius: 16px; border: 1px solid var(--line); background: var(--panel-2); }
+.pkg-cta p { margin: 0; font: 300 clamp(20px, 2.2vw, 26px)/1.25 var(--display); font-stretch: 112%; color: var(--paper); }
+
+/* Every piece, up close (the "Module Orbit" product shot): one piece stands in a white studio
+   while the devices it works with float around it. Picking another folds them into the middle
+   and flies them back out. Each device photo sits on white and is multiplied onto the studio,
+   so no photo shows a box edge. The words sit beside the studio, never on it. */
+.orbit { display: grid; gap: 18px; }
+.o-head { display: grid; gap: 10px; max-width: 64ch; }
+.o-head p { margin: 0; color: var(--soft); }
+.o-body { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: var(--panel); }
+.studio { position: relative; overflow: hidden; background: radial-gradient(90% 70% at 50% 35%, #ffffff 0%, #f1f2f4 72%); min-height: 520px; color-scheme: light; }
+.studio .dev { position: absolute; margin: 0; mix-blend-mode: multiply; will-change: transform, opacity;
+  transition: transform 0.75s cubic-bezier(0.2, 0.75, 0.2, 1), opacity 0.45s ease, left 0.75s cubic-bezier(0.2, 0.75, 0.2, 1), top 0.75s cubic-bezier(0.2, 0.75, 0.2, 1); }
+.studio .dev img { display: block; width: 100%; height: auto; }
+.studio .o-hero { left: 50%; top: 56%; width: min(62%, 520px); transform: translate(-50%, -50%); z-index: 2; }
+.studio .m { width: min(28%, 220px); z-index: 1; }
+.studio .m.a { left: 6%; top: 6%; transform: rotate(-14deg); }
+.studio .m.b { left: 68%; top: 4%; transform: rotate(12deg); }
+.studio .m.c { left: 72%; top: 44%; width: min(22%, 180px); transform: rotate(-8deg); }
+.studio.fold .m { left: 38%; top: 36%; transform: rotate(0deg) scale(0.35); opacity: 0; }
+.studio.fold .o-hero { opacity: 0; transform: translate(-50%, -46%) scale(0.92); }
+@media (prefers-reduced-motion: no-preference) {
+  .studio .m img { animation: o-drift 7s ease-in-out infinite; }
+  .studio .m.b img { animation-delay: -2.3s; animation-duration: 8s; }
+  .studio .m.c img { animation-delay: -4.1s; animation-duration: 6.5s; }
+  @keyframes o-drift { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+}
+@media (prefers-reduced-motion: reduce) { .studio .dev { transition: none; } }
+.plate { position: absolute; bottom: -7%; width: 34%; height: 15%; border-radius: 14px; z-index: 3;
+  background: linear-gradient(100deg, #c9ccd0 0%, #eef0f2 30%, #b8bcc1 55%, #e6e8ea 80%, #c3c6ca 100%); box-shadow: 0 -10px 30px -12px rgba(0, 0, 0, 0.25); }
+.plate.l { left: -6%; transform: rotate(8deg); }
+.plate.r { right: -6%; transform: rotate(-9deg); }
+.o-mark, .o-count { position: absolute; top: 18px; z-index: 4; font: 500 11.5px/1 var(--mono); letter-spacing: 0.2em; color: #555d68; }
+.o-mark { left: 20px; }
+.o-count { right: 20px; letter-spacing: 0.1em; }
+.o-info { display: grid; align-content: center; gap: 18px; padding: clamp(22px, 3vw, 40px); border-left: 1px solid var(--line); min-width: 0; }
+.o-panel { display: grid; gap: 12px; }
+.o-name { margin: 0; font: 300 clamp(28px, 3vw, 40px)/1.08 var(--display); font-stretch: 112%; letter-spacing: -0.01em; color: var(--paper); }
+.o-name b { font-weight: 600; }
+.o-lede { margin: 0; color: var(--soft); }
+.o-does { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.o-does li { display: grid; grid-template-columns: 8px minmax(0, 1fr); gap: 12px; color: var(--soft); font-size: 15.5px; }
+.o-does li::before { content: ""; width: 8px; height: 8px; margin-top: 9px; border-radius: 2px; background: var(--cyan); }
+.o-soon { display: inline-block; margin-left: 10px; padding: 4px 9px; border-radius: 999px; border: 1px solid var(--amber); color: var(--amber); font: 600 11px/1 var(--body); letter-spacing: 0.08em; text-transform: uppercase; vertical-align: 6px; }
+@media (prefers-reduced-motion: no-preference) { .o-swap { transition: opacity 0.3s, transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1); } .o-info.out .o-swap { opacity: 0; transform: translateY(8px); } }
+.o-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
+.o-chip { appearance: none; display: grid; gap: 4px; justify-items: center; align-content: start; min-height: 44px; padding: 8px 6px 9px; border-radius: 12px; border: 1px solid var(--line); background: #f6f7f9;
+  color: #15202e; font: 600 12px/1.2 var(--body); text-align: center; cursor: pointer; }
+.o-chip img { width: 52px; height: 52px; mix-blend-mode: multiply; }
+.o-chip:hover { border-color: var(--muted); }
+.o-chip[aria-selected="true"] { background: #fff; border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan); }
+@media (max-width: 900px) {
+  .o-body { grid-template-columns: 1fr; }
+  .studio { min-height: 0; aspect-ratio: 1 / 0.95; }
+  .o-info { border-left: 0; border-top: 1px solid var(--line); padding-top: 14px; }
+  /* the picker sits right under the studio, so a tap shows its result */
+  .o-picker { display: flex; overflow-x: auto; margin-inline: calc(-1 * clamp(22px, 3vw, 40px)); padding: 2px clamp(22px, 3vw, 40px) 10px; scroll-snap-type: x proximity; scroll-padding-inline: clamp(22px, 3vw, 40px); }
+  .o-chip { flex: 0 0 92px; scroll-snap-align: start; }
+}
+
+/* Porcelain & Navy: the site's colors. Tokens, then the few colors written as literals above
+   (nav glass, quote, code). The film band (hero) and the live panel's start screen stay dark. */
+:root {
+  color-scheme: light;
+  --night: #f4f5f7; --panel: #ffffff; --panel-2: #e9edf3; --line: rgba(16, 36, 66, 0.16); --line-2: rgba(16, 36, 66, 0.09);
+  --cyan: #1d4a86; --on-cyan: #ffffff; --amber: #8a5a12; --paper: #0f1c2e; --soft: #34445b; --muted: #59677b;
+  --quote: #0f1c2e; --code: #2a3a52; --shade: 12 22 38; --nav-bg: rgba(244, 245, 247, 0.92); --hover: rgba(29, 74, 134, 0.08);
+}
+.nav { background: var(--nav-bg); }
+.nav ul a:hover, .nav ul a[aria-current="true"] { background: var(--hover); }
+.frame .start { background: linear-gradient(rgb(var(--shade) / 0.78), rgb(var(--shade) / 0.9)), var(--poster, none) center / cover; }
+.security blockquote { color: var(--quote); }
+.security pre { color: var(--code); }
+.styles li { color: var(--soft); }
+/* Corporate restraint: no glow on the selected-room edge or the screen-change sweep. */
+.rooms button::before { box-shadow: none; }
+.shot::after { box-shadow: none; }
+.hero, .frame .start {
+  color-scheme: dark;
+  --night: #0c1626; --paper: #f2f5f9; --soft: #cbd4e0; --muted: #9aa8ba; --cyan: #9cbce6; --on-cyan: #0c1626; --line: rgba(156, 188, 230, 0.32);
+  color: var(--paper);
+}
+.home-card, .steps li, .shot, .frame { box-shadow: 0 1px 2px rgba(15, 28, 46, 0.06); }

@@ -52,6 +52,76 @@
   }), { rootMargin: "-45% 0px -50% 0px" });
   document.querySelectorAll("main > section[id]").forEach((s) => sectionIO.observe(s));
 
+  // ---- The security package, piece by piece (the "Module Orbit" studio). What each piece does in
+  // Haven today; `soon` marks what's shown but not built yet.
+  const PIECES = [
+    { id: "panel", label: "Wall panel", kick: "The heart of the house", name: "Wall control <b>panel</b>", with: ["bullet-cam", "doorbell", "lock"],
+      lede: "One screen in the hallway that tells you, at a glance, that the house is ready or exactly what&rsquo;s open.",
+      does: ["Doors, locks, cameras, water and climate in one place", "&ldquo;Goodnight&rdquo; locks up, closes the garage and turns the lights off", "Answers to you, and only you"] },
+    { id: "bullet-cam", label: "Outdoor camera", kick: "Outside", name: "Outdoor <b>camera</b>", with: ["indoor-cam", "phone"],
+      lede: "Watch the driveway, the yard and the side gate on the panel, your laptop and your phone.",
+      does: ["Live view on the panel and any screen", "A picture saved at home when its motion sensor trips", "Works with the cameras you already own"] },
+    { id: "indoor-cam", label: "Indoor camera", kick: "Inside", name: "Indoor <b>camera</b>", with: ["bullet-cam", "panel"],
+      lede: "A quiet eye on the rooms that matter, from the nursery to the front hall.",
+      does: ["Live view on every screen in the house", "Pictures kept on the home server", "One tap from the panel&rsquo;s Cameras card"] },
+    { id: "doorbell", label: "Video doorbell", kick: "The front door", name: "Video <b>doorbell</b>", with: ["phone", "lock"],
+      lede: "When someone rings, you see them before you reach the door, wherever you are.",
+      does: ["The picture goes to your phone and Apple Watch", "The panel by the door opens the camera on its own", "Rings get through even in quiet hours"] },
+    { id: "lock", label: "Keypad lock", kick: "Every door", name: "Keypad smart <b>lock</b>", with: ["doorbell", "panel"],
+      lede: "Haven locks up for you. Unlocking always waits for you.",
+      does: ["Locks every door when everyone leaves", "Never unlocks a door unless you say so", "Shows Locked or Unlocked on every screen"] },
+    { id: "sensors", label: "Sensors", kick: "Doors, windows, water", name: "<b>Sensors</b>", with: ["hub", "panel"],
+      lede: "Small sensors that tell Haven what&rsquo;s open, where there&rsquo;s water and where someone is moving.",
+      does: ["Every door and window, open or closed", "A leak closes the main water by itself", "Motion turns the lights on after dark"] },
+    { id: "hub", label: "Home server", kick: "The brain, at home", name: "Home <b>server</b>", with: ["sensors", "panel", "phone"],
+      lede: "Haven runs here, inside your home, so the basics never wait on the internet.",
+      does: ["Safety automations keep working if the internet drops", "Camera pictures stay in the home", "Every action shows on the panel"] },
+    { id: "phone", label: "Phone alerts", kick: "Wherever you are", name: "On your <b>phone</b>", with: ["doorbell", "panel"],
+      lede: "The same house in your pocket and on your wrist, with only the alerts that matter.",
+      does: ["Doorbell pictures on iPhone and Apple Watch", "Leak and freeze alerts, right away", "The whole house on any phone, tablet or computer"] },
+    { id: "smoke-co", label: "Smoke and CO", soon: true, kick: "Fire and safety", name: "Smoke and CO <b>alarm</b>", with: ["panel", "phone"],
+      lede: "Smoke and carbon monoxide alerts on the panel, your phone and your watch.",
+      does: ["Coming soon to the security package", "Ask about it on your walkthrough"] },
+  ];
+  const studio = $("#studio");
+  if (studio) {
+    const info = $("#o-info"), picker = $("#o-picker"), panel = $("#o-panel"), mods = [$("#o-a"), $("#o-b"), $("#o-c")];
+    const label = Object.fromEntries(PIECES.map((p) => [p.id, p.label]));
+    picker.innerHTML = PIECES.map((p, i) => `<button class="o-chip" type="button" role="tab" id="o-tab-${p.id}" aria-controls="o-panel" data-i="${i}"><img src="img/p-${p.id}.webp" alt="" width="52" height="52" loading="lazy">${p.label}${p.soon ? " (soon)" : ""}</button>`).join("");
+    const chips = [...picker.querySelectorAll(".o-chip")];
+    let cur = -1, timer;
+    const fill = (i) => {
+      const p = PIECES[i];
+      $("#o-hero").src = `img/p-${p.id}.webp`;
+      mods.forEach((m, k) => { const id = p.with[k]; m.parentElement.hidden = !id; if (id) m.src = `img/p-${id}.webp`; });
+      $("#o-kick").textContent = p.kick;
+      $("#o-name").innerHTML = p.name + (p.soon ? '<span class="o-soon">Coming soon</span>' : "");
+      $("#o-lede").innerHTML = p.lede;
+      $("#o-does").innerHTML = p.does.map((d) => `<li>${d}</li>`).join("");
+      $("#o-count").textContent = `${String(i + 1).padStart(2, "0")} / ${String(PIECES.length).padStart(2, "0")}`;
+      studio.setAttribute("aria-label", `${p.label}, with the ${p.with.map((w) => label[w].toLowerCase()).join(", ")} around it.`);
+      panel.setAttribute("aria-labelledby", `o-tab-${p.id}`);
+    };
+    const show = (i, focus) => {
+      if (i === cur) return;
+      const first = cur < 0; cur = i;
+      chips.forEach((c, k) => { const on = k === i; c.setAttribute("aria-selected", String(on)); c.tabIndex = on ? 0 : -1; });
+      if (focus) chips[i].focus();
+      if (!first) chips[i].scrollIntoView({ block: "nearest", inline: "nearest", behavior: reduce ? "auto" : "smooth" });
+      clearTimeout(timer);
+      if (first || reduce) { fill(i); return; }
+      // Fold the devices into the middle, swap, then fly them back out.
+      studio.classList.add("fold"); info.classList.add("out");
+      timer = setTimeout(() => { fill(i); requestAnimationFrame(() => requestAnimationFrame(() => { studio.classList.remove("fold"); info.classList.remove("out"); })); }, 420);
+    };
+    picker.addEventListener("click", (e) => { const c = e.target.closest(".o-chip"); if (c) show(Number(c.dataset.i)); });
+    picker.addEventListener("keydown", (e) => {
+      const n = PIECES.length, j = { ArrowRight: (cur + 1) % n, ArrowDown: (cur + 1) % n, ArrowLeft: (cur + n - 1) % n, ArrowUp: (cur + n - 1) % n, Home: 0, End: n - 1 }[e.key];
+      if (j !== undefined) { e.preventDefault(); show(j, true); }
+    });
+    show(0);
+  }
+
   // ---- Screens and rooms.
   const SCREENS = {
     signature: { name: "Signature", best: "Great room or main entry", about: "The flagship. The house in realistic 3D beside the room you're in, with every control on glass.", has: ["Six house views to choose from: live 3D, four photoreal renders or the hologram", "Rooms warm when lit and flush red on alerts", "Room tabs, scenes, device tiles, climate dial", "Electricity today, suggestions and confirmations"] },
