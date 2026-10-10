@@ -13,9 +13,10 @@
     KEY: "soc_photos_v1",
     map: {},
     load: function () { try { this.map = JSON.parse(localStorage.getItem(this.KEY) || "{}"); } catch (e) { this.map = {}; } return this.map; },
-    save: function () { try { localStorage.setItem(this.KEY, JSON.stringify(this.map)); } catch (e) {} },
+    // returns false when the browser refuses to store it (quota), so callers can say so instead of failing silently
+    save: function () { try { localStorage.setItem(this.KEY, JSON.stringify(this.map)); return true; } catch (e) { return false; } },
     get: function (id) { return this.map[id]; },
-    set: function (id, src) { this.map[id] = src; this.save(); this.applyOne(id); },
+    set: function (id, src) { this.map[id] = src; var ok = this.save(); this.applyOne(id); return ok; },
     remove: function (id) { delete this.map[id]; this.save(); },
     clear: function () { this.map = {}; try { localStorage.removeItem(this.KEY); } catch (e) {} },
     applyOne: function (id) {
@@ -31,47 +32,48 @@
 
   /* ---------- Product catalogue (Secrets of Cint) ----------
      Names, prices & scent notes match the live store (shop.app / secretsofcint.com).
-     img values are PLACEHOLDERS — swap for the brand's real black-glass /
-     wood-lid product photos (upload to assets/images/) before launch. */
+     Images are the brand's real photos except For Him, Vintage Bloom and Stress
+     Relief, which are still placeholders (see CLIENT-APPROVAL-STATUS.md). No ratings
+     or review counts are kept here: there are no real reviews to count yet. */
   var PRODUCTS = [
     { id: "harlem-smock", name: "Harlem Smock", cat: "candles", label: "Signature Candle",
-      notes: "Santal · Sandalwood · Vetiver", price: 38, rating: 4.9, reviews: 32,
+      notes: "Santal · Sandalwood · Vetiver", price: 38,
       img: "real-harlem-smock.jpg", badge: "best" },
     { id: "moon-flower", name: "Moon Flower", cat: "candles", label: "Signature Candle",
-      notes: "Bergamot · Leather · Labdanum", price: 35, rating: 5.0, reviews: 27,
+      notes: "Bergamot · Leather · Labdanum", price: 35,
       img: "moon-flower.jpg", badge: "best" },
     { id: "inferno-dreams", name: "Inferno Dreams", cat: "candles", label: "Signature Candle",
-      notes: "Saffron · Sandalwood · Embers", price: 35, rating: 5.0, reviews: 21,
+      notes: "Saffron · Sandalwood · Embers", price: 35,
       img: "real-inferno-dreams.jpg", badge: "best" },
     { id: "exotic-peach", name: "Exotic Peach", cat: "candles", label: "Signature Candle",
-      notes: "Mango · Coconut · Peach", price: 35, rating: 5.0, reviews: 24,
+      notes: "Mango · Coconut · Peach", price: 35,
       img: "real-exotic-peach.jpg", badge: null },
     { id: "brewed-elixir", name: "Brewed Elixir", cat: "candles", label: "Signature Candle",
-      notes: "Coffee · Hazelnut · Vanilla", price: 35, rating: 4.9, reviews: 16,
+      notes: "Coffee · Hazelnut · Vanilla", price: 35,
       img: "real-brewed-elixir.jpg", badge: "new" },
     { id: "for-him", name: "For Him", cat: "candles", label: "Signature Candle",
-      notes: "Bourbon · Whiskey · Tobacco", price: 35, rating: 4.9, reviews: 41,
+      notes: "Bourbon · Whiskey · Tobacco", price: 35,
       img: "for-him.jpg", badge: null },
     { id: "vintage-bloom", name: "Vintage Bloom", cat: "candles", label: "Signature Candle",
-      notes: "Gardenia · Tuberose · Jasmine", price: 33, rating: 4.8, reviews: 19,
+      notes: "Gardenia · Tuberose · Jasmine", price: 33,
       img: "vintage-bloom.jpg", badge: null },
     { id: "stress-relief", name: "Stress Relief", cat: "candles", label: "Signature Candle",
-      notes: "Cucumber · Bamboo · Lavender", price: 35, rating: 4.9, reviews: 22,
+      notes: "Cucumber · Bamboo · Lavender", price: 35,
       img: "stress-relief.jpg", badge: null },
     { id: "exotic-peach-spray", name: "Exotic Peach Room Spray", cat: "sprays", label: "Room Spray",
-      notes: "Peach · Coconut · Mango", price: 22, rating: 5.0, reviews: 1,
+      notes: "Peach · Coconut · Mango", price: 22,
       img: "real-exotic-peach-spray.jpg", badge: "best" },
     { id: "amber-blush-spray", name: "Amber Blush Room Spray", cat: "sprays", label: "Room Spray",
-      notes: "Vanilla · White Amber · Jasmine", price: 22, rating: 4.9, reviews: 12,
+      notes: "Vanilla · White Amber · Jasmine", price: 22,
       img: "real-amber-blush.jpg", badge: null },
     { id: "stress-relief-spray", name: "Stress Relief Room Spray", cat: "sprays", label: "Room Spray",
-      notes: "Cucumber · Lavender · Bamboo", price: 21, rating: 5.0, reviews: 8,
+      notes: "Cucumber · Lavender · Bamboo", price: 21,
       img: "stress-relief-spray.jpg", badge: null },
     { id: "moon-flower-spray", name: "Moon Flower Room Spray", cat: "sprays", label: "Room Spray",
-      notes: "Bergamot · Leather · Labdanum", price: 22, rating: 5.0, reviews: 9,
+      notes: "Bergamot · Leather · Labdanum", price: 22,
       img: "real-moon-flower-spray.jpg", badge: null },
     { id: "citrus-grove", name: "No.7 Citrus Grove", cat: "diffusers", label: "Reed Diffuser",
-      notes: "Citrus · Green Vetiver · Amber", price: 28, rating: 4.9, reviews: 6,
+      notes: "Citrus · Green Vetiver · Amber", price: 28,
       img: "real-citrus-grove.jpg", badge: "new" }
   ];
 
@@ -102,10 +104,12 @@
   /* ---------- Cart state (demo) ---------- */
   var cart = 0;
   var cartCountEl = document.getElementById("cartCount");
+  var cartBtn = document.getElementById("cartBtn");
   function addToCart(id) {
     var p = PRODUCTS.find(function (x) { return x.id === id; });
     cart += 1;
     cartCountEl.textContent = String(cart);
+    cartBtn.setAttribute("aria-label", "Cart, " + cart + " item" + (cart === 1 ? "" : "s"));
     cartCountEl.animate(
       [{ transform: "scale(1)" }, { transform: "scale(1.5)" }, { transform: "scale(1)" }],
       { duration: 360, easing: "ease-out" }
@@ -126,6 +130,7 @@
 
   /* ---------- Render products ---------- */
   var grid = document.getElementById("productGrid");
+  var favs = {};   // wishlist state lives here, not in the DOM, so it survives filtering
   function buildCard(p) {
     var card = el("article", "card");
     card.id = "p-" + p.id;   // deep-link target (the hero's "In the film" links)
@@ -141,12 +146,16 @@
     media.appendChild(img);
 
 
-    var fav = el("button", "card-fav");
+    var fav = el("button", "card-fav" + (favs[p.id] ? " on" : ""));
+    fav.type = "button";
     fav.setAttribute("aria-label", "Save " + p.name + " to wishlist");
+    fav.setAttribute("aria-pressed", favs[p.id] ? "true" : "false");
     fav.innerHTML = svg(ICON_HEART, 17);
     fav.addEventListener("click", function () {
-      fav.classList.toggle("on");
-      showToast(fav.classList.contains("on") ? "Saved to wishlist" : "Removed from wishlist");
+      favs[p.id] = !favs[p.id];
+      fav.classList.toggle("on", favs[p.id]);
+      fav.setAttribute("aria-pressed", favs[p.id] ? "true" : "false");
+      showToast(favs[p.id] ? p.name + " saved to wishlist" : p.name + " removed from wishlist");
     });
     media.appendChild(fav);
     card.appendChild(media);
@@ -165,6 +174,8 @@
     body.appendChild(meta);
 
     var add = el("button", "card-add");
+    add.type = "button";
+    add.setAttribute("aria-label", "Add to Cart: " + p.name);   // starts with the visible words, so voice control ("click Add to Cart") still works
     add.innerHTML = svg(ICON_CART, 15) + "<span>Add to Cart</span>";
     add.addEventListener("click", function () { addToCart(p.id); });
     body.appendChild(add);
@@ -189,7 +200,7 @@
     REVIEWS.forEach(function (r) {
       var sample = r.author.charAt(0) === "[";   // a fill-in slot, not a real customer
       var card = el("article", "review reveal");
-      var h4 = el("h4"); h4.textContent = r.title; card.appendChild(h4);
+      var h3 = el("h3"); h3.textContent = r.title; card.appendChild(h3);
       var body = el("p", "body"); body.textContent = "“" + r.body + "”"; card.appendChild(body);
 
       var verified = el("span", "verified");
@@ -213,8 +224,9 @@
   filters.addEventListener("click", function (e) {
     var chip = e.target.closest(".chip");
     if (!chip) return;
-    filters.querySelectorAll(".chip").forEach(function (c) { c.classList.remove("active"); });
+    filters.querySelectorAll(".chip").forEach(function (c) { c.classList.remove("active"); c.setAttribute("aria-pressed", "false"); });
     chip.classList.add("active");
+    chip.setAttribute("aria-pressed", "true");
     renderProducts(chip.getAttribute("data-filter"));
   });
 
@@ -260,14 +272,28 @@
 
   /* ---------- Mobile nav ---------- */
   var mNav = document.getElementById("mobileNav");
-  function setNav(open) {
+  var burger = document.getElementById("hamburger");
+  var mClose = document.getElementById("mClose");
+  function setNav(open, restoreFocus) {
     mNav.classList.toggle("open", open);
-    mNav.setAttribute("aria-hidden", open ? "false" : "true");
+    if (open) mNav.removeAttribute("inert"); else mNav.setAttribute("inert", "");
+    burger.setAttribute("aria-expanded", open ? "true" : "false");
     document.body.style.overflow = open ? "hidden" : "";
+    if (open) mClose.focus();
+    else if (restoreFocus) burger.focus();
   }
-  document.getElementById("hamburger").addEventListener("click", function () { setNav(true); });
-  document.getElementById("mClose").addEventListener("click", function () { setNav(false); });
+  burger.addEventListener("click", function () { setNav(true); });
+  mClose.addEventListener("click", function () { setNav(false, true); });
   mNav.querySelectorAll("a").forEach(function (a) { a.addEventListener("click", function () { setNav(false); }); });
+  mNav.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") { setNav(false, true); return; }
+    if (e.key !== "Tab") return;
+    var f = mNav.querySelectorAll("button, a[href]"), first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+  // the sheet only exists below the desktop breakpoint; close it if the window grows past it
+  window.addEventListener("resize", function () { if (window.innerWidth > 1180 && mNav.classList.contains("open")) setNav(false); });
 
   /* ---------- Newsletter ---------- */
   var newsForm = document.getElementById("newsForm");
@@ -276,14 +302,17 @@
     var email = document.getElementById("newsEmail");
     var val = email.value.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+      email.setAttribute("aria-invalid", "true");
       email.focus();
       showToast("Please enter a valid email address");
       return;
     }
+    email.removeAttribute("aria-invalid");
     newsForm.style.display = "none";
     document.getElementById("newsOk").classList.add("show");
-    showToast("You're on the list ✦");
+    showToast("You're on the list");
   });
+  document.getElementById("newsEmail").addEventListener("input", function () { this.removeAttribute("aria-invalid"); });
 
   /* ---------- Init ---------- */
   document.getElementById("year").textContent = String(new Date().getFullYear());

@@ -84,3 +84,25 @@ A script measured every visible text node in a real browser at 1440 and 375: com
 - **Phone fit.** The hero badge broke onto two lines between its two hairlines at 375px; it keeps one line and one hairline there, and just the words at 320px. Card categories tighten their tracking so "Signature Candle" fits a two-column card on one line. The footer's bottom line stacks (copyright, tagline, Owner Login) instead of wrapping around a stray separator dot.
 - **Dead rules removed:** `.card .rate`, `.card .rate .s`, `.review .stars`, `.card-badges`, the duplicate 8px header-subtitle rule, and the unused `starStr()` helper.
 - **Re-verified:** contrast audit clean at both widths; filters, cart, sound, newsletter and deep links still pass; `scrollWidth == clientWidth` at 375 and 320; all controls ≥44px.
+
+
+## Deep diagnostic (structure, behaviour, accessibility, deploy) — 2026-10-10
+Every state of the one page was tested in a real browser at 1440 and 375 (fit also checked at 1024, 768 and 320), served with the exact security headers the site deploys with. Tools: the html-validate standards checker, the axe-core accessibility engine (page, open menu, PIN dialog and photo panel, both widths), and scripted runs of every feature. Final state: validator clean except the intended muted autoplay; axe clean in all seven states; zero CSP violations, zero failed requests, zero script errors.
+
+**Bugs found and fixed**
+- **Menu (phones).** Escape did nothing; focus stayed behind the sheet; closed links were reachable by Tab. The sheet is now a modal dialog: `inert` when closed, focus moves to Close on open, Tab stays inside, Escape and Close return focus to the menu button, `aria-expanded` on the button; it closes itself if the window grows past the desktop breakpoint.
+- **Wishlist.** A heart was lost whenever the filter changed (state lived in the re-rendered DOM). State now lives in data; hearts expose `aria-pressed`.
+- **Filters.** Claimed `role="tablist"` with no tabs (axe critical). Now a labelled group of toggle buttons with `aria-pressed`.
+- **Cart.** The count was invisible to screen readers; the button now reads "Cart, 2 items". Card buttons read "Add to Cart: Harlem Smock" (visible words first, so voice control still works).
+- **Toasts.** `left: 50%` capped their width at half the screen, so phone toasts wrapped into a narrow two-line pill; and at `z-index: 101` they rendered *under* the portal's backdrop (120). Now `width: max-content` and `z-index: 130`.
+- **Owner portal.** PIN box and panel are real dialogs (`role="dialog"`, `aria-modal`, labelled), focus stays inside, Escape and Close return focus to Owner Login; wrong PIN marks the field invalid and is announced. The photo upload was `display: none` and unreachable by keyboard; it is now visually hidden but focusable with a visible focus ring. Every panel control is 44 px. On phones the photo cards ran off the right edge (`1fr` grid minimum); fixed with `minmax(0, 1fr)` and a stacked card. Emoji (lock, camera) replaced by a stroke SVG lock and plain text.
+- **Photo storage.** A phone photo (3–8 MB) stored as a data URL overflows the ~5 MB the browser allows, so it vanished on reload with no warning. Uploads are scaled to 1600 px (JPEG 0.86) before storing: a worst-case 12 MB, 4000×3000 test photo stores at about 1 MB and survives a reload. If storage still refuses, the toast says so.
+- **Deploy caching.** `/assets/*` was cached for a year without revalidation, but assets keep their names when they change (the film, CSS/JS, photos replaced via the portal ZIP), so returning visitors would have kept stale files. Now `max-age=0, must-revalidate` (ETag 304s). CSP also gains `object-src 'none'`.
+- **Structure.** Review titles skipped from h2 to h4 (now h3). The video used `aria-label`, which video does not support; it is now described by a screen-reader `figcaption`. Social icons were links to `#` (scrolled to the top); they are visible dashed slots, labelled "link coming soon", until the URLs arrive. Two navigation landmarks shared a name (the mobile one is now "Mobile"); the announcement bar is a labelled region. Buttons declare `type`; raw `&` escaped; the phone number cannot break mid-number. Inline styles in the menu and footer moved into the stylesheet. Invented ratings and review counts were deleted from the product data (they were no longer shown, but should not exist).
+- **Newsletter.** An invalid address now sets `aria-invalid` (cleared on typing); the success toast lost its dingbat.
+
+**Polish (taste, awesome-design, apple-interface)**
+- Add to Cart buttons sit level across every row (pinned to the card bottom), whatever the note length or badge.
+- All four filters fit on one line down to 320 px (tighter tracking on phones; 10.5 px, the label floor, at 320).
+- Phones: the shipping bar is two clean lines instead of a wrap with a dangling bullet; Join the List is full width under the field like the hero buttons; Owner Login aligns with the lines above it.
+- README rewritten to describe the site as it is (it still described an older olive-and-gold version with eight scents and live ratings).

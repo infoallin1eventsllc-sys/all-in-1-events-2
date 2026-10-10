@@ -1,6 +1,6 @@
 # Secrets of Cint — Project Status & Client Approval Checklist
 
-_Last updated: 2026-10-07 · Branch: `claude/client-promo-website-5ct9i8` · Built by All in 1 Events LLC_
+_Last updated: 2026-10-10 · Branch: `claude/client-promo-website-5ct9i8` · Built by All in 1 Events LLC_
 
 A living record of what's done and **everything waiting on the client** before launch.
 
@@ -77,6 +77,7 @@ A living record of what's done and **everything waiting on the client** before l
 - [ ] **Commerce:** cart / checkout / newsletter are front-end demos — wire to real commerce
   (Shopify / Snipcart) when ready to sell?
 - [ ] **Deploy** to Netlify or Vercel once approved (and merge PR #1)
+- [ ] **Final domain** for link previews: once the address is chosen, `og:image` in `index.html` becomes an absolute URL (social apps ignore relative ones)
 
 ---
 

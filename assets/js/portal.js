@@ -60,19 +60,22 @@
 
   function buildPin() {
     pinView = el("div", "soc-pin");
+    pinView.setAttribute("role", "dialog");
+    pinView.setAttribute("aria-modal", "true");
+    pinView.setAttribute("aria-labelledby", "socPinTitle");
     pinView.innerHTML =
-      '<div class="lock">🔒</div>' +
-      '<h3>Owner Login</h3>' +
-      '<p>Enter your 4-digit PIN to manage photos.</p>' +
-      '<input id="socPin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" aria-label="PIN" />' +
-      '<div class="err" id="socErr"></div>' +
-      '<div class="row"><button class="btn ghost" id="socCancel">Cancel</button><button class="btn" id="socEnter">Enter</button></div>';
+      '<div class="lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" width="28" height="28" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>' +
+      '<h3 id="socPinTitle">Owner Login</h3>' +
+      '<p id="socPinHint">Enter your 4-digit PIN to manage photos.</p>' +
+      '<input id="socPin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" aria-label="PIN" aria-describedby="socPinHint socErr" />' +
+      '<div class="err" id="socErr" role="alert"></div>' +
+      '<div class="row"><button type="button" class="btn ghost" id="socCancel">Cancel</button><button type="button" class="btn" id="socEnter">Enter</button></div>';
     overlay.appendChild(pinView);
     var input = pinView.querySelector("#socPin");
     var err = pinView.querySelector("#socErr");
     function submit() {
-      if (input.value === PIN) { err.textContent = ""; input.value = ""; showPanel(); }
-      else { err.textContent = "Incorrect PIN. Try again."; input.value = ""; input.focus(); }
+      if (input.value === PIN) { err.textContent = ""; input.value = ""; input.removeAttribute("aria-invalid"); showPanel(); }
+      else { err.textContent = "Incorrect PIN. Try again."; input.setAttribute("aria-invalid", "true"); input.value = ""; input.focus(); }
     }
     pinView.querySelector("#socEnter").addEventListener("click", submit);
     pinView.querySelector("#socCancel").addEventListener("click", close);
@@ -81,13 +84,16 @@
 
   function buildPanel() {
     panelView = el("div", "soc-panel");
+    panelView.setAttribute("role", "dialog");
+    panelView.setAttribute("aria-modal", "true");
+    panelView.setAttribute("aria-labelledby", "socPanelTitle");
     var head = el("div", "soc-head");
     head.innerHTML =
-      '<div><h2>📸 Owner Photo Control</h2><div class="sub">Update any photo — changes show on the site instantly.</div></div>' +
+      '<div><h2 id="socPanelTitle">Owner Photo Control</h2><div class="sub">Update any photo — changes show on the site instantly.</div></div>' +
       '<div class="soc-tools">' +
-        '<button class="btn" id="socExport">Export ZIP to publish</button>' +
-        '<button class="btn sec" id="socResetAll">Reset all</button>' +
-        '<button class="btn sec" id="socClose">Close</button>' +
+        '<button type="button" class="btn" id="socExport">Export ZIP to publish</button>' +
+        '<button type="button" class="btn sec" id="socResetAll">Reset all</button>' +
+        '<button type="button" class="btn sec" id="socClose">Close</button>' +
       '</div>';
     panelView.appendChild(head);
 
@@ -112,20 +118,21 @@
     thumbWrap.appendChild(thumb);
 
     var body = el("div", "body");
-    var nm = el("div", "nm"); nm.textContent = s.name;
+    var nm = el("h3", "nm"); nm.textContent = s.name;
     var fn = el("div", "fn"); fn.textContent = s.file;
-    var live = el("span", "live"); live.textContent = SOC.get(s.id) ? "● Custom photo set" : "";
+    var live = el("span", "live"); live.textContent = SOC.get(s.id) ? "Custom photo set" : "";
     body.appendChild(nm); body.appendChild(fn); body.appendChild(live);
 
     // file drop / picker
     var drop = el("label", "soc-drop");
     drop.textContent = "Click or drop a photo here";
-    var file = el("input"); file.type = "file"; file.accept = "image/*"; file.style.display = "none";
+    var file = el("input", "sr-only"); file.type = "file"; file.accept = "image/*";
+    file.setAttribute("aria-label", "Upload a new photo for " + s.name);
     drop.appendChild(file);
     function handleFile(f) {
       if (!f || !/^image\//.test(f.type)) { toast("Please choose an image file"); return; }
       var r = new FileReader();
-      r.onload = function () { apply(s.id, r.result, thumb, live); };
+      r.onload = function () { shrink(r.result, function (src) { apply(s.id, src, thumb, live); }); };
       r.readAsDataURL(f);
     }
     file.addEventListener("change", function () { handleFile(file.files[0]); });
@@ -136,7 +143,9 @@
     // image URL
     var urlRow = el("div", "soc-url");
     var url = el("input"); url.type = "url"; url.placeholder = "…or paste an image URL";
+    url.setAttribute("aria-label", "Image URL for " + s.name);
     var urlBtn = el("button"); urlBtn.type = "button"; urlBtn.textContent = "Apply";
+    urlBtn.setAttribute("aria-label", "Apply: image URL for " + s.name);
     urlRow.appendChild(url); urlRow.appendChild(urlBtn);
     urlBtn.addEventListener("click", function () {
       var v = url.value.trim();
@@ -146,6 +155,7 @@
     url.addEventListener("keydown", function (e) { if (e.key === "Enter") urlBtn.click(); });
 
     var reset = el("button", "reset"); reset.type = "button"; reset.textContent = "Reset to original";
+    reset.setAttribute("aria-label", "Reset to original: " + s.name);
     reset.addEventListener("click", function () {
       SOC.remove(s.id);
       var imgs = document.querySelectorAll('img[data-product="' + s.id + '"]');
@@ -159,11 +169,26 @@
     return slot;
   }
 
+  // Phone photos are often 3–8 MB; as data URLs they would overflow the ~5 MB the browser
+  // allows this site to store, and vanish on reload. Scale to 1600 px on the long edge first.
+  function shrink(dataUrl, done) {
+    var img = new Image();
+    img.onload = function () {
+      var max = 1600, w = img.naturalWidth, h = img.naturalHeight, k = Math.min(1, max / Math.max(w, h));
+      if (k === 1 && dataUrl.length < 900000) { done(dataUrl); return; }
+      var c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      done(c.toDataURL("image/jpeg", 0.86));
+    };
+    img.onerror = function () { toast("That file could not be read as an image"); };
+    img.src = dataUrl;
+  }
+
   function apply(id, src, thumb, live) {
-    SOC.set(id, src);          // persists + updates every img[data-product=id] live
+    var kept = SOC.set(id, src);   // updates every img[data-product=id] live; false if the browser could not store it
     if (thumb) thumb.src = src;
-    if (live) live.textContent = "● Custom photo set";
-    toast(SLOT_BY_ID[id].name + " updated");
+    if (live) live.textContent = "Custom photo set";
+    toast(kept ? SLOT_BY_ID[id].name + " updated" : SLOT_BY_ID[id].name + " updated for now; export it before reloading (browser storage is full)");
   }
 
   function resetAll() {
@@ -210,10 +235,20 @@
 
   /* ---------- open/close ---------- */
   function showPin() { panelView.style.display = "none"; pinView.style.display = "block"; overlay.classList.add("open"); document.body.style.overflow = "hidden"; setTimeout(function () { var i = pinView.querySelector("#socPin"); if (i) i.focus(); }, 60); }
-  function showPanel() { pinView.style.display = "none"; panelView.style.display = "flex"; }
-  function close() { overlay.classList.remove("open"); document.body.style.overflow = ""; }
+  function showPanel() { pinView.style.display = "none"; panelView.style.display = "flex"; panelView.querySelector("#socClose").focus(); }
+  function close() { overlay.classList.remove("open"); document.body.style.overflow = ""; if (trigger) trigger.focus(); }
+  function visibleDialog() { return pinView.style.display !== "none" ? pinView : panelView; }
 
   var trigger = document.getElementById("ownerLogin");
   if (trigger) trigger.addEventListener("click", function () { buildOverlay(); showPin(); });
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && overlay && overlay.classList.contains("open")) close(); });
+  document.addEventListener("keydown", function (e) {
+    if (!overlay || !overlay.classList.contains("open")) return;
+    if (e.key === "Escape") { close(); return; }
+    if (e.key !== "Tab") return;   // keep Tab inside the open dialog
+    var f = [].filter.call(visibleDialog().querySelectorAll("button, input, a[href]"), function (n) { return n.offsetParent !== null || n.classList.contains("sr-only"); });
+    if (!f.length) return;
+    var first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
 })();
