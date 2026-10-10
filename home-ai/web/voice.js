@@ -12,6 +12,11 @@
 // returns its audio and the panel plays that; if it returns nothing or the
 // audio can't play, the browser's built-in voice says it instead.
 //
+// iPad and iPhone (Safari) only let a page make sound that starts inside a
+// tap, and Haven's reply arrives after the tap. So the first touch unlocks
+// both voices: a silent word for the browser voice, and a moment of silence
+// on the one audio player every ElevenLabs clip then plays through.
+//
 // onLevel(0..1) drives the waveform from real speech signals only: words the
 // recognizer hears, each word the browser voice says, and the loudness of
 // the ElevenLabs audio (measured once the panel has been touched, since
@@ -23,31 +28,69 @@ export function createVoice({ onInterim, onFinal, onState, onLevel, synthesize =
   let recognizer = null;
   let listening = false;
   let voice = null;
-  let audio = null;     // the ElevenLabs clip playing now
+  let audio = null;     // the ElevenLabs clip playing now (its object URL is on `audio.src`)
   let speakSeq = 0;     // newest speak() wins
   let audioCtx = null;  // for measuring the clip's loudness
+  let player = null;    // the one audio element every clip plays through, unlocked on the first touch
+  let analyser = null;  // its loudness meter, once audio processing runs
+  let talking = false;  // a reply is being spoken right now
 
-  // Wake audio processing on the first touch, as browsers require.
+  // A tenth of a second of silence, as a WAV file (blob: is allowed by the panel's CSP).
+  function silentWav() {
+    const n = 800, buf = new ArrayBuffer(44 + n), v = new DataView(buf);
+    const str = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+    str(0, "RIFF"); v.setUint32(4, 36 + n, true); str(8, "WAVE"); str(12, "fmt ");
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true);
+    str(36, "data"); v.setUint32(40, n, true);
+    for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
+    return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
+  }
+
+  // On the first touch: wake audio processing, and unlock both voices for later replies.
+  let woken = false;
   const wake = () => {
+    if (woken) return;
+    woken = true;
+    window.removeEventListener("pointerdown", wake, true);
+    window.removeEventListener("keydown", wake, true);
     try {
       const Ctx = window.AudioContext || window.webkitAudioContext;
       if (Ctx && !audioCtx) audioCtx = new Ctx();
       audioCtx?.resume?.();
     } catch { audioCtx = null; }
+    try {
+      if (canSpeak) {
+        const u = new SpeechSynthesisUtterance(" ");
+        u.volume = 0;
+        speechSynthesis.speak(u);
+      }
+    } catch { /* the browser voice will try again on the next reply */ }
+    try {
+      player = new Audio();
+      const hush = silentWav();
+      player.src = hush;
+      const p = player.play();
+      // The next clip replaces the source; until then the player just sits paused.
+      const done = () => { if (player.src === hush) player.pause(); URL.revokeObjectURL(hush); };
+      if (p?.then) p.then(done, done); else done();
+    } catch { player = null; }
   };
   window.addEventListener("pointerdown", wake, { once: true, capture: true });
   window.addEventListener("keydown", wake, { once: true, capture: true });
 
   // Measure the clip as it plays. Only when audio processing is running:
-  // routing sound through a sleeping context would silence it.
+  // routing sound through a sleeping context would silence it. The meter goes
+  // on the shared player once (an element can be attached to only one meter).
   function measure(clip) {
     try {
-      if (!onLevel || audioCtx?.state !== "running") return;
-      const source = audioCtx.createMediaElementSource(clip);
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 512;
-      source.connect(analyser);
-      analyser.connect(audioCtx.destination);
+      if (!onLevel || clip !== player || audioCtx?.state !== "running") return;
+      if (!analyser) {
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 512;
+        audioCtx.createMediaElementSource(clip).connect(analyser);
+        analyser.connect(audioCtx.destination);
+      }
       const buf = new Uint8Array(analyser.fftSize);
       const tick = () => {
         if (clip.paused || clip.ended || audio !== clip) return;
@@ -57,7 +100,7 @@ export function createVoice({ onInterim, onFinal, onState, onLevel, synthesize =
         onLevel(Math.min(1, Math.sqrt(sum / buf.length) * 5));
         requestAnimationFrame(tick);
       };
-      clip.addEventListener("playing", () => requestAnimationFrame(tick));
+      clip.addEventListener("playing", () => requestAnimationFrame(tick), { once: true });
     } catch { /* no measurement; the waveform stays calm */ }
   }
 
@@ -129,17 +172,23 @@ export function createVoice({ onInterim, onFinal, onState, onLevel, synthesize =
   function speakWithBrowser(text) {
     if (!canSpeak || !text) return;
     speechSynthesis.cancel();
-    // Read the words, not the symbols.
+    // Read the words, not the symbols, a sentence at a time: some browsers stop
+    // a long utterance partway. Split only where a sentence ends ("71.5" stays whole).
     const spoken = String(text).replace(/°F/g, " degrees").replace(/%/g, " percent").replace(/\n+/g, ". ");
-    const u = new SpeechSynthesisUtterance(spoken);
-    if (voice) u.voice = voice;
-    u.rate = 1.02;
-    u.pitch = 1;
-    u.onstart = () => { onState?.("speaking"); onLevel?.(0.6); };
-    u.onboundary = () => onLevel?.(0.9);
-    u.onend = () => onState?.("idle");
-    u.onerror = () => onState?.("idle");
-    speechSynthesis.speak(u);
+    const parts = spoken.replace(/([.!?])\s+/g, "$1\u0000").split("\u0000").map((t) => t.trim()).filter(Boolean);
+    const mine = speakSeq;
+    const end = () => { if (mine === speakSeq) { talking = false; onState?.("idle"); } };
+    parts.forEach((part, i) => {
+      const u = new SpeechSynthesisUtterance(part);
+      if (voice) u.voice = voice;
+      u.rate = 1.02;
+      u.pitch = 1;
+      if (i === 0) u.onstart = () => { if (mine !== speakSeq) return; talking = true; onState?.("speaking"); onLevel?.(0.6); };
+      u.onboundary = () => onLevel?.(0.9);
+      if (i === parts.length - 1) u.onend = end;
+      u.onerror = end;
+      speechSynthesis.speak(u);
+    });
   }
 
   async function speak(text) {
@@ -152,28 +201,35 @@ export function createVoice({ onInterim, onFinal, onState, onLevel, synthesize =
     if (mine !== speakSeq) return; // something newer was said meanwhile
     if (!blob) return speakWithBrowser(text);
     const url = URL.createObjectURL(blob);
-    const clip = new Audio(url);
+    // A player wired to the meter is silent while audio processing sleeps: wake it first.
+    if (analyser && audioCtx?.state !== "running") { try { await audioCtx.resume(); } catch { /* plays unmeasured */ } }
+    if (mine !== speakSeq) { URL.revokeObjectURL(url); return; }
+    const clip = player || new Audio();
+    clip.src = url;
     audio = clip;
     let finished = false;
     const done = (fallback) => {
       if (finished) return;
       finished = true;
       URL.revokeObjectURL(url);
-      if (audio === clip) audio = null;
+      if (mine !== speakSeq) return; // a newer reply (or a tap) already took over the player
+      audio = null;
+      talking = false;
       onState?.("idle");
-      if (fallback && mine === speakSeq) speakWithBrowser(text);
+      if (fallback) speakWithBrowser(text);
     };
     measure(clip);
-    clip.onplaying = () => onState?.("speaking");
+    clip.onplaying = () => { if (mine === speakSeq) { talking = true; onState?.("speaking"); } };
     clip.onended = () => done(false);
     clip.onerror = () => done(true);
-    clip.play().catch(() => done(true));
+    try { const p = clip.play(); p?.catch?.(() => done(true)); } catch { done(true); }
   }
 
   function silence() {
     speakSeq++;
-    if (audio) { audio.pause(); URL.revokeObjectURL(audio.src); audio = null; onState?.("idle"); }
+    if (audio) { const clip = audio; audio = null; clip.pause(); URL.revokeObjectURL(clip.src); }
     if (canSpeak) speechSynthesis.cancel();
+    if (talking) { talking = false; onState?.("idle"); }
   }
 
   return { canListen, canSpeak, whyNot, listen, stopListening, speak, silence, isListening: () => listening };
