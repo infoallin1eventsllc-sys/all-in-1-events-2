@@ -132,6 +132,14 @@ section h2.sec { margin: 0; font-size: 1.3rem; }
 table { border-collapse: collapse; width: 100%; min-width: 520px; }
 th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); }
 th { font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+/* Phones: each row becomes a short stacked entry instead of a table that scrolls sideways. */
+@media (max-width: 560px) {
+  table { min-width: 0; }
+  thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  tr { display: block; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  td { display: grid; grid-template-columns: 5.5em 1fr; gap: 12px; padding: 3px 0; border: 0; }
+  td::before { content: attr(data-label); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding-top: 0.2em; }
+}
 .note p { margin: 0; color: var(--muted); max-width: 72ch; }
 footer { color: var(--muted); font-size: 0.85rem; }
 /* Scroll reveal: cards rise into place as they come into view. Only when
@@ -165,16 +173,16 @@ footer { color: var(--muted); font-size: 0.85rem; }
   ${SCREENS.map(card).join("")}
   <section class="plan" aria-labelledby="plan-h">
     <h2 class="sec" id="plan-h">A typical home</h2>
-    <div class="table-wrap" tabindex="0" role="region" aria-label="A typical home, room by room; scrolls sideways"><table>
+    <div class="table-wrap" tabindex="0" role="region" aria-label="A typical home, room by room"><table>
       <thead><tr><th scope="col">Where</th><th scope="col">Screen</th><th scope="col">Why</th></tr></thead>
       <tbody>
-        <tr><td>Great room</td><td>Signature</td><td>The showpiece: the whole house at a glance and every control</td></tr>
-        <tr><td>Model home, living room</td><td>Studio</td><td>Shows the intelligence working: talk to the orb, watch the agents coordinate</td></tr>
-        <tr><td>Living room</td><td>Wallpaper</td><td>Looks like a photo of the home until you need it; weather and every light</td></tr>
-        <tr><td>Kitchen</td><td>Family Hub</td><td>Everyone uses it; big clock, briefing and comfort buttons</td></tr>
-        <tr><td>Primary bedroom</td><td>Nightstand</td><td>Dark and quiet; bedtime in one tap or by voice; each person's own photo</td></tr>
-        <tr><td>Mudroom or garage door</td><td>Entry</td><td>Leave or arrive in one tap; nothing left on or unlocked</td></tr>
-        <tr><td>Office</td><td>Command Center</td><td>Every system on one wall for whoever runs the house</td></tr>
+        <tr><td data-label="Where">Great room</td><td data-label="Screen">Signature</td><td data-label="Why">The showpiece: the whole house at a glance and every control</td></tr>
+        <tr><td data-label="Where">Model home, living room</td><td data-label="Screen">Studio</td><td data-label="Why">Shows the intelligence working: talk to the orb, watch the agents coordinate</td></tr>
+        <tr><td data-label="Where">Living room</td><td data-label="Screen">Wallpaper</td><td data-label="Why">Looks like a photo of the home until you need it; weather and every light</td></tr>
+        <tr><td data-label="Where">Kitchen</td><td data-label="Screen">Family Hub</td><td data-label="Why">Everyone uses it; big clock, briefing and comfort buttons</td></tr>
+        <tr><td data-label="Where">Primary bedroom</td><td data-label="Screen">Nightstand</td><td data-label="Why">Dark and quiet; bedtime in one tap or by voice; each person's own photo</td></tr>
+        <tr><td data-label="Where">Mudroom or garage door</td><td data-label="Screen">Entry</td><td data-label="Why">Leave or arrive in one tap; nothing left on or unlocked</td></tr>
+        <tr><td data-label="Where">Office</td><td data-label="Screen">Command Center</td><td data-label="Why">Every system on one wall for whoever runs the house</td></tr>
       </tbody>
     </table></div>
   </section>

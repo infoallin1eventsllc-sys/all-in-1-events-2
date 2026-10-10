@@ -89,6 +89,8 @@
   @media (max-width: 760px) { footer .wrap { grid-template-columns: 1fr; } }
   .loading { position: absolute; inset: 0; display: grid; place-items: center; font: 500 12px/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
 
+  .top .narrow { display: none; }
+  @media (max-width: 480px) { .top .wide { display: none; } .top .narrow { display: inline; } }
   @media (max-width: 760px) {
     .stage .vignette { background: linear-gradient(0deg, rgba(5, 8, 14, 0.92) 0%, rgba(5, 8, 14, 0.55) 45%, rgba(5, 8, 14, 0) 70%); }
     .sheet { bottom: 22px; }

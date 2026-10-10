@@ -75,7 +75,7 @@ for (const finish of ["grounded", "futuristic", "vivid"]) writeFileSync(`${OUT}/
   </section>
 ` + html.slice(to);
   html = swap(html, '<nav aria-label="Sections"><a href="#haven">Haven</a><a href="#builders">For builders</a></nav>',
-    '<nav aria-label="Sections"><a href="index.html">Back to the website</a></nav>', "meridian.html nav");
+    '<nav aria-label="Sections"><a href="index.html" aria-label="Back to the website"><span class="wide">Back to the website</span><span class="narrow">&larr; Website</span></a></nav>', "meridian.html nav");
   html = swap(html, "<p>Keep scrolling to see what Haven does.</p>", "<p>That is the whole build. Below, where it leads.</p>", "meridian.html last chapter");
   html = swap(html, '<nav aria-label="Footer"><a href="#haven">What Haven does</a><a href="#builders">For builders</a></nav>',
     '<nav aria-label="Footer"><a href="index.html">Meridian Interface</a><a href="index.html#screens">Screens</a><a href="index.html#contact">Book a walkthrough</a></nav>', "meridian.html footer");

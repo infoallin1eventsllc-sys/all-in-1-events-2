@@ -1,6 +1,6 @@
 # Generated clips (Higgsfield), October 6, 2026
 
-The photoreal and hologram clips for the merged film: the house designs itself as a hologram (our engine, `film/film.js`), becomes real, and the holographic guide walks the client through it to the panel. All 16:9, 10 s, no audio (the River voice track and score go over the top). Each clip's job id is also its reference for further generations (`medias[].value`), so a new shot can match an existing one.
+The photoreal and hologram clips for the merged film: the house designs itself as a hologram (our engine, `film/film.js`), becomes real, and the holographic guide walks the client through it to the panel. All 16:9, 10 s, no audio (the guide's voice, ElevenLabs "Lily D", and the score go over the top). Each clip's job id is also its reference for further generations (`medias[].value`), so a new shot can match an existing one.
 
 Download links are on Higgsfield's CDN, which this cloud container can't reach; they open in a browser and sit in the account under Generations.
 
