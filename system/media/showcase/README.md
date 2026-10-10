@@ -56,7 +56,14 @@ Rebuild (after the site or a demo changes):
 5d. Every screen's motion is keyed to the camera's phase (`phase(n)`, the distance the
    camera has travelled round the loop): pages scroll as the camera moves and rest when
    it rests; product changes sit mid-way between the camera's two rests; the home page
-   scrolls down on the way out and back up on the way home.
+   scrolls down on the way out and back up on the way home, in direct proportion to the
+   camera's travel (one ease, the camera's own, so it never sits still while the camera
+   moves). Every scroll is sub-pixel: the page is read between two rows, never rounded to
+   a whole pixel, so a slow scroll near a turnaround glides instead of stepping.
+5f. The two small panes' screens sit inside the band that is cut back to the aluminium,
+   ringed by their dark bezel, and the visible face is opened with a disc (4.5% of the
+   pane's width in the frame) so every corner turns on a curve where the glass meets
+   the aluminium side, as in the clip.
 5e. `clean.py` also clears the short stubs the threads lit on each pane's aluminium sides
    (a median along the edge direction over a band on each side edge) and the tracked
    anchor dots, so no line is left on any frame.

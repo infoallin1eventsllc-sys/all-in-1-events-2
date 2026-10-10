@@ -99,9 +99,11 @@ def load_page(name, w):
     return page, pin
 def view(page, pin, w, h, off):
     """What the face shows with the page scrolled by off (pixels at SS scale)."""
-    H = h * SS; off = int(np.clip(off, 0, max(page.shape[0] - H, 0)))
-    v = page[off:off + H].astype(np.float32)
-    if v.shape[0] < H: v = np.vstack([v, np.repeat(v[-1:], H - v.shape[0], 0)])
+    H = h * SS; off = float(np.clip(off, 0, max(page.shape[0] - H, 0)))
+    i = int(np.floor(off)); f = np.float32(off - i)                 # sub-pixel: a slow scroll glides instead of stepping a whole pixel at a time
+    v = page[i:i + H + 1].astype(np.float32)
+    if v.shape[0] < H + 1: v = np.vstack([v, np.repeat(v[-1:], H + 1 - v.shape[0], 0)])
+    v = v[:H] * (1 - f) + v[1:] * f
     if pin is not None:
         ph = pin.shape[0]; half = ph // 2
         for part, y in ((pin[:half], 0), (pin[half:], H - (ph - half))):
@@ -119,6 +121,11 @@ def seat(k, img):
     if k not in _SEAT:
         h, w = img.shape[:2]; short = min(w, h)
         bz = int(round(0.022 * short)); r = int(round(F[k]['r'] * w * 0.8))
+        if k in 'AB':
+            # the small panes' outer band is cut back to the aluminium (CORE, 3% in), where a
+            # white screen ran into the white rim and its corner read square: the screen sits
+            # inside that band, ringed all round by its dark bezel, so the corners show round
+            bz = int(round(0.03 * w + 0.009 * short))
         inner = np.zeros((h, w), np.uint8)
         cv2.rectangle(inner, (bz + r, bz), (w - 1 - bz - r, h - 1 - bz), 255, -1); cv2.rectangle(inner, (bz, bz + r), (w - 1 - bz, h - 1 - bz - r), 255, -1)
         for cx, cy in ((bz + r, bz + r), (w - 1 - bz - r, bz + r), (w - 1 - bz - r, h - 1 - bz - r), (bz + r, h - 1 - bz - r)):
@@ -160,8 +167,9 @@ class Sequence:
         else: return self.look(j, x)
         m = smooth(m); xa = x + (self.slot if b == j else 0); xb = x - (self.slot if a == j else 0)
         stack = np.vstack([self.look(a, xa), np.tile(np.float32([32, 18, 11]), (g, self.w * SS, 1)), self.look(b, xb)])
-        y = int(round(m * (H + g)))
-        return stack[y:y + H]
+        y = m * (H + g); i = int(np.floor(y)); f = np.float32(y - i)
+        stack = np.vstack([stack, stack[-1:]])
+        return stack[i:i + H] * (1 - f) + stack[i + 1:i + H + 1] * f
 
 # tablet pane (A): the part of the loop where it faces the camera, in phase units
 PH = np.array([phase(n) for n in range(T)])
@@ -201,7 +209,10 @@ def paneD(s):
 def site_at(ph):
     w, h = SZ['C']; page, pin = SITE
     rng = max(page.shape[0] - h * SS, 0)
-    return view(page, pin, w, h, 0.9 * rng * (1 - np.cos(2 * np.pi * ph / PERIOD)) / 2)
+    # straight off the camera's phase: the page moves exactly as the camera does, easing
+    # with it into each turnaround and away again, never frozen while the camera moves
+    tri = ph / L if ph <= L else (PERIOD - ph) / L
+    return view(page, pin, w, h, 0.9 * rng * tri)
 
 # ---- faces ------------------------------------------------------------------------
 def rounded(w, h, rad, grow=0.0):
@@ -289,6 +300,16 @@ for n in range(T):
         fm, g = FACE[k]; cm, gc = CORE[k]
         m = warp(fm.astype(np.float32) / 255, H, g); core = warp(cm.astype(np.float32) / 255, H, gc)
         m = m * (1 - (1 - core) * rim_soft) * v          # outside the core, the rim's own pixels stay rim
+        if k in 'AB':
+            # The glass of the two small panes turns its corners on a curve where it meets the
+            # aluminium side; the rim cut alone leaves a square notch there. Opening the visible
+            # face with a disc rounds every convex corner at the glass's own radius (straight
+            # edges are untouched), so the clip's rounded rim shows through the corners.
+            R = 0.045 * float(np.linalg.norm(q[1] - q[0]))
+            if R >= 1.5:
+                d = 2 * int(round(R)) + 1
+                m = cv2.morphologyEx(m.astype(np.float32), cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (d, d)))
+                m = cv2.GaussianBlur(m, (0, 0), 0.6)
         face[k] = [warp(pics[k], H), m, warp(printed_at(k, s), H)]
         sm, gs = SIL[k]; sil[k] = warp(sm.astype(np.float32) / 255, H, gs)
     for k in 'AB':                                       # a nearer pane stays in front: its face and its lit rim
