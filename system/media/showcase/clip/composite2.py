@@ -40,6 +40,13 @@ def dist(u):
     if u <= R: return u / 2 - R / (2 * np.pi) * np.sin(np.pi * u / R)
     if u <= HALF - R: return R / 2 + (u - R)
     return L - dist(HALF - u)
+def phase(n):
+    """How far the camera has travelled round the loop, in true source frames: 0..L on the
+    way out, L..2L on the way back. Its speed is the camera's, so anything keyed to it
+    slows, rests and resumes exactly with the camera."""
+    c = (n + START) % T
+    return dist(c) if c <= HALF else 2 * L - dist(T - c)
+PERIOD = 2 * L
 def source_pos(n):
     c = (n + START) % T
     tau = dist(c) if c <= HALF else dist(T - c)
@@ -127,11 +134,11 @@ def seat(k, img):
     return (img * fall + sheen) * screen + bezel * (1 - screen)
 
 class Sequence:
-    """Products one after another inside one face. Each scrolls gently (it never stops,
-    and eases at its ends); at the end of its turn the next product rises up from below
-    it, as one continuous scroll, over SLIDE frames. No two pages are ever overlaid.
-    span = (start, length) of the part of the loop the sequence plays in; outside it
-    the last product holds where it is."""
+    """Products one after another inside one face, all keyed to the camera's phase: each
+    page scrolls as the camera moves (and rests when it rests); at the end of its turn
+    the next product rises up from below it as one continuous scroll over SLIDE frames
+    of camera travel. The turns are offset by half a slot, so the camera's two rests
+    fall in the middle of a page, never on a change. span = (start, length) in phase."""
     SLIDE = 20
     GAP = 6                                         # a thin line of the scene's navy between pages
     def __init__(self, kind, names, face, span):
@@ -143,8 +150,8 @@ class Sequence:
         tau = np.clip((x + self.SLIDE / 2) / (self.slot + self.SLIDE), 0, 1)
         pos = 0.55 * tau + 0.45 * (1 - np.cos(np.pi * tau)) / 2          # steady flow, soft ends
         return view(page, pin, self.w, self.h, travel * pos)
-    def at(self, n):
-        local = (n - self.start) % T
+    def at(self, ph):
+        local = (ph - self.start) % PERIOD
         if local >= self.length: local = self.length - 1e-3            # hidden part of the loop: hold
         j = int(local // self.slot); x = local - j * self.slot
         H = self.h * SS; g = self.GAP * SS
@@ -156,26 +163,45 @@ class Sequence:
         y = int(round(m * (H + g)))
         return stack[y:y + H]
 
-# tablet pane (A): the part of the loop where it faces the camera
+# tablet pane (A): the part of the loop where it faces the camera, in phase units
+PH = np.array([phase(n) for n in range(T)])
 vis = np.array([quad_at('A', source_pos(n))[1] for n in range(T)])
-hid = vis < 0.05
-# longest cyclic run of visible frames
-best, cur, s0 = (0, 0), 0, 0
-for n in range(2 * T):
-    if not hid[n % T]:
-        if cur == 0: s0 = n
+order = np.argsort(PH); ph_sorted, vis_sorted = PH[order], vis[order] >= 0.05
+# longest cyclic run of visible phases
+best, cur, s0 = (0, 0), 0, 0; n_ = len(ph_sorted)
+for k in range(2 * n_):
+    if vis_sorted[k % n_]:
+        if cur == 0: s0 = k
         cur += 1
-        if cur > best[1]: best = (s0 % T, min(cur, T))
+        if cur > best[1]: best = (s0 % n_, min(cur, n_))
     else: cur = 0
-A_SPAN = best
-B_SPAN = (0, T)
+a0 = ph_sorted[best[0]]; a1 = ph_sorted[(best[0] + best[1] - 1) % n_]
+A_SPAN = (float(a0), float((a1 - a0) % PERIOD))
+B_SLOT = PERIOD / 6
+B_SPAN = (B_SLOT / 2, PERIOD)                      # the camera rests at phase 0 and L: mid-page, never on a change
 PHONE = Sequence('phone', ['bigboy', 'fogcity', 'frameshop', 'modernstreet', 'carepulse', 'drone'], 'B', B_SPAN)
 TABLET = Sequence('tablet', ['finsight', 'crm', 'analytics', 'planner'], 'A', A_SPAN)
 SITE = load_page('site', SZ['C'][0])
-def site_at(n):
+# The fourth pane, far right, coplanar with the big one (its edges stay fixed in the big
+# pane's plane to 2 px over every frame it shows in). Measured by paneD.json: left edge
+# and the top rim / bottom edge as straight lines in the source frame. It carries the
+# Meridian lockup on the brand's ink, seated like the others. Only its left part is ever
+# on screen, so the mark sits at the left of the face.
+PD = json.load(open(f'{D}/paneD.json'))
+LOGO = cv2.imread(f'{D}/logo-d.png')
+def paneD(s):
+    """Quad of the fourth pane's face in the frame at source position s, or None."""
+    if s < PD['first'] - 8: return None
+    top = np.polyval(PD['top'], s) + 10; bot = np.polyval(PD['bottom'], s) - 4          # inside its own rim
+    hh = bot - top; ww = hh * PD['aspect']; x0 = PD['left']
+    rect = np.float32([[x0, top], [x0 + ww, top], [x0 + ww, bot], [x0, bot]])
+    qc, _ = quad_at('C', s); w, h = SZ['C']
+    Hc = cv2.getPerspectiveTransform(np.float32([[0, 0], [w, 0], [w, h], [0, h]]), qc)
+    return cv2.perspectiveTransform(rect.reshape(-1, 1, 2), Hc).reshape(-1, 2)
+def site_at(ph):
     w, h = SZ['C']; page, pin = SITE
     rng = max(page.shape[0] - h * SS, 0)
-    return view(page, pin, w, h, 0.9 * rng * (1 - np.cos(2 * np.pi * n / T)) / 2)
+    return view(page, pin, w, h, 0.9 * rng * (1 - np.cos(2 * np.pi * ph / PERIOD)) / 2)
 
 # ---- faces ------------------------------------------------------------------------
 def rounded(w, h, rad, grow=0.0):
@@ -238,7 +264,22 @@ for n in range(T):
     hsv = cv2.cvtColor(np.clip(orig, 0, 255).astype(np.uint8), cv2.COLOR_BGR2HSV)
     rimpx = ((hsv[..., 2] > 105) & (hsv[..., 1] < 95)).astype(np.uint8)
     rim_soft = cv2.GaussianBlur(cv2.dilate(rimpx, np.ones((3, 3), np.uint8)).astype(np.float32), (0, 0), 0.7)
-    pics = {k: seat(k, v) for k, v in (('A', TABLET.at(n)), ('B', PHONE.at(n)), ('C', site_at(n)))}
+    ph = phase(n)
+    pics = {k: seat(k, v) for k, v in (('A', TABLET.at(ph)), ('B', PHONE.at(ph)), ('C', site_at(ph)))}
+    qd = paneD(s)
+    if qd is not None and qd[:, 0].min() < 1920:
+        # the lockup at the fourth pane's size, seated, drawn before the three panes so they stay in front
+        Lh, Lw = LOGO.shape[:2]; dw = int(round(np.linalg.norm(qd[1] - qd[0]))); dh = int(round(np.linalg.norm(qd[3] - qd[0])))
+        if 'D' not in SZ: SZ['D'] = (dw, dh); F['D'] = {'r': 0.045}
+        pic = cv2.resize(LOGO, (SZ['D'][0] * SS, SZ['D'][1] * SS), interpolation=cv2.INTER_AREA)
+        pic = seat('D', pic.astype(np.float32))
+        Hd = cv2.getPerspectiveTransform(np.float32([[0, 0], [SZ['D'][0], 0], [SZ['D'][0], SZ['D'][1]], [0, SZ['D'][1]]]), np.float32(qd)).astype(np.float64)
+        if 'D' not in FACE:
+            FACE['D'] = rounded(*SZ['D'], 0.8 * F['D']['r'] * SZ['D'][0], 0.004); CORE['D'] = rounded(*SZ['D'], F['D']['r'] * SZ['D'][0], -0.03)
+        fm, g = FACE['D']; cm, gc = CORE['D']
+        md = warp(fm.astype(np.float32) / 255, Hd, g); cd = warp(cm.astype(np.float32) / 255, Hd, gc)
+        md = md * (1 - (1 - cd) * rim_soft)
+        md3 = md[..., None]; orig = orig * (1 - md3) + warp(pic, Hd) * md3
     if os.environ.get('DIAG') == 'white':             # diagnostic: plain white screens show anything left of the glass print
         pics = {k: np.full_like(v, 245) for k, v in pics.items()}
     face, sil = {}, {}

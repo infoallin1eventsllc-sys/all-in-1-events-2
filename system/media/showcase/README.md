@@ -47,6 +47,19 @@ Rebuild (after the site or a demo changes):
    with every pane's top and bottom edges and corners guarded so the rims stay intact,
    and filled from the pixels above and below. The homepage capture hides the hero
    backdrop, so the big pane never shows a copy of the clip inside itself.
+5c. The fourth pane (far right) carries the Meridian lockup on the brand's ink: it is
+   coplanar with the big pane, measured in `clip/paneD.json` (left edge, top rim and
+   bottom edge as lines in the source frame; it shows from source frame 166). The screen
+   is `clip/logo/logo-d.png`, rendered from `logo-d.html` with the site's fonts and the
+   real mark (`node shoot.mjs logo-d.html out.png 836 585`; the mark is `meridian-mark.png`
+   from the meridian-brand skill, never redrawn); copy it to `<dir>/logo-d.png`.
+5d. Every screen's motion is keyed to the camera's phase (`phase(n)`, the distance the
+   camera has travelled round the loop): pages scroll as the camera moves and rest when
+   it rests; product changes sit mid-way between the camera's two rests; the home page
+   scrolls down on the way out and back up on the way home.
+5e. `clean.py` also clears the short stubs the threads lit on each pane's aluminium sides
+   (a median along the edge direction over a band on each side edge) and the tracked
+   anchor dots, so no line is left on any frame.
 6. Render: `python clip/composite2.py <dir> shots out` (frame numbers to preview a few;
    several copies with different frame lists to use every core). The loop is 478
    frames (19.9 s at 24 fps): the camera runs source frames 1-190 forward then back,

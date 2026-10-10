@@ -14,6 +14,7 @@ background, and any vertical rim edge, exactly.
 import cv2, numpy as np, json, sys, os
 D = sys.argv[1]; FR = [int(x) for x in sys.argv[2:]] or list(range(1, 194))
 TR = json.load(open(f'{D}/track2.json'))
+DOTS = json.load(open(f'{D}/dots.json'))   # the anchor dots, tracked by dots.py
 os.makedirs(f'{D}/clean', exist_ok=True); os.makedirs(f'{D}/mask', exist_ok=True)
 DISK = lambda r: cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (r, r))
 
@@ -38,7 +39,13 @@ def thread_mask(im, i):
     for k in range(1, n):
         x, y, w, h, a = st[k]
         if 4 <= a <= 2500 and max(w, h) <= 2.2 * min(w, h) and a >= 0.4 * w * h: blobs |= lab == k
-    m = cv2.dilate(lines.astype(np.uint8), DISK(9)) | cv2.dilate(blobs.astype(np.uint8), DISK(31))
+    # the tracked anchor dots too: where one sits on a pane's side it merges with the rim
+    # in the blob test above and would be missed
+    tracked = np.zeros(V.shape, np.uint8)
+    for k in ('A', 'C'):
+        for p in DOTS[k].get(str(min(i, 190)), []):
+            if p and p[2] > 150: cv2.circle(tracked, (int(round(p[0])), int(round(p[1]))), 22, 1, -1)
+    m = cv2.dilate(lines.astype(np.uint8), DISK(9)) | cv2.dilate(blobs.astype(np.uint8), DISK(31)) | tracked
     # never touch: the big pane's slanted top and bottom rims, the floor, the far right
     guard = np.zeros(V.shape, np.uint8)
     for k, grow in (('A', 1.0), ('B', 1.0), ('C', 1.0)):
@@ -96,9 +103,36 @@ def clear_edge_on(im, i):
     out = im.copy(); out[y0:y1, x0:x1] = np.clip(med, 0, 255).astype(np.uint8)
     return out
 
+def clear_side_rims(im, i):
+    """Where a thread met a pane it also lit a short stub on the aluminium side itself,
+    which the thread mask leaves alone (the rim is bright, so the stub does not stand out).
+    The side of a pane is uniform along its length: a median along the edge direction,
+    over a band on each side edge, removes the stubs and leaves the rim as it was."""
+    out = im.astype(np.float32).copy()
+    for k in 'ABC':
+        t = TR[k][str(min(i, 190))]; q = np.array(t['q'], float)
+        w = np.linalg.norm(q[1] - q[0]); h = np.linalg.norm(q[3] - q[0]); band = int(np.clip(0.05 * min(w, h) + 14, 22, 30))
+        sides = [(q[0], q[3]), (q[1], q[2])] if k != 'C' else [(q[0], q[3])]
+        for a, b in sides:
+            d = (b - a) / np.linalg.norm(b - a)                       # along the edge
+            mask = np.zeros(im.shape[:2], np.uint8)
+            cv2.line(mask, tuple(np.round(a + d * 12).astype(int)), tuple(np.round(b - d * 12).astype(int)), 1, band)
+            ys, xs = np.where(mask > 0)
+            if len(xs) == 0: continue
+            x0, x1, y0, y1 = xs.min(), xs.max() + 1, ys.min(), ys.max() + 1
+            sub = im[y0:y1, x0:x1].astype(np.float32); H_, W_ = sub.shape[:2]
+            yy, xx = np.mgrid[0:H_, 0:W_].astype(np.float32)
+            K = 32; stack = []
+            for j in range(-K, K + 1, 2):
+                stack.append(cv2.remap(sub, xx + np.float32(j * d[0]), yy + np.float32(j * d[1]), cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE))
+            med = np.median(np.stack(stack), axis=0)
+            mm = mask[y0:y1, x0:x1].astype(np.float32); mm = cv2.GaussianBlur(mm, (0, 0), 1.2)[..., None]
+            out[y0:y1, x0:x1] = out[y0:y1, x0:x1] * (1 - mm) + med * mm
+    return np.clip(out, 0, 255).astype(np.uint8)
+
 for i in FR:
     im = cv2.imread(f'{D}/full/{i:03d}.png'); m = thread_mask(im, i)
     cl = np.clip(fill_vertical(im, m), 0, 255).astype(np.uint8)
-    cv2.imwrite(f'{D}/clean/{i:03d}.png', clear_edge_on(cl, i))
+    cv2.imwrite(f'{D}/clean/{i:03d}.png', clear_side_rims(clear_edge_on(cl, i), i))
     cv2.imwrite(f'{D}/mask/{i:03d}.png', (m * 255).astype(np.uint8))
     print(i, 'erased %.2f%%' % (100 * m.mean()), flush=True)
