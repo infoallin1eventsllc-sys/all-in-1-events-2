@@ -111,11 +111,24 @@ export function createVoice({ onInterim, onFinal, onState, onLevel, synthesize =
       ? "Voice needs a secure connection. Open Haven over HTTPS (for example with Tailscale) to talk to it."
       : "";
 
+  // The smoothest voice this device has. Devices ship basic voices that sound robotic beside their
+  // natural ones: Edge's "(Natural)" voices, Apple's Premium/Enhanced and Siri voices, Google's
+  // network voices. Novelty voices (Zarvox, Bells, ...) are never chosen.
+  function rankVoice(v) {
+    const n = v.name || "";
+    if (/\b(albert|bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|superstar|trinoids|whisper|wobble|zarvox|fred|junior|ralph|kathy|princess|grandma|grandpa|eddy|flo|reed|rocko|sandy|shelley)\b/i.test(n)) return -10;
+    let s = 0;
+    if (/natural|neural/i.test(n)) s += 6;
+    if (/premium|enhanced|siri/i.test(n)) s += 5;
+    if (/^google/i.test(n)) s += 3;
+    if (/\b(ava|samantha|allison|aria|jenny|zoe|serena|evan|nathan|emma|libby|sonia)\b/i.test(n)) s += 2;
+    if (/^en[-_]us/i.test(v.lang)) s += 1;
+    return s;
+  }
   function pickVoice() {
     if (!canSpeak) return null;
     const voices = speechSynthesis.getVoices().filter((v) => /^en(-|_)/i.test(v.lang));
-    const preferred = ["Samantha", "Ava", "Allison", "Google US English", "Microsoft Aria", "Microsoft Jenny"];
-    return preferred.map((n) => voices.find((v) => v.name.includes(n))).find(Boolean) || voices.find((v) => v.localService) || voices[0] || null;
+    return voices.map((v, i) => ({ v, s: rankVoice(v), i })).sort((a, b) => b.s - a.s || a.i - b.i)[0]?.v || null;
   }
   if (canSpeak) {
     voice = pickVoice();
@@ -181,7 +194,7 @@ export function createVoice({ onInterim, onFinal, onState, onLevel, synthesize =
     parts.forEach((part, i) => {
       const u = new SpeechSynthesisUtterance(part);
       if (voice) u.voice = voice;
-      u.rate = 1.02;
+      u.rate = 0.97; // a touch unhurried: smoother than the default pace
       u.pitch = 1;
       if (i === 0) u.onstart = () => { if (mine !== speakSeq) return; talking = true; onState?.("speaking"); onLevel?.(0.6); };
       u.onboundary = () => onLevel?.(0.9);

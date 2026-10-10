@@ -45,7 +45,7 @@ export async function createHome({ config = loadConfig(), env = process.env, dat
   };
   home.energy = new Energy(home);
   home.weather = new Weather({ config, adapter });
-  home.speech = new Speech({ env });
+  home.speech = new Speech({ env, dataDir });
   home.cameras = new Cameras({ config, adapter, bus, notifier: home.notifier, dataDir });
   home.learner = new Learner(home);
   home.automations = new Automations(home);

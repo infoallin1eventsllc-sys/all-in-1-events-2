@@ -53,6 +53,9 @@ copyFileSync(need("dist/film/meridian-film-merged-share.webm"), `${OUT}/meridian
 copyFileSync(need("dist/film/meridian-film-hero.mp4"), `${OUT}/meridian-film-hero.mp4`); // the landing page's short cut
 copyFileSync(need("dist/film/meridian-film-hero.webm"), `${OUT}/meridian-film-hero.webm`);
 copyFileSync(need("docs/poster.jpg"), `${OUT}/poster.jpg`);
+// Haven's voices, to play in "Choose Haven's voice" (Lily is Haven speaking; the others are each voice's own sample).
+mkdirSync(`${OUT}/voices`, { recursive: true });
+for (const v of ["lily", "sia", "richard", "charlotte"]) copyFileSync(need(`docs/voice/haven-voice-${v}.mp3`), `${OUT}/voices/${v}.mp3`);
 const shots = readdirSync(need("dist/catalog/shots")).filter((f) => f.endsWith(".jpg"));
 if (shots.length !== 32) throw new Error(`expected 32 screen pictures, found ${shots.length}`);
 for (const f of shots) copyFileSync(`dist/catalog/shots/${f}`, `${OUT}/shots/${f}`);
@@ -129,7 +132,7 @@ writeFileSync(`${OUT}/library.html`, page("dist/catalog/haven-screen-library.htm
 }
 
 // Every local link and asset the site's pages name must exist.
-const files = new Set(readdirSync(OUT).concat(shots.map((f) => `shots/${f}`), imgs.map((f) => `img/${f}`)));
+const files = new Set(readdirSync(OUT).concat(shots.map((f) => `shots/${f}`), imgs.map((f) => `img/${f}`), readdirSync(`${OUT}/voices`).map((f) => `voices/${f}`)));
 const index = readFileSync(`${OUT}/index.html`, "utf8");
 const refs = [...index.matchAll(/(?:href|src|poster)="([^"#:]+)(?:#[^"]*)?"/g)].map((m) => m[1]).filter((r) => !r.startsWith("//"));
 const missing = refs.filter((r) => !files.has(r));

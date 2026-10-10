@@ -787,8 +787,33 @@ function renderLibrary() {
       x.id === screen ? "In use" : "Use this screen"))));
 }
 
+// Screens → Haven's voice: one choice for the whole home, saved on the home server.
+function renderVoiceChoice() {
+  const v = state?.voice;
+  const box = $(".library-voice");
+  box.hidden = !v?.choices?.length;
+  if (box.hidden) return;
+  const sel = $("#voice-choice");
+  sel.replaceChildren(...(v.choice ? [] : [el("option", { value: "" }, "A custom voice (set by your installer)")]),
+    ...v.choices.map((c) => el("option", { value: c.id }, `${c.name} · ${c.about}`)));
+  sel.value = v.choice || "";
+  $("#voice-choice-note").textContent = v.provider === "elevenlabs"
+    ? "One voice for the whole home: every panel speaks with it."
+    : "Saved for the whole home. These natural voices play once the home server has the premium voice; until then panels use the tablet's own voice.";
+}
+$("#voice-choice").addEventListener("change", async (e) => {
+  const r = await api("/api/voice", { voice: e.target.value });
+  if (!r?.choices) { showHint(r?.error || "That voice couldn't be saved. Try again."); renderVoiceChoice(); return; }
+  state.voice = r;
+  renderVoiceChoice();
+  const name = r.choices.find((c) => c.id === r.choice)?.name;
+  showHint(`Haven will speak as ${name} on every panel.`);
+  if (speakAloud) voice.speak("Hello. This is how I'll sound in your home.");
+});
+
 function openLibrary() {
   renderLibrary();
+  renderVoiceChoice();
   const d = $("#library");
   if (d.showModal) d.showModal(); else d.setAttribute("open", "");
 }

@@ -71,13 +71,49 @@
         <figcaption>One house on every screen: the wall panels, a laptop, an iPad, an iPhone and an Apple Watch, in any browser.</figcaption>
       </figure>
       <ul class="features">
-        <li><h3>Talks and listens</h3><p>Push to talk on any panel. It answers in its own voice.</p></li>
+        <li><h3>Talks and listens</h3><p>Push to talk on any panel. It answers in <a href="#voices">the voice you choose</a>.</p></li>
         <li><h3>Watches the electricity</h3><p>Today&rsquo;s use on the panel, from an energy monitor or clearly marked as an estimate. On your way out, Entry shows what&rsquo;s still on.</p></li>
         <li><h3>Learns your comfort</h3><p>Say &ldquo;I&rsquo;m cold&rdquo; and it warms the room now, and remembers it for that time of day.</p></li>
         <li><h3>Briefs you</h3><p>A morning and evening summary: the house, the forecast once a weather source is connected, and anything that needs you.</p></li>
         <li><h3>Goes where you go</h3><p>Talk to Haven, run scenes and hear its briefings from an iPhone, an Apple Watch or the car, through Siri.</p></li>
         <li><h3>Shows off the model home</h3><p>On a model-home panel, Haven runs its scenes on its own between visitors, and stops the moment someone touches the screen.</p></li>
       </ul>
+
+      <div class="voices" id="voices">
+        <div class="sub">
+          <h3>Choose Haven&rsquo;s voice</h3>
+          <p>Every Haven home speaks in the voice its family picks. Play each one and choose yours: we&rsquo;ll set it up in your home, and you can change it any time from the panel.</p>
+        </div>
+        <fieldset class="voice-pick">
+          <legend class="sr">Haven&rsquo;s voice</legend>
+          <div class="voice">
+            <input type="radio" name="voice" id="v-lily" value="Lily D">
+            <label for="v-lily"><b>Lily D</b><span>Clear, calm and warm &middot; American woman</span></label>
+            <button class="play" type="button" data-src="voices/lily.mp3" aria-label="Play Lily D" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button>
+            <small>Haven speaking</small>
+          </div>
+          <div class="voice">
+            <input type="radio" name="voice" id="v-sia" value="Sia">
+            <label for="v-sia"><b>Sia</b><span>Warm and gentle &middot; American woman</span></label>
+            <button class="play" type="button" data-src="voices/sia.mp3" aria-label="Play Sia" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button>
+            <small>Her own sample</small>
+          </div>
+          <div class="voice">
+            <input type="radio" name="voice" id="v-richard" value="Richard">
+            <label for="v-richard"><b>Richard</b><span>Deep and velvety &middot; American man</span></label>
+            <button class="play" type="button" data-src="voices/richard.mp3" aria-label="Play Richard" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button>
+            <small>His own sample</small>
+          </div>
+          <div class="voice">
+            <input type="radio" name="voice" id="v-charlotte" value="Charlotte">
+            <label for="v-charlotte"><b>Charlotte</b><span>Smooth and relaxed &middot; British woman</span></label>
+            <button class="play" type="button" data-src="voices/charlotte.mp3" aria-label="Play Charlotte" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button>
+            <small>Her own sample</small>
+          </div>
+        </fieldset>
+        <p class="voice-note" id="voice-note" role="status">Pick a voice and it goes with your walkthrough request.</p>
+        <p class="voice-fine">These natural voices come with Haven&rsquo;s premium voice. Without it, panels use the tablet&rsquo;s own voice.</p>
+      </div>
     </div>
   </section>
 
@@ -310,6 +346,7 @@
         <label>Email<input id="f-email" name="email" type="email" autocomplete="email" maxlength="120"></label>
         <label>Phone <small>or email, either is fine</small><input id="f-phone" name="phone" type="tel" autocomplete="tel" maxlength="30"></label>
         <label>You are<select id="f-role" name="role"><option>A homeowner</option><option>A builder or developer</option><option>An architect or designer</option><option>Something else</option></select></label>
+        <label>Haven&rsquo;s voice<select id="f-voice" name="voice"><option value="">Not chosen yet</option><option>Lily D</option><option>Sia</option><option>Richard</option><option>Charlotte</option></select></label>
         <label>Company <small>(optional)</small><input id="f-company" name="company" autocomplete="organization" maxlength="120"></label>
         <label>Where is the project?<input id="f-where" name="where" autocomplete="address-level2" maxlength="120"></label>
         <label class="full">Tell us about it<textarea id="f-note" name="note" maxlength="1500" placeholder="The home or development, how many homes, timing, the rooms you'd like panels in."></textarea></label>

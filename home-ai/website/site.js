@@ -240,6 +240,36 @@
   });
   renderLive();
 
+  // ---- Haven's voice: play each sample, and the pick goes with the walkthrough request.
+  const player = new Audio();
+  let playing = null;
+  const playIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>';
+  const pauseIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
+  const setPlaying = (btn) => {
+    document.querySelectorAll(".voice .play").forEach((b) => {
+      const on = b === btn;
+      b.setAttribute("aria-pressed", String(on));
+      b.innerHTML = on ? pauseIcon : playIcon;
+      b.setAttribute("aria-label", `${on ? "Pause" : "Play"} ${b.closest(".voice").querySelector("b").textContent}`);
+    });
+    playing = btn;
+  };
+  player.addEventListener("ended", () => setPlaying(null));
+  player.addEventListener("error", () => { if (playing) $("#voice-note").textContent = "That sample couldn't play. Try again."; setPlaying(null); });
+  document.querySelectorAll(".voice .play").forEach((btn) => btn.addEventListener("click", () => {
+    if (playing === btn) { player.pause(); setPlaying(null); return; }
+    player.src = btn.dataset.src;
+    player.play().then(() => setPlaying(btn), () => setPlaying(null));
+  }));
+  const voiceSelect = $("#f-voice");
+  document.querySelectorAll('.voice input[name="voice"]').forEach((r) => r.addEventListener("change", () => {
+    voiceSelect.value = r.value;
+    $("#voice-note").innerHTML = `<b>${r.value}</b> is your choice. It goes with your <a href="#contact">walkthrough request</a>.`;
+  }));
+  voiceSelect.addEventListener("change", () => {
+    document.querySelectorAll('.voice input[name="voice"]').forEach((r) => { r.checked = r.value === voiceSelect.value; });
+  });
+
   // ---- Contact: posts to Meridian's CRM intake.
   const INTAKE = "https://glzodwhyavexpuusbqjy.supabase.co/functions/v1/intake";
   const form = $("#contact-form"), result = $("#f-result"), send = $("#f-send");
@@ -256,7 +286,7 @@
     if (!name) { show("warn", "<p>Add your name so we know who to reply to.</p>"); $("#f-name").focus(); return; }
     if (badEmail) { show("warn", "<p>That email address doesn&rsquo;t look complete. Check it and send again.</p>"); $("#f-email").focus(); return; }
     if (!email && !phone) { show("warn", "<p>Add an email address or a phone number so we can reach you.</p>"); $("#f-email").focus(); return; }
-    const message = [`Role: ${$("#f-role").value}`, field("#f-where") && `Project: ${field("#f-where")}`, field("#f-note")].filter(Boolean).join("\n");
+    const message = [`Role: ${$("#f-role").value}`, $("#f-voice").value && `Haven's voice: ${$("#f-voice").value}`, field("#f-where") && `Project: ${field("#f-where")}`, field("#f-note")].filter(Boolean).join("\n");
     const body = { name, email: email || undefined, phone: phone || undefined, company: field("#f-company") || undefined, message, source: "meridian-website:haven" };
     send.disabled = true; send.textContent = "Sending…";
     try {
@@ -265,6 +295,8 @@
       if (!res.ok || out.ok === false) throw Object.assign(new Error(out.error || `HTTP ${res.status}`), { server: true });
       show("ok", `<p><b>Thanks, ${esc(name)}.</b> Your request is with Meridian. We&rsquo;ll reply to ${esc(email || phone)} to set up your walkthrough.</p>`);
       form.reset();
+      document.querySelectorAll('.voice input[name="voice"]').forEach((r) => { r.checked = false; });
+      $("#voice-note").textContent = "Pick a voice and it goes with your walkthrough request.";
     } catch (err) {
       if (err.server) {
         show("warn", `<p>Meridian couldn&rsquo;t accept this request (${esc(err.message)}). Check your details and send it again.</p>`);

@@ -43,6 +43,8 @@ export function createRoutes(home) {
       if (typeof body.text !== "string" || !body.text.trim()) return { status: 400, error: "text is required" };
       return home.speech.synthesize(body.text);
     }],
+    // The home's voice, chosen on the panel (one of the voices in state.voice.choices).
+    ["POST", /^\/api\/voice$/, true, (url, body) => home.speech.setVoice(String(body.voice || ""))],
 
     ["GET", /^\/api\/energy$/, true, () => home.energy.report()],
     ["GET", /^\/api\/weather$/, true, () => home.weather.report()],

@@ -214,6 +214,17 @@ async function exercise(page, { garageTravelMs, home }) {
   await page.selectOption("#home-preview", "");
   await page.locator("#library-close").click();
   await check("Home style: back to this home", async () => (await page.evaluate(() => document.querySelector("#map").dataset.style)) === "modern" && (await page.locator("#map .map-room").count()) === 6, 8000);
+  // Haven's voice: one choice for the whole home, made on the panel.
+  await openLib0();
+  await check("Voice: Screens offers the four voices", async () => (await page.locator("#voice-choice option").count()) === 4);
+  await page.evaluate(() => { window.__spoken = []; });
+  await page.selectOption("#voice-choice", "richard");
+  await check("Voice: choosing Richard says so and speaks in it", async () => /Richard/.test(await page.textContent("#voice-hint")) && /how I'll sound/.test(await spoken()));
+  await page.locator("#library-close").click();
+  await openLib0();
+  await check("Voice: the home keeps the choice", async () => (await page.inputValue("#voice-choice")) === "richard");
+  await page.selectOption("#voice-choice", "lily");
+  await page.locator("#library-close").click();
   await check("Energy tile says the numbers are estimated", async () => /Estimated/.test(await tileOf("energy").textContent()));
   const kwNow = async () => Number((await tileOf("energy").locator(".energy-num").first().textContent()).trim());
   const kw0 = await kwNow();
@@ -721,8 +732,9 @@ async function runTarget(browser, target) {
   await page.addInitScript(() => { try { localStorage.setItem("haven.holoMotion", "still"); } catch {} });
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
-  // A reload cuts the live-update stream on purpose; that isn't an error.
-  page.on("requestfailed", (r) => { if (!/fonts\.(googleapis|gstatic)/.test(r.url()) && !(/\/api\/stream/.test(r.url()) && /ABORTED/.test(r.failure()?.errorText || ""))) errors.push(`request failed: ${r.url()} ${r.failure()?.errorText || ""}`); });
+  // A reload cuts the live-update stream on purpose, and closing the camera viewer cuts its live
+  // video (checked by "closing the viewer ends the video"); neither is an error.
+  page.on("requestfailed", (r) => { if (!/fonts\.(googleapis|gstatic)/.test(r.url()) && !(/\/api\/(stream|cameras\/[\w-]+\/live)/.test(r.url()) && /ABORTED/.test(r.failure()?.errorText || ""))) errors.push(`request failed: ${r.url()} ${r.failure()?.errorText || ""}`); });
 
   let cleanup = () => {};
   let home = null;

@@ -1403,7 +1403,7 @@ input[type="range"].pill-range::-moz-range-thumb { width: 8px; height: 26px; bor
   background: var(--glass); color: var(--ink); border: 1px solid var(--line); box-shadow: var(--shadow);
   backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); white-space: nowrap; max-width: calc(100% - 32px); overflow: hidden; text-overflow: ellipsis;
 }
-.library-showcase p { flex: 1 1 360px; }
+.library-showcase p, .library-voice p { flex: 1 1 360px; }
 
 /* The picture's room buttons get smaller with the picture, so they never crowd: details drop
    first, then each room becomes a dot that shows its name on hover, focus or when chosen. */
