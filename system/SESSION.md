@@ -3140,3 +3140,6 @@ Otis: debug, run a system diagnostic, fix everything, then upload the new design
 - QA on e8de10c: static 0 FAIL / 7 known WARN; browser 0 FAIL / 0 WARN; screenshots looked at.
 - Backend: 13 cron jobs, 0 failures in 24 h; every function call 200 except the known 97 x 404 from security-watch/audit calling security-agent, which is still NOT deployed (Otis's deploy command, Sep 30 entry). Security advisor: only INFO rls_enabled_no_policy (service-role tables, by design).
 - main fast-forwarded d16fce6 -> e8de10c (preview/hero-flow's five commits). Vercel status success (HAZC35vBMEGzSFK1go54GvffZmP5), checked via the GitHub commit status; the sandbox cannot load meridianinterface.com.
+
+### 10 Oct (night): Otis's lockup on the fourth pane (preview only)
+Otis sent his logo (identical, pixel for pixel, to brand `meridian-logo-square.png`) for the last screen. Only the left 15-18% of that pane is ever on camera (output frames 12-118), so the mark and the one-line wordmark, cropped from `meridian-lockup.png`, are set left-aligned on the square file's off-white (`clip/logo/logo-d-light.py`, rebuilds the image exactly). 107 frames re-rendered, the rest reused; static 0 FAIL / 7 known WARN; hero modes 5/5. Website preview/hero-flow 03e0aa7, Vercel preview success (8oYnrAoNrD9GZJHxWuw9Vk8XdPaB). Live main still e8de10c (dark lockup) until Otis says go.
