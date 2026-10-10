@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600&family=Hanken+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&family=Chakra+Petch:wght@500;600&family=Exo+2:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=Jost:wght@300;400;500;600&family=Lexend:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Nunito:wght@400;600;700;800&family=Outfit:wght@300;400;500;600&family=Roboto:wght@400;500;700&family=Saira+Condensed:wght@600;700&family=Saira:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="styles.css">
   <script src="look.js"></script>
 </head>
@@ -30,9 +30,11 @@
   </div>
 
   <div id="app" class="panel" data-daypart="evening" hidden>
-    <!-- Left: the room, the greeting, the house status, the time -->
+    <!-- All controls (opened from any screen): the room, the greeting, the house status and
+         the time on the left; every device, Updates, About you and the simulator on the right. -->
     <section class="stage" aria-label="Home status">
       <div class="stage-top">
+        <button type="button" id="controls-close" class="controls-close">Back</button>
         <nav id="rooms-nav" class="rooms-nav" aria-label="Rooms"></nav>
       </div>
       <div id="map" class="map"></div>
@@ -55,11 +57,6 @@
         </div>
         <div class="stage-tools">
           <button type="button" class="screens-open" aria-haspopup="dialog">Screens</button>
-          <div class="look-switch" role="group" aria-label="Panel style">
-            <button type="button" data-look="grounded">Grounded</button>
-            <button type="button" data-look="futuristic">Futuristic</button>
-            <button type="button" data-look="vivid">Vivid</button>
-          </div>
           <span id="conn" class="conn" role="img" aria-label="Live connection"></span>
         </div>
       </div>
@@ -119,10 +116,10 @@
       <footer class="muted small" id="footer"></footer>
     </section>
 
-    <!-- Other screens from the library render here instead of stage + glass -->
+    <!-- The screen this panel shows, from the library -->
     <main id="alt" class="alt" hidden></main>
 
-    <input type="file" id="night-file" accept="image/*" hidden aria-label="Nightstand photo">
+    <input type="file" id="night-file" accept="image/*" hidden aria-label="Bedroom photo">
 
     <p id="showcase-banner" class="showcase-banner" role="status" hidden>Model home showcase · touch anywhere to take over</p>
 
@@ -182,7 +179,7 @@
     <div class="library-head">
       <div>
         <h2 id="library-title" class="library-title">Screen library</h2>
-        <p class="muted small">Pick the screen that suits each spot in the home. Every screen runs on the same live house and works in both finishes.</p>
+        <p class="muted small">Pick the screen that suits each spot in the home. Every screen runs on the same live house, and All controls opens from any of them. Each screen has its own look; the finish below dresses Wallpaper and All controls.</p>
       </div>
       <button type="button" id="library-close" class="ghost" aria-label="Close the screen library">Close</button>
     </div>
@@ -201,7 +198,7 @@
       </div>
     </div>
     <div class="library-settings library-house">
-      <p><strong>House view</strong> <span class="muted small">How the house appears on Signature, Command Center and full screen. Live 3D and the hologram turn and zoom; the photoreal renders are pictures of this home. Every view lights up rooms and opens them when tapped.</span></p>
+      <p><strong>House view</strong> <span class="muted small">How the house appears on Command, the Security Console, Lagoon, All controls and full screen. Live 3D and the hologram turn and zoom; the photoreal renders are pictures of this home. Every view lights up rooms and opens them when tapped.</span></p>
       <div class="house-gallery" id="house-gallery" role="group" aria-label="House view"></div>
     </div>
     <div class="library-settings library-home">
@@ -215,7 +212,7 @@
       <select id="voice-choice"></select>
     </div>
     <div class="library-settings library-showcase">
-      <p><strong>Model home showcase</strong> <span class="muted small">For a builder's model home. After a minute untouched, Haven gives a short live tour on the Studio screen: Welcome home, Movie night, Goodnight and Good morning, saying what it's doing. It pauses if anything needs attention. Any touch hands control back.</span></p>
+      <p><strong>Model home showcase</strong> <span class="muted small">For a builder's model home. After a minute untouched, Haven gives a short live tour on the Glass screen: Welcome home, Movie night, Goodnight and Good morning, saying what it's doing. It pauses if anything needs attention. Any touch hands control back.</span></p>
       <button type="button" id="showcase-toggle" class="switch" role="switch" aria-checked="false" aria-label="Model home showcase"></button>
     </div>
     <div class="library-settings library-photo">

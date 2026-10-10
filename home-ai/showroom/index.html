@@ -98,14 +98,16 @@
     <button class="chip" data-finish="vivid" aria-pressed="false">Vivid</button>
     <span class="gap"></span>
     <span class="l">Screen</span>
-    <button class="chip" data-screen="signature" aria-pressed="true">Signature</button>
-    <button class="chip" data-screen="studio" aria-pressed="false">Studio</button>
-    <button class="chip" data-screen="rooms" aria-pressed="false">Rooms</button>
-    <button class="chip" data-screen="command-center" aria-pressed="false">Command Center</button>
-    <button class="chip" data-screen="family-hub" aria-pressed="false">Family Hub</button>
-    <button class="chip" data-screen="nightstand" aria-pressed="false">Nightstand</button>
+    <button class="chip" data-screen="command" aria-pressed="true">Command</button>
+    <button class="chip" data-screen="glass" aria-pressed="false">Glass</button>
+    <button class="chip" data-screen="evening" aria-pressed="false">Good Evening</button>
+    <button class="chip" data-screen="aurora" aria-pressed="false">Aurora</button>
+    <button class="chip" data-screen="console" aria-pressed="false">Security Console</button>
+    <button class="chip" data-screen="wall" aria-pressed="false">Everything Wall</button>
+    <button class="chip" data-screen="classic" aria-pressed="false">Portrait Classic</button>
+    <button class="chip" data-screen="neon" aria-pressed="false">Neon Frame</button>
+    <button class="chip" data-screen="lagoon" aria-pressed="false">Lagoon</button>
     <button class="chip" data-screen="wallpaper" aria-pressed="false">Wallpaper</button>
-    <button class="chip" data-screen="entry" aria-pressed="false">Entry</button>
   </div>
 
   <main>
@@ -113,7 +115,7 @@
       <video controls playsinline preload="metadata" poster="poster.jpg" src="meridian-film.mp4" aria-label="The Meridian Interface film"></video>
     </div>
     <iframe id="view-live" title="The live hologram film" loading="lazy" data-src="film.html"></iframe>
-    <iframe id="view-panel" title="The Haven wall panel" loading="lazy" data-src="panel-grounded.html#signature"></iframe>
+    <iframe id="view-panel" title="The Haven wall panel" loading="lazy" data-src="panel-grounded.html#command"></iframe>
     <iframe id="view-site" title="Meridian Interface website" loading="lazy" data-src="meridian.html"></iframe>
     <iframe id="view-residence" title="Linden House property site" loading="lazy" data-src="residence.html"></iframe>
     <iframe id="view-library" title="Haven screen library" loading="lazy" data-src="library.html"></iframe>
@@ -154,9 +156,11 @@
     panel: "The wall panel, running on a simulated house. Everything on it works: talk to Haven, run scenes, open rooms, change screens.",
     site: "Scrolling builds the home, chapter by chapter, then what Haven does.",
     residence: "A property site made from the same plan. Scroll walk-through, specs, floor plans, a booking form.",
-    library: "Every screen in every finish, with a link to open each one live.",
+    library: "Every screen, with a link to open each one live. Wallpaper also shows its three finishes.",
   };
-  const state = { tab: "film", film: "cut", finish: "grounded", screen: "signature" };
+  const state = { tab: "film", film: "cut", finish: "grounded", screen: "command" };
+  // Screens from before the redesign, for saved state and old deep links.
+  const OLD = { signature: "command", studio: "glass", "command-center": "wall", "family-hub": "evening", nightstand: "aurora", rooms: "classic", entry: "console" };
   const views = { film: $("#view-film"), live: $("#view-live"), panel: $("#view-panel"), site: $("#view-site"), residence: $("#view-residence"), library: $("#view-library") };
   function load(frame, src) { if (frame.getAttribute("src") !== src) frame.setAttribute("src", src); }
   function show() {
@@ -203,16 +207,16 @@
   // The guided demo: each step sets the app's state and says what to try.
   const TOUR = [
     { tab: "film", film: "cut", title: "The film", text: "The house designs itself as a hologram, becomes real, and its guide walks the client through to the panel. Press play; it runs 1:19, with sound.", go: () => $("video").play().catch(() => {}) },
-    { tab: "panel", finish: "grounded", screen: "signature", title: "The wall panel", text: "This is the panel a family sees in the hall. Everything on it works; it is running on a simulated house.", tip: "Type <b>I'm cold</b> in the bar at the bottom. Haven warms the room and remembers it for this time of day." },
-    { tab: "panel", finish: "grounded", screen: "signature", title: "It asks before anything risky", text: "Haven never unlocks a door or opens the garage on its own. The rule is in the code, not the brochure.", tip: "Type <b>open the garage</b>. It asks you to confirm first." },
-    { tab: "panel", finish: "grounded", screen: "studio", title: "Studio", text: "Haven's orb, and under it the four agents: lighting, climate, security and energy. They light up only when something real happens.", tip: "Press <b>Goodnight</b> under the orb and watch the agents hand off to each other." },
-    { tab: "panel", finish: "grounded", screen: "rooms", title: "Rooms", text: "Every room and every device, with the sensors that feed Haven: motion, leaks, doors.", tip: "Tap a light's switch, or slide its brightness." },
-    { tab: "panel", finish: "grounded", screen: "command-center", title: "Command Center", text: "The whole house in realistic 3D, the day's energy, and the activity feed.", tip: "Tap a room on the 3D house to fly in." },
-    { tab: "panel", finish: "grounded", screen: "entry", title: "Entry", text: "The screen by the front door: who's home, the locks, and one tap to say you're leaving.", tip: "Press <b>I'm leaving</b>. Lights off, doors locked, the house set back." },
-    { tab: "panel", finish: "vivid", screen: "signature", title: "Three finishes", text: "The same panel in Vivid. Grounded and Futuristic are the other two; a builder picks per home, and the family can change it.", tip: "Try the <b>Futuristic</b> chip above." },
+    { tab: "panel", finish: "grounded", screen: "command", title: "The wall panel", text: "This is the panel a family sees in the great room. Everything on it works; it is running on a simulated house.", tip: "Type <b>I'm cold</b> in the bar at the bottom. Haven warms the room and remembers it for this time of day." },
+    { tab: "panel", finish: "grounded", screen: "command", title: "It asks before anything risky", text: "Haven never unlocks a door or opens the garage on its own. The rule is in the code, not the brochure.", tip: "Type <b>open the garage</b>. It asks you to confirm first." },
+    { tab: "panel", finish: "grounded", screen: "glass", title: "Glass", text: "Haven's voice line along the bottom, and above it the four agents: lighting, climate, security and energy. They light up only when something real happens.", tip: "Tap the voice line and say <b>goodnight</b>, or type it, and watch the agents hand off to each other." },
+    { tab: "panel", finish: "grounded", screen: "evening", title: "Good Evening", text: "The kitchen screen: a greeting, climate and the water heater, the forecast, scenes, and a card for every room.", tip: "Tap a light's round button on a room card." },
+    { tab: "panel", finish: "grounded", screen: "console", title: "Security Console", text: "The screen by the door you leave by: every lock and sensor, the cameras, and one tap to say you're leaving.", tip: "Press <b>I'm leaving</b>. Lights off, doors locked, the house set back." },
+    { tab: "panel", finish: "grounded", screen: "wall", title: "Everything Wall", text: "Everything at once for the office: the numbers that matter, every switch, each room, and today's electricity.", tip: "Tap a room's light bar to switch it." },
+    { tab: "panel", finish: "vivid", screen: "wallpaper", title: "Ten screens, and three finishes", text: "Each screen has its own look. Wallpaper also comes in three finishes: this is Vivid; Grounded and Futuristic are the other two.", tip: "Try the <b>Futuristic</b> chip above." },
     { tab: "site", title: "The website", text: "Scrolling builds the home, chapter by chapter. Further down, what Haven does.", tip: "Scroll slowly through the first screen." },
     { tab: "residence", title: "A property site", text: "The Linden House template: a listing made from the same plan, with its floor plans and a preview booking form.", tip: "Scroll to the floor plans. They are drawn from the plan itself." },
-    { tab: "library", title: "Every screen", text: "The screen library: every screen in every finish, for choosing what goes in each room.", tip: "That's the demo. Use the tabs to go anywhere, or start over for the next client." },
+    { tab: "library", title: "Every screen", text: "The screen library: all ten screens, for choosing what goes in each room.", tip: "That's the demo. Use the tabs to go anywhere, or start over for the next client." },
   ];
   let step = -1;
   const tour = $("#tour"), welcome = $("#welcome");
@@ -234,7 +238,7 @@
     // A clean house for the next client: the panels' saved state and this app's own.
     try { Object.keys(localStorage).forEach((k) => localStorage.removeItem(k)); } catch {}
     Object.values(views).forEach((v) => { if (v.tagName === "IFRAME") v.removeAttribute("src"); });
-    Object.assign(state, { tab: "film", film: "cut", finish: "grounded", screen: "signature" });
+    Object.assign(state, { tab: "film", film: "cut", finish: "grounded", screen: "command" });
     const v = $("video"); v.pause(); v.currentTime = 0;
     show(); tour.hidden = true; welcome.hidden = false; $("#start-tour").focus();
   }
@@ -247,12 +251,13 @@
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !tour.hidden) endTour(); });
   // A page inside the app can ask for a tab (the website's "Try the wall panel").
   window.addEventListener("message", (e) => { const t = e.data && e.data.showroom; if (t in views || t === "panel") { state.tab = t; show(); } });
-  // Deep links: #panel/vivid/studio, #live, #site, #residence, #library.
+  // Deep links: #panel/vivid/glass, #live, #site, #residence, #library.
   const h = location.hash.slice(1).split("/");
   if (h[0] === "live") { state.tab = "film"; state.film = "live"; }
   else if (h[0] in views || h[0] === "panel") { state.tab = h[0]; if (h[1]) state.finish = h[1]; if (h[2]) state.screen = h[2]; }
   else { try { Object.assign(state, JSON.parse(localStorage.getItem("showroom") || "{}")); } catch {} }
   if (!(state.finish in { grounded: 1, futuristic: 1, vivid: 1 })) state.finish = "grounded";
+  state.screen = OLD[state.screen] || state.screen;
   if (location.hash.length > 1) welcome.hidden = true;
   show();
 })();

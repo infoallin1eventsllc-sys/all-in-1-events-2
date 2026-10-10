@@ -106,9 +106,9 @@ Haven still sees every change, logs it, and keeps its safety rules and briefings
 
 Haven shows the cameras Home Assistant already has, so add the cameras there first: UniFi Protect, Reolink, Axis, Hikvision, Amcrest, ONVIF and most video doorbells each have a Home Assistant integration. With `HAVEN_ADAPTER=homeassistant`, every `camera.*` entity then appears on its own.
 
-- **On the panels:** a Cameras card on the Entry and Command Center screens, with a fresh picture every 10 seconds. Tap a camera for live video. A camera without live video shows a new picture every 2 seconds instead, and says so.
+- **On the panels:** camera tiles on the Command, Security Console, Everything Wall, Good Evening, Portrait Classic and Neon Frame screens, with a fresh picture every 10 seconds. Tap a camera for live video. A camera without live video shows a new picture every 2 seconds instead, and says so.
 - **On iPhone, iPad and computers:** the same, in the Haven app.
-- **The doorbell:** link it in `config/home.json` under `cameras` (the `_cameras` note there has an example): `"doorbell"` is the doorbell's `event.*` entity (newer integrations) or its `binary_sensor.*`. A ring opens the camera on any Entry panel, Haven says someone's at the door, and ntfy or Pushover sends the alert **with the picture** to your phone and Apple Watch, even during quiet hours.
+- **The doorbell:** link it in `config/home.json` under `cameras` (the `_cameras` note there has an example): `"doorbell"` is the doorbell's `event.*` entity (newer integrations) or its `binary_sensor.*`. A ring opens the camera on any Security Console panel, Haven says someone's at the door, and ntfy or Pushover sends the alert **with the picture** to your phone and Apple Watch, even during quiet hours.
 - **Motion:** link a camera's person or motion sensor as `"motion"`, and Haven saves a picture when it trips (at most one a minute), without an alert.
 - **Where pictures go:** saved on the Haven computer in `data/cameras/` (the last 200, for up to 14 days), never a cloud. Live video passes through the Haven computer, so Home Assistant's key never reaches a phone or panel. Nothing from a camera is ever sent to the AI.
 - **What a ring can't do:** unlock a door. Opening it is always a person's tap, as everywhere else in Haven.

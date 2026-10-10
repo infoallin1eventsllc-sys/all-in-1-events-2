@@ -990,6 +990,9 @@ function paintFor(kind, bw, bd, bh, bz) {
 // Day for the light finishes, evening for the dark ones: the evening lets the rooms that
 // are lit glow against the dusk.
 export function moodNow() {
+  // A screen with its own dark look asks for the evening mood (the panel sets data-mood).
+  const asked = document.getElementById("app")?.dataset.mood;
+  if (asked === "day" || asked === "evening") return asked;
   const de = document.documentElement, theme = de.dataset.theme;
   const dark = theme ? theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
   return de.dataset.look === "futuristic" || dark ? "evening" : "day";

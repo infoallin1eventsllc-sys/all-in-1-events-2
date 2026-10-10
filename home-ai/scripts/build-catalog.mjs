@@ -1,6 +1,6 @@
-// Builds the Screen Library catalog: one page showing every Haven screen in
-// both finishes, captured live from the demo build, for a client to choose
-// from.
+// Builds the Screen Library catalog: one page showing every Haven screen,
+// captured live from the demo build, for a client to choose from. Each screen
+// has its own look; Wallpaper also comes in the three finishes.
 //
 //   npm run build:demo && npm run build:catalog
 //   -> dist/catalog/haven-screen-library.html (self-contained, images inline)
@@ -16,6 +16,7 @@ const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const demoDir = path.join(root, "dist/demo");
 const out = path.join(root, "dist/catalog");
 fs.mkdirSync(out, { recursive: true });
+fs.rmSync(path.join(out, "shots"), { recursive: true, force: true }); // only this build's pictures
 const executablePath = process.env.CHROMIUM_PATH || (fs.existsSync("/opt/pw-browsers/chromium") ? "/opt/pw-browsers/chromium" : undefined);
 const LIVE = {
   grounded: process.env.DEMO_URL_GROUNDED || "",
@@ -32,14 +33,16 @@ const FINISHES = [
 ];
 
 const SCREENS = [
-  { id: "signature", name: "Signature", best: "Great room or main entry", about: "The flagship. The house in realistic 3D beside the room you're in, with every control on glass.", has: ["Six house views to choose from: live 3D (orbit, pinch to zoom, tap a room to fly in), four photoreal renders of the home, or the hologram", "Rooms warm when lit and flush red on alerts; full-screen explorer", "Any home: eight architectural styles, several floors, any room shape", "Room tabs, scenes, device tiles, climate dial", "Electricity today", "Suggestions and confirmations", "About you: what Haven has learned"] },
-  { id: "wallpaper", name: "Wallpaper", best: "Living room or a large wall display", about: "The home's own photo behind frosted tiles. The photo changes with the time of day, or the homeowner can use a picture of their own house.", has: ["Photo backdrop: morning, day, evening and night", "Weather now, the next hours and days (when connected)", "Indoor temperature, humidity and electricity with a live line", "Climate, fans and water heater", "Every light with an icon switch and a pill dimmer", "Doors, locks, garage and water; scenes; latest updates"] },
-  { id: "studio", name: "Studio", best: "Living room or kitchen; the model-home showpiece", about: "Haven at the center. A large orb listens, thinks and speaks, and underneath it Haven's agents show what each is doing, with the lines between them lighting up when they work together.", has: ["Tap the orb to talk; a waveform follows the voice", "Agents: Lighting, Climate, Security, Energy, each glowing while it works", "Lines between agents light when one event involves several (a scene, leaving home)", "Big clock, weather now and the next hours", "Climate with a temperature range bar, lighting, electricity, doors"] },
-  { id: "command-center", name: "Command Center", best: "Office or a large wall display", about: "Everything at once for the person who runs the house.", has: ["3D house that filters the lights list by room", "Climate dial and electricity chart", "Every light with switch and dimmer", "Doors, locks, garage and main water", "Room conditions: temperature, humidity, occupancy, leaks", "Scenes and the latest updates"] },
-  { id: "family-hub", name: "Family Hub", best: "Kitchen", about: "Big and friendly for everyone in the house, not just the owner.", has: ["Large clock and date", "Today's briefing, with Brief me now", "Big scene cards", "Too cold / Too warm / Too bright / Too dark / Just right", "Lights for the kitchen (or the whole house)"] },
-  { id: "nightstand", name: "Nightstand", best: "Bedroom", about: "Dim, quiet and easy to use half-asleep. Talk to it in the dark.", has: ["Large clock on a dark screen", "Goodnight: lock up, lights off, 68°F", "Lights off for this room", "Warmer and Cooler (learned as your preference)", "Good morning", "Each bedroom's own photo behind the clock, if its owner adds one"] },
-  { id: "rooms", name: "Rooms", best: "Large or busy households", about: "Every room as its own card. One tap per device.", has: ["A card per room with its devices as big buttons", "Thermostat with − and + in its room", "Each room's sensors: motion, leaks, doors, light level"] },
-  { id: "entry", name: "Entry", best: "Mudroom or garage door", about: "Built for the moment you walk in or out.", has: ["I'm leaving (Away), I'm home, Lock up", "Doors, locks, garage and main water with one-tap actions", "What's still on, with Turn off", "Room conditions before you go"] },
+  { id: "command", name: "Command", best: "Great room or main entry", about: "The flagship. Tabs across the top, a rail at the side, and tiles for everything: scenes, security, the weather, a thermostat dial, the house in 3D, big light tiles and the cameras.", has: ["Home, Lights, Climate, Security and Cameras tabs, all live", "Scene buttons that say what each scene does", "The house in 3D (or a photoreal render): tap a room for its lights", "A thermostat dial with + and −, and the mode", "Light tiles that glow as bright as the light is set"] },
+  { id: "wallpaper", name: "Wallpaper", best: "A feature wall or large display", about: "The home's own photo behind frosted tiles. The photo changes with the time of day, or the homeowner can use a picture of their own house. The one screen that comes in all three finishes.", has: ["Photo backdrop: morning, day, evening and night", "Weather now, the next hours and days (when connected)", "Indoor temperature, humidity and electricity with a live line", "Every light with an icon switch and a pill dimmer", "Grounded, Futuristic, or Vivid in light and dark"] },
+  { id: "glass", name: "Glass", best: "Living room, where people talk to Haven; the model-home showpiece", about: "Black glass with a thermostat dial at the side. Haven's voice line runs along the bottom: tap it and talk, and its agents light up as they work, together.", has: ["A big clock, the weather and the security mode", "Haven's latest updates, with Brief me", "Scene cards with photoreal pictures of the home", "A dial for the room's lights, and the doors", "Lighting, Climate, Security and Energy agents"] },
+  { id: "wall", name: "Everything Wall", best: "Office or a large wall display", about: "Everything at once for the person who runs the house.", has: ["A strip of the numbers: inside, outside, humidity, power, today, water", "Every camera, door, lock and outside switch", "Each room with its lights as bars, motion and leaks", "Gauges and today's running total of electricity"] },
+  { id: "evening", name: "Good Evening", best: "Kitchen", about: "A friendly greeting with the weather, then climate and the water heater, the forecast, scenes, a card for every room and the cameras with their lights.", has: ["Today's briefing, with Brief me now", "Climate or the water heater, one tap apart", "The forecast as temperature bars", "A card per room with round one-tap buttons", "Each camera with its own light underneath"] },
+  { id: "aurora", name: "Aurora", best: "Bedroom", about: "Soft color that dims at night. Bedtime is one tap away, and whoever sleeps there can put their own photo behind it.", has: ["Goodnight, Lights off, Warmer, Cooler, Good morning", "This bedroom's lights and fan", "The thermostat, the weather and the security mode", "Today's electricity and the humidity", "Each bedroom's own photo, kept on that room's panel"] },
+  { id: "console", name: "Security Console", best: "Mudroom or garage door", about: "The alarm-panel view, built for the moment you walk in or out.", has: ["I'm leaving, I'm home, Lock up", "Every door, lock, motion and leak sensor, in words", "The cameras, with the saved pictures", "The thermostat and water heater dials", "The house, today's updates, and what's still on"] },
+  { id: "classic", name: "Portrait Classic", best: "Hallway, on a tall portrait screen", about: "The classic dashboard in sections, made to read top to bottom.", has: ["Today: the time and Haven's latest", "Climate: the forecast and a thermostat dial", "Every light and fan as a one-tap button", "Home at a glance, the cameras, security and scenes"] },
+  { id: "neon", name: "Neon Frame", best: "Media room or office, in a dark room", about: "Glowing outlines on black. Electricity flows into the house on screen while it's being used.", has: ["Doors and locks with their state in words", "Electricity flowing from the grid, and the top user", "Today's running total", "The cameras, climate, and every light and fan on a switch"] },
+  { id: "lagoon", name: "Lagoon", best: "Family room or guest suite", about: "Deep blue, with the house itself in the middle and Home and Away one tap away.", has: ["The weather with temperature bars", "The house in 3D, every room a button", "Home and Away cards with pictures of the home", "Choose Haven's voice right on the panel", "Who's home, security, the front door and the water"] },
 ];
 
 async function capture(browser, finish, id) {
@@ -55,7 +58,7 @@ async function capture(browser, finish, id) {
   const jpg = await page.screenshot({ type: "jpeg", quality: 84 }); // 2880x1800: crisp on any screen
   // The website (scripts/build-website.mjs) shows the same pictures as files.
   fs.mkdirSync(path.join(out, "shots"), { recursive: true });
-  fs.writeFileSync(path.join(out, "shots", `${finish.key}-${id}.jpg`), jpg);
+  fs.writeFileSync(path.join(out, "shots", id === "wallpaper" ? `${finish.key}-${id}.jpg` : `${id}.jpg`), jpg);
   await page.close();
   fs.rmSync(wrapper, { force: true });
   return `data:image/jpeg;base64,${jpg.toString("base64")}`;
@@ -64,23 +67,29 @@ async function capture(browser, finish, id) {
 // Software WebGL, so the hologram renders in headless Chromium.
 const browser = await chromium.launch({ ...(executablePath ? { executablePath } : {}), args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
 const shots = {};
-for (const f of FINISHES) {
-  for (const s of SCREENS) shots[`${f.key}/${s.id}`] = await capture(browser, f, s.id);
+for (const s of SCREENS) {
+  if (s.id === "wallpaper") for (const f of FINISHES) shots[`${f.key}/${s.id}`] = await capture(browser, f, s.id);
+  else shots[s.id] = await capture(browser, FINISHES[0], s.id);
 }
 await browser.close();
 
 const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const card = (s, i) => `
 <article class="screen" id="${s.id}">
-  <figure class="shot">
-    ${FINISHES.map((f, k) => `<img class="img-${f.key}" src="${shots[`${f.key}/${s.id}`]}" alt="${esc(s.name)} screen in the ${f.label} finish" loading="${i < 2 && k === 0 ? "eager" : "lazy"}" width="1440" height="900">`).join("\n    ")}
+  <figure class="shot${s.id === "wallpaper" ? " by-finish" : ""}">
+    ${s.id === "wallpaper"
+      ? FINISHES.map((f, k) => `<img class="img-${f.key}" src="${shots[`${f.key}/${s.id}`]}" alt="${esc(s.name)} screen in the ${f.label} finish" loading="${k === 0 ? "eager" : "lazy"}" width="1440" height="900">`).join("\n    ")
+      : `<img src="${shots[s.id]}" alt="The ${esc(s.name)} screen" loading="${i < 2 ? "eager" : "lazy"}" width="1440" height="900">`}
   </figure>
   <div class="about">
     <h2>${esc(s.name)}</h2>
     <p class="best">Best for: ${esc(s.best)}</p>
     <p class="lede">${esc(s.about)}</p>
     <ul>${s.has.map((h) => `<li>${esc(h)}</li>`).join("")}</ul>
-    ${Object.values(LIVE).some(Boolean) ? `<p class="links">${[["grounded", "Grounded"], ["futuristic", "Futuristic"], ["vivid", "Vivid"]].filter(([k]) => LIVE[k]).map(([k, l]) => `<a href="${LIVE[k]}#${s.id}">Open live · ${l}</a>`).join("")}</p>` : ""}
+    ${s.id === "wallpaper" ? `<div class="finish" role="group" aria-label="Finish shown in the picture">
+      ${FINISHES.map((f, k) => `<button type="button" data-finish="${f.key}" aria-pressed="${k === 0}">${f.label}</button>`).join("\n      ")}
+    </div>` : ""}
+    ${Object.values(LIVE).some(Boolean) ? `<p class="links">${(s.id === "wallpaper" ? [["grounded", "Grounded"], ["futuristic", "Futuristic"], ["vivid", "Vivid"]] : [["grounded", ""]]).filter(([k]) => LIVE[k]).map(([k, l]) => `<a href="${LIVE[k]}#${s.id}">Open live${l ? ` · ${l}` : ""}</a>`).join("")}</p>` : ""}
   </div>
 </article>`;
 
@@ -116,8 +125,9 @@ nav.jump a { color: var(--ink); text-decoration: none; font-size: 0.9rem; paddin
 @media (max-width: 860px) { .screen { grid-template-columns: 1fr; } }
 .shot { margin: 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); aspect-ratio: 16 / 10; background: #0b0b0e; }
 .shot img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top left; max-width: 100%; }
-.shot img { display: none; }
-${FINISHES.map((f) => `body[data-finish="${f.key}"] .img-${f.key}`).join(", ")} { display: block; }
+.shot.by-finish img { display: none; }
+${FINISHES.map((f) => `body[data-finish="${f.key}"] .by-finish .img-${f.key}`).join(", ")} { display: block; }
+.about .finish { justify-self: start; margin-top: 6px; }
 .about { display: grid; gap: 8px; }
 .about h2 { margin: 0; font-size: 1.7rem; letter-spacing: -0.01em; }
 .best { margin: 0; font-weight: 600; color: var(--accent); }
@@ -162,11 +172,8 @@ footer { color: var(--muted); font-size: 0.85rem; }
   <header class="top">
     <p class="kicker">Haven · Screen library</p>
     <h1>Choose a screen for every room</h1>
-    <p class="intro">Eight screens, each designed for a different spot in the home. All of them run on the same live house, talk and listen, learn the homeowner's preferences, and come in three finishes: Grounded, Futuristic, and Vivid in light and dark. Each panel in the home can use a different one.</p>
+    <p class="intro">Ten screens, each designed for a different spot in the home and each with a look of its own. All of them run on the same live house, talk and listen, and learn the homeowner's preferences. Wallpaper also comes in three finishes. Each panel in the home can use a different screen, and All controls (every device, room by room) opens from any of them.</p>
     <div class="controls">
-      <div class="finish" role="group" aria-label="Finish shown in the pictures">
-        ${FINISHES.map((f, k) => `<button type="button" data-finish="${f.key}" aria-pressed="${k === 0}">${f.label}</button>`).join("\n        ")}
-      </div>
       <nav class="jump" aria-label="Screens">${SCREENS.map((s) => `<a href="#${s.id}">${esc(s.name)}</a>`).join("")}</nav>
     </div>
   </header>
@@ -176,23 +183,23 @@ footer { color: var(--muted); font-size: 0.85rem; }
     <div class="table-wrap" tabindex="0" role="region" aria-label="A typical home, room by room"><table>
       <thead><tr><th scope="col">Where</th><th scope="col">Screen</th><th scope="col">Why</th></tr></thead>
       <tbody>
-        <tr><td data-label="Where">Great room</td><td data-label="Screen">Signature</td><td data-label="Why">The showpiece: the whole house at a glance and every control</td></tr>
-        <tr><td data-label="Where">Model home, living room</td><td data-label="Screen">Studio</td><td data-label="Why">Shows the intelligence working: talk to the orb, watch the agents coordinate</td></tr>
-        <tr><td data-label="Where">Living room</td><td data-label="Screen">Wallpaper</td><td data-label="Why">Looks like a photo of the home until you need it; weather and every light</td></tr>
-        <tr><td data-label="Where">Kitchen</td><td data-label="Screen">Family Hub</td><td data-label="Why">Everyone uses it; big clock, briefing and comfort buttons</td></tr>
-        <tr><td data-label="Where">Primary bedroom</td><td data-label="Screen">Nightstand</td><td data-label="Why">Dark and quiet; bedtime in one tap or by voice; each person's own photo</td></tr>
-        <tr><td data-label="Where">Mudroom or garage door</td><td data-label="Screen">Entry</td><td data-label="Why">Leave or arrive in one tap; nothing left on or unlocked</td></tr>
-        <tr><td data-label="Where">Office</td><td data-label="Screen">Command Center</td><td data-label="Why">Every system on one wall for whoever runs the house</td></tr>
+        <tr><td data-label="Where">Great room</td><td data-label="Screen">Command</td><td data-label="Why">The showpiece: the house in 3D, every system a tab away</td></tr>
+        <tr><td data-label="Where">Model home, living room</td><td data-label="Screen">Glass</td><td data-label="Why">Shows the intelligence working: tap the voice line, watch the agents coordinate</td></tr>
+        <tr><td data-label="Where">Kitchen</td><td data-label="Screen">Good Evening</td><td data-label="Why">Everyone uses it: the greeting, the forecast, scenes and every room</td></tr>
+        <tr><td data-label="Where">Primary bedroom</td><td data-label="Screen">Aurora</td><td data-label="Why">Dims at night; bedtime in one tap or by voice; each person's own photo</td></tr>
+        <tr><td data-label="Where">Mudroom or garage door</td><td data-label="Screen">Security Console</td><td data-label="Why">Leave or arrive in one tap; nothing left on or unlocked</td></tr>
+        <tr><td data-label="Where">Office</td><td data-label="Screen">Everything Wall</td><td data-label="Why">Every system on one wall for whoever runs the house</td></tr>
+        <tr><td data-label="Where">Feature wall</td><td data-label="Screen">Wallpaper</td><td data-label="Why">Looks like a photo of the home until you need it</td></tr>
       </tbody>
     </table></div>
   </section>
   <section class="note" aria-labelledby="builder-h">
     <h2 class="sec" id="builder-h">For builders: the model home</h2>
-    <p>Haven is designed to be a standard feature in new construction. On a model-home panel, turn on <strong>Model home showcase</strong> (Screens, on the panel): when nobody has touched it for a minute, Haven gives a short live tour on the Studio screen. It runs Welcome home, Movie night, Goodnight and Good morning on the real lights, locks and thermostat, and says what it's doing, so visitors watch the agents work together. Any touch hands control back, and it pauses if anything needs attention. The agent row shows only what the house is really doing; nothing on it is animated for show.</p>
+    <p>Haven is designed to be a standard feature in new construction. On a model-home panel, turn on <strong>Model home showcase</strong> (Screens, on the panel): when nobody has touched it for a minute, Haven gives a short live tour on the Glass screen. It runs Welcome home, Movie night, Goodnight and Good morning on the real lights, locks and thermostat, and says what it's doing, so visitors watch the agents work together. Any touch hands control back, and it pauses if anything needs attention. The agent row shows only what the house is really doing; nothing on it is animated for show.</p>
   </section>
   <section class="note" aria-labelledby="note-h">
     <h2 class="sec" id="note-h">Coming with integrations</h2>
-    <p>Weather is now built in: it comes from the home's Home Assistant weather or from Open-Meteo once the installer adds the home's location, and the screens say so plainly when it isn't connected. The demo shows sample weather, labeled as a sample. Security cameras, family calendars and package tracking will be added as cards once each is connected to a real source, so a screen never shows made-up information. The pictures here are the live demo house, captured as built. The Wallpaper screen's photos were generated for the demo; a homeowner can replace them with a photo of their own home.</p>
+    <p>Weather is now built in: it comes from the home's Home Assistant weather or from Open-Meteo once the installer adds the home's location, and the screens say so plainly when it isn't connected. The demo shows sample weather, labeled as a sample. Cameras come from the home's Home Assistant; the demo has none, so its camera tiles show four stills from the film of the model home, each marked "Sample picture". Family calendars and package tracking will be added as cards once each is connected to a real source, so a screen never shows made-up information. The pictures here are the live demo house, captured as built. The Wallpaper screen's photos were generated for the demo; a homeowner can replace them with a photo of their own home.</p>
   </section>
   <footer>Screens shown with simulated devices. Each installed panel can be set to its own screen and room from Screens on the panel.</footer>
 </div>
@@ -222,7 +229,7 @@ footer { color: var(--muted); font-size: 0.85rem; }
   }
   var saved = null;
   try { saved = localStorage.getItem("haven.catalog.finish"); } catch (e) {}
-  set(${JSON.stringify(FINISHES.map((f) => f.key))}.indexOf(saved) >= 0 ? saved : "grounded");
+  set(${JSON.stringify(FINISHES.map((f) => f.key))}.indexOf(saved) >= 0 ? saved : "grounded"); // the Wallpaper card's finish
   document.querySelectorAll(".finish button").forEach(function (b) { b.addEventListener("click", function () { set(b.dataset.finish); }); });
 })();
 </script>

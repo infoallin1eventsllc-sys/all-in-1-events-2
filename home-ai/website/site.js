@@ -142,24 +142,28 @@
 
   // ---- Screens and rooms.
   const SCREENS = {
-    signature: { name: "Signature", best: "Great room or main entry", about: "The flagship. The house in realistic 3D beside the room you're in, with every control on glass.", has: ["Six house views to choose from: live 3D, four photoreal renders or the hologram", "Rooms warm when lit and flush red on alerts", "Room tabs, scenes, device tiles, climate dial", "Electricity today, suggestions and confirmations"] },
-    wallpaper: { name: "Wallpaper", best: "Living room or a large wall display", about: "The home's own photo behind frosted tiles. The photo follows the time of day, or the family uses a picture of their own house.", has: ["Photo backdrop for morning, day, evening and night", "Weather now and ahead, once a source is connected", "Temperature, humidity and electricity with a live line", "Every light, doors, locks, garage and water"] },
-    studio: { name: "Studio", best: "Living room or kitchen; the model-home showpiece", about: "Haven at the center. A large orb listens and speaks, and underneath it Haven's agents light up as they work, together.", has: ["Tap the orb to talk; a waveform follows the voice", "Lighting, Climate, Security and Energy agents", "Lines between agents light when they work together", "Big clock, climate, lighting, electricity, doors"] },
-    "command-center": { name: "Command Center", best: "Office or a large wall display", about: "Everything at once, for the person who runs the house.", has: ["3D house that filters the lights by room", "Climate dial and electricity chart", "Every light, door, lock, garage and the main water", "Room conditions, scenes and the latest updates"] },
-    "family-hub": { name: "Family Hub", best: "Kitchen", about: "Big and friendly for everyone in the house, not just the owner.", has: ["Large clock and date", "Today's briefing, with Brief me now", "Big scene cards", "Too cold, too warm, too bright, too dark, just right"] },
-    nightstand: { name: "Nightstand", best: "Bedroom", about: "Dim, quiet and easy to use half-asleep. Talk to it in the dark.", has: ["Large clock on a dark screen", "Goodnight: lock up, lights off, 68°F", "Warmer and cooler, learned as a preference", "Each bedroom's own photo behind the clock"] },
-    rooms: { name: "Rooms", best: "Large or busy households", about: "Every room as its own card. One tap per device.", has: ["A card per room with big device buttons", "The thermostat in its own room", "Each room's sensors: motion, leaks, doors, light"] },
-    entry: { name: "Entry", best: "Mudroom or garage door", about: "Built for the moment you walk in or out.", has: ["I'm leaving, I'm home, Lock up", "Security first: Ready, or what's open", "What's still on, with Turn off", "Doors, locks, garage and water in one tap"] },
+    command: { name: "Command", best: "Great room or main entry", about: "The flagship. Tabs across the top, the house in 3D, the thermostat dial, big light tiles and the cameras, with every tab live.", has: ["Scenes and security in one row", "The weather, a thermostat dial and the house in 3D", "Light tiles that glow as bright as the light is set", "Lights, Climate, Security and Cameras tabs"] },
+    wallpaper: { name: "Wallpaper", best: "A feature wall or large display", about: "The home's own photo behind frosted tiles. The photo follows the time of day, or the family uses a picture of their own house. It comes in three finishes.", has: ["Photo backdrop for morning, day, evening and night", "Weather now and ahead, once a source is connected", "Temperature, humidity and electricity with a live line", "Grounded, Futuristic or Vivid"] },
+    glass: { name: "Glass", best: "Living room, where people talk to Haven", about: "Black glass with a thermostat dial at the side. Tap the voice line along the bottom and talk; Haven's agents light up as they work.", has: ["A big clock and Haven's latest updates", "Scene cards with the house itself", "A dial for the room's lights, and the doors", "The voice line, with a waveform that follows Haven's voice"] },
+    wall: { name: "Everything Wall", best: "Office or a large wall display", about: "Everything at once, for the person who runs the house.", has: ["A strip of the numbers that matter", "Every camera, door, lock and switch", "Each room's lights, motion and leaks", "Gauges and today's electricity"] },
+    evening: { name: "Good Evening", best: "Kitchen", about: "A friendly greeting with the weather, then climate, the forecast, scenes, a card for every room and the cameras.", has: ["Climate and the water heater, side by side", "The forecast as temperature bars", "A card per room with one-tap buttons", "Each camera with its own lights underneath"] },
+    aurora: { name: "Aurora", best: "Bedroom", about: "Soft color that dims at night, with bedtime one tap away. Whoever sleeps there can put their own photo behind it.", has: ["Goodnight, Lights off, Warmer, Cooler, Good morning", "This room's lights and fan", "The thermostat and the day's electricity", "Each bedroom's own photo"] },
+    console: { name: "Security Console", best: "Mudroom or garage door", about: "The alarm-panel view, built for the moment you walk in or out.", has: ["I'm leaving, I'm home, Lock up", "Every door, lock, motion and leak sensor", "The cameras, the house, and what's still on", "The thermostat and water heater dials"] },
+    classic: { name: "Portrait Classic", best: "Hallway, on a tall portrait screen", about: "The classic dashboard in sections, made to read top to bottom.", has: ["Today, climate and every light", "Home at a glance: inside, doors, water, power", "The cameras and security", "Scenes as one-tap buttons"] },
+    neon: { name: "Neon Frame", best: "Media room or office, in a dark room", about: "Glowing outlines on black. Electricity flows into the house on screen while it's being used.", has: ["Doors and locks, with their state in words", "Electricity flowing in, and today's running total", "The cameras and climate", "Every light and fan on a switch"] },
+    lagoon: { name: "Lagoon", best: "Family room or guest suite", about: "Deep blue, with the house itself in the middle and Home and Away one tap away.", has: ["The weather with temperature bars", "The house in 3D, every room a button", "Home and Away cards", "Choose Haven's voice right on the panel"] },
   };
+  // Only Wallpaper comes in finishes; every other screen has one look of its own.
   const ROOMS = [
-    ["great-room", "Great room", "signature"], ["living", "Living room", "wallpaper"], ["model", "Model home", "studio"], ["kitchen", "Kitchen", "family-hub"],
-    ["bedroom", "Bedroom", "nightstand"], ["mudroom", "Mudroom", "entry"], ["office", "Office", "command-center"], ["landing", "Upstairs landing", "rooms"],
+    ["great-room", "Great room", "command"], ["living", "Living room", "glass"], ["kitchen", "Kitchen", "evening"], ["bedroom", "Bedroom", "aurora"],
+    ["mudroom", "Mudroom", "console"], ["office", "Office", "wall"], ["hallway", "Hallway", "classic"], ["media", "Media room", "neon"],
+    ["family", "Family room", "lagoon"], ["feature", "Feature wall", "wallpaper"],
   ];
   const FINISHES = [["grounded", "Grounded"], ["futuristic", "Futuristic"], ["vivid", "Vivid light"], ["vivid-dark", "Vivid dark"]];
   const pick = { room: store.get("site.room") || "great-room", finish: store.get("site.finish") || "grounded" };
   if (!ROOMS.some((r) => r[0] === pick.room)) pick.room = "great-room";
   if (!FINISHES.some((f) => f[0] === pick.finish)) pick.finish = "grounded";
-  const shot = (finish, id) => `shots/${finish}-${id}.jpg`;
+  const shot = (finish, id) => (id === "wallpaper" ? `shots/${finish}-${id}.jpg` : `shots/${id}.jpg`);
   const screenOf = (room) => ROOMS.find((r) => r[0] === room)[2];
 
   const roomsEl = $("#rooms");
@@ -189,8 +193,9 @@
     roomsEl.querySelectorAll("[role=tab]").forEach((b) => { const on = b.dataset.room === pick.room; b.setAttribute("aria-selected", String(on)); b.tabIndex = on ? 0 : -1; });
     $("#pick").setAttribute("aria-labelledby", `room-${pick.room}`);
     $("#finishes").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.finish === pick.finish)));
+    $("#finishes").hidden = id !== "wallpaper";
     const img = $("#pick-img"), src = shot(pick.finish, id);
-    img.alt = `The ${s.name} screen for the ${room.toLowerCase()}, in the ${FINISHES.find((f) => f[0] === pick.finish)[1]} finish`;
+    img.alt = id === "wallpaper" ? `The ${s.name} screen for the ${room.toLowerCase()}, in the ${FINISHES.find((f) => f[0] === pick.finish)[1]} finish` : `The ${s.name} screen for the ${room.toLowerCase()}`;
     if (wanted !== src) swapShot(img, src);
     $("#pick-name").textContent = `${room}: ${s.name}`;
     $("#pick-best").textContent = `Best for: ${s.best}`;
@@ -210,13 +215,14 @@
 
   // ---- The live panel: loads on request, switches screens in place.
   const LIVE_FINISHES = [["grounded", "Grounded"], ["futuristic", "Futuristic"], ["vivid", "Vivid"]];
-  const live = { finish: "grounded", screen: "signature", loaded: false };
+  const live = { finish: "grounded", screen: "command", loaded: false };
   $("#live-finishes").innerHTML = LIVE_FINISHES.map(([k, l]) => `<button type="button" data-finish="${k}">${l}</button>`).join("");
   $("#live-screens").innerHTML = Object.entries(SCREENS).map(([id, s]) => `<button type="button" data-screen="${id}">${s.name}</button>`).join("");
   let frame = null, frameReady = false;
   function renderLive() {
     $("#live-finishes").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.finish === live.finish)));
     $("#live-screens").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.screen === live.screen)));
+    $("#live-finishes").closest(".chip-set").hidden = live.screen !== "wallpaper"; // only Wallpaper comes in finishes
     $("#frame").style.setProperty("--poster", `url('${shot(live.finish, live.screen)}')`);
     if (!live.loaded) return;
     const src = `panel-${live.finish}.html#${live.screen}`;

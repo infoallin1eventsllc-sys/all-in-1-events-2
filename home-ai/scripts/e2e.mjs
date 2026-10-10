@@ -114,24 +114,19 @@ async function exercise(page, { garageTravelMs, home }) {
   const sim = async (label) => { await openTab("Simulator"); await page.locator("#sim-buttons button", { hasText: label }).click(); await openTab("Home"); };
   const waitGarageRest = () => new Promise((r) => setTimeout(r, Math.max(garageTravelMs, 10_500)));
 
-  // ----- look and layout -----
-  await page.click('.look-switch button[data-look="futuristic"]');
-  await check("Style switch: Futuristic", async () => (await page.getAttribute("html", "data-look")) === "futuristic");
-  await page.click('.look-switch button[data-look="grounded"]');
-  await check("Style switch: Grounded", async () => (await page.getAttribute("html", "data-look")) === "grounded");
+  // ----- the first screen, and All controls -----
+  // The panel opens on Command. The room-by-room checks below run in All controls, which opens
+  // over any screen and wears the finish (Wallpaper's checks cover Futuristic and Vivid).
+  await check("The panel opens on the Command screen", async () => (await page.getAttribute("#app", "data-screen")) === "command" && (await page.locator("#alt .s-command").count()) === 1);
+  await check("Command's clock shows the time", async () => /\d:\d\d/.test(await page.textContent("#alt .cm-clock")));
+  await check("Command wears its own look, not a finish", async () => (await page.getAttribute("html", "data-look")) === "grounded");
+  await audit(page, "Command");
+  await page.locator(".controls-open:visible").first().click();
+  await check("All controls opens over the screen", async () => (await page.getAttribute("#app", "data-screen")) === "controls" && await page.locator("#tiles").isVisible() && (await page.textContent("#controls-close")) === "Back to Command");
   await check("Status starts at 'All secure'", async () => (await headline()) === "All secure");
   await check("Greeting states the indoor temperature", async () => /It's [\d.]+°F inside/.test(await page.textContent("#greeting")));
   await check("Clock shows the time", async () => /\d:\d\d/.test(await page.textContent("#clock")));
-  await audit(page, "whole home, Grounded");
-  await page.click('.look-switch button[data-look="futuristic"]');
-  await audit(page, "whole home, Futuristic");
-  await page.click('.look-switch button[data-look="vivid"]');
-  await check("Style switch: Vivid", async () => (await page.getAttribute("html", "data-look")) === "vivid");
-  await audit(page, "whole home, Vivid light");
-  await page.emulateMedia({ colorScheme: "dark" });
-  await audit(page, "whole home, Vivid dark (device setting)");
-  await page.emulateMedia({ colorScheme: "light" });
-  await page.click('.look-switch button[data-look="grounded"]');
+  await audit(page, "All controls, Grounded");
 
   // ----- home map and energy -----
   await check("Home map draws every room", async () => (await page.locator("#map .map-room").count()) === 6);
@@ -481,7 +476,7 @@ async function exercise(page, { garageTravelMs, home }) {
     await check(`Library: switches to ${id}`, async () => (await page.getAttribute("#app", "data-screen")) === id);
   };
   await openLibrary();
-  await check("Library lists eight screens", async () => (await page.locator(".library-card").count()) === 8);
+  await check("Library lists ten screens", async () => (await page.locator(".library-card").count()) === 10);
   await page.locator('#library [data-theme-choice="dark"]').click();
   await check("Appearance: Dark pins the dark theme", async () => (await page.getAttribute("html", "data-theme")) === "dark");
   await page.locator('#library [data-theme-choice="auto"]').click();
@@ -496,62 +491,178 @@ async function exercise(page, { garageTravelMs, home }) {
   await page.locator("#library-close").click();
 
   const ALT = (id) => `#alt [data-device="${id}"]`;
-  await useScreen("command-center");
-  await check("Command Center shows the map, climate, energy, lights, doors and conditions", async () =>
-    (await page.locator("#alt .map-room").count()) === 6 && (await page.locator("#alt .energy").count()) === 1 &&
-    (await page.locator("#alt .lights-list li").count()) === 7 && (await page.locator("#alt .sec-item").count()) >= 4 && (await page.locator("#alt .cond-list li").count()) >= 4);
-  const kitchenLi = () => page.locator(`#alt .lights-list li[data-device="light.kitchen"]`);
-  const wasOn = (await kitchenLi().getAttribute("class"))?.includes("on");
-  await kitchenLi().getByRole("switch").click();
-  await check("Command Center: a light switch works", async () => ((await kitchenLi().getAttribute("class")) || "").includes("on") !== wasOn);
-  await audit(page, "Command Center");
+  const lightOn = async (sel) => (await page.getAttribute(`${sel} [role="switch"]`, "aria-checked")) === "true";
 
-  await useScreen("family-hub");
-  await check("Family Hub shows the briefing, scenes and comfort buttons", async () =>
-    (await page.locator("#alt .briefing-card").count()) === 1 && (await page.locator("#alt .scene").count()) === 5 && (await page.locator("#alt .feel button").count()) === 5);
-  await page.locator("#alt .briefing-card button", { hasText: "Brief me now" }).click();
-  await check("Family Hub: Brief me now fills the Today card", async () => (await page.locator("#alt .briefing-card .brief-title").count()) === 1);
-  await audit(page, "Family Hub");
+  // ----- 1 · Command -----
+  await useScreen("command");
+  await check("Command shows scenes, security, weather, the thermostat, the house, lights and cameras", async () =>
+    (await page.locator("#alt .ds-scene").count()) === 5 && (await page.locator("#alt .cm-sec").count()) === 1 &&
+    (await page.locator("#alt .cm-wx").count()) === 1 && (await page.locator("#alt .cm-thermo").count()) === 1 &&
+    (await page.locator("#alt .map-room").count()) === 6 && (await page.locator("#alt .ds-light").count()) === 4 &&
+    (await page.locator("#alt .cm-cams").count()) === 1);
+  if (home) await check("Command: says the forecast isn't connected on a house without one", async () => /isn't connected/.test(await page.textContent("#alt .cm-wx")));
+  else await check("Command: the demo's weather is labeled a sample, with 4 days", async () => /Sample/i.test(await page.textContent("#alt .cm-wx")) && (await page.locator("#alt .cm-wx .ds-day").count()) === 4);
+  const cmKitchen = ALT("light.kitchen");
+  const cmWas = await lightOn(cmKitchen);
+  await page.locator(`${cmKitchen} [role="switch"]`).click();
+  await check("Command: a light tile switches the light", async () => (await lightOn(cmKitchen)) !== cmWas);
+  const cmTarget = async () => Number((await page.locator("#alt .cm-thermo .target").textContent()).replace(/\D/g, ""));
+  const cm0 = await cmTarget();
+  await page.locator("#alt .cm-thermo").getByRole("button", { name: "Warmer by 1°F" }).click();
+  await check("Command: the thermostat's + raises the setpoint", async () => (await cmTarget()) === cm0 + 1);
+  await page.locator("#alt .cm-thermo").getByRole("button", { name: "Cooler by 1°F" }).click();
+  await page.locator('#alt .map-room[data-room="kitchen"]').click();
+  await check("Command: tapping a room on the house shows that room's lights", async () =>
+    (await page.textContent("#alt .cm-house h2")) === "Kitchen" && (await page.locator("#alt .ds-light").count()) === 1);
+  await page.locator("#alt .cm-house").getByRole("button", { name: "Every room" }).click();
+  await page.locator('#alt .cm-tabs button[data-tab="lights"]').click();
+  await check("Command: the Lights tab shows every light and fan", async () => (await page.locator("#alt .ds-light").count()) === 9 && (await page.locator("#alt .ds-range").count()) >= 1);
+  await page.locator('#alt .cm-tabs button[data-tab="security"]').click();
+  await check("Command: the Security tab shows the security card", async () => (await page.locator("#alt .security-card .sec-item").count()) >= 4);
+  await page.locator('#alt .cm-tabs button[data-tab="cameras"]').click();
+  if (home) await check("Command: the Cameras tab says none are connected", async () => /none are connected/.test(await page.textContent("#alt .cm-grid")) && (await page.locator("#alt .cm-grid img").count()) === 0);
+  else await check("Command: the Cameras tab shows the demo's four pictures, each marked a sample", async () => (await page.locator("#alt .ds-cam").count()) === 4 && (await page.locator("#alt .ds-cam", { hasText: "Sample picture" }).count()) === 4);
+  await audit(page, "Command, Cameras tab");
+  await page.locator('#alt .cm-tabs button[data-tab="home"]').click();
 
-  await useScreen("nightstand");
+  // ----- 2 · Glass: Haven's voice line, its agents and the thermostat dial -----
+  await useScreen("glass");
+  await check("Glass shows the clock, updates, scene cards, a light dial, doors, the voice line, the agents and the thermostat", async () =>
+    (await page.locator("#alt .gl-clock").count()) === 1 && (await page.locator("#alt .gl-news").count()) === 1 &&
+    (await page.locator("#alt .gl-scene").count()) === 2 && (await page.locator("#alt .gl-lamp").count()) === 1 &&
+    (await page.locator("#alt .gl-doors .ds-row").count()) === 3 && (await page.locator("#alt .gl-talk").count()) === 1 &&
+    (await page.locator("#alt .agent").count()) === 4 && (await page.locator("#alt .gl-knob").count()) === 1);
+  await chat("turn off all the lights");
+  await page.evaluate(() => { window.__heard = "turn on the kitchen lights"; });
+  await page.locator("#alt .gl-talk").click();
+  await check("Glass: tapping the voice line talks to Haven", async () => /Kitchen/i.test(await page.textContent("#alt .st-reply")));
+  await check("Glass: the Lighting agent glows while a light is on", async () => (await page.getAttribute('#alt .agent[data-agent="lighting"]', "data-active")) === "true");
+  await chat("goodnight");
+  await check("Glass: a scene lights the lines between agents", async () => (await page.getAttribute("#alt .agents", "data-sync")) === "true");
+  await check("Glass: the lines go quiet again afterwards", async () => (await page.getAttribute("#alt .agents", "data-sync")) === "false", 12_000);
+  const knob = async () => Number((await page.textContent("#alt .gl-set")).replace(/\D/g, ""));
+  const kn0 = await knob();
+  await page.locator("#alt .gl-knob").getByRole("button", { name: "Warmer by 1°F" }).click();
+  await check("Glass: the dial's + raises the setpoint", async () => (await knob()) === kn0 + 1);
+  await page.locator("#alt .gl-lamp").getByRole("button", { name: "Brighter" }).click();
+  await check("Glass: + brightens the room's light", async () => /\d+%/.test(await page.textContent("#alt .gl-lamp-ring")));
+  await audit(page, "Glass");
+
+  // ----- 3 · Everything Wall -----
+  await useScreen("wall");
+  await check("Everything Wall shows the numbers, cameras, every switch, the rooms, gauges and today's electricity", async () =>
+    (await page.locator("#alt .wa-kpi").count()) === 7 && (await page.locator("#alt .wa-dev").count()) >= 5 &&
+    (await page.locator("#alt .wa-room").count()) >= 5 && (await page.locator("#alt .wa-gauges .ds-gauge").count()) === 4 &&
+    (await page.locator("#alt .wa-energy .ds-total svg").count()) === 1);
+  await check("Everything Wall: electricity is labeled estimated", async () => /Estimated/i.test(await page.textContent("#alt .wa-energy")));
+  const porch = ALT("light.porch");
+  const porchWas = await lightOn(porch);
+  await page.locator(`${porch} [role="switch"]`).click();
+  await check("Everything Wall: the porch light switch works", async () => (await lightOn(porch)) !== porchWas);
+  await page.locator(`${porch} [role="switch"]`).click();
+  const lamp = '#alt .wa-lamp[data-device="light.living"]';
+  const lampWas = await page.getAttribute(lamp, "aria-checked");
+  await page.locator(lamp).click();
+  await check("Everything Wall: a room's light bar switches the light", async () => (await page.getAttribute(lamp, "aria-checked")) !== lampWas);
+  await audit(page, "Everything Wall");
+
+  // ----- 4 · Good Evening -----
+  await useScreen("evening");
+  await check("Good Evening shows the greeting, climate, the forecast, scenes, rooms and cameras", async () =>
+    (await page.locator("#alt .ev-greet").count()) === 1 && (await page.locator("#alt .ev-climate").count()) === 1 &&
+    (await page.locator("#alt .ev-scene").count()) === 5 && (await page.locator("#alt .ev-room").count()) >= 5 &&
+    (await page.locator("#alt .feel button").count()) === 2);
+  if (!home) await check("Good Evening: the sample forecast shows 4 days with bars", async () => (await page.locator("#alt .ev-ranges li").count()) === 4);
+  await page.locator("#alt .ev-seg").getByRole("tab", { name: "Water heater" }).click();
+  await check("Good Evening: the Water heater tab shows the heater", async () => (await page.locator('#alt .ev-pane[data-device="water_heater.main"]').count()) === 1);
+  await page.locator("#alt .ev-pane").getByRole("button", { name: "Lower 5°F" }).click();
+  await check("Good Evening: the water heater's − lowers it 5°F", async () => /115/.test(await page.textContent("#alt .ev-big")));
+  await page.locator("#alt .ev-pane").getByRole("button", { name: "Raise 5°F" }).click();
+  await page.locator("#alt .ev-seg").getByRole("tab", { name: "Climate" }).click();
+  const evAct = '#alt .ev-room[data-room="kitchen"] .ev-act[data-device="light.kitchen"]';
+  const evWas = await page.getAttribute(evAct, "aria-checked");
+  await page.locator(evAct).click();
+  await check("Good Evening: a room card's light button works", async () => (await page.getAttribute(evAct, "aria-checked")) !== evWas);
+  await page.locator("#alt .ev-note").getByRole("button", { name: "Brief me now" }).click();
+  await check("Good Evening: Brief me now shows the briefing", async () => (await page.locator("#alt .ev-note .brief-title").count()) === 1);
+  await audit(page, "Good Evening");
+
+  // ----- 5 · Aurora, the bedroom: bedtime buttons and the sleeper's own photo -----
+  await useScreen("aurora");
+  await check("Aurora shows the clock, this room's lights and fan, bedtime buttons, the thermostat and electricity", async () =>
+    (await page.locator("#alt .au-time").count()) === 1 && (await page.locator('#alt .au-tiles [data-device="light.primary"]').count()) === 1 &&
+    (await page.locator("#alt .au-bed .big-btn").count()) === 5 && (await page.locator("#alt .au-thermo").count()) === 1 && (await page.locator("#alt .au-semis .ds-gauge").count()) === 2);
   await page.locator("#alt .big-btn", { hasText: "Goodnight" }).click();
-  await useScreen("rooms");
-  await check("Nightstand Goodnight took effect (checked on Rooms)", async () =>
-    (await page.locator(`${ALT("lock.front")} .rd-state`).textContent()) === "Locked" && (await page.locator(`${ALT("light.kitchen")} .rd-state`).textContent()) === "Off", garageTravelMs + 4000);
-  await useScreen("nightstand");
-  await audit(page, "Nightstand");
-  // Each bedroom's nightstand can show its own photo.
+  await useScreen("classic");
+  await check("Aurora's Goodnight took effect (checked on Portrait Classic)", async () =>
+    /Locked/.test(await page.textContent(`${ALT("lock.front")} .sec-state`)) && !(await lightOn(ALT("light.kitchen"))), garageTravelMs + 4000);
+  await useScreen("aurora");
+  await audit(page, "Aurora");
   const nightPng = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAABAAAAAJCAIAAAC0SDtlAAAAF0lEQVR4nGPUiFrAQApgIkn1qAZaaQAAAi4BNDuufHgAAAAASUVORK5CYII=", "base64");
   const hasNightPhoto = () => page.evaluate(() => document.querySelector("#app").classList.contains("has-night-photo"));
   await page.locator("#night-file").setInputFiles({ name: "me.png", mimeType: "image/png", buffer: nightPng });
-  await check("Nightstand: your own photo shows behind the clock", async () =>
+  await check("Aurora: your own photo shows behind the bedroom screen", async () =>
     (await hasNightPhoto()) && /^url\("data:image\/jpeg/.test(await page.evaluate(() => document.querySelector("#app").style.getPropertyValue("--night-photo"))) &&
     (await page.locator("#alt .night-photo-add").textContent()) === "Change photo");
-  await check("Nightstand: the photo is kept for this bedroom", async () => Boolean(await page.evaluate(() => localStorage.getItem("haven.nightstand.primary"))));
-  await audit(page, "Nightstand with a photo");
+  await check("Aurora: the photo is kept for this bedroom", async () => Boolean(await page.evaluate(() => localStorage.getItem("haven.nightstand.primary"))));
+  await audit(page, "Aurora with a photo");
   await openLibrary();
   await page.selectOption("#panel-room", "kitchen");
   await page.locator("#library-close").click();
-  await check("Nightstand: another room's nightstand doesn't show it", async () => !(await hasNightPhoto()));
+  await check("Aurora: another room's panel doesn't show it", async () => !(await hasNightPhoto()));
   await openLibrary();
   await page.selectOption("#panel-room", "");
   await page.locator("#library-close").click();
-  await check("Nightstand: back in the bedroom, the photo is there", async () => hasNightPhoto());
+  await check("Aurora: back in the bedroom, the photo is there", async () => hasNightPhoto());
   await page.locator("#alt .night-photo-remove").click();
-  await check("Nightstand: Remove photo takes it off", async () => !(await hasNightPhoto()) && !(await page.evaluate(() => localStorage.getItem("haven.nightstand.primary"))));
+  await check("Aurora: Remove photo takes it off", async () => !(await hasNightPhoto()) && !(await page.evaluate(() => localStorage.getItem("haven.nightstand.primary"))));
 
-  await useScreen("rooms");
-  await check("Rooms shows a card per room", async () => (await page.locator("#alt .room-card").count()) === 7);
-  await page.locator(ALT("light.kitchen")).click();
-  await check("Rooms: tapping a light turns it on", async () => (await page.locator(`${ALT("light.kitchen")} .rd-state`).textContent()).startsWith("On"));
-  await audit(page, "Rooms");
+  // ----- 6 · Portrait Classic -----
+  await useScreen("classic");
+  await check("Portrait Classic shows its seven sections", async () => (await page.locator("#alt .cl-sec").count()) === 7 && (await page.locator("#alt .cl-pill").count()) === 9);
+  const clWas = await lightOn(ALT("light.kitchen"));
+  await page.locator(`${ALT("light.kitchen")} [role="switch"]`).click();
+  await check("Portrait Classic: a light button switches the light", async () => (await lightOn(ALT("light.kitchen"))) !== clWas);
+  await audit(page, "Portrait Classic");
 
-  await useScreen("entry");
-  await check("Entry lists what's still on", async () => (await page.locator("#alt .stillon-card li", { hasText: "Kitchen Lights" }).count()) === 1);
+  // ----- 7 · Security Console (the entry panel) -----
+  await useScreen("console");
+  await check("Security Console shows leave and arrive, the security card, both dials, cameras, the house and what's still on", async () =>
+    (await page.locator("#alt .co-actions .big-btn").count()) === 3 && (await page.locator("#alt .sec-item").count()) >= 8 &&
+    (await page.locator("#alt .co-dial").count()) === 2 && (await page.locator("#alt .cameras-card").count()) === 1 &&
+    (await page.locator("#alt .co-house .map-room").count()) === 6);
+  await check("Security Console lists what's still on", async () => (await page.locator("#alt .stillon-card li", { hasText: "Kitchen Lights" }).count()) === 1);
   await page.locator("#alt .stillon-card li", { hasText: "Kitchen Lights" }).getByRole("button", { name: "Turn off" }).click();
-  await check("Entry: Turn off works", async () => (await page.locator("#alt .stillon-card li", { hasText: "Kitchen Lights" }).count()) === 0);
-  await audit(page, "Entry");
+  await check("Security Console: Turn off works", async () => (await page.locator("#alt .stillon-card li", { hasText: "Kitchen Lights" }).count()) === 0);
+  await audit(page, "Security Console");
 
+  // ----- 8 · Neon Frame -----
+  await useScreen("neon");
+  await check("Neon Frame shows the doors, electricity flowing in, the chart, climate and every switch", async () =>
+    (await page.locator("#alt .ne-flow svg").count()) === 1 && (await page.locator("#alt .ne-chart .ds-total svg").count()) === 1 &&
+    (await page.locator("#alt .ne-list .ds-row").count()) >= 11 && (await page.locator("#alt .ne-climate").count()) === 1);
+  const neRow = `#alt .ds-row[data-device="light.porch"]`;
+  const neWas = await page.getAttribute(`${neRow} .switch`, "aria-checked");
+  await page.locator(`${neRow} .switch`).click();
+  await check("Neon Frame: the porch switch works", async () => (await page.getAttribute(`${neRow} .switch`, "aria-checked")) !== neWas);
+  await page.locator(`${neRow} .switch`).click();
+  await audit(page, "Neon Frame");
+
+  // ----- 9 · Lagoon: the house, Home and Away, and Haven's voice -----
+  await useScreen("lagoon");
+  await check("Lagoon shows the weather, the house, Home and Away, the voices and the status", async () =>
+    (await page.locator("#alt .la-wx").count()) === 1 && (await page.locator("#alt .la-house .map-room").count()) === 6 &&
+    (await page.locator("#alt .la-scene").count()) === 2 && (await page.locator("#alt .la-voices [role=radio]").count()) === 4 && (await page.locator("#alt .la-stat").count()) === 4);
+  await page.evaluate(() => { window.__spoken = []; });
+  await page.locator('#alt .la-voices [data-voice="sia"]').click();
+  await check("Lagoon: choosing Sia saves it and says so", async () => (await page.getAttribute('#alt .la-voices [data-voice="sia"]', "aria-checked")) === "true" && /Sia/.test(await page.textContent("#voice-hint")));
+  await page.locator('#alt .la-voices [data-voice="lily"]').click();
+  await check("Lagoon: back to Lily D", async () => (await page.getAttribute('#alt .la-voices [data-voice="lily"]', "aria-checked")) === "true");
+  await page.locator('#alt .la-scene[data-scene="home"]').click();
+  await check("Lagoon: the Home card runs Welcome home", async () => /Welcome home|Kitchen/i.test(await page.textContent("#chat-log")));
+  await audit(page, "Lagoon");
+
+  // ----- Wallpaper, and the finishes it wears -----
   await useScreen("wallpaper");
   const WP = (id) => page.locator(`#alt .wp-tile[data-device="${id}"]`);
   await check("Wallpaper shows weather, climate, lights, doors, scenes and updates", async () =>
@@ -579,62 +690,59 @@ async function exercise(page, { garageTravelMs, home }) {
   await check("Wallpaper: your own photo replaces Haven's", async () => /^url\("data:image\/jpeg/.test(await page.evaluate(() => document.querySelector("#app").style.getPropertyValue("--wp-photo"))));
   await page.locator("#wp-reset").click();
   await check("Wallpaper: back to Haven's photos", async () => (await page.evaluate(() => document.querySelector("#app").style.getPropertyValue("--wp-photo"))) === "" && await page.locator("#wp-reset").isHidden());
+  // The finish dresses Wallpaper (and All controls over it), and only Wallpaper.
+  await page.locator('#library [data-look="futuristic"]').click();
+  await check("Finish: Futuristic dresses the Wallpaper screen", async () => (await page.getAttribute("html", "data-look")) === "futuristic");
+  await page.locator("#library-close").click();
+  await audit(page, "Wallpaper, Futuristic");
+  await page.locator(".controls-open:visible").first().click();
+  await audit(page, "All controls, Futuristic");
+  await page.locator("#controls-close").click();
+  await openLibrary();
+  await page.locator('#library [data-look="vivid"]').click();
+  await check("Finish: Vivid dresses the Wallpaper screen", async () => (await page.getAttribute("html", "data-look")) === "vivid");
+  await page.locator("#library-close").click();
+  await page.locator(".controls-open:visible").first().click();
+  await audit(page, "All controls, Vivid light");
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.waitForFunction(() => document.getAnimations().every((a) => !(a instanceof CSSTransition) || a.playState !== "running"), null, { timeout: 5000 }).catch(() => {});
+  await audit(page, "All controls, Vivid dark (device setting)");
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.locator("#controls-close").click();
+  await useScreen("command");
+  await check("Finish: other screens keep their own look", async () => (await page.getAttribute("html", "data-look")) === "grounded");
+  await openLibrary();
+  await page.locator('#library [data-look="grounded"]').click();
   await page.locator("#library-close").click();
 
-  // Studio: Haven at the center, its agents underneath.
-  await useScreen("studio");
-  await check("Studio shows the orb, the agents, the time, lights, climate, electricity and doors", async () =>
-    (await page.locator("#alt .st-orb").count()) === 1 && (await page.locator("#alt .agent").count()) === 4 &&
-    (await page.locator("#alt .st-clock").count()) === 1 && (await page.locator("#alt .st-lights .lights-list li").count()) === 7 &&
-    (await page.locator("#alt .st-climate").count()) === 1 && (await page.locator("#alt .st-energy").count()) === 1 && (await page.locator("#alt .st-secure").count()) === 1);
-  await chat("turn off all the lights");
-  await page.evaluate(() => { window.__heard = "turn on the kitchen lights"; });
-  await page.locator("#alt .st-orb").click();
-  await check("Studio: tapping the orb talks to Haven", async () => ((await page.locator('#alt .st-lights li[data-device="light.kitchen"]').getAttribute("class")) || "").includes("on"));
-  await check("Studio: the Lighting agent glows while a light is on", async () => (await page.getAttribute('#alt .agent[data-agent="lighting"]', "data-active")) === "true");
-  await check("Studio: Haven's reply shows under the orb", async () => /Kitchen/i.test(await page.textContent("#alt .st-reply")));
-  await page.locator("#alt .st-chips button", { hasText: "Goodnight" }).click();
-  await check("Studio: Goodnight lights the lines between agents", async () => (await page.getAttribute("#alt .agents", "data-sync")) === "true");
-  await check("Studio: the lines go quiet again afterwards", async () => (await page.getAttribute("#alt .agents", "data-sync")) === "false", 12_000);
-  const stTarget = async () => Number((await page.locator("#alt .st-climate .target").textContent()).replace(/\D/g, ""));
-  const st0 = await stTarget();
-  await page.locator("#alt .st-climate").getByRole("button", { name: "Warmer by 1°F" }).click();
-  await check("Studio: climate + raises the setpoint", async () => (await stTarget()) === st0 + 1);
-  await audit(page, "Studio");
-  await page.evaluate(() => document.documentElement.setAttribute("data-look", "vivid"));
-  await audit(page, "Studio, Vivid light");
-  await page.emulateMedia({ colorScheme: "dark" });
-  // Buttons fade to their dark colors over 0.15 s; under software rendering that can run late,
-  // so wait for the fades themselves to finish rather than a fixed time.
-  await page.waitForFunction(() => document.getAnimations().every((a) => !(a instanceof CSSTransition) || a.playState !== "running"), null, { timeout: 5000 }).catch(() => {});
-  await audit(page, "Studio, Vivid dark");
-  await page.emulateMedia({ colorScheme: "light" });
-  await page.evaluate(() => document.documentElement.setAttribute("data-look", "grounded"));
-
-  // Model home showcase: a live tour after the panel sits untouched.
+  // Model home showcase: a live tour on the Glass screen after the panel sits untouched.
   await page.evaluate(() => localStorage.setItem("haven.showcaseIdleMs", "1500"));
-  await useScreen("rooms");
+  await useScreen("classic");
   await openLibrary();
   await page.locator("#showcase-toggle").click();
   await check("Showcase: the switch turns on", async () => (await page.getAttribute("#showcase-toggle", "aria-checked")) === "true");
   await page.locator("#library-close").click();
-  await check("Showcase: starts on its own on the Studio screen", async () => !(await page.locator("#showcase-banner").isHidden()) && (await page.getAttribute("#app", "data-screen")) === "studio", 8000);
-  await check("Showcase: runs a real scene and says what it did", async () => /Welcome home/.test(await page.textContent("#chat-log")) && ((await page.locator('#alt .st-lights li[data-device="light.kitchen"]').getAttribute("class")) || "").includes("on"), 8000);
+  await check("Showcase: starts on its own on the Glass screen", async () => !(await page.locator("#showcase-banner").isHidden()) && (await page.getAttribute("#app", "data-screen")) === "glass", 8000);
+  await check("Showcase: runs a real scene and says what it did", async () => /Welcome home/.test(await page.textContent("#chat-log")) && (await page.getAttribute('#alt .agent[data-agent="lighting"]', "data-active")) === "true", 8000);
   await page.mouse.click(5, 400);
-  await check("Showcase: a touch hands control back", async () => (await page.locator("#showcase-banner").isHidden()) && (await page.getAttribute("#app", "data-screen")) === "rooms");
+  await check("Showcase: a touch hands control back", async () => (await page.locator("#showcase-banner").isHidden()) && (await page.getAttribute("#app", "data-screen")) === "classic");
   await openLibrary();
   await page.locator("#showcase-toggle").click();
   await page.locator("#library-close").click();
   await page.evaluate(() => localStorage.removeItem("haven.showcaseIdleMs"));
 
-  for (const id of ["command-center", "family-hub", "nightstand", "rooms", "entry", "wallpaper", "studio"]) {
+  // Old links and saved choices still land on the right screen.
+  await page.evaluate(() => { location.hash = "#entry"; });
+  await check("An old link (#entry) opens its replacement, the Security Console", async () => (await page.getAttribute("#app", "data-screen")) === "console");
+
+  for (const id of ["command", "glass", "wall", "evening", "aurora", "classic", "console", "neon", "lagoon", "wallpaper"]) {
     await page.setViewportSize({ width: 390, height: 844 });
     await useScreen(id);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
     report(!overflow, `${id}: no sideways scrolling at 390px`);
   }
   await page.setViewportSize({ width: 1280, height: 800 });
-  await useScreen("signature");
+  await useScreen("command");
 
   // ----- layout -----
   for (const [w, h] of [[1280, 800], [390, 844]]) {
@@ -650,43 +758,55 @@ async function exercise(page, { garageTravelMs, home }) {
 // stands in where a panel can't draw 3D (forced here with haven.houseView = "still").
 async function houseViewFallback(page) {
   const openLib = async () => { await page.locator(".screens-open:visible").first().click(); await page.waitForSelector("#library[open]"); };
-  const useSig = async () => { await openLib(); await page.locator('#library [data-screen="signature"]').click(); await page.locator("#library-close").click(); };
+  // The house in All controls (#map), opened over Command after every reload.
+  const useSig = async () => {
+    await openLib(); await page.locator('#library [data-screen="command"]').click(); await page.locator("#library-close").click();
+    await page.locator(".controls-open:visible").first().click();
+  };
+  const reopened = async () => { await page.waitForSelector("#app:not([hidden])", { timeout: 10_000 }); await page.locator(".controls-open:visible").first().click(); };
   await useSig();
   await check("House view: realistic 3D by default", async () => (await page.locator("#map.holo.cgi canvas").count()) === 1);
   await openLib();
   await Promise.all([page.waitForEvent("load"), page.locator('[data-house-view="hologram"]').click()]);
-  await page.waitForSelector("#app:not([hidden])", { timeout: 10_000 });
+  await reopened();
   await check("House view: the hologram replaces it", async () => (await page.locator("#map.holo:not(.cgi) canvas").count()) === 1, 8000);
   await openLib();
   await check("House view: a gallery of six views, each with its picture", async () => (await page.locator("#house-gallery .house-pick img").count()) === 6);
   await Promise.all([page.waitForEvent("load"), page.locator('[data-house-view="ai-evening-1"]').click()]);
-  await page.waitForSelector("#app:not([hidden])", { timeout: 10_000 });
+  await reopened();
   await check("House view: a photoreal render, with every room a button", async () =>
     (await page.locator("#map.house-still[data-mood='evening'] .still-wrap img").count()) === 1 && (await page.locator("#map .map-room").count()) === 6 && (await page.locator("#map canvas").count()) === 0, 8000);
   await page.evaluate(() => localStorage.setItem("haven.houseView", "still"));
   await Promise.all([page.waitForEvent("load"), page.reload()]);
-  await page.waitForSelector("#app:not([hidden])", { timeout: 10_000 });
+  await reopened();
   await check("Without 3D: this home's CGI picture, with every room a button", async () =>
     (await page.locator("#map.house-still .still-wrap img").count()) === 1 && (await page.locator("#map .map-room").count()) === 6 && (await page.locator("#map canvas, #map svg.map-svg").count()) === 0, 8000);
   await page.locator('#map .map-room[data-room="kitchen"]').click();
   await check("Without 3D: tapping a room on the picture selects it", async () => (await page.locator('#map .map-room[data-room="kitchen"][aria-pressed="true"]').count()) === 1);
   await openLib();
   await Promise.all([page.waitForEvent("load"), page.locator('[data-house-view="cgi"]').click()]);
-  await page.waitForSelector("#app:not([hidden])", { timeout: 10_000 });
+  await reopened();
   await check("House view: back to realistic 3D", async () => (await page.locator("#map.holo.cgi canvas").count()) === 1, 8000);
+  await check("House view: the screens show the same house", async () => { await page.locator("#controls-close").click(); return (await page.locator("#alt .cm-house .map.holo.cgi canvas").count()) === 1; }, 8000);
 }
 
-// Cameras. The demo has none and must say so. On the server, Home Assistant's cameras are
+// Cameras. The demo shows four stills, each marked a sample picture, never as live. On the server, Home Assistant's cameras are
 // stood in for at the network edge (one doorbell camera and a saved still), so the card, the
 // live viewer, a saved picture and a doorbell ring are exercised in a real browser.
 async function cameraChecks(page, { home }) {
   const openLib = async () => { await page.locator(".screens-open:visible").first().click(); await page.waitForSelector("#library[open]"); };
   const useScreen = async (id) => { await openLib(); await page.locator(`#library [data-screen="${id}"]`).click(); await page.locator("#library-close").click(); };
   if (!home) {
-    await useScreen("entry");
-    await check("Cameras: the demo says none are connected, with no placeholder feed", async () =>
-      /none are connected/.test(await page.textContent(".cameras-card")) && (await page.locator(".cameras-card img").count()) === 0);
-    await useScreen("signature");
+    await useScreen("console");
+    await check("Cameras: the demo shows four pictures, each marked a sample", async () =>
+      (await page.locator(".cameras-card .cam-tile").count()) === 4 && (await page.locator(".cameras-card .cam-tile", { hasText: "Sample picture" }).count()) === 4 &&
+      (await page.locator(".cameras-card img[src^='data:image']").count()) === 4);
+    await page.locator('.cam-tile[data-camera="front_door"]').click();
+    await check("Cameras: a demo picture opens as a still, never as live video", async () =>
+      (await page.evaluate(() => document.querySelector("#camera-view").open)) && (await page.textContent("#camera-state")) === "Sample picture" && /^data:image/.test(await page.getAttribute("#camera-img", "src")));
+    await audit(page, "Camera viewer, demo sample");
+    await page.locator("#camera-close").click();
+    await useScreen("command");
     return;
   }
   const jpeg = fs.readFileSync(path.join(root, "docs/poster.jpg"));
@@ -698,13 +818,13 @@ async function cameraChecks(page, { home }) {
   await page.route(/\/api\/cameras\/.+/, (r) => { seen.push(new URL(r.request().url()).pathname + (new URL(r.request().url()).searchParams.has("token") ? "?token" : "")); r.fulfill({ body: jpeg, contentType: "image/jpeg" }); });
   await Promise.all([page.waitForEvent("load"), page.reload()]);
   await page.waitForSelector("#app:not([hidden])", { timeout: 10_000 });
-  await useScreen("entry");
-  await check("Cameras: the Entry screen shows the doorbell camera's picture", async () =>
+  await useScreen("console");
+  await check("Cameras: the Security Console shows the doorbell camera's picture", async () =>
     page.evaluate(() => { const i = document.querySelector('.cam-tile[data-camera="front_door"] img'); return !!i && !i.hidden && i.naturalWidth > 0; }), 8000);
   await check("Cameras: it says the doorbell rang, in words", async () => /Doorbell rang/.test(await page.textContent('.cam-tile[data-camera="front_door"]')));
   await check("Cameras: the saved still is listed", async () => (await page.locator(".cam-recent [data-still]").count()) === 1);
   await check("Cameras: pictures come with the owner token in the header, not the address", async () => seen.includes("/api/cameras/front_door/snapshot"));
-  await audit(page, "Entry with a camera");
+  await audit(page, "Security Console with a camera");
   await page.locator('.cam-tile[data-camera="front_door"]').click();
   await check("Cameras: tapping it opens live video", async () =>
     (await page.evaluate(() => document.querySelector("#camera-view").open)) && /\/api\/cameras\/front_door\/live\?token=/.test(await page.getAttribute("#camera-img", "src")) && (await page.textContent("#camera-state")) === "Live");
@@ -715,12 +835,12 @@ async function cameraChecks(page, { home }) {
   await check("Cameras: a saved still opens from the home server", async () => /saved picture/.test(await page.textContent("#camera-state")) && seen.includes("/api/cameras/stills/front_door-20261009-120000-doorbell"));
   await page.keyboard.press("Escape");
   home.bus.publish("doorbell", { camera: "front_door", name: "Front door", still: null });
-  await check("Cameras: a ring opens the door camera on the Entry panel and says so", async () =>
+  await check("Cameras: a ring opens the door camera on the Security Console and says so", async () =>
     (await page.evaluate(() => document.querySelector("#camera-view").open)) && /Someone's at the door/.test(await page.textContent("#chat-log")), 8000);
   await page.keyboard.press("Escape");
   await page.unroute("**/api/cameras");
   await page.unroute(/\/api\/cameras\/.+/);
-  await useScreen("signature");
+  await useScreen("command");
 }
 
 async function runTarget(browser, target) {

@@ -47,7 +47,7 @@ Haven is several parts with separate jobs. Only two of them use a language model
 
 ## Showing the agents at work
 
-The Studio screen shows the agents under Haven's orb: Lighting, Climate, Security and Energy. Each glows only while it's doing something real, pulses when it just acted, and the lines between them flow when one event involves several at once (a scene, "I'm leaving", an automation touching lights and locks together). They're driven by the same action and scene events the activity feed shows, so homeowners and builders see the coordination as it happens rather than taking it on faith. Model home showcase (docs/DESIGN.md) runs a live tour of scenes so this is visible on a model-home walkthrough.
+The Glass screen shows the agents under Haven's voice line: Lighting, Climate, Security and Energy. Each glows only while it's doing something real, pulses when it just acted, and the lines between them flow when one event involves several at once (a scene, "I'm leaving", an automation touching lights and locks together). They're driven by the same action and scene events the activity feed shows, so homeowners and builders see the coordination as it happens rather than taking it on faith. Model home showcase (docs/DESIGN.md) runs a live tour of scenes so this is visible on a model-home walkthrough.
 
 ## Weather
 

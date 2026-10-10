@@ -28,6 +28,8 @@ let tab = "home";
 let speakAloud = safeGet("haven.speak") !== "off";
 let started = false;
 let panelRoom = safeGet("haven.panelRoom") || "";
+let screen = null;        // the library screen this panel shows (set from initialScreen() below)
+let controlsOpen = false; // All controls is showing over the screen
 
 // ---------- helpers ----------
 function safeGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
@@ -124,8 +126,17 @@ $("#login-form").addEventListener("submit", (e) => {
 });
 
 // ---------- look switch and appearance ----------
+// Each designed screen has its own look. The finish (Grounded, Futuristic, Vivid) dresses
+// Wallpaper and All controls on Wallpaper; on the other screens the page wears the plain base
+// and each screen's own colors (set on .panel[data-screen=…] in styles.css).
 const LOOKS = ["grounded", "futuristic", "vivid"];
+// The finish this panel's owner chose (look.js or the demo page may have put the plain base on
+// <html> already, since the screen opening isn't Wallpaper).
+const lookAsked = new URLSearchParams(location.search).get("look");
+let chosenLook = [lookAsked, safeGet("haven.look"), window.__havenLook, document.documentElement.getAttribute("data-look")].find((x) => LOOKS.includes(x)) || "grounded";
+const SCREEN_BG = { command: "#1b1e23", glass: "#08090b", console: "#0f1216", wall: "#0a0e13", classic: "#26282c", neon: "#040507", aurora: "#2c1660", lagoon: "#16357d", evening: "#0b0e13" };
 function themeColor() {
+  if (SCREEN_BG[screen] && !controlsOpen) return SCREEN_BG[screen];
   const look = document.documentElement.getAttribute("data-look");
   const theme = document.documentElement.getAttribute("data-theme");
   const dark = theme ? theme === "dark" : window.matchMedia?.("(prefers-color-scheme: dark)").matches;
@@ -133,15 +144,21 @@ function themeColor() {
   if (look === "vivid") return dark ? "#000000" : "#eef1f7";
   return dark ? "#15110d" : "#efe9df";
 }
+function applyLook() {
+  const look = screen === "wallpaper" || controlsOpen ? chosenLook : "grounded";
+  if (document.documentElement.getAttribute("data-look") !== look) document.documentElement.setAttribute("data-look", look);
+  document.body.style.background = (!controlsOpen && SCREEN_BG[screen]) || ""; // past the end of the screen, its own color
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", themeColor());
+}
 function setLook(look) {
   if (!LOOKS.includes(look)) look = "grounded";
-  document.documentElement.setAttribute("data-look", look);
+  chosenLook = look;
   safeSet("haven.look", look);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", themeColor());
+  if (screen) applyLook();
   for (const b of document.querySelectorAll(".look-switch button[data-look]")) b.setAttribute("aria-pressed", String(b.dataset.look === look));
 }
 for (const b of document.querySelectorAll(".look-switch button[data-look]")) b.addEventListener("click", () => setLook(b.dataset.look));
-setLook(document.documentElement.getAttribute("data-look") || "grounded");
+setLook(chosenLook);
 
 // Appearance: Auto follows the device; Light or Dark pins it (Grounded and
 // Vivid have both; Futuristic is always dark).
@@ -224,7 +241,7 @@ function stepTarget(d, delta) {
   });
 }
 function renderCurrent() {
-  if (screen === "signature") renderHome(); else renderAlt();
+  if (controlsOpen) renderHome(); else renderAlt();
 }
 
 // What needs the homeowner's attention, most serious first, each with the fix.
@@ -294,6 +311,10 @@ function tickClock() {
     $("#clock").textContent = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit" }).format(now);
     $("#date").textContent = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "long", month: "short", day: "numeric" }).format(now);
   } catch { /* unknown timezone: leave as is */ }
+  for (const n of document.querySelectorAll(".live-clock")) {
+    const t = clockText(n.dataset.fmt);
+    if (n.textContent !== t) n.textContent = t;
+  }
 }
 
 // ---------- the glass (right) ----------
@@ -587,7 +608,7 @@ let voiceState = "idle";
 function setVoiceState(s) {
   voiceState = VOICE_LABEL[s] ? s : "idle";
   $("#orb").dataset.voice = voiceState;
-  for (const o of document.querySelectorAll(".st-orb")) o.dataset.voice = voiceState;
+  for (const o of document.querySelectorAll(".st-orb, .gl-orb")) o.dataset.voice = voiceState;
   for (const l of document.querySelectorAll(".st-state")) l.textContent = VOICE_LABEL[voiceState];
 }
 
@@ -607,7 +628,7 @@ function stepLevel(t) {
     const shape = 0.5 + 0.5 * Math.abs(Math.sin(t / 150 + i * 1.7));
     b.style.setProperty("--l", active ? (level.now * shape).toFixed(3) : "0");
   });
-  for (const o of document.querySelectorAll(".orb, .st-orb")) o.style.setProperty("--lvl", active ? level.now.toFixed(3) : "0");
+  for (const o of document.querySelectorAll(".orb, .st-orb, .gl-orb")) o.style.setProperty("--lvl", active ? level.now.toFixed(3) : "0");
   if (active) level.raf = requestAnimationFrame(stepLevel);
 }
 
@@ -719,33 +740,41 @@ function simButtons() {
 }
 
 // ---------- screen library ----------
-// Every screen runs on the same live house; only the arrangement changes.
+// Every screen runs on the same live house; only the arrangement and the look change.
+// All controls (the room view, every device tile, Updates, About you and the simulator) opens from any of them.
 const SCREENS = [
-  { id: "signature", name: "Signature", best: "Great room or main entry", about: "The house model, the room you're in, and every control on glass. The flagship screen." },
+  { id: "command", name: "Command", best: "Great room or main entry", about: "The flagship: tabs across the top, scene buttons, security, the weather, a thermostat dial, the house in 3D, big light tiles and the cameras. Every tab is live." },
   { id: "wallpaper", name: "Wallpaper", best: "Living room or a large wall display", about: "Your home's photo behind frosted tiles: weather, climate, every light on a slider, doors, energy and scenes. The photo follows the time of day, or use your own." },
-  { id: "studio", name: "Studio", best: "Living room or kitchen, where people talk to Haven", about: "Haven at the center: a large orb that listens, thinks and speaks (tap it to talk), with the time, weather, lighting, climate, electricity and doors around it." },
-  { id: "command-center", name: "Command Center", best: "Office or a large wall display", about: "Everything at once: climate, energy, every light, every door, room conditions and updates." },
-  { id: "family-hub", name: "Family Hub", best: "Kitchen", about: "A big clock, today's briefing, scenes and quick comfort buttons the whole family can use." },
-  { id: "nightstand", name: "Nightstand", best: "Bedroom", about: "Dim and quiet: the time and big bedtime buttons. Talk to it in the dark. Whoever sleeps there can add their own photo behind the clock." },
-  { id: "rooms", name: "Rooms", best: "Large or busy households", about: "Every room as a card with its lights, fans and conditions, one tap each." },
-  { id: "entry", name: "Entry", best: "Mudroom or garage door", about: "Leaving or arriving: lock up, the garage, what's still on, and one-tap Away or Welcome home." },
+  { id: "glass", name: "Glass", best: "Living room, where people talk to Haven", about: "Black glass with a thermostat dial, a big clock, Haven's updates, scene cards and the voice line along the bottom: tap it and talk. Haven's agents show what each is doing." },
+  { id: "wall", name: "Everything Wall", best: "Office or a large wall display", about: "Everything at a glance: a strip of the numbers that matter, the cameras, every door and switch, each room's lights, gauges and today's electricity." },
+  { id: "evening", name: "Good Evening", best: "Kitchen", about: "A friendly greeting with the weather, climate and the water heater, the forecast, scenes, a card for every room and the cameras with their lights." },
+  { id: "aurora", name: "Aurora", best: "Bedroom", about: "Soft color that dims at night, big bedtime buttons, this room's lights, the thermostat and the day's electricity. Whoever sleeps there can put their own photo behind it." },
+  { id: "console", name: "Security Console", best: "Mudroom or garage door", about: "The alarm-panel view: every door, lock, motion and leak sensor, the cameras, the thermostat and water heater, the house, and one tap to leave or arrive." },
+  { id: "classic", name: "Portrait Classic", best: "Hallway, or a tall portrait screen", about: "The classic dashboard in sections: today, climate, every light, the cameras, security and scenes. Made to read top to bottom." },
+  { id: "neon", name: "Neon Frame", best: "Media room or office, in a dark room", about: "Glowing outlines on black: doors and locks, electricity flowing into the house, the cameras, climate, and every light on a switch." },
+  { id: "lagoon", name: "Lagoon", best: "Family room or guest suite", about: "Deep blue: the weather with temperature bars, the house itself, Home and Away cards, and the choice of Haven's voice." },
 ];
+// Screens from before the redesign, so saved choices and old links keep working.
+const SCREEN_ALIAS = { signature: "command", studio: "glass", "command-center": "wall", "family-hub": "evening", nightstand: "aurora", rooms: "classic", entry: "console" };
+const screenId = (id) => SCREEN_ALIAS[id] || id;
+const screenName = (id) => SCREENS.find((x) => x.id === id)?.name || id;
 function initialScreen() {
-  const fromHash = location.hash.replace("#", "");
+  const fromHash = screenId(location.hash.replace("#", ""));
   if (SCREENS.some((x) => x.id === fromHash)) return fromHash;
-  const saved = safeGet("haven.screen");
-  return SCREENS.some((x) => x.id === saved) ? saved : "signature";
+  const saved = screenId(safeGet("haven.screen"));
+  return SCREENS.some((x) => x.id === saved) ? saved : "command";
 }
-let screen = initialScreen();
+screen = initialScreen();
 
 // A screen named in the address after load (the showroom's tour, a link tapped on the panel) switches the panel live.
 window.addEventListener("hashchange", () => {
-  const id = location.hash.replace("#", "");
+  const id = screenId(location.hash.replace("#", ""));
   if (id !== screen && SCREENS.some((x) => x.id === id)) setScreen(id);
 });
 
 function setScreen(id) {
   screen = id;
+  controlsOpen = false;
   safeSet("haven.screen", id);
   try { history.replaceState(null, "", `#${id}`); } catch { /* not allowed here */ }
   room = "all";
@@ -753,16 +782,33 @@ function setScreen(id) {
   renderLibrary();
 }
 
+// All controls: the full room-by-room view, over whichever screen is showing.
+function openControls() {
+  controlsOpen = true;
+  render();
+  window.scrollTo?.(0, 0);
+  $("#controls-close").focus();
+}
+function closeControls() {
+  controlsOpen = false;
+  render();
+  window.scrollTo?.(0, 0);
+}
+$("#controls-close").addEventListener("click", closeControls);
+document.addEventListener("click", (e) => { if (e.target.closest?.(".controls-open")) openControls(); });
+
 // Small schematic of each layout for the library cards.
 const SCHEMATIC = {
-  "signature": [[0, 0, 5, 12, "s"], [5, 0, 7, 3], [5, 3, 7, 4], [5, 7, 7, 5]],
+  "command": [[0, 0, 1, 12, "s"], [1, 0, 11, 1.5], [1, 2, 2.2, 2.5], [3.4, 2, 2.2, 2.5], [5.8, 2, 2.2, 2.5], [8.2, 2, 3.8, 2.5], [1, 5, 3.6, 4], [4.8, 5, 3.4, 4, "s"], [8.4, 5, 3.6, 4], [1, 9.4, 2.6, 2.6], [3.8, 9.4, 2.6, 2.6], [6.6, 9.4, 5.4, 2.6]],
   "wallpaper": [[0, 0, 3, 5, "s"], [0, 5, 3, 3], [0, 8, 3, 4], [3, 0, 3, 4], [3, 4, 3, 8], [6, 0, 3, 7], [6, 7, 3, 5], [9, 0, 3, 5], [9, 5, 3, 7]],
-  "studio": [[0, 0, 4, 4], [0, 4, 4, 4], [4, 0, 4, 8, "s"], [8, 0, 4, 8], [0, 8, 8, 4], [8, 8, 4, 4]],
-  "command-center": [[0, 0, 3, 6, "s"], [3, 0, 3, 6], [6, 0, 6, 6], [0, 6, 3, 6], [3, 6, 3, 6], [6, 6, 3, 6], [9, 6, 3, 6]],
-  "family-hub": [[0, 0, 6, 6, "s"], [6, 0, 6, 6], [0, 6, 12, 3], [0, 9, 4, 3], [4, 9, 4, 3], [8, 9, 4, 3]],
-  "nightstand": [[3, 1, 6, 5, "s"], [1, 8, 2.5, 3], [3.8, 8, 2.5, 3], [6.6, 8, 2.5, 3], [9.4, 8, 1.6, 3]],
-  "rooms": [[0, 0, 4, 6], [4, 0, 4, 6], [8, 0, 4, 6], [0, 6, 4, 6], [4, 6, 4, 6], [8, 6, 4, 6]],
-  "entry": [[0, 0, 4, 5, "s"], [4, 0, 4, 5, "s"], [8, 0, 4, 5, "s"], [0, 5, 6, 7], [6, 5, 6, 7]],
+  "glass": [[0, 0, 1.4, 12], [1.6, 0.4, 5, 2.4, "s"], [1.6, 3.2, 2.6, 6.6], [4.4, 3.2, 3, 3.2], [4.4, 6.6, 3, 3.2], [7.6, 3.2, 2.2, 6.6], [10, 2, 2, 5, "s"], [1.6, 10.2, 8.2, 1.6, "s"]],
+  "wall": [[0, 0, 12, 1.6, "s"], [0, 2, 3, 2.4], [3, 2, 3, 2.4], [6, 2, 3, 2.4], [9, 2, 3, 2.4], [0, 4.8, 12, 1.6], [0, 6.8, 6, 5.2], [6.2, 6.8, 5.8, 1.8], [6.2, 8.8, 5.8, 3.2, "s"]],
+  "evening": [[0, 0, 3, 4.6, "s"], [3.2, 0, 3, 4.6], [6.4, 0, 3, 4.6], [9.6, 0, 2.4, 4.6], [0, 5.4, 2, 2.6], [2, 5.4, 2, 2.6], [4, 5.4, 2, 2.6], [6, 5.4, 2, 2.6], [8, 5.4, 2, 2.6], [10, 5.4, 2, 2.6], [0, 8.8, 3, 3.2], [3, 8.8, 3, 3.2], [6, 8.8, 3, 3.2], [9, 8.8, 3, 3.2]],
+  "aurora": [[0, 0, 4, 2.4, "s"], [0, 2.8, 4, 4.6], [0, 7.8, 4, 4.2], [4.2, 0, 3.8, 3], [4.2, 3.4, 3.8, 4.6, "s"], [4.2, 8.4, 3.8, 3.6], [8.2, 0, 3.8, 5], [8.2, 5.4, 3.8, 6.6]],
+  "console": [[0, 0, 12, 1.2], [0, 1.6, 4, 1.6, "s"], [4, 1.6, 4, 1.6, "s"], [8, 1.6, 4, 1.6, "s"], [0, 3.6, 3, 8.4], [3.2, 3.6, 2.6, 4], [3.2, 7.8, 2.6, 4.2], [6, 3.6, 3.4, 4.2], [6, 8, 3.4, 4], [9.6, 3.6, 2.4, 4.2], [9.6, 8, 2.4, 4]],
+  "classic": [[2, 0, 4, 1.6, "s"], [2, 2, 4, 3.6], [2, 6, 4, 3.4], [2, 9.8, 4, 2.2], [6.2, 0, 3.8, 2.2], [6.2, 2.6, 3.8, 4.6], [6.2, 7.6, 3.8, 2.4], [6.2, 10.4, 3.8, 1.6]],
+  "neon": [[0, 0, 4, 1.8], [0, 2.2, 4, 2.6], [0, 5.2, 4, 4.4, "s"], [0, 10, 4, 2], [4.2, 0, 3.8, 2], [4.2, 2.4, 3.8, 1.6], [4.2, 4.4, 3.8, 4.2, "s"], [4.2, 9, 3.8, 3], [8.2, 0, 3.8, 2.4], [8.2, 2.6, 3.8, 2.4], [8.2, 5.2, 3.8, 2.6], [8.2, 8.2, 3.8, 3.8]],
+  "lagoon": [[0, 0, 12, 1], [0, 1.4, 3.8, 7.6, "s"], [0, 9.4, 1.8, 2.6], [2, 9.4, 1.8, 2.6], [4, 1.4, 4, 6.8, "s"], [4, 8.6, 4, 3.4], [8.2, 1.4, 1.8, 6.6], [10.2, 1.4, 1.8, 6.6], [8.2, 8.4, 3.8, 3.6]],
 };
 function schematic(id) {
   const box = el("div", { class: "schematic", "aria-hidden": "true" });
@@ -821,7 +867,7 @@ $("#library-close").addEventListener("click", () => $("#library").close ? $("#li
 $("#panel-room").addEventListener("change", (e) => {
   panelRoom = e.target.value;
   safeSet("haven.panelRoom", panelRoom);
-  if (state) render(); // the Nightstand's photo and "Lights off" follow the room right away
+  if (state) render(); // the bedroom photo and "Lights off" follow the room right away
   showHint(panelRoom ? `This panel is in the ${roomName(panelRoom).toLowerCase()}. "Turn off the lights" here means that room.` : "This panel covers the whole home.");
 });
 document.addEventListener("click", (e) => { if (e.target.closest?.(".screens-open")) openLibrary(); });
@@ -829,53 +875,12 @@ document.addEventListener("click", (e) => { if (e.target.closest?.(".screens-ope
 // ---------- building blocks for the other screens ----------
 const block = (title, cls, ...children) => el("section", { class: `xcard ${cls || ""}` }, title ? el("h2", {}, title) : null, ...children);
 
-function altHeader({ big = false } = {}) {
-  const list = issues();
-  const hs = houseState();
-  const tz = state.timezone;
-  let clock = "", date = "";
-  try {
-    clock = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit" }).format(new Date());
-    date = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "long", month: "long", day: "numeric" }).format(new Date());
-  } catch { /* unknown timezone */ }
-  const th = byType("thermostat")[0];
-  return el("header", { class: `alt-head${big ? " big" : ""}` },
-    el("div", { class: "alt-title" },
-      el("p", { class: "eyebrow" }, state.home),
-      el("p", { class: "alt-clock" }, clock),
-      el("p", { class: "alt-date" }, `${date} · ${th.state.current}°F inside${weather?.available ? ` · ${weather.current.tempF}°F and ${weather.current.text.toLowerCase()} outside` : ""}`)),
-    el("div", { class: "alt-status status", "data-state": hs },
-      el("span", { class: "status-mark", "aria-hidden": "true" }),
-      el("div", { class: "status-text" },
-        el("p", { class: "status-headline" }, hs === "alert" ? "Needs your attention now" : list.length ? `${list.length} ${list.length === 1 ? "thing needs" : "things need"} attention` : state.pending.length ? "Waiting for your OK" : "All secure"),
-        el("ul", { class: "issues" }, ...list.map((i) => el("li", { class: `issue ${i.level}` }, i.text, i.action && el("button", { onclick: i.action[1] }, i.action[0])))))),
-    el("button", { class: "screens-open", "aria-haspopup": "dialog" }, "Screens"));
-}
-
 function asksBlock() {
   const cards = [...suggestionCards(state.suggestions || []), ...state.pending.map((p) => askCard("confirm", "Needs your OK", `${p.summary}?`, [
     el("button", { onclick: () => api(`/api/confirm/${p.confirmId}`, { approve: false }).then(showResult) }, "Cancel"),
     el("button", { class: "primary", onclick: () => api(`/api/confirm/${p.confirmId}`, { approve: true }).then(showResult) }, "Confirm"),
   ]))];
   return cards.length ? el("div", { class: "stack alt-asks" }, ...cards) : null;
-}
-
-function scenesBlock(title = "Scenes") {
-  return block(title, "scenes-card", el("div", { class: "scenes" }, ...Object.entries(state.scenes).map(([id, label]) =>
-    el("button", { class: "scene", "data-scene": id, onclick: () => api(`/api/scenes/${id}`, {}).then(showResult) }, el("span", {}, label)))));
-}
-
-function lightsBlock(filterRoom = null) {
-  const lights = byType("light").filter((l) => !filterRoom || l.room === filterRoom);
-  const lit = lights.filter((l) => l.state.on);
-  return block(filterRoom ? `${roomName(filterRoom)} lights` : "Lights", "lights-card",
-    el("ul", { class: "lights-list" }, ...lights.map((l) => el("li", { class: l.state.on ? "on" : "", "data-device": l.id, style: l.state.on ? `--glow:${l.state.brightness / 100}` : undefined },
-      el("span", { class: "tile-icon" }, svg(ICON.light)),
-      el("div", { class: "ll-text" }, el("span", { class: "ll-name" }, l.name), el("span", { class: "ll-state" }, describe(l))),
-      toggle(l.name, l.state.on, () => send(l.id, { on: !l.state.on })),
-      l.state.on ? el("input", { type: "range", class: "ll-slider", min: "5", max: "100", step: "5", value: String(l.state.brightness), "aria-label": `${l.name} brightness`, style: `--fill:${l.state.brightness}%`,
-        oninput: (e) => e.target.style.setProperty("--fill", `${e.target.value}%`), onchange: (e) => send(l.id, { on: true, brightness: Number(e.target.value) }) }) : null))),
-    lit.length ? el("button", { class: "ghost", onclick: () => Promise.all(lit.map((l) => api(`/api/devices/${l.id}`, { command: { on: false } }))).then(() => showResult({ message: "All lights off." })) }, `Turn off ${lit.length === 1 ? "the light" : `all ${lit.length}`}`) : null);
 }
 
 // The security card, laid out the way alarm panels are: one status line (ready, or what's
@@ -907,23 +912,30 @@ function secRow(d) {
     el("span", { class: `sec-state ${level}` }, el("i", { "aria-hidden": "true" }), word),
     action ? el("button", { class: d.type === "water_valve" && s.open ? "danger" : "", onclick: action[1] }, action[0]) : null);
 }
-function securityBlock() {
-  const entry = [...byType("lock"), ...byType("contact"), ...byType("garage")];
-  const water = [...byType("water_valve"), ...byType("leak")];
-  const motion = byType("motion");
-  const open = entry.filter(isAlert), wet = byType("leak").filter((l) => l.state.wet);
+// The mode the house is in, from who's home and the hour on the home's own clock: Home, Night
+// or Away. Haven sets it; nobody arms or disarms anything.
+function homeMode() {
   const away = state.people.length > 0 && state.people.every((p) => !p.home);
-  // Night from the home's own clock (the one the panel shows), not the device's.
-  const night = (() => {
-    let h = new Date().getHours();
-    try { h = Number(new Intl.DateTimeFormat("en-US", { timeZone: state.timezone, hour: "numeric", hourCycle: "h23" }).format(new Date())); } catch { /* no time zone: the device's hour */ }
-    return h >= 22 || h < 6;
-  })();
-  const mode = away ? ["away", "Away", "Guarding the house"] : night ? ["night", "Night", "Watching the doors"] : ["home", "Home", "Watching"];
+  let h = new Date().getHours();
+  try { h = Number(new Intl.DateTimeFormat("en-US", { timeZone: state.timezone, hour: "numeric", hourCycle: "h23" }).format(new Date())); } catch { /* no time zone: the device's hour */ }
+  const night = h >= 22 || h < 6;
+  return away ? ["away", "Away", "Guarding the house"] : night ? ["night", "Night", "Watching the doors"] : ["home", "Home", "Watching"];
+}
+// The security card's verdict in one place, so every screen says the same thing.
+function secSummary() {
+  const entry = [...byType("lock"), ...byType("contact"), ...byType("garage")];
+  const open = entry.filter(isAlert), wet = byType("leak").filter((l) => l.state.wet);
   const level = wet.length ? "bad" : open.length || !byType("water_valve").every((v) => v.state.open) ? "warn" : "ok";
   const headline = wet.length ? `Leak at ${wet.map((w) => w.name.replace(/ Leak Sensor$/, "")).join(", ")}`
     : open.length ? `Not ready · ${open.map((d) => `${d.name.replace(/ Lock$/, "")} ${secState(d)[1].toLowerCase()}`).join(", ")}`
     : "Ready · every entry point secured";
+  const short = wet.length ? "Leak" : open.length ? `Not ready · ${open.length} open` : level === "warn" ? "Ready · water off" : "Ready";
+  return { entry, open, wet, level, headline, short, mode: homeMode() };
+}
+function securityBlock() {
+  const { entry, open, level, headline, mode } = secSummary();
+  const water = [...byType("water_valve"), ...byType("leak")];
+  const motion = byType("motion");
   const group = (title, items) => items.length ? el("div", { class: "sec-group" }, el("h3", {}, title), el("ul", { class: "sec-list" }, ...items.map(secRow))) : null;
   return block(null, "security-card",
     el("div", { class: "sec-head", "data-level": level },
@@ -947,6 +959,7 @@ async function cameraPicture(path) {
   return URL.createObjectURL(await res.blob());
 }
 function camStatus(c) {
+  if (c.sample) return ["ok", "Sample picture"];
   const recent = (iso, mins) => iso && Date.now() - Date.parse(iso) < mins * 60_000;
   if (!c.online) return ["warn", "Offline"];
   if (recent(c.lastRing, 10)) return ["info", `Doorbell rang ${timeAgo(c.lastRing)}`];
@@ -962,11 +975,11 @@ function camerasBlock() {
   return block("Cameras", "cameras-card",
     el("ul", { class: "cam-grid" }, ...cams.cameras.map((c) => {
       const [level, word] = camStatus(c);
-      const pic = camPictures.get(`/api/cameras/${c.id}/snapshot`)?.url;
+      const pic = c.sample || camPictures.get(`/api/cameras/${c.id}/snapshot`)?.url;
       return el("li", {},
         el("button", { type: "button", class: "cam-tile", "data-camera": c.id, onclick: () => openCamera(c.id) },
           el("span", { class: "cam-frame" },
-            el("img", { "data-cam-src": `/api/cameras/${c.id}/snapshot`, alt: "", ...(pic ? { src: pic } : { hidden: "" }) }),
+            el("img", { alt: "", ...(c.sample ? { src: c.sample } : { "data-cam-src": `/api/cameras/${c.id}/snapshot`, ...(pic ? { src: pic } : { hidden: "" }) }) }),
             pic ? null : el("span", { class: "cam-wait" }, c.online ? "Loading picture" : "No picture")),
           el("span", { class: "cam-name" }, c.name),
           el("span", { class: `sec-state ${level}` }, el("i", { "aria-hidden": "true" }), word)));
@@ -1025,6 +1038,13 @@ async function openCamera(id, { still = null } = {}) {
   $("#camera-title").textContent = c.name;
   $("#camera-note").textContent = "";
   if (!dlg.open) dlg.showModal();
+  if (c.sample) { // the demo's stand-in: a still, never presented as live
+    img.alt = `${c.name}, sample picture`;
+    img.src = c.sample;
+    $("#camera-state").textContent = "Sample picture";
+    $("#camera-note").textContent = "The demo house has no cameras, so this is a still from the film of the model home. A real home shows its own cameras here, live.";
+    return;
+  }
   const showPicture = async (path) => {
     const url = await cameraPicture(path);
     if (camView.url) URL.revokeObjectURL(camView.url);
@@ -1053,54 +1073,9 @@ $("#camera-close").addEventListener("click", () => $("#camera-view").close());
 $("#camera-view").addEventListener("close", stopCameraView);
 document.addEventListener("visibilitychange", () => { if (document.hidden && $("#camera-view").open) $("#camera-view").close(); else loadCameraPictures(); });
 
-function conditionsBlock() {
-  const rows = [];
-  for (const r of state.rooms) {
-    const devs = allDevices().filter((d) => d.room === r.id);
-    const bits = [];
-    const th = devs.find((d) => d.type === "thermostat");
-    const temp = devs.find((d) => d.type === "temperature");
-    const motion = devs.filter((d) => d.type === "motion");
-    const leak = devs.filter((d) => d.type === "leak");
-    const lux = devs.find((d) => d.type === "illuminance");
-    if (th) bits.push(`${th.state.current}°F · ${th.state.humidity}% humidity`);
-    if (temp) bits.push(`${temp.state.value}°F`);
-    if (lux) bits.push(`${lux.state.lux} lux`);
-    if (motion.length) bits.push(motion.some((m) => m.state.motion) ? "Occupied now" : motion.some((m) => m.state.lastMotion && Date.now() - Date.parse(m.state.lastMotion) < 10 * 60_000) ? "Occupied recently" : "Clear");
-    if (leak.length) bits.push(leak.some((l) => l.state.wet) ? "LEAK" : "Dry");
-    if (!bits.length) continue;
-    rows.push(el("li", { class: bits.includes("LEAK") ? "alert" : "" }, el("span", { class: "ll-name" }, r.name), el("span", { class: "ll-state" }, bits.join(" · "))));
-  }
-  return block("Room conditions", "cond-card", el("ul", { class: "cond-list" }, ...rows));
-}
-
-function updatesBlock(n = 6) {
-  const items = feed.map((e) => [e, feedItem(e)]).filter(([, f]) => f).slice(-n).reverse();
-  return block("Updates", "updates-card", el("ol", { class: "feed" }, ...items.map(([e, f]) =>
-    el("li", { class: f.urgent ? "urgent" : "" }, el("span", { class: "when" }, timeAgo(e.ts)), el("span", { class: "title" }, f.title), el("span", {}, f.body)))));
-}
-
-function briefingBlock() {
-  const last = [...feed].reverse().find((e) => e.type === "briefing");
-  return block("Today", "briefing-card",
-    last ? el("div", { class: "brief" }, el("p", { class: "brief-title" }, last.title), el("p", {}, last.body), el("p", { class: "when" }, timeAgo(last.ts)))
-      : el("p", { class: "muted" }, "Haven's next update arrives at the scheduled time. Ask for one now:"),
-    el("button", { class: "ghost", onclick: () => api("/api/briefing", {}) }, "Brief me now"));
-}
-
-function feelBlock() {
-  return block("How does it feel?", "feel-card", el("div", { class: "feel" }, ...feelButtons()));
-}
-
-// Kept across redraws so a pinch or drag in progress, and the zoom, survive
-// the live house updating.
+// Kept across redraws (and shared by the screens that show the house) so a pinch or drag in
+// progress, and the zoom, survive the live house updating.
 const altMapBox = el("div", { class: "map alt-map" });
-function mapBlock() {
-  const box = altMapBox;
-  houseView(box, { selected: room === "all" ? null : room, onSelect: (id) => { room = room === id ? "all" : id; render(); }, onExpand: () => openExplorer() });
-  return block(room === "all" ? "The house" : `The house · ${roomName(room)}`, "map-card", box,
-    room !== "all" ? el("button", { class: "ghost", onclick: () => { room = "all"; render(); } }, "Show every room") : null);
-}
 
 // The house view, from the gallery in Screens → House view (haven.houseView): live 3D
 // ("cgi", the default: the real model of this home, web/holo.js), the hologram, or one of the
@@ -1365,35 +1340,10 @@ function roomCard(r) {
     sensors.length ? el("p", { class: "sensors" }, ...sensors.map((d) => el("span", { class: isAlert(d) ? "alert" : "" }, `${d.name.replace(new RegExp(`^${r.name} `), "")}: ${describe(d)}`))) : null);
 }
 
-// ---------- Studio screen ----------
-// Built around Haven itself: a large orb in the middle that shows it
-// listening, thinking and speaking (tap it to talk), with the time and
-// weather, lighting, climate, electricity and the doors around it.
-function studioTime() {
-  const { time, date } = localClock();
-  const outdoor = byType("temperature")[0];
-  const w = weather?.available ? weather : null;
-  return el("section", { class: "xcard st-card st-time", "aria-label": "Time and weather" },
-    el("p", { class: "st-clock" }, time),
-    el("p", { class: "st-date" }, date),
-    w ? el("div", { class: "st-weather" },
-      el("span", { class: "st-wx-icon" }, wxIcon(w.current.condition, w.current.isDay)),
-      el("div", {}, el("p", { class: "st-temp" }, `${w.current.tempF}°`), el("p", { class: "muted small" }, `${w.current.text} · H ${w.daily[0]?.highF ?? "--"}° L ${w.daily[0]?.lowF ?? "--"}°`)))
-      : el("div", { class: "st-weather" }, el("div", {},
-        el("p", { class: "st-temp" }, outdoor ? `${outdoor.state.value}°` : "--"),
-        el("p", { class: "muted small" }, outdoor ? "Outside, from your sensor. Forecast not connected." : "Forecast not connected."))),
-    w ? el("ol", { class: "st-hours", "aria-label": "Next hours" }, ...w.hourly.slice(1, 6).map((h) =>
-      el("li", { "aria-label": `${h.label}: ${h.tempF}°F, ${h.text}` },
-        el("span", { class: "muted small", "aria-hidden": "true" }, h.label.replace(" ", "")),
-        el("span", { "aria-hidden": "true" }, wxIcon(h.condition, h.isDay)),
-        el("span", { class: "st-h-temp", "aria-hidden": "true" }, `${h.tempF}°`)))) : null,
-    w?.source === "sample" ? el("p", { class: "muted small" }, "Sample weather for the demo") : null);
-}
-
-// Haven's agents, shown under the orb. Each glows while it's working; the
-// lines between them light up when one real event involves several of them
-// at once (a scene, "I'm leaving", an automation), so people can see the
-// house coordinating instead of guessing.
+// ---------- Haven's agents (on the Glass screen) ----------
+// Each glows while it's working; the lines between them light up when one real event involves
+// several of them at once (a scene, "I'm leaving", an automation), so people can see the house
+// coordinating instead of guessing.
 const AGENT_OF = { light: "lighting", climate: "climate", fan: "climate", water_heater: "climate", lock: "security", garage: "security", valve: "security" };
 const agentSync = { last: {}, until: 0, timer: 0 };
 function noteAgents(e) {
@@ -1406,7 +1356,7 @@ function noteAgents(e) {
   const recent = ["lighting", "climate", "security"].filter((a) => now - (agentSync.last[a] || 0) < 3000);
   if (e.type === "scene" || recent.length >= 2) agentSync.until = now + 4000;
   clearTimeout(agentSync.timer);
-  agentSync.timer = setTimeout(() => { if (screen === "studio" && state) renderAlt(); }, 6100);
+  agentSync.timer = setTimeout(() => { if (screen === "glass" && !controlsOpen && state) renderAlt(); }, 6100);
 }
 
 function agentRow() {
@@ -1419,7 +1369,7 @@ function agentRow() {
   const running = energy ? energy.breakdown.filter((p) => !p.name.startsWith("Always-on")).length : 0;
   const agents = [
     ["lighting", "Lighting", ICON.light, lit ? `${lit} on` : "All off", lit > 0],
-    ["climate", "Climate", ICON.climate, th.state.hvac === "heating" ? `Heating to ${th.state.target}°` : th.state.hvac === "cooling" ? `Cooling to ${th.state.target}°` : `Holding ${th.state.target}°`, th.state.hvac === "heating" || th.state.hvac === "cooling" || fans > 0],
+    ["climate", "Climate", ICON.climate, !th ? "No thermostat" : th.state.hvac === "heating" ? `Heating to ${th.state.target}°` : th.state.hvac === "cooling" ? `Cooling to ${th.state.target}°` : `Holding ${th.state.target}°`, (th && (th.state.hvac === "heating" || th.state.hvac === "cooling")) || fans > 0],
     ["security", "Security", ICON.shield, list.length ? list[0].text : away ? "Guarding the house" : "All secure", away || list.length > 0],
     ["energy", "Energy", ICON.bolt, energy ? `${energy.nowKw} kW now` : "Not measured", running > 0],
   ];
@@ -1434,65 +1384,803 @@ function agentRow() {
       el("span", { class: "agent-state" }, text))));
 }
 
-function studioOrb() {
-  const orb = el("button", { class: "st-orb", "data-voice": voiceState, "data-house": houseState(), "aria-label": "Talk to Haven", onclick: talk },
-    el("span", { class: "st-halo", "aria-hidden": "true" }),
-    el("span", { class: "st-sphere", "aria-hidden": "true" },
-      el("span", { class: "st-light" }, el("i", { class: "b1" }), el("i", { class: "b2" }), el("i", { class: "b3" })),
-      el("span", { class: "st-glass" }),
-      (() => { const m = svg("M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2Z"); m.classList.add("st-mic"); return m; })()));
-  return el("section", { class: "xcard st-card st-orb-card", "aria-label": "Haven" },
-    el("p", { class: "st-state" }, VOICE_LABEL[voiceState]),
-    orb,
-    el("span", { class: "wave st-wave", "aria-hidden": "true" }, ...Array.from({ length: 21 }, () => el("i"))),
-    agentRow(),
-    el("p", { class: "st-reply" }, lastReply || "Ask me anything about the house, or tap the orb and talk."),
-    el("div", { class: "st-chips" },
-      el("button", { onclick: () => api("/api/briefing", {}) }, "Brief me"),
-      el("button", { onclick: () => ask("status") }, "How's the house?"),
-      el("button", { onclick: () => api("/api/scenes/goodnight", {}).then(showResult) }, "Goodnight")));
+// ---------- the designed screens ----------
+// Nine screens, each with its own look (its colors are tokens on .panel[data-screen=…] in
+// styles.css, so every shared part, from the security card to the voice bar, takes them on).
+// Every number comes from the house; nothing is decorative. Weather says "Sample" in the demo,
+// electricity says "Estimated" unless a real meter reports it, and camera tiles show the home's
+// own cameras (the demo's are stills marked "Sample picture"). Motion only follows something
+// real: a light that's on glows, a fan that's running turns, electricity flows while it's used,
+// the waveform follows Haven's voice, and a screen draws itself in once when it opens.
+const DI = {
+  sunrise: "M11 2h2v4h2.5L12 9.5 8.5 6H11V2ZM3.5 11l1.4-1.4 2 2-1.4 1.4-2-2Zm13.6.6 2-2 1.4 1.4-2 2-1.4-1.4ZM2 18h4.2a6 6 0 0 1 11.6 0H22v2H2v-2Zm6.3 0h7.4a4 4 0 0 0-7.4 0Z",
+  moon: WX.moon,
+  film: "M3 4h18v16H3V4Zm2 2v2h2V6H5Zm12 0v2h2V6h-2ZM5 11v2h2v-2H5Zm12 0v2h2v-2h-2ZM5 16v2h2v-2H5Zm12 0v2h2v-2h-2ZM9 6v12h6V6H9Z",
+  exit: "M10 3h9a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-9v-2h9V5h-9V3Zm-1 5 1.4 1.4L8.8 11H16v2H8.8l1.6 1.6L9 16l-4-4 4-4Z",
+  grid: "M3 3h8v8H3V3Zm10 0h8v8h-8V3ZM3 13h8v8H3v-8Zm10 0h8v8h-8v-8Z",
+  camera: "M9 3 7.2 5H4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3.2L15 3H9Zm3 5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z",
+  mic: "M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2Z",
+  person: "M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-4.4 0-8 2.2-8 5v3h16v-3c0-2.8-3.6-5-8-5Z",
+  sliders: "M3 5h10v2H3V5Zm14 0h4v2h-4V5Zm-2-2h2v6h-2V3ZM3 11h4v2H3v-2Zm8 0h10v2H11v-2Zm-2-2h2v6H9V9Zm-6 8h10v2H3v-2Zm14 0h4v2h-4v-2Zm-2-2h2v6h-2v-6Z",
+  sofa: "M5 6h14a2 2 0 0 1 2 2v2.2a2.5 2.5 0 0 0-1 .3V8H4v2.5a2.5 2.5 0 0 0-1-.3V8a2 2 0 0 1 2-2ZM1 13a2 2 0 0 1 4 0v2h14v-2a2 2 0 0 1 4 0v6h-2v1h-2v-1H5v1H3v-1H1v-6Z",
+  bed: "M2 6h2v7h7V8h8a3 3 0 0 1 3 3v9h-2v-3H4v3H2V6Zm3 3.5a2 2 0 1 1 4 0 2 2 0 0 1-4 0Z",
+  pot: "M3 10h18v2h-1v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5v-4H3v-2Zm5-6c1 1 1 2 0 3h1.6c1-1 1-2 0-3H8Zm4 0c1 1 1 2 0 3h1.6c1-1 1-2 0-3H12Z",
+  tree: "M12 2 6 10h3l-4 6h6v6h2v-6h6l-4-6h3l-6-8Z",
+  utility: "M7 2h10a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Zm5 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM9 15h6v1.6H9V15Zm0 3h6v1.6H9V18Z",
+};
+const SCENE_ICON = { morning: DI.sunrise, away: DI.exit, home: ICON.home, goodnight: DI.moon, movie: DI.film };
+const ROOM_ICON = { kitchen: DI.pot, living: DI.sofa, primary: DI.bed, bedroom: DI.bed, hallway: ICON.door, garage: ICON.garage, utility: DI.utility, exterior: DI.tree, bath: ICON.water };
+const roomIcon = (r) => ROOM_ICON[r.kind] || ROOM_ICON[r.id] || ICON.home;
+const runScene = (id) => api(`/api/scenes/${id}`, {}).then(showResult);
+const allOff = (list, message) => Promise.all(list.map((d) => api(`/api/devices/${d.id}`, { command: { on: false } }))).then(() => showResult({ message }));
+const shortName = (d) => d.name.replace(/ (Lights?|Lock|Leak Sensor|Motion)$/, "").replace(/^Main /, "");
+const cap = (t) => (t ? t[0].toUpperCase() + t.slice(1) : t);
+const clamp01 = (v) => Math.min(1, Math.max(0, v));
+
+// The time in the home's own time zone. Live clocks carry data-fmt and tick with tickClock().
+function clockText(fmt) {
+  const tz = state?.timezone;
+  const now = new Date();
+  try {
+    if (fmt === "date") return new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "long", month: "long", day: "numeric" }).format(now);
+    if (fmt === "dateShort") return new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short", month: "short", day: "numeric" }).format(now);
+    if (fmt === "numeric") return new Intl.DateTimeFormat("en-US", { timeZone: tz, month: "numeric", day: "numeric", year: "numeric" }).format(now);
+    const t = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit" }).format(now);
+    if (fmt === "time") return t.replace(/\s+/g, " ");
+    const [hm, ap] = t.split(/\s+/);
+    return fmt === "hm" ? hm : ap;
+  } catch { return ""; }
+}
+const liveClock = (fmt, cls = "") => el("span", { class: `live-clock ${cls}`, "data-fmt": fmt }, clockText(fmt));
+
+function headlineText(list = issues(), hs = houseState()) {
+  return hs === "alert" ? "Needs your attention now" : list.length ? `${list.length} ${list.length === 1 ? "thing needs" : "things need"} attention` : state.pending.length ? "Waiting for your OK" : "All secure";
+}
+const issueItems = (list) => list.map((i) => el("li", { class: `issue ${i.level}` }, i.text, i.action && el("button", { onclick: i.action[1] }, i.action[0])));
+// The house status every screen carries: one line, and each problem with its fix.
+function dsStatus(cls = "") {
+  const list = issues(), hs = houseState();
+  return el("div", { class: `status ds-status ${cls}`, "data-state": hs },
+    el("span", { class: "status-mark", "aria-hidden": "true" }),
+    el("div", { class: "status-text" }, el("p", { class: "status-headline" }, headlineText(list, hs)), el("ul", { class: "issues" }, ...issueItems(list))));
+}
+// Only the problems, for screens that show "all secure" another way.
+const dsIssues = () => { const list = issues(); return list.length ? el("ul", { class: "issues ds-issues", "aria-label": "Needs attention" }, ...issueItems(list)) : null; };
+const dsTools = (cls = "") => el("div", { class: `ds-tools ${cls}` },
+  el("button", { type: "button", class: "controls-open" }, "All controls"),
+  el("button", { type: "button", class: "screens-open", "aria-haspopup": "dialog" }, "Screens"));
+const tag = (text, cls = "") => (text ? el("span", { class: `ds-tag ${cls}` }, text) : null);
+
+// Weather: the forecast when one is connected (the demo's is a labeled sample), or the outdoor
+// sensor alone, or a plain "not connected".
+const wxNow = () => (weather?.available ? weather : null);
+const wxSampleTag = () => (weather?.source === "sample" ? tag("Sample") : null);
+const outdoorF = () => byType("temperature")[0]?.state.value;
+function wxDays(n = 4) {
+  return (wxNow()?.daily || []).slice(0, n).map((d, i) => el("li", { class: "ds-day", "aria-label": `${d.label}: ${d.text}, high ${d.highF}°F, low ${d.lowF}°F${d.precip ? `, ${d.precip}% chance of rain` : ""}` },
+    el("span", { class: "ds-day-name", "aria-hidden": "true" }, i === 0 ? "Today" : d.label.slice(0, 3)),
+    el("span", { "aria-hidden": "true" }, wxIcon(d.condition)),
+    el("span", { class: "ds-day-hi", "aria-hidden": "true" }, `${d.highF}°`),
+    el("span", { class: "ds-day-lo", "aria-hidden": "true" }, `${d.lowF}°${d.precip >= 20 ? ` · ${d.precip}%` : ""}`)));
+}
+// The forecast as rows with a bar from each day's low to its high, on one shared scale.
+function wxRanges(n = 4, cls = "") {
+  const days = (wxNow()?.daily || []).slice(0, n);
+  if (!days.length) return null;
+  const lo = Math.min(...days.map((d) => d.lowF)) - 3, hi = Math.max(...days.map((d) => d.highF)) + 3, span = Math.max(1, hi - lo);
+  const nowF = wxNow().current.tempF;
+  return el("ul", { class: `ds-ranges ${cls}`, "aria-label": "The next days" }, ...days.map((d, i) => el("li", { "aria-label": `${d.label}: ${d.text}, low ${d.lowF}°F, high ${d.highF}°F` },
+    el("span", { class: "rg-day", "aria-hidden": "true" }, i === 0 ? "Today" : d.label.slice(0, 3)),
+    el("span", { "aria-hidden": "true" }, wxIcon(d.condition)),
+    el("span", { class: "rg-lo", "aria-hidden": "true" }, `${d.lowF}°`),
+    el("span", { class: "rg-bar", "aria-hidden": "true" },
+      el("i", { style: `left:${((d.lowF - lo) / span) * 100}%;width:${((d.highF - d.lowF) / span) * 100}%;--d:${i * 0.08}s` }),
+      i === 0 && nowF >= d.lowF - 3 && nowF <= d.highF + 3 ? el("b", { style: `left:${((nowF - lo) / span) * 100}%` }) : null),
+    el("span", { class: "rg-hi", "aria-hidden": "true" }, `${d.highF}°`))));
+}
+function wxNotConnected() {
+  const f = outdoorF();
+  return el("p", { class: "ds-wx-none" }, f != null ? `${f}°F outside, from your sensor. The forecast isn't connected yet.` : "The forecast isn't connected yet.");
 }
 
-function studioClimate(d) {
+// Electricity: the running total for today, drawn from the day's samples and scaled to the
+// house's own total. Labeled estimated unless a meter measures it.
+const energyWord = () => (energy?.source === "estimate" ? "Estimated" : "Measured");
+function runningTotal({ w = 320, h = 140, labels = true } = {}) {
+  const box = el("div", { class: "ds-total", role: "img", "aria-label": energy ? `Electricity today: ${energy.todayKwh} kilowatt hours so far, ${energyWord().toLowerCase()}.` : "Electricity today: loading." });
+  const pts = energy?.samples || [];
+  if (pts.length < 2) return box;
+  let sum = 0;
+  const acc = [[pts[0].minute, 0]];
+  for (let i = 1; i < pts.length; i++) { sum += ((pts[i].kw + pts[i - 1].kw) / 2) * ((pts[i].minute - pts[i - 1].minute) / 60); acc.push([pts[i].minute, sum]); }
+  const k = sum > 0 && energy.todayKwh ? energy.todayKwh / sum : 1;
+  const top = Math.max(10, Math.ceil((energy.todayKwh || sum) / 10) * 10);
+  const L = labels ? 34 : 4, B = labels ? h - 18 : h - 4, T = 8;
+  const X = (min) => L + (min / 1440) * (w - L - 6), Y = (v) => B - (v / top) * (B - T);
+  const line = acc.map(([m, v], i) => `${i ? "L" : "M"}${X(m).toFixed(1)} ${Y(v * k).toFixed(1)}`).join("");
+  const end = acc.at(-1);
+  const grid = [0, top / 2, top].map((v) => `<line x1="${L}" x2="${w - 4}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" class="tg"/>${labels ? `<text x="${L - 6}" y="${(Y(v) + 3).toFixed(1)}" text-anchor="end">${v}</text>` : ""}`).join("");
+  const ticks = labels ? [[0, "12 AM"], [360, "6 AM"], [720, "Noon"], [1080, "6 PM"]].map(([m, t]) => `<text x="${X(m).toFixed(1)}" y="${h - 3}" text-anchor="${m ? "middle" : "start"}">${t}</text>`).join("") : "";
+  box.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">${grid}${ticks}<path class="ta" d="${line}L${X(end[0]).toFixed(1)} ${B}L${X(acc[0][0]).toFixed(1)} ${B}Z"/><path class="tl" pathLength="1" d="${line}"/><circle class="te" cx="${X(end[0]).toFixed(1)}" cy="${Y(end[1] * k).toFixed(1)}" r="4"/></svg>`;
+  return box;
+}
+
+// An arc gauge (270°), or a half circle with semi: value is 0..1. The number sits inside.
+function gauge(frac, { size = 120, stroke = 10, semi = false, cls = "", label = "", value = "", unit = "" } = {}) {
+  const r = (size - stroke) / 2, c = 2 * Math.PI * r, arc = semi ? c / 2 : c * 0.75;
+  const f = clamp01(frac);
+  const rot = semi ? 180 : 135;
+  const g = el("div", { class: `ds-gauge ${semi ? "semi" : ""} ${cls}`, role: "img", "aria-label": `${label}: ${value}${unit}`, style: `--size:${size}px` });
+  g.innerHTML = `<svg viewBox="0 0 ${size} ${semi ? size / 2 + stroke : size}" aria-hidden="true"><circle class="gt" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${stroke}" stroke-dasharray="${arc.toFixed(1)} ${c.toFixed(1)}" transform="rotate(${rot} ${size / 2} ${size / 2})"/><circle class="gv" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${stroke}" stroke-dasharray="${(arc * f).toFixed(1)} ${c.toFixed(1)}" style="--arc:${(arc * f).toFixed(1)}" transform="rotate(${rot} ${size / 2} ${size / 2})"/></svg>`;
+  g.append(el("span", { class: "gauge-num", "aria-hidden": "true" }, value, unit ? el("small", {}, unit) : null), label ? el("span", { class: "gauge-label", "aria-hidden": "true" }, label) : null);
+  return g;
+}
+
+// The thermostat as a dial: the arc runs to the set temperature, the number is the room now.
+function climateDoing(d) {
+  const s = d.state, t = targetOf(d);
+  return s.mode === "off" ? "System off" : s.hvac === "heating" ? `Heating to ${t}°` : s.hvac === "cooling" ? `Cooling to ${t}°` : `Holding ${t}°`;
+}
+function climateHue(d) {
   const s = d.state;
-  const pos = (v) => `${Math.min(100, Math.max(0, ((v - 55) / 30) * 100))}%`;
-  const doing = s.mode === "off" ? "System off" : s.hvac === "heating" ? `Heating to ${targetOf(d)}°` : s.hvac === "cooling" ? `Cooling to ${targetOf(d)}°` : `Holding ${targetOf(d)}°`;
-  return el("section", { class: "xcard st-card st-climate", "data-device": d.id, "aria-label": "Climate" },
-    el("div", { class: "row-between" }, el("h2", {}, "Climate"), el("span", { class: "muted small" }, `${s.humidity ?? "--"}% humidity`)),
-    el("div", { class: "st-climate-now" }, el("p", { class: "st-temp big" }, `${Math.round(s.current)}°`), el("p", { class: "muted" }, doing)),
-    el("div", { class: "st-range", role: "img", "aria-label": `Set to ${targetOf(d)}°F; it's ${s.current}°F inside. Range 55 to 85°F.` },
-      el("span", { class: "st-range-now", style: `left:${pos(s.current)}` }),
-      el("span", { class: "st-range-set", style: `left:${pos(targetOf(d))}` })),
-    el("div", { class: "st-range-labels muted small", "aria-hidden": "true" }, el("span", {}, "55°"), el("span", {}, "85°")),
-    el("div", { class: "pill-stepper" },
-      el("button", { "aria-label": "Cooler by 1°F", onclick: () => stepTarget(d, -1) }, "−"),
-      el("span", { class: "target" }, `${targetOf(d)}°F`),
-      el("button", { "aria-label": "Warmer by 1°F", onclick: () => stepTarget(d, 1) }, "+")),
-    el("div", { class: "seg st-seg", role: "group", "aria-label": "Mode" },
-      ...MODES.map(([m, label]) => el("button", { "aria-pressed": String(s.mode === m), onclick: () => send(d.id, { mode: m }) }, label))));
+  return s.mode === "off" ? "var(--muted)" : s.hvac === "heating" ? "var(--heat)" : s.hvac === "cooling" ? "var(--cool)" : "var(--idle)";
+}
+function tempDial(d, { size = 190, stroke = 12, big = "current" } = {}) {
+  const s = d.state, t = targetOf(d);
+  const frac = clamp01((t - 55) / 30);
+  const r = (size - stroke) / 2 - 4, c = 2 * Math.PI * r, arc = c * 0.75;
+  const a = ((135 + 270 * frac) * Math.PI) / 180;
+  const kx = size / 2 + r * Math.cos(a), ky = size / 2 + r * Math.sin(a);
+  const dial = el("div", { class: "ds-dial", style: `--size:${size}px;--hue:${climateHue(d)}`, role: "img", "aria-label": `${s.current}°F inside, ${climateDoing(d).toLowerCase()}` });
+  dial.innerHTML = `<svg viewBox="0 0 ${size} ${size}" aria-hidden="true"><circle class="gt" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${stroke}" stroke-dasharray="${arc.toFixed(1)} ${c.toFixed(1)}" transform="rotate(135 ${size / 2} ${size / 2})"/><circle class="gv" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${stroke}" stroke-dasharray="${s.mode === "off" ? 0 : (arc * frac).toFixed(1)} ${c.toFixed(1)}" style="--arc:${(arc * frac).toFixed(1)}" transform="rotate(135 ${size / 2} ${size / 2})"/>${s.mode === "off" ? "" : `<circle class="gk" cx="${kx.toFixed(1)}" cy="${ky.toFixed(1)}" r="${stroke * 0.62}"/>`}</svg>`;
+  dial.append(el("div", { class: "dial-mid", "aria-hidden": "true" },
+    el("span", { class: "dial-small" }, big === "current" ? (s.hvac && s.hvac !== "idle" && s.hvac !== "off" ? cap(s.hvac) : "Idle") : "Set to"),
+    el("span", { class: "dial-big" }, big === "current" ? `${s.current}°` : `${t}°`),
+    el("span", { class: "dial-small" }, big === "current" ? climateDoing(d) : `${s.current}° now`)));
+  return dial;
+}
+const climateStepper = (d, cls = "") => el("div", { class: `ds-stepper ${cls}` },
+  el("button", { type: "button", "aria-label": "Cooler by 1°F", onclick: () => stepTarget(d, -1) }, "−"),
+  el("span", { class: "target" }, `${targetOf(d)}°F`),
+  el("button", { type: "button", "aria-label": "Warmer by 1°F", onclick: () => stepTarget(d, 1) }, "+"));
+const modeButtons = (d, cls = "") => el("div", { class: `ds-modes ${cls}`, role: "group", "aria-label": "Mode" },
+  ...MODES.map(([m, label]) => el("button", { type: "button", "aria-pressed": String(d.state.mode === m), onclick: () => send(d.id, { mode: m }) }, label)));
+function heaterStepper(d, cls = "") {
+  return el("div", { class: `ds-stepper ${cls}` },
+    el("button", { type: "button", "aria-label": "Lower 5°F", onclick: () => stepTarget(d, -5), disabled: !d.state.on }, "−"),
+    el("span", { class: "target" }, d.state.on ? `${targetOf(d)}°F` : "Off"),
+    el("button", { type: "button", "aria-label": "Raise 5°F", onclick: () => stepTarget(d, 5), disabled: !d.state.on }, "+"));
 }
 
-function studioScreen() {
-  const list = issues();
-  const hs = houseState();
-  const lights = lightsBlock(panelRoom || null);
-  const secure = securityBlock();
-  const power = energyTile();
-  lights.classList.add("st-card", "st-lights");
-  secure.classList.add("st-card", "st-secure");
-  power.classList.add("st-card", "st-energy");
-  return el("div", { class: "studio" },
-    el("header", { class: "st-top" },
-      el("div", { class: "st-title" },
-        el("p", { class: "eyebrow" }, state.home),
-        el("div", { class: "status", "data-state": hs },
-          el("span", { class: "status-mark", "aria-hidden": "true" }),
-          el("div", { class: "status-text" },
-            el("p", { class: "status-headline" }, hs === "alert" ? "Needs your attention now" : list.length ? `${list.length} ${list.length === 1 ? "thing needs" : "things need"} attention` : state.pending.length ? "Waiting for your OK" : "All secure"),
-            el("ul", { class: "issues" }, ...list.map((i) => el("li", { class: `issue ${i.level}` }, i.text, i.action && el("button", { onclick: i.action[1] }, i.action[0]))))))),
-      el("button", { class: "screens-open", "aria-haspopup": "dialog" }, "Screens")),
+// A light or fan as a big tile: the whole tile is its switch; a dimmer shows while a light is on.
+function lightTile(d, { slider = false, cls = "", icon = ICON.light } = {}) {
+  const s = d.state, on = s.on;
+  const isFan = d.type === "fan";
+  return el("div", { class: `ds-light${on ? " on" : ""}${isFan ? " fan" : ""} ${cls}`, "data-device": d.id, style: on && !isFan ? `--glow:${s.brightness / 100}` : undefined },
+    el("button", { type: "button", class: "ds-light-btn", role: "switch", "aria-checked": String(on), "aria-label": d.name, onclick: () => send(d.id, { on: !on }) },
+      el("span", { class: "ds-light-ic" }, svg(isFan ? ICON.fan : icon)),
+      el("span", { class: "ds-light-name" }, shortName(d)),
+      el("span", { class: "ds-light-state" }, isFan ? (on ? `On · speed ${s.speed}` : "Off") : on ? `On · ${s.brightness}%` : "Off")),
+    slider && on && !isFan ? el("input", { type: "range", class: "ds-range", min: "5", max: "100", step: "5", value: String(s.brightness), "aria-label": `${d.name} brightness`, style: `--fill:${s.brightness}%`,
+      oninput: (e) => e.target.style.setProperty("--fill", `${e.target.value}%`), onchange: (e) => send(d.id, { on: true, brightness: Number(e.target.value) }) }) : null);
+}
+// A row with a switch, for list-style screens.
+function switchRow(d, cls = "") {
+  const s = d.state, on = s.on;
+  const word = d.type === "fan" ? (on ? `On · speed ${s.speed}` : "Off") : on ? `On · ${s.brightness}%` : "Off";
+  return el("li", { class: `ds-row${on ? " on" : ""} ${cls}`, "data-device": d.id },
+    el("span", { class: "ds-row-ic" }, svg(d.type === "fan" ? ICON.fan : ICON.light)),
+    el("span", { class: "ds-row-name" }, shortName(d)),
+    el("span", { class: "ds-row-state" }, word),
+    toggle(d.name, on, () => send(d.id, { on: !on })));
+}
+// A door, lock, garage or water valve with its state in words and, where it has one, its action.
+function statusRow(d, cls = "") {
+  const [level, word] = secState(d);
+  const s = d.state;
+  let action = null;
+  if (d.type === "garage") action = [s.door === "closed" ? "Open" : "Close", () => send(d.id, { door: s.door === "closed" ? "open" : "closed" })];
+  if (d.type === "lock") action = [s.locked ? "Unlock" : "Lock", () => send(d.id, { locked: !s.locked })];
+  return el("li", { class: `ds-row ${cls}`, "data-device": d.id, "data-level": level },
+    el("span", { class: "ds-row-ic" }, svg(ICON[SEC_ICON[d.type]] || ICON.shield)),
+    el("span", { class: "ds-row-name" }, shortName(d)),
+    el("span", { class: `sec-state ${level}` }, el("i", { "aria-hidden": "true" }), word),
+    action ? el("button", { type: "button", class: "ds-row-act", "aria-label": `${action[0]} ${d.name}`, onclick: action[1] }, action[0]) : null);
+}
+const entryPoints = () => [...byType("lock"), ...byType("garage"), ...byType("contact")];
+
+// Cameras on the designed screens: the picture, its name and its state in words. A tap opens
+// the viewer. With none connected, the space says so.
+const camList = () => (cams?.available ? cams.cameras : []);
+function camFeed(c, cls = "") {
+  const [level, word] = camStatus(c);
+  const pic = c.sample || camPictures.get(`/api/cameras/${c.id}/snapshot`)?.url;
+  return el("button", { type: "button", class: `ds-cam ${cls}`, "data-camera": c.id, "aria-label": `${c.name} camera${c.sample ? ", sample picture" : ""}`, onclick: () => openCamera(c.id) },
+    el("img", { alt: "", ...(c.sample ? { src: c.sample } : { "data-cam-src": `/api/cameras/${c.id}/snapshot`, ...(pic ? { src: pic } : { hidden: "" }) }) }),
+    pic ? null : el("span", { class: "cam-wait" }, c.online ? "Loading picture" : "No picture"),
+    el("span", { class: "ds-cam-name" }, c.name),
+    el("span", { class: `ds-cam-state ${level}` }, word));
+}
+const camNone = (cls = "") => el("div", { class: `ds-cam-none ${cls}` }, el("p", {}, cams?.reason || "No cameras connected."));
+
+// The house, in whichever view Screens → House view picks; tapping a room selects it.
+function houseBox() {
+  houseView(altMapBox, { selected: room === "all" ? null : room, onSelect: (id) => { room = room === id ? "all" : id; render(); }, onExpand: () => openExplorer() });
+  return altMapBox;
+}
+
+// Haven's latest updates, newest first.
+const latestUpdates = (n) => feed.map((e) => [e, feedItem(e)]).filter(([, f]) => f).slice(-n).reverse();
+function updatesList(n, cls = "") {
+  const items = latestUpdates(n);
+  return items.length ? el("ol", { class: `ds-updates ${cls}` }, ...items.map(([e, f]) => el("li", { class: f.urgent ? "urgent" : "" },
+    el("span", { class: "upd-title" }, f.title), el("span", { class: "upd-body" }, f.body), el("span", { class: "upd-when" }, timeAgo(e.ts)))))
+    : el("p", { class: "muted" }, "Nothing new.");
+}
+
+// Scene cards with a picture: this home's own photoreal renders where they exist, otherwise
+// the scene's painted light.
+const SCENE_RENDER = { home: "ai-evening-1", away: "ai-day-1", goodnight: "ai-evening-2", morning: "ai-day-2", movie: "ai-evening-2" };
+function scenePhoto(id, label, cls = "") {
+  const thisHome = HOUSE_STILLS?.sig && HOUSE_STILLS.sig === homeSignature(currentHome());
+  const pic = thisHome && HOUSE_RENDERS.find((r) => r.id === SCENE_RENDER[id]);
+  return el("button", { type: "button", class: `scene ds-photo ${cls}`, "data-scene": id, onclick: () => runScene(id) },
+    pic ? el("img", { src: pic.src, alt: "" }) : null,
+    el("span", { class: "ds-photo-name" }, label),
+    el("span", { class: "ds-photo-what" }, state.sceneInfo?.[id] || ""));
+}
+const sceneButton = (id, label, cls = "") => el("button", { type: "button", class: `ds-scene ${cls}`, "data-scene": id, onclick: () => runScene(id) },
+  el("span", { class: "ds-scene-ic" }, svg(SCENE_ICON[id] || ICON.sparkle)),
+  el("span", { class: "ds-scene-name" }, label),
+  state.sceneInfo?.[id] ? el("span", { class: "ds-scene-what" }, state.sceneInfo[id]) : null);
+const sceneList = () => Object.entries(state.scenes);
+
+const bedRoom = () => panelRoom || "primary";
+// The panel's own room for a lights card, or the living room, or the first room with lights.
+function mainLightRoom() {
+  const has = (id) => byType("light").some((l) => l.room === id);
+  return [panelRoom, "living"].find((id) => id && has(id)) || byType("light")[0]?.room;
+}
+
+// ----- 1 · Command: tabs across the top, a rail on the left, tiles in a 12-column grid -----
+let cmTab = "home";
+function commandScreen() {
+  const th = byType("thermostat")[0];
+  const sec = secSummary();
+  const home = state.people.filter((p) => p.home).length;
+  const pick = (t) => { cmTab = t; renderAlt(); };
+  const railBtn = (label, icon, attrs) => el("button", { type: "button", "aria-label": label, title: label, ...attrs }, svg(icon));
+  const TABS = [["home", "Home"], ["lights", "Lights"], ["climate", "Climate"], ["security", "Security"], ["cameras", "Cameras"]];
+  const lights = byType("light");
+  const shownLights = room !== "all" ? lights.filter((l) => l.room === room) : lights.filter((l) => l.room !== "exterior").slice(0, 4);
+  const camsShown = camList();
+  let body;
+  if (cmTab === "lights") {
+    body = [...lights.map((l) => lightTile(l, { slider: true, cls: "span3" })), ...byType("fan").map((f) => lightTile(f, { cls: "span3" })),
+      lights.some((l) => l.state.on) ? el("button", { type: "button", class: "cm-wide span12", onclick: () => allOff(lights.filter((l) => l.state.on), "All lights off.") }, "Turn every light off") : null];
+  } else if (cmTab === "climate") {
+    const wh = byType("water_heater")[0];
+    body = [
+      th ? el("section", { class: "cm-card cm-thermo span6", "data-device": th.id, "aria-label": "Thermostat" },
+        el("h2", {}, shortName(th)), tempDial(th, { size: 230 }), climateStepper(th), modeButtons(th),
+        el("p", { class: "muted" }, `${th.state.humidity ?? "--"}% humidity inside`)) : null,
+      ...byType("fan").map((f) => lightTile(f, { cls: "span3" })),
+      wh ? el("section", { class: "cm-card span6", "data-device": wh.id, "aria-label": wh.name },
+        el("div", { class: "row-between" }, el("h2", {}, wh.name), toggle("Water heater power", wh.state.on, () => send(wh.id, { on: !wh.state.on }))),
+        gauge((targetOf(wh) - 100) / 40, { size: 150, label: describe(wh), value: wh.state.on ? `${targetOf(wh)}°` : "Off" }), heaterStepper(wh)) : null,
+    ];
+  } else if (cmTab === "security") {
+    body = [el("div", { class: "span12" }, securityBlock())];
+  } else if (cmTab === "cameras") {
+    body = camsShown.length ? camsShown.map((c) => camFeed(c, "span6 cm-cam-big")) : [camNone("span12")];
+  } else {
+    body = [
+      ...sceneList().map(([id, label]) => sceneButton(id, label, "span2")),
+      el("button", { type: "button", class: `cm-sec span2 lvl-${sec.level}`, onclick: () => pick("security") },
+        el("span", { class: "ds-scene-ic" }, svg(ICON.shield)),
+        el("span", { class: "ds-scene-name" }, "Security"),
+        el("span", { class: "ds-scene-what" }, `${sec.short} · ${sec.mode[1]}`),
+        el("span", { class: "ds-scene-what" }, home ? `${home} ${home === 1 ? "person" : "people"} home` : "Everyone away")),
+      el("section", { class: "cm-card cm-wx span4", "aria-label": "Weather" },
+        wxNow() ? [
+          el("div", { class: "cm-wx-now" },
+            el("span", { class: "cm-wx-ic" }, wxIcon(weather.current.condition, weather.current.isDay)),
+            el("div", {}, el("p", { class: "cm-wx-text" }, weather.current.text), el("p", { class: "muted" }, `${weather.current.humidity ?? "--"}% humidity${weather.current.windMph != null ? ` · wind ${weather.current.windMph} mph` : ""}`)),
+            el("div", { class: "cm-wx-temp" }, el("p", {}, `${weather.current.tempF}°`), wxSampleTag())),
+          el("ul", { class: "ds-days" }, ...wxDays(4)),
+        ] : [el("h2", {}, "Weather"), wxNotConnected()]),
+      th ? el("section", { class: "cm-card cm-thermo span4", "data-device": th.id, "aria-label": "Thermostat" },
+        el("h2", {}, shortName(th)), tempDial(th, { size: 180 }), climateStepper(th)) : null,
+      el("section", { class: "cm-card cm-house span4", "aria-label": "The house" },
+        el("div", { class: "row-between" }, el("h2", {}, room === "all" ? "The house" : roomName(room)),
+          room !== "all" ? el("button", { type: "button", class: "ghost", onclick: () => { room = "all"; render(); } }, "Every room") : null),
+        houseBox()),
+      ...shownLights.map((l) => lightTile(l, { cls: "span2" })),
+      el("div", { class: "cm-cams span4" }, ...(camsShown.length ? camsShown.slice(0, 2).map((c) => camFeed(c)) : [camNone()])),
+    ];
+    if (!shownLights.length) body.splice(body.length - 1, 0, el("p", { class: "muted span8" }, `No lights in the ${roomName(room).toLowerCase()}.`));
+  }
+  return el("div", { class: "ds s-command" },
+    el("nav", { class: "cm-rail", "aria-label": "Panel" },
+      el("span", { class: "cm-mark", "aria-hidden": "true" }, (state.home || "H").replace(/^The /, "")[0]),
+      railBtn("Home", ICON.home, { "aria-pressed": String(cmTab === "home"), onclick: () => pick("home") }),
+      railBtn("All controls", DI.sliders, { class: "controls-open" }),
+      railBtn("Cameras", DI.camera, { "aria-pressed": String(cmTab === "cameras"), onclick: () => pick("cameras") }),
+      railBtn("Screens", DI.grid, { class: "screens-open", "aria-haspopup": "dialog" })),
+    el("div", { class: "cm-main" },
+      el("header", { class: "cm-top" },
+        el("nav", { class: "cm-tabs", "aria-label": "Sections" }, ...TABS.map(([id, label]) =>
+          el("button", { type: "button", "aria-pressed": String(cmTab === id), "data-tab": id, onclick: () => pick(id) }, label))),
+        liveClock("time", "cm-clock"),
+        el("button", { type: "button", class: "cm-mic", "aria-label": "Talk to Haven", onclick: talk }, svg(DI.mic))),
+      dsIssues(), asksBlock(),
+      el("div", { class: `cm-grid tab-${cmTab}` }, ...body.flat().filter(Boolean))));
+}
+
+// ----- 2 · Glass: black glass, a thermostat dial at the side, Haven's voice along the bottom -----
+function glassScreen() {
+  const th = byType("thermostat")[0];
+  const sec = secSummary();
+  const lr = mainLightRoom();
+  const ringLights = byType("light").filter((l) => l.room === lr);
+  const ring = ringLights[0];
+  const w = wxNow();
+  const two = ["home", "away"].filter((id) => state.scenes[id]);
+  const scenes = (two.length === 2 ? two : sceneList().slice(0, 2).map(([id]) => id)).map((id) => scenePhoto(id, state.scenes[id], "gl-scene"));
+  const doors = entryPoints().filter((d) => d.type !== "contact").slice(0, 3);
+  const chip = (k, v, extra, cls = "") => el("div", { class: `gl-chip ${cls}` }, el("span", { class: "gl-chip-k" }, k, extra), el("span", { class: "gl-chip-v" }, v));
+  const nav = (label, icon, attrs) => el("button", { type: "button", ...attrs }, svg(icon), el("span", {}, label));
+  const knob = th ? el("section", { class: "gl-knob", "data-device": th.id, "aria-label": "Thermostat" },
+    el("p", { class: "gl-knob-label" }, shortName(th)),
+    el("div", { class: "gl-dial" },
+      el("span", { class: "gl-ring", style: `--rot:${(targetOf(th) - 70) * 9}deg;--hue:${climateHue(th)}`, "aria-hidden": "true" }, el("i")),
+      el("div", { class: "gl-face" }, el("span", { class: "gl-set" }, `${targetOf(th)}°`), el("span", { class: "gl-doing" }, climateDoing(th).replace(/ (to )?\d+°$/, "")))),
+    el("p", { class: "gl-now" }, `${th.state.current}° inside · ${th.state.humidity ?? "--"}%`),
+    climateStepper(th, "gl-step"), modeButtons(th, "gl-modes")) : null;
+  return el("div", { class: "ds s-glass" },
+    el("nav", { class: "gl-nav", "aria-label": "Panel" },
+      el("span", { class: "gl-mark", "aria-hidden": "true" }, "H"),
+      nav("Home", ICON.home, { "aria-current": "page" }),
+      nav("Controls", DI.sliders, { class: "controls-open", "aria-label": "All controls" }),
+      nav("Screens", DI.grid, { class: "screens-open", "aria-haspopup": "dialog" })),
+    el("div", { class: "gl-main" },
+      el("header", { class: "gl-top" },
+        el("div", {},
+          el("p", { class: "gl-clock" }, liveClock("hm"), el("span", { class: "gl-ampm" }, liveClock("ampm"))),
+          el("p", { class: "gl-date" }, liveClock("date"), ` · ${greetingWord()}`)),
+        el("div", { class: "gl-chips" },
+          w ? chip("Outside", `${w.current.tempF}° ${w.current.text}`, w.source === "sample" ? " · sample" : "")
+            : chip("Outside", outdoorF() != null ? `${outdoorF()}°` : "Not connected"),
+          th ? chip("Inside", `${th.state.current}° · ${th.state.humidity ?? "--"}%`) : null,
+          chip("Security", `${sec.short} · ${sec.mode[1]}`, "", `lvl-${sec.level}`))),
+      dsIssues(), asksBlock(),
+      el("div", { class: "gl-grid" },
+        el("section", { class: "gl-card gl-news", "aria-label": "Haven updates" },
+          el("h2", {}, "Haven updates"), updatesList(4, "gl-feed"),
+          el("div", { class: "gl-asks" },
+            el("button", { type: "button", onclick: () => api("/api/briefing", {}) }, "Brief me"),
+            el("button", { type: "button", onclick: () => ask("status") }, "How's the house?"))),
+        el("div", { class: "gl-scenes" }, ...scenes),
+        ring ? el("section", { class: "gl-card gl-lamp", "data-device": ring.id, "aria-label": `${roomName(lr)} lights` },
+          el("div", { class: "gl-lamp-ring", style: `--fill:${ring.state.on ? ring.state.brightness : 0}%`, role: "img", "aria-label": ring.state.on ? `${ring.name} at ${ring.state.brightness}%` : `${ring.name} off` },
+            el("span", { "aria-hidden": "true" }, ring.state.on ? `${ring.state.brightness}%` : "Off")),
+          el("div", { class: "gl-lamp-side" },
+            el("p", { class: "gl-lamp-name" }, `${roomName(lr)} lights`),
+            el("div", { class: "gl-lamp-btns" },
+              el("button", { type: "button", "aria-label": "Dimmer", onclick: () => (ring.state.on && ring.state.brightness > 10 ? send(ring.id, { on: true, brightness: ring.state.brightness - 10 }) : send(ring.id, { on: false })) }, "−"),
+              el("button", { type: "button", "aria-label": "Brighter", onclick: () => send(ring.id, { on: true, brightness: ring.state.on ? Math.min(100, ring.state.brightness + 10) : 30 }) }, "+")),
+            toggle(ring.name, ring.state.on, () => send(ring.id, { on: !ring.state.on })))) : null,
+        el("section", { class: "gl-card gl-doors", "aria-label": "Doors" },
+          el("ul", { class: "ds-rows" }, ...doors.map((d) => statusRow(d))))),
+      el("div", { class: "gl-voice" },
+        el("button", { type: "button", class: "gl-talk", "aria-label": "Talk to Haven", onclick: talk },
+          el("span", { class: "gl-orb", "data-voice": voiceState, "aria-hidden": "true" }, svg(DI.mic)),
+          el("span", { class: "gl-talk-text" },
+            el("span", { class: "st-state" }, VOICE_LABEL[voiceState]),
+            el("span", { class: "st-reply" }, lastReply || `${greetingWord()}. Talk to me.`)),
+          el("span", { class: "wave gl-wave", "aria-hidden": "true" }, ...Array.from({ length: 28 }, () => el("i")))),
+        agentRow())),
+    knob);
+}
+
+// ----- 3 · Security Console: the alarm-panel view, for the door you leave by -----
+function consoleScreen() {
+  const th = byType("thermostat")[0];
+  const wh = byType("water_heater")[0];
+  const on = allDevices().filter((d) => (d.type === "light" || d.type === "fan") && d.state.on);
+  const dialCard = (d, title, dial, controls) => el("section", { class: "co-card co-dial", "data-device": d.id, "aria-label": title },
+    el("div", { class: "row-between" }, el("h2", {}, title), el("span", { class: "muted small" }, d.type === "thermostat" ? roomName(d.room) : "Heat pump")), dial, ...controls);
+  return el("div", { class: "ds s-console" },
+    el("header", { class: "co-top" },
+      el("p", { class: "co-name" }, state.home),
+      dsStatus("co-status"),
+      liveClock("time", "co-clock"),
+      dsTools()),
     asksBlock(),
-    el("div", { class: "st-grid" }, studioTime(), studioOrb(), lights, studioClimate(byType("thermostat")[0]), power, secure));
+    el("div", { class: "co-actions" },
+      state.scenes.away ? bigButton("I'm leaving", state.sceneInfo?.away || "Away", () => runScene("away"), "primary") : null,
+      state.scenes.home ? bigButton("I'm home", state.sceneInfo?.home || "Welcome home", () => runScene("home")) : null,
+      bigButton("Lock up", "Every door, and the garage", lockUp)),
+    el("div", { class: "co-grid" },
+      el("div", { class: "co-sec" }, securityBlock()),
+      el("div", { class: "co-dials" },
+        th ? dialCard(th, "Thermostat", tempDial(th, { size: 170 }), [climateStepper(th), modeButtons(th)]) : null,
+        wh ? dialCard(wh, wh.name, gauge((targetOf(wh) - 100) / 40, { size: 150, label: wh.state.on ? "Ready" : "Off", value: wh.state.on ? `${targetOf(wh)}°F` : "Off" }),
+          [heaterStepper(wh), el("div", { class: "row-between" }, el("span", { class: "muted small" }, "Power"), toggle("Water heater power", wh.state.on, () => send(wh.id, { on: !wh.state.on })))]) : null),
+      el("div", { class: "co-cams" }, camerasBlock()),
+      el("div", { class: "co-side" },
+        el("section", { class: "co-card co-house", "aria-label": "The house" },
+          el("div", { class: "row-between" }, el("h2", {}, room === "all" ? "The house" : roomName(room)),
+            room !== "all" ? el("button", { type: "button", class: "ghost", onclick: () => { room = "all"; render(); } }, "Every room") : null),
+          houseBox()),
+        el("section", { class: "co-card", "aria-label": "Today" }, el("h2", {}, "Today"), updatesList(4)),
+        block("Still on", "stillon-card co-card",
+          on.length ? el("ul", { class: "lights-list" }, ...on.map((d) => el("li", { class: "on", "data-device": d.id },
+            el("span", { class: "tile-icon" }, svg(d.type === "fan" ? ICON.fan : ICON.light)),
+            el("div", { class: "ll-text" }, el("span", { class: "ll-name" }, d.name), el("span", { class: "ll-state" }, describe(d))),
+            el("button", { type: "button", onclick: () => send(d.id, { on: false }) }, "Turn off")))) : el("p", { class: "muted" }, "Everything's off."),
+          on.length > 1 ? el("button", { type: "button", class: "ghost", onclick: () => allOff(on, "Everything's off.") }, "Turn everything off") : null))));
+}
+
+// ----- 4 · Everything Wall: a strip of numbers, the cameras, every switch, the rooms, gauges -----
+function wallScreen() {
+  const th = byType("thermostat")[0];
+  const valve = byType("water_valve")[0];
+  const wet = byType("leak").filter((l) => l.state.wet);
+  const wh = byType("water_heater")[0];
+  const w = wxNow();
+  const kpi = (label, value, unit, note, cls = "") => el("div", { class: `wa-kpi ${cls}` },
+    el("span", { class: "wa-k" }, label), el("span", { class: "wa-v" }, value, unit ? el("small", {}, unit) : null), note ? tag(note) : null);
+  const outside = w ? kpi("Outside", `${w.current.tempF}`, "°F", w.source === "sample" ? "Sample" : "") : outdoorF() != null ? kpi("Outside", `${outdoorF()}`, "°F", "Sensor") : kpi("Outside", "--", "", "Not connected");
+  const devRow = [
+    ...[...entryPoints(), ...byType("water_valve")].map((d) => { const [level, word] = secState(d); return el("div", { class: `wa-dev lvl-${level}`, "data-device": d.id }, el("span", { class: "wa-dev-ic" }, svg(ICON[SEC_ICON[d.type]] || ICON.shield)), el("span", { class: "wa-dev-name" }, shortName(d)), el("span", { class: "sec-state " + level }, el("i", { "aria-hidden": "true" }), word)); }),
+    ...byType("light").filter((l) => l.room === "exterior").map((l) => lightTile(l, { cls: "wa-sw" })),
+    ...byType("fan").map((f) => lightTile(f, { cls: "wa-sw" })),
+  ];
+  const rooms = state.rooms.filter((r) => allDevices().some((d) => d.room === r.id && ["light", "fan", "motion", "leak", "thermostat", "water_heater", "garage"].includes(d.type)) && r.id !== "exterior");
+  const roomCardW = (r) => {
+    const ds = allDevices().filter((d) => d.room === r.id);
+    const lit = ds.some((d) => d.type === "light" && d.state.on);
+    const lines = [];
+    for (const d of ds) {
+      if (d.type === "motion") lines.push([shortName(d) === r.name ? "Motion" : `${shortName(d)} motion`, d.state.motion ? "Motion now" : "Quiet"]);
+      if (d.type === "leak") lines.push([d.name.replace(/ Leak Sensor$/, " leak sensor"), d.state.wet ? "LEAK" : "Dry"]);
+      if (d.type === "thermostat") lines.push(["Thermostat", `${d.state.current}° · holding ${targetOf(d)}°`]);
+      if (d.type === "water_heater") lines.push(["Water heater", describe(d)]);
+      if (d.type === "garage") lines.push(["Garage door", secState(d)[1]]);
+      if (d.type === "fan") lines.push([d.name, d.state.on ? `On · speed ${d.state.speed}` : "Off"]);
+    }
+    return el("section", { class: `wa-room${lit ? " lit" : ""}`, "data-room": r.id, "aria-label": r.name },
+      el("h2", {}, r.name, lit ? tag("Lit", "lit") : null),
+      ...ds.filter((d) => d.type === "light").map((l) => el("button", { type: "button", class: "wa-lamp", role: "switch", "aria-checked": String(l.state.on), "aria-label": l.name, "data-device": l.id, onclick: () => send(l.id, { on: !l.state.on }) },
+        el("span", { class: "wa-lamp-top" }, el("span", {}, "Lights"), el("b", {}, l.state.on ? `${l.state.brightness}%` : "Off")),
+        el("span", { class: "wa-bar", "aria-hidden": "true" }, el("i", { style: `width:${l.state.on ? l.state.brightness : 0}%` })))),
+      el("ul", { class: "wa-lines" }, ...lines.map(([k, v]) => el("li", { class: v === "LEAK" ? "alert" : "" }, el("span", {}, k), el("b", {}, v)))));
+  };
+  return el("div", { class: "ds s-wall" },
+    el("div", { class: "wa-kpis" },
+      el("div", { class: "wa-kpi wa-time" }, el("span", { class: "wa-clock" }, liveClock("time")), el("span", { class: "wa-k" }, liveClock("date"))),
+      th ? kpi("Inside", `${th.state.current}`, "°F") : null,
+      outside,
+      th ? kpi("Humidity", `${th.state.humidity ?? "--"}`, "%") : null,
+      energy ? kpi("Power now", `${energy.nowKw}`, "kW", energy.source === "estimate" ? "Est." : "") : null,
+      energy ? kpi("Today", `${energy.todayKwh}`, "kWh", energy.source === "estimate" ? "Est." : "") : null,
+      valve ? kpi("Water", valve.state.open ? "On" : "Off", "", wet.length ? "Leak" : "No leaks", wet.length || !valve.state.open ? "alert" : "ok") : null),
+    el("div", { class: "wa-top" }, dsStatus("wa-status"), dsTools()),
+    asksBlock(),
+    el("div", { class: "wa-cams" }, ...(camList().length ? camList().slice(0, 4).map((c) => camFeed(c)) : [camNone()])),
+    el("div", { class: "wa-devs" }, ...devRow),
+    el("div", { class: "wa-bottom" },
+      el("div", { class: "wa-rooms" }, ...rooms.map(roomCardW)),
+      el("div", { class: "wa-right" },
+        el("div", { class: "wa-gauges" },
+          th ? gauge((th.state.current - 50) / 40, { label: "Inside", value: `${th.state.current}°`, cls: "g-heat" }) : null,
+          th ? gauge((th.state.humidity ?? 0) / 100, { label: "Humidity", value: `${th.state.humidity ?? "--"}%`, cls: "g-cool" }) : null,
+          wh ? gauge((targetOf(wh) - 100) / 40, { label: "Water heater", value: wh.state.on ? `${targetOf(wh)}°F` : "Off", cls: "g-warm" }) : null,
+          energy ? gauge(energy.nowKw / 5, { label: energy.source === "estimate" ? "Power, est." : "Power", value: `${energy.nowKw}`, unit: " kW", cls: "g-ok" }) : null),
+        el("section", { class: "wa-energy", "aria-label": "Electricity today" },
+          el("p", { class: "wa-energy-head" }, el("span", {}, "Electricity today"), tag(energyWord()), el("b", {}, energy ? `${energy.todayKwh}` : "--", el("small", {}, " kWh so far"))),
+          runningTotal({ w: 640, h: 190 })))));
+}
+
+// ----- 5 · Good Evening: a greeting, climate and water, the forecast, scenes, rooms, cameras -----
+let evSeg = "climate";
+function eveningScreen() {
+  const th = byType("thermostat")[0];
+  const wh = byType("water_heater")[0];
+  const w = wxNow();
+  const today = w?.daily?.[0];
+  const chipsWx = w ? [
+    el("span", {}, "Outside is"), el("span", { class: "ev-pill" }, `${w.current.tempF}°F, ${w.current.text.toLowerCase()}`),
+    w.current.windMph != null ? [el("span", {}, "Wind"), el("span", { class: "ev-pill" }, `${w.current.windMph} mph`)] : null,
+    today ? [el("span", {}, "High"), el("span", { class: "ev-pill" }, `${today.highF}° ▲`), el("span", {}, "Low"), el("span", { class: "ev-pill" }, `${today.lowF}° ▼`)] : null,
+  ] : [el("span", {}, outdoorF() != null ? `It's ${outdoorF()}°F outside, from your sensor.` : "The forecast isn't connected yet.")];
+  const last = [...feed].reverse().find((e) => e.type === "briefing");
+  const segBtn = (id, label) => el("button", { type: "button", role: "tab", "aria-selected": String(evSeg === id), onclick: () => { evSeg = id; renderAlt(); } }, label);
+  const roomCardE = (r) => {
+    const ds = allDevices().filter((d) => d.room === r.id);
+    const lights = ds.filter((d) => d.type === "light"), fans = ds.filter((d) => d.type === "fan");
+    const lit = lights.filter((l) => l.state.on);
+    const bits = [];
+    if (lights.length) bits.push(lit.length ? `Lights ${lit.length === 1 ? `${lit[0].state.brightness}%` : `${lit.length} on`}` : "Lights off");
+    for (const f of fans) bits.push(`fan ${f.state.on ? "on" : "off"}`);
+    if (!lights.length && !fans.length) {
+      const extra = ds.find((d) => ["water_heater", "garage", "lock", "leak"].includes(d.type));
+      if (extra) bits.push(`${shortName(extra)}: ${secState(extra)[1] || describe(extra)}`);
+    }
+    const circle = (d, label, icon) => el("button", { type: "button", class: "ev-act", role: "switch", "aria-checked": String(d.state.on), "aria-label": label, "data-device": d.id, onclick: () => send(d.id, { on: !d.state.on }) }, svg(icon));
+    return el("section", { class: `ev-room${lit.length ? " lit" : ""}`, "data-room": r.id, "aria-label": r.name },
+      el("p", { class: "ev-room-name" }, r.name.replace(/ Room$/, "")),
+      el("p", { class: "ev-room-state" }, cap(bits.join(" · "))),
+      el("span", { class: "ev-blob", "aria-hidden": "true" }, svg(roomIcon(r))),
+      el("div", { class: "ev-acts" }, ...lights.slice(0, 2).map((l) => circle(l, l.name, ICON.light)), ...fans.map((f) => circle(f, f.name, ICON.fan))));
+  };
+  // Under each camera, the light that goes with it: one named like the camera ("Driveway" and
+  // the Driveway Lights) first, then any other light in its room that no camera has yet.
+  const shownCams = camList().slice(0, 4);
+  const camLight = new Map(), used = new Set();
+  for (const c of shownCams) {
+    const words = c.name.toLowerCase().split(/\s+/).filter((wd) => wd.length > 3);
+    const l = byType("light").find((x) => !used.has(x.id) && words.some((wd) => x.name.toLowerCase().includes(wd)));
+    if (l) { camLight.set(c.id, l); used.add(l.id); }
+  }
+  for (const c of shownCams) {
+    if (camLight.has(c.id)) continue;
+    const l = byType("light").find((x) => x.room === c.room && !used.has(x.id));
+    if (l) { camLight.set(c.id, l); used.add(l.id); }
+  }
+  const camLights = (c) => (camLight.has(c.id) ? [camLight.get(c.id)] : []);
+  return el("div", { class: "ds s-evening" },
+    el("div", { class: "ev-top" },
+      el("div", { class: "ev-hello" },
+        el("p", { class: "ev-greet" }, `${greetingWord()}!`),
+        el("p", { class: "ev-date" }, "Today is ", liveClock("dateShort"), " · ", liveClock("time")),
+        el("div", { class: "ev-chips" }, ...chipsWx.flat().filter(Boolean)),
+        w?.source === "sample" ? el("p", { class: "ev-fine" }, "Sample weather for this demo") : null,
+        el("div", { class: "ev-note briefing-card" },
+          last ? el("div", { class: "brief" }, el("p", { class: "brief-title" }, last.title), el("p", {}, last.body)) : el("p", {}, lastReply || "Everything Haven notices shows up here."),
+          el("button", { type: "button", class: "ghost", onclick: () => api("/api/briefing", {}) }, "Brief me now"))),
+      el("section", { class: "ev-climate", "aria-label": "Climate and water" },
+        el("div", { class: "ev-seg", role: "tablist", "aria-label": "Climate or water heater" }, segBtn("climate", "Climate"), wh ? segBtn("water", "Water heater") : null),
+        evSeg === "water" && wh ? el("div", { class: "ev-pane", "data-device": wh.id, role: "tabpanel" },
+          el("p", { class: "ev-big" }, wh.state.on ? `${targetOf(wh)}` : "Off", wh.state.on ? el("small", {}, "°F") : null),
+          el("p", { class: "muted" }, `${wh.name} · ${describe(wh)}`),
+          el("p", { class: "ev-ok" }, byType("leak").some((l) => l.state.wet) ? "A leak sensor is wet" : "Leak sensors dry"),
+          heaterStepper(wh), el("div", { class: "row-between" }, el("span", { class: "muted small" }, "Power"), toggle("Water heater power", wh.state.on, () => send(wh.id, { on: !wh.state.on }))))
+        : th ? el("div", { class: "ev-pane", "data-device": th.id, role: "tabpanel" },
+          el("div", { class: "ev-now" },
+            el("p", {}, el("b", {}, `${th.state.current}°F`), el("span", {}, "Inside now")),
+            el("p", {}, el("b", {}, `${th.state.humidity ?? "--"}%`), el("span", {}, "Humidity"))),
+          el("div", { class: "ev-track", role: "img", "aria-label": `Set to ${targetOf(th)}°F, on a scale of 60 to 80` },
+            el("i", { style: `left:${clamp01((targetOf(th) - 60) / 20) * 100}%` })),
+          el("div", { class: "ev-ctl" }, climateStepper(th), modeButtons(th)),
+          el("div", { class: "feel", role: "group", "aria-label": "Tell Haven how it feels" }, ...feelButtons().slice(0, 2))) : null),
+      el("section", { class: "ev-wx", "aria-label": "Weather forecast" },
+        el("h2", {}, "Weather forecast"),
+        w ? el("p", { class: "muted" }, (() => { const wet = w.daily.find((d) => d.precip >= 50); return wet ? `Rain likely ${wet.label} · ${wet.precip}%` : "No rain expected"; })(), w.source === "sample" ? " · sample" : "") : wxNotConnected(),
+        wxRanges(4, "ev-ranges")),
+      el("section", { class: "ev-scenes", "aria-label": "Scenes" },
+        el("h2", {}, "Scenes"),
+        ...sceneList().map(([id, label]) => el("button", { type: "button", class: "ev-scene", "data-scene": id, onclick: () => runScene(id) },
+          el("span", { class: `ev-scene-bar sc-${id}`, "aria-hidden": "true" }),
+          el("span", { class: "ev-scene-text" }, el("b", {}, label), el("span", {}, state.sceneInfo?.[id] || ""))))),
+      el("div", { class: "ev-tools" }, dsStatus("ev-status"), dsTools())),
+    asksBlock(),
+    el("h2", { class: "ev-h" }, "Rooms"),
+    el("div", { class: "ev-rooms" }, ...state.rooms.filter((r) => r.id !== "exterior" && allDevices().some((d) => d.room === r.id && CONTROL_TYPES.has(d.type))).map(roomCardE)),
+    el("div", { class: "ev-cams" }, ...(shownCams.length ? shownCams.map((c) => el("div", { class: "ev-cam" },
+      el("h2", {}, c.name), camFeed(c),
+      el("div", { class: "ev-cam-lights" }, ...camLights(c).map((l) => el("button", { type: "button", role: "switch", "aria-checked": String(l.state.on), "aria-label": l.name, "data-device": l.id, onclick: () => send(l.id, { on: !l.state.on }) }, svg(ICON.light), shortName(l) + " light"))))) : [camNone()])));
+}
+
+// ----- 6 · Aurora: the bedroom; dims at night, and can wear its sleeper's own photo -----
+function auroraScreen() {
+  const th = byType("thermostat")[0];
+  const here = bedRoom();
+  const mine = allDevices().filter((d) => d.room === here && (d.type === "light" || d.type === "fan"));
+  const lit = mine.filter((d) => d.type === "light" && d.state.on);
+  const w = wxNow();
+  const sec = secSummary();
+  const feel = (f, room) => api("/api/feedback", { feeling: f, room }).then((r) => { reply(r.message); refresh(); });
+  return el("div", { class: "ds s-aurora" },
+    el("div", { class: "au-col" },
+      el("div", { class: "au-card au-clock" },
+        el("p", { class: "au-time" }, liveClock("hm"), el("small", {}, liveClock("ampm"))),
+        el("p", { class: "au-date" }, liveClock("date"))),
+      el("h2", { class: "au-h" }, roomName(here)),
+      el("div", { class: "au-tiles" }, ...(mine.length ? mine.map((d) => lightTile(d, { cls: "au-tile" })) : [el("p", { class: "muted" }, "No lights or fans in this room.")])),
+      el("div", { class: "au-bed" },
+        bigButton("Goodnight", state.sceneInfo?.goodnight || "Lock up, lights off", () => runScene("goodnight"), "primary"),
+        bigButton("Lights off", lit.length ? `${roomName(here)}: ${lit.length} on` : `${roomName(here)} is dark`, () => allOff(lit, `${roomName(here)} lights off.`)),
+        th ? bigButton("Warmer", `Now ${targetOf(th)}°F`, () => feel("too_cold", here)) : null,
+        th ? bigButton("Cooler", `Now ${targetOf(th)}°F`, () => feel("too_warm", here)) : null,
+        state.scenes.morning ? bigButton("Good morning", state.sceneInfo?.morning || "", () => runScene("morning")) : null),
+      el("div", { class: "night-photo" },
+        el("button", { type: "button", class: "ghost night-photo-add", onclick: () => $("#night-file").click() }, nightPhoto() ? "Change photo" : "Add your photo"),
+        nightPhoto() ? el("button", { type: "button", class: "ghost night-photo-remove", onclick: removeNightPhoto }, "Remove photo") : null,
+        el("span", { class: "night-photo-note" }, `Stays on this ${roomName(here).toLowerCase()} panel.`))),
+    el("div", { class: "au-col" },
+      el("section", { class: "au-card au-wx", "aria-label": "Weather" },
+        w ? [el("div", { class: "au-wx-now" }, el("span", { class: "au-wx-ic" }, wxIcon(w.current.condition, w.current.isDay)),
+          el("div", {}, el("p", {}, w.current.text), w.source === "sample" ? el("p", { class: "au-fine" }, "Sample forecast") : null),
+          el("p", { class: "au-wx-t" }, `${w.current.tempF}°`)),
+        el("ul", { class: "ds-days" }, ...wxDays(4))] : wxNotConnected()),
+      el("div", { class: `au-card au-sec lvl-${sec.level}` }, svg(ICON.shield), el("div", {}, el("p", { class: "au-sec-t" }, `${sec.short} · ${sec.mode[1]} mode`), el("p", { class: "au-fine" }, sec.headline))),
+      dsIssues(), asksBlock(),
+      th ? el("section", { class: "au-card au-thermo", "data-device": th.id, "aria-label": "Thermostat" },
+        el("p", { class: "au-fine" }, shortName(th)), tempDial(th, { size: 180, stroke: 9, big: "target" }), climateStepper(th)) : null,
+      el("div", { class: "au-tools" }, dsTools())),
+    el("div", { class: "au-col" },
+      el("h2", { class: "au-h" }, "Electricity"),
+      el("p", { class: "au-pill" }, liveClock("dateShort"), ` · ${energyWord().toLowerCase()}`),
+      el("section", { class: "au-card", "aria-label": "Electricity today" },
+        el("p", { class: "au-fine" }, "Running total"),
+        el("p", { class: "au-kwh" }, energy ? `${energy.todayKwh}` : "--", el("small", {}, " kWh so far")),
+        runningTotal({ w: 300, h: 150, labels: false })),
+      el("div", { class: "au-semis" },
+        energy ? gauge(energy.nowKw / 5, { semi: true, size: 110, stroke: 9, label: `Right now, ${energyWord().toLowerCase()}`, value: `${energy.nowKw}`, unit: " kW", cls: "g-ok" }) : null,
+        th ? gauge((th.state.humidity ?? 0) / 100, { semi: true, size: 110, stroke: 9, label: "Humidity", value: `${th.state.humidity ?? "--"}%`, cls: "g-cool" }) : null),
+      el("h2", { class: "au-h" }, "Scenes"),
+      ...sceneList().filter(([id]) => id !== "goodnight" && id !== "morning").map(([id, label]) => el("button", { type: "button", class: "au-scene", "data-scene": id, onclick: () => runScene(id) },
+        el("b", {}, label), el("span", {}, state.sceneInfo?.[id] || "")))));
+}
+
+// ----- 7 · Portrait Classic: sections read top to bottom -----
+function classicScreen() {
+  const th = byType("thermostat")[0];
+  const sec = secSummary();
+  const valve = byType("water_valve")[0];
+  const wet = byType("leak").filter((l) => l.state.wet);
+  const w = wxNow();
+  const section = (title, icon, ...children) => el("section", { class: "cl-sec", "aria-label": title }, el("h2", {}, svg(icon), title), ...children.filter(Boolean));
+  const locked = byType("lock").filter((l) => l.state.locked).length;
+  const tile = (label, value, unit, icon, hue) => el("div", { class: "cl-tile" }, el("p", { class: "cl-tile-k" }, el("span", { class: "cl-chip", style: `--hue:${hue}` }, svg(icon)), label), el("p", { class: "cl-tile-v" }, value, el("small", {}, unit)));
+  return el("div", { class: "ds s-classic" },
+    el("header", { class: "cl-top" },
+      el("p", { class: "cl-title" }, "Home overview"), el("p", { class: "cl-home" }, state.home), dsTools()),
+    asksBlock(),
+    el("div", { class: "cl-cols" },
+      el("div", { class: "cl-col" },
+        section("Today", ICON.bell,
+          el("div", { class: "cl-card cl-clock" }, el("p", { class: "cl-time" }, liveClock("time")), el("p", {}, liveClock("dateShort"))),
+          el("div", { class: "cl-card" }, dsStatus("cl-status"), el("p", { class: "cl-note" }, latestUpdates(1)[0] ? latestUpdates(1)[0][1].body : "Nothing new."))),
+        section("Climate", ICON.climate,
+          el("div", { class: "cl-card cl-wx" }, w ? [
+            el("div", { class: "cl-wx-now" }, wxIcon(w.current.condition, w.current.isDay), el("div", {}, el("p", { class: "cl-wx-t" }, w.current.text), el("p", { class: "muted small" }, w.source === "sample" ? "Sample forecast" : "Forecast")), el("p", { class: "cl-wx-f" }, `${w.current.tempF} °F`)),
+            el("ul", { class: "ds-days" }, ...wxDays(4))] : wxNotConnected()),
+          th ? el("div", { class: "cl-card cl-thermo", "data-device": th.id },
+            el("p", { class: "cl-card-t" }, roomName(th.room)), tempDial(th, { size: 190, big: "target" }), climateStepper(th), modeButtons(th)) : null),
+        section("Lights", ICON.light,
+          el("div", { class: "cl-pills" }, ...byType("light").map((l) => lightTile(l, { cls: "cl-pill" })), ...byType("fan").map((f) => lightTile(f, { cls: "cl-pill" }))))),
+      el("div", { class: "cl-col" },
+        section("Home", ICON.home,
+          el("div", { class: "cl-tiles" },
+            th ? tile("Inside", `${th.state.current}`, `°F · ${th.state.humidity ?? "--"}%`, ICON.climate, "#ff7043") : null,
+            tile("Doors", locked === byType("lock").length ? "Locked" : `${byType("lock").length - locked} unlocked`, `${byType("lock").length} locks`, ICON.lock, locked === byType("lock").length ? "#43a047" : "#e8a33a"),
+            valve ? tile("Water", valve.state.open ? "On" : "Off", wet.length ? "leak!" : "no leaks", ICON.water, wet.length || !valve.state.open ? "#e5534b" : "#1e88e5") : null,
+            energy ? tile("Power now", `${energy.nowKw}`, energy.source === "estimate" ? "kW est." : "kW", ICON.bolt, "#f9a825") : null)),
+        section("Cameras", DI.camera, el("div", { class: "cl-cams" }, ...(camList().length ? camList().slice(0, 2).map((c) => camFeed(c)) : [camNone()]))),
+        section("Security", ICON.shield,
+          el("div", { class: `cl-card cl-secline lvl-${sec.level}` }, svg(ICON.shield), el("div", {}, el("p", {}, `${sec.short} · ${sec.mode[1]} mode`), el("p", { class: "muted small" }, "Set by who's home and the time of day"))),
+          el("ul", { class: "ds-rows cl-doors" }, ...entryPoints().map((d) => statusRow(d)))),
+        section("Scenes", ICON.sparkle,
+          el("div", { class: "cl-scenes" }, ...sceneList().map(([id, label]) => sceneButton(id, label, "cl-scene")))))));
+}
+
+// ----- 8 · Neon Frame: glowing outlines on black -----
+function neonScreen() {
+  const th = byType("thermostat")[0];
+  const wh = byType("water_heater")[0];
+  const valve = byType("water_valve")[0];
+  const wet = byType("leak").filter((l) => l.state.wet);
+  const w = wxNow();
+  const top = energy?.breakdown?.filter((p) => !p.name.startsWith("Always-on"))[0];
+  const flowing = energy && energy.nowKw > 0;
+  const flow = el("section", { class: "ne-card ne-flow", "aria-label": energy ? `Electricity: ${energy.nowKw} kilowatts from the grid now, ${energy.todayKwh} kilowatt hours today${top ? `; ${top.name.toLowerCase()} is using the most` : ""}. ${energyWord()}.` : "Electricity: loading" });
+  flow.innerHTML = `<svg viewBox="0 0 240 230" aria-hidden="true" class="${flowing ? "on" : ""}">
+    <path class="nf-glow" d="M60 100 H176"/><path class="nf-line" d="M60 100 H176"/>
+    ${top ? `<path class="nf-line warm" d="M190 132 V176 Q190 192 174 192 H148"/>` : ""}
+    <circle class="nf-node grid" cx="40" cy="100" r="28"/><text x="40" y="106" text-anchor="middle" class="nf-ic">⚡</text><text x="40" y="146" text-anchor="middle" class="nf-k">Grid</text>
+    <circle class="nf-node home" cx="198" cy="100" r="30"/><text x="198" y="106" text-anchor="middle" class="nf-ic">⌂</text>
+    <text x="198" y="48" text-anchor="middle" class="nf-k">Home today</text><text x="198" y="64" text-anchor="middle" class="nf-v">${energy ? `${energy.todayKwh} kWh` : "--"}</text>
+    <text x="118" y="88" text-anchor="middle" class="nf-v big">${energy ? `${energy.nowKw} kW` : "--"}</text>
+    ${top ? `<circle class="nf-node warm" cx="124" cy="192" r="22"/><text x="124" y="198" text-anchor="middle" class="nf-ic">♨</text><text x="124" y="226" text-anchor="middle" class="nf-k">${top.name.replace(/&/g, "&amp;").replace(/</g, "&lt;")} · top user</text>` : ""}
+  </svg>`;
+  flow.append(el("p", { class: "ne-foot" }, `${energyWord()} · `, el("button", { type: "button", class: "ne-link controls-open" }, "Open all controls")));
+  const mini = (k, v, icon) => el("div", { class: "ne-card ne-mini" }, svg(icon), el("span", { class: "ne-mini-v" }, v), el("span", { class: "ne-mini-k" }, k));
+  const listCard = (title, rows) => [el("h2", { class: "ne-h" }, title), el("ul", { class: "ne-card ds-rows ne-list" }, ...rows)];
+  return el("div", { class: "ds s-neon" },
+    el("div", { class: "ne-col" },
+      el("div", { class: "ne-minis" }, th ? mini("Inside", `${th.state.current}°F`, ICON.climate) : null, th ? mini("Humidity", `${th.state.humidity ?? "--"}%`, ICON.water) : null),
+      el("ul", { class: "ne-card ds-rows ne-list", "aria-label": "Doors and locks" }, ...entryPoints().map((d) => statusRow(d))),
+      flow,
+      el("div", { class: "ne-water" },
+        el("div", { class: "ne-card ne-w" }, el("b", {}, wet.length ? "Leak" : "Dry"), el("span", {}, "Leak sensors")),
+        valve ? el("div", { class: "ne-card ne-w" }, el("b", {}, valve.state.open ? "On" : "Off"), el("span", {}, "Main water")) : null,
+        wh ? el("div", { class: "ne-card ne-w" }, el("b", {}, wh.state.on ? `${targetOf(wh)}°F` : "Off"), el("span", {}, "Water heater")) : null),
+      dsStatus("ne-card ne-status")),
+    el("div", { class: "ne-col" },
+      el("div", { class: "ne-card ne-clock" }, el("p", { class: "ne-time" }, liveClock("time")), el("p", {}, liveClock("dateShort"))),
+      el("div", { class: "ne-card ne-wx" }, w ? [wxIcon(w.current.condition, w.current.isDay), el("div", {}, el("p", { class: "ne-wx-t" }, w.current.text), el("p", { class: "ne-fine" }, w.source === "sample" ? "Sample forecast" : "Forecast")), el("p", { class: "ne-wx-f" }, `${w.current.tempF}°F`)] : wxNotConnected()),
+      el("section", { class: "ne-card ne-chart", "aria-label": "Electricity today" },
+        el("p", { class: "ne-chart-t" }, "Electricity today"),
+        el("p", { class: "ne-fine" }, `Running total, ${energyWord().toLowerCase()} · ${energy ? energy.todayKwh : "--"} kWh`),
+        runningTotal({ w: 420, h: 220 })),
+      ...listCard("Outside lights", byType("light").filter((l) => l.room === "exterior").map((l) => switchRow(l))),
+      dsIssues(), asksBlock(), dsTools("ne-tools")),
+    el("div", { class: "ne-col" },
+      ...(camList().length ? camList().slice(0, 3).map((c, i) => camFeed(c, `ne-cam ne-cam-${i}`)) : [camNone("ne-card")]),
+      el("h2", { class: "ne-h" }, "Climate"),
+      el("div", { class: "ne-card ne-climate" },
+        th ? el("div", { class: "ne-cl-row", "data-device": th.id }, el("span", { class: "ne-cl-ic" }, svg(ICON.climate)), el("span", {}, shortName(th)), el("span", { class: "ne-cl-v" }, el("b", {}, `Hold ${targetOf(th)}°F`), el("br"), `Now ${th.state.current}°F`)) : null,
+        th ? climateStepper(th, "ne-step") : null,
+        wh ? el("div", { class: "ne-cl-row", "data-device": wh.id }, el("span", { class: "ne-cl-ic" }, svg(ICON.heater)), el("span", {}, wh.name), el("span", { class: "ne-cl-v" }, el("b", {}, wh.state.on ? `${targetOf(wh)}°F` : "Off"), el("br"), describe(wh).replace(/^\d+°F · /, ""))) : null),
+      ...listCard("Lighting control", [...byType("light").filter((l) => l.room !== "exterior"), ...byType("fan")].map((d) => switchRow(d)))));
+}
+
+// ----- 9 · Lagoon: deep blue, the house itself, Home and Away, and Haven's voice -----
+function lagoonScreen() {
+  const th = byType("thermostat")[0];
+  const sec = secSummary();
+  const w = wxNow();
+  const front = byType("lock")[0];
+  const valve = byType("water_valve")[0];
+  const wet = byType("leak").filter((l) => l.state.wet);
+  const home = state.people.filter((p) => p.home);
+  const v = state.voice;
+  const lit = byType("light").filter((l) => l.state.on);
+  const two = ["home", "away"].filter((id) => state.scenes[id]);
+  const stat = (k, val, icon) => el("div", { class: "la-stat" }, svg(icon), el("span", {}, el("span", { class: "la-stat-k" }, k), el("b", {}, val)));
+  return el("div", { class: "ds s-lagoon" },
+    el("header", { class: "la-top" },
+      el("nav", { class: "la-nav", "aria-label": "Panel" },
+        el("button", { type: "button", "aria-pressed": "true", "aria-label": "Overview" }, svg(DI.grid)),
+        el("button", { type: "button", class: "controls-open", "aria-label": "All controls" }, svg(DI.sliders)),
+        camList()[0] ? el("button", { type: "button", "aria-label": "Cameras", onclick: () => openCamera(camList()[0].id) }, svg(DI.camera)) : null,
+        el("button", { type: "button", class: "screens-open", "aria-haspopup": "dialog", "aria-label": "Screens" }, svg(ICON.sparkle))),
+      el("p", { class: "la-home" }, state.home)),
+    dsIssues(), asksBlock(),
+    el("div", { class: "la-grid" },
+      el("div", { class: "la-col" },
+        el("section", { class: "la-card la-wx", "aria-label": "Weather" },
+          el("div", { class: "la-wx-head" },
+            w ? el("span", { class: "la-wx-ic" }, wxIcon(w.current.condition, w.current.isDay)) : null,
+            el("div", { class: "la-wx-side" },
+              w ? el("p", { class: "la-wx-now" }, `${w.current.text}, ${w.current.tempF}°`, wxSampleTag()) : null,
+              el("p", { class: "la-clock" }, liveClock("hm")),
+              el("p", { class: "la-date" }, liveClock("numeric")))),
+          w ? wxRanges(4, "la-ranges") : wxNotConnected()),
+        el("div", { class: "la-pair" },
+          el("div", { class: "la-card la-io" }, el("p", { class: "la-io-k" }, "Outside"), el("p", { class: "la-io-v" }, w ? `${w.current.tempF}` : outdoorF() ?? "--", el("small", {}, "°F")), el("p", { class: "la-io-n" }, w?.source === "sample" ? "Sample" : w ? "Forecast" : outdoorF() != null ? "Your sensor" : "Not connected")),
+          th ? el("div", { class: "la-card la-io" }, el("p", { class: "la-io-k" }, "Inside"), el("p", { class: "la-io-v" }, `${th.state.current}`, el("small", {}, "°F")), el("p", { class: "la-io-n" }, `Holding ${targetOf(th)}° · ${th.state.humidity ?? "--"}%`)) : null)),
+      el("div", { class: "la-col" },
+        el("section", { class: "la-card la-house", "aria-label": "The house" },
+          el("div", { class: "la-house-head" }, el("p", {}, room === "all" ? "Home" : roomName(room)),
+            el("p", { class: "la-house-sub" }, lit.length ? `${lit.length} light${lit.length === 1 ? "" : "s"} on` : "Lights off", ` · ${sec.short}`)),
+          houseBox()),
+        v?.choices?.length ? el("section", { class: "la-card la-voice", "aria-label": "Haven's voice" },
+          el("p", { class: "la-voice-t" }, "Haven's voice", el("span", {}, "Chosen by your home")),
+          el("div", { class: "la-voices", role: "radiogroup", "aria-label": "Haven's voice" }, ...v.choices.map((c) => el("button", {
+            type: "button", role: "radio", "aria-checked": String(v.choice === c.id), "data-voice": c.id,
+            onclick: async () => {
+              if (v.choice === c.id) return;
+              const r = await api("/api/voice", { voice: c.id });
+              if (!r?.choices) { showHint(r?.error || "That voice couldn't be saved. Try again."); return; }
+              state.voice = r;
+              renderAlt();
+              showHint(`Haven will speak as ${c.name} on every panel.`);
+              if (speakAloud) voice.speak("Hello. This is how I'll sound in your home.");
+            },
+          }, el("b", {}, c.name), el("span", {}, c.about.split("·")[0].trim())))),
+          el("p", { class: "la-voice-n" }, v.provider === "elevenlabs" ? "Every panel speaks with it." : "Saved for the whole home. These natural voices need the premium voice on the home server; until then panels use the tablet's own.")) : null),
+      el("div", { class: "la-col" },
+        el("div", { class: "la-scenes" }, ...(two.length ? two : sceneList().slice(0, 2).map(([id]) => id)).map((id) => scenePhoto(id, state.scenes[id], "la-scene"))),
+        el("div", { class: "la-stats" },
+          stat("Who's home", home.length ? home.map((p) => p.name).join(", ") : "Everyone away", DI.person),
+          stat("Security", `${sec.short} · ${sec.mode[1]}`, ICON.shield),
+          front ? stat(shortName(front), secState(front)[1], ICON.lock) : null,
+          valve ? stat("Water", `${valve.state.open ? "On" : "Off"} · ${wet.length ? "leak" : "dry"}`, ICON.water) : null),
+        dsTools("la-tools"))));
 }
 
 // ---------- Wallpaper screen ----------
@@ -1668,7 +2356,9 @@ function wallpaperScreen() {
           el("div", { class: "status-text" },
             el("p", { class: "status-headline" }, hs === "alert" ? "Needs your attention now" : list.length ? `${list.length} ${list.length === 1 ? "thing needs" : "things need"} attention` : state.pending.length ? "Waiting for your OK" : "All secure"),
             el("ul", { class: "issues" }, ...list.map((i) => el("li", { class: `issue ${i.level}` }, i.text, i.action && el("button", { onclick: i.action[1] }, i.action[0]))))))),
-      el("button", { class: "screens-open", "aria-haspopup": "dialog" }, "Screens")),
+      el("div", { class: "wp-tools" },
+        el("button", { type: "button", class: "controls-open" }, "All controls"),
+        el("button", { class: "screens-open", "aria-haspopup": "dialog" }, "Screens"))),
     asksBlock(),
     el("div", { class: "wp-grid" },
       wpSection("Main", ICON.home,
@@ -1745,14 +2435,14 @@ $("#wp-reset").addEventListener("click", () => {
   showHint("Back to Haven's photos, which follow the time of day.");
 });
 
-// The Nightstand's photo: each bedroom's own, chosen by whoever sleeps there
-// and kept on that nightstand only (one per room, so a shared panel in the
-// hallway never shows someone's bedroom photo).
+// The bedroom photo (on the Aurora screen): each bedroom's own, chosen by whoever sleeps
+// there and kept on that room's panel only (one per room, so a shared panel in the hallway
+// never shows someone's bedroom photo). Stored as haven.nightstand.<room>, as it always was.
 const nightPhotos = new Map(); // room -> photo, for when storage is full or blocked
 const nightRoom = () => panelRoom || "primary";
 const nightPhoto = (r = nightRoom()) => nightPhotos.get(r) || safeGet(`haven.nightstand.${r}`);
 function applyNightPhoto() {
-  const photo = screen === "nightstand" ? nightPhoto() : null;
+  const photo = screen === "aurora" && !controlsOpen ? nightPhoto() : null;
   $("#app").classList.toggle("has-night-photo", Boolean(photo));
   if (photo) $("#app").style.setProperty("--night-photo", `url("${photo}")`);
   else $("#app").style.removeProperty("--night-photo");
@@ -1767,7 +2457,7 @@ $("#night-file").addEventListener("change", async (e) => {
     nightPhotos.set(r, photo);
     const kept = keep(`haven.nightstand.${r}`, photo);
     render();
-    showHint(kept ? `Your photo is on the ${roomName(r)} nightstand.` : "Your photo is on screen, but it's too large to keep after a restart.");
+    showHint(kept ? `Your photo is on the ${roomName(r).toLowerCase()} panel.` : "Your photo is on screen, but it's too large to keep after a restart.");
   } catch {
     showHint("That photo couldn't be opened. Try a JPEG or PNG.");
   }
@@ -1777,63 +2467,16 @@ function removeNightPhoto() {
   nightPhotos.delete(r);
   keep(`haven.nightstand.${r}`, null);
   render();
-  showHint("Photo removed from this nightstand.");
+  showHint("Photo removed from this panel.");
 }
 
+const SCREEN_VIEW = { command: commandScreen, wallpaper: wallpaperScreen, glass: glassScreen, wall: wallScreen, evening: eveningScreen, aurora: auroraScreen, console: consoleScreen, classic: classicScreen, neon: neonScreen, lagoon: lagoonScreen };
+let introFor = null; // a screen draws itself in once when it opens, not on every live update
 function renderAlt() {
   const alt = $("#alt");
-  const th = byType("thermostat")[0];
-  const nodes = [];
-  if (screen === "wallpaper") {
-    nodes.push(wallpaperScreen());
-  } else if (screen === "studio") {
-    nodes.push(studioScreen());
-  } else if (screen === "command-center") {
-    nodes.push(altHeader(), asksBlock(),
-      el("div", { class: "grid-cc" },
-        mapBlock(), climateTile(th), energyTile(), lightsBlock(room === "all" ? null : room), securityBlock(), camerasBlock(), conditionsBlock(), scenesBlock(), updatesBlock(6)));
-  } else if (screen === "family-hub") {
-    nodes.push(altHeader({ big: true }), asksBlock(),
-      el("div", { class: "grid-family" }, briefingBlock(), climateTile(th), scenesBlock("Scenes"), feelBlock(), lightsBlock(panelRoom || null)));
-  } else if (screen === "nightstand") {
-    const here = panelRoom || "primary";
-    const lit = byType("light").filter((l) => l.room === here && l.state.on);
-    nodes.push(
-      el("div", { class: "night" },
-        (() => { const h = altHeader(); h.classList.add("night-head"); return h; })(),
-        asksBlock(),
-        el("div", { class: "night-actions" },
-          bigButton("Goodnight", "Lock up, lights off, 68°F", () => api("/api/scenes/goodnight", {}).then(showResult), "primary"),
-          bigButton("Lights off", lit.length ? `${roomName(here)}: ${lit.length} on` : `${roomName(here)} is dark`, () => Promise.all(lit.map((l) => api(`/api/devices/${l.id}`, { command: { on: false } }))).then(() => showResult({ message: `${roomName(here)} lights off.` }))),
-          bigButton("Warmer", `Now ${targetOf(th)}°F`, () => api("/api/feedback", { feeling: "too_cold", room: here }).then((r) => { reply(r.message); refresh(); })),
-          bigButton("Cooler", `Now ${targetOf(th)}°F`, () => api("/api/feedback", { feeling: "too_warm", room: here }).then((r) => { reply(r.message); refresh(); })),
-          bigButton("Good morning", "Lights up, 71°F", () => api("/api/scenes/morning", {}).then(showResult))),
-        el("div", { class: "night-photo" },
-          el("button", { class: "ghost night-photo-add", onclick: () => $("#night-file").click() }, nightPhoto() ? "Change photo" : "Add your photo"),
-          nightPhoto() ? el("button", { class: "ghost night-photo-remove", onclick: removeNightPhoto }, "Remove photo") : null,
-          el("span", { class: "night-photo-note" }, `Stays on this ${roomName(here)} nightstand.`))));
-  } else if (screen === "rooms") {
-    nodes.push(altHeader(), asksBlock(),
-      el("div", { class: "grid-rooms" }, ...state.rooms.filter((r) => r.devices.length).map(roomCard)));
-  } else if (screen === "entry") {
-    const on = allDevices().filter((d) => (d.type === "light" || d.type === "fan") && d.state.on);
-    nodes.push(altHeader(), asksBlock(),
-      el("div", { class: "entry-actions" },
-        bigButton("I'm leaving", "Lights off, doors locked, garage closed, setback", () => api("/api/scenes/away", {}).then(showResult), "primary"),
-        bigButton("I'm home", "Lights on, comfortable temperature", () => api("/api/scenes/home", {}).then(showResult)),
-        bigButton("Lock up", "Every door, and the garage", lockUp)),
-      el("div", { class: "grid-entry" },
-        camerasBlock(),
-        securityBlock(),
-        block("Still on", "stillon-card",
-          on.length ? el("ul", { class: "lights-list" }, ...on.map((d) => el("li", { class: "on", "data-device": d.id },
-            el("span", { class: "tile-icon" }, svg(d.type === "fan" ? ICON.fan : ICON.light)),
-            el("div", { class: "ll-text" }, el("span", { class: "ll-name" }, d.name), el("span", { class: "ll-state" }, describe(d))),
-            el("button", { onclick: () => send(d.id, { on: false }) }, "Turn off")))) : el("p", { class: "muted" }, "Everything's off."),
-          on.length > 1 ? el("button", { class: "ghost", onclick: () => Promise.all(on.map((d) => api(`/api/devices/${d.id}`, { command: { on: false } }))).then(() => showResult({ message: "Everything's off." })) }, "Turn everything off") : null),
-        conditionsBlock()));
-  }
-  alt.replaceChildren(...nodes.filter(Boolean));
+  const view = (SCREEN_VIEW[screen] || commandScreen)();
+  if (introFor !== screen) { introFor = screen; view.classList.add("intro"); }
+  alt.replaceChildren(view);
   loadCameraPictures();
   const slot = alt.querySelector(".chart-slot");
   if (slot && energy) renderEnergyChart(slot, energy, slot.clientWidth || 600);
@@ -1862,7 +2505,7 @@ function startShowcase() {
   showcase.running = true;
   showcase.returnTo = screen;
   $("#showcase-banner").hidden = false;
-  if (screen !== "studio") { screen = "studio"; room = "all"; render(); }
+  if (screen !== "glass" || controlsOpen) { screen = "glass"; controlsOpen = false; room = "all"; render(); }
   runShowcaseStep();
 }
 async function runShowcaseStep() {
@@ -1897,16 +2540,22 @@ $("#showcase-toggle").addEventListener("click", () => {
 
 // ---------- render and live updates ----------
 function render() {
-  const alt = screen !== "signature";
+  const alt = !controlsOpen;
   $("#app").classList.toggle("alt-mode", alt);
-  $("#app").dataset.screen = screen;
+  $("#app").classList.toggle("controls-mode", !alt);
+  $("#app").dataset.screen = alt ? screen : "controls"; // All controls wears the finish, not the screen's colors
   $("#alt").hidden = !alt;
+  $("#controls-close").textContent = `Back to ${screenName(screen)}`;
+  applyLook();
+  // Every designed screen is dark, so the house wears its evening light there.
+  if (alt && screen !== "wallpaper") $("#app").dataset.mood = "evening"; else delete $("#app").dataset.mood;
   applyNightPhoto();
   if (alt) {
     $("#app").dataset.daypart = state.daypart || "evening";
     $("#orb").dataset.house = houseState();
     renderAlt();
   } else {
+    $("#alt").replaceChildren(); // nothing of the screen lingers, hidden, behind All controls
     renderStage();
     renderAsks();
     renderScenes();
@@ -1942,7 +2591,7 @@ function onEvent(e) {
     else if (e.type === "doorbell") {
       reply(`Someone's at the door. The ${e.name} camera is showing who.`);
       // The panel by the front door shows them right away; the others say so.
-      if (screen === "entry" && !$("#camera-view").open) openCamera(e.camera);
+      if (screen === "console" && !$("#camera-view").open) openCamera(e.camera);
     }
   }
   refresh();

@@ -4,6 +4,24 @@
 import config from "../../config/home.json";
 import { createHome } from "../../src/home.js";
 import { createRoutes } from "../../src/api.js";
+import frontDoor from "./cameras/front_door.webp";
+import frontWalk from "./cameras/front_walk.webp";
+import driveway from "./cameras/driveway.webp";
+import garden from "./cameras/garden.webp";
+
+// The demo house has no cameras, so the panel shows four stills from the film of
+// the model home instead, each marked as a sample picture. Only the demo does this.
+const SAMPLE_CAMERAS = {
+  available: true,
+  sample: true,
+  cameras: [
+    { id: "front_door", name: "Front door", room: "exterior", online: true, doorbell: true, motion: true, lastRing: null, lastMotion: null, sample: frontDoor },
+    { id: "front_walk", name: "Front walk", room: "exterior", online: true, doorbell: false, motion: true, lastRing: null, lastMotion: null, sample: frontWalk },
+    { id: "driveway", name: "Driveway", room: "exterior", online: true, doorbell: false, motion: true, lastRing: null, lastMotion: null, sample: driveway },
+    { id: "garden", name: "Garden", room: "exterior", online: true, doorbell: false, motion: false, lastRing: null, lastMotion: null, sample: garden },
+  ],
+  recent: [],
+};
 
 const ready = (async () => {
   const home = await createHome({ config, env: {}, dataDir: null });
@@ -34,6 +52,7 @@ window.HavenDemo = {
   async request(method, path, body) {
     const { routes } = await ready;
     const url = new URL(path, "https://haven.demo");
+    if (method === "GET" && url.pathname === "/api/cameras") return copy(SAMPLE_CAMERAS);
     const route = routes.find(([m, re]) => m === method && re.test(url.pathname));
     if (!route) return { error: "not found" };
     const [, re, , handler] = route;

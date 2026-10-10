@@ -22,27 +22,31 @@ Whole home shows Climate (a dial with target, mode and system state), Electricit
 On a phone the stage becomes a header card and everything stacks; the voice bar stays pinned to the bottom.
 
 ## Screen library
-Eight screens built from the same components on the same live house, each in every finish. Choose one per panel from **Screens** (on the stage, or the header of any other screen). The choice is remembered on that device; a demo link can open a screen directly with `#screen-id`.
+Ten screens on the same live house, nine of them drawn from the client's reference dashboards (October 10): each has a look of its own, set as tokens on `.panel[data-screen=…]` so every shared part (the security and cameras cards, the voice bar, confirmations) takes it on. **Wallpaper** is the one that comes in the three finishes. Choose one per panel from **Screens** (on every screen). **All controls** (the room-by-room view: house, room tabs, every device tile, Updates, About you, the simulator) opens over any screen and wears the finish; Back returns to the screen. The choice is remembered on that device; a demo link can open a screen directly with `#screen-id`, and the old ids still work (`#signature` opens Command, `#studio` Glass, `#command-center` Everything Wall, `#family-hub` Good Evening, `#nightstand` Aurora, `#rooms` Portrait Classic, `#entry` Security Console).
 
 | Screen | id | Best for | What's on it |
 |---|---|---|---|
-| Signature | `signature` | Great room, main entry | House model, room tabs, glass controls, energy, suggestions, About you |
-| Studio | `studio` | Living room, kitchen, model home | Haven's orb (tap to talk) with the voice waveform and the agent row, time and weather, climate range bar, lighting, electricity, doors |
-| Wallpaper | `wallpaper` | Living room, large wall display | The home's photo behind frosted tiles in columns: weather, indoor temperature and humidity, electricity with a live line, climate, fans, water heater, every light (icon switch and pill dimmer), doors & water, scenes, updates |
-| Command Center | `command-center` | Office, large wall display | Map (filters the lights list), climate, energy, every light with dimmer, doors & water, room conditions, scenes, updates |
-| Family Hub | `family-hub` | Kitchen | Large clock, today's briefing, big scenes, feeling buttons, lights |
-| Nightstand | `nightstand` | Bedroom | Dark screen, large clock, Goodnight / Lights off / Warmer / Cooler / Good morning |
-| Rooms | `rooms` | Large households | A card per room, each device a big button, sensors per room |
-| Entry | `entry` | Mudroom, garage door | I'm leaving / I'm home / Lock up, doors & water, what's still on, conditions |
+| Command | `command` | Great room, main entry | Rail and tabs (Home, Lights, Climate, Security, Cameras), scene buttons with what each does, security and who's home, weather, thermostat dial, the house in 3D (tap a room for its lights), light tiles, cameras |
+| Wallpaper | `wallpaper` | Feature wall, large display | The home's photo behind frosted tiles: weather, temperature and humidity, electricity with a live line, climate, fans, water heater, every light, doors & water, scenes, updates. In every finish |
+| Glass | `glass` | Living room, model home | Black glass: big clock, outside / inside / security chips, Haven updates (Brief me, How's the house?), scene photo cards, a ring dial for the room's lights, doors, the voice line (tap to talk; waveform from the real voice) with the agent row, and a thermostat dial at the side |
+| Everything Wall | `wall` | Office, large wall display | KPI strip (time, inside, outside, humidity, power now, today, water), cameras, every door and outside switch, a card per room (light bars, motion, leaks), four gauges, today's running total |
+| Good Evening | `evening` | Kitchen | Greeting with weather chips and the latest briefing, Climate / Water heater tabs, forecast range bars, scenes list, room cards with round one-tap buttons, cameras with their lights |
+| Aurora | `aurora` | Bedroom | Purple-to-orange glass that darkens at night; clock, this room's lights and fan, Goodnight / Lights off / Warmer / Cooler / Good morning, weather, security mode, thermostat, today's electricity and humidity, scenes; the sleeper's own photo |
+| Security Console | `console` | Mudroom, garage door | I'm leaving / I'm home / Lock up, the full security card, thermostat and water heater dials, the cameras card, the house, today's updates, what's still on. A doorbell ring opens its camera here |
+| Portrait Classic | `classic` | Hallway, tall portrait screen | Sections top to bottom: today, climate (forecast and dial), every light and fan as pills, home tiles, cameras, security, scenes |
+| Neon Frame | `neon` | Media room, office in a dark room | Glowing outlines on black: doors and locks, electricity flowing in from the grid with the top user, the running total, outside lights, cameras, climate, every light and fan on a switch |
+| Lagoon | `lagoon` | Family room, guest suite | Deep blue: weather with range bars, outside and inside, the house in 3D, Haven's voice choice, Home and Away photo cards, who's home, security, the front door, water |
 
-**This panel is in** (in the library) sets the panel's room. When the homeowner doesn't name a room, requests at that panel mean that room: "turn off the lights", "too bright", and the Nightstand's buttons.
+Honesty on every screen: numbers only from the house; weather says Sample in the demo; electricity says Estimated unless a meter measures it; cameras show the home's own (the demo's four are stills from the film of the model home, each marked "Sample picture", in `web/demo/cameras/`). Scene cards describe a scene from its own actions (`src/scenes.js`, `state.sceneInfo`). Motion follows something real only: a lit light glows, a running fan turns, electricity flows on Neon while it's used, the waveform follows the voice, and a screen draws itself in once when it opens (never on each update; Reduce Motion turns it off).
 
-Weather is built in (src/weather.js): Home Assistant's weather entity, or Open-Meteo once `weather.latitude` and `weather.longitude` are set in config/home.json. Without either, the Wallpaper screen says the forecast isn't connected and shows the outdoor sensor; the other screens simply leave it out. The demo shows sample weather labeled as a sample. Cameras, calendars and packages are not in the library yet: they'll arrive as cards when connected to real sources, never as placeholder data.
+**This panel is in** (in the library) sets the panel's room. When the homeowner doesn't name a room, requests at that panel mean that room: "turn off the lights", "too bright", and Aurora's buttons.
+
+Weather is built in (src/weather.js): Home Assistant's weather entity, or Open-Meteo once `weather.latitude` and `weather.longitude` are set in config/home.json. Without either, the Wallpaper screen says the forecast isn't connected and shows the outdoor sensor; the other screens simply leave it out. The demo shows sample weather labeled as a sample. Calendars and packages are not in the library yet: they'll arrive as cards when connected to real sources, never as placeholder data.
 
 ### Wallpaper screen
 Modeled on photo-backed Home Assistant dashboards. It sets its own dark tokens in both finishes (Futuristic swaps the accent to cyan), because it always sits on a photo.
 - **Photo:** `web/wallpapers/{morning,day,evening,night}.webp`, chosen by the house's time of day, on a fixed layer behind the page (`background-attachment: fixed` doesn't work on iPhone/iPad). A darker overlay at dusk and a lighter one by day keep the section titles readable without turning day into night.
-- **Nightstand photo:** each bedroom's Nightstand has Add your photo / Change photo / Remove photo under the buttons. The photo is resized to 1600 px, saved on that panel for that room only, and shown behind the clock under a night shade (darker at the top and bottom) so the time and buttons stay readable in the dark.
+- **Bedroom photo (Aurora):** Add your photo / Change photo / Remove photo under the bedtime buttons. The photo is resized to 1600 px, saved on that panel for that room only (`haven.nightstand.<room>`), and shown behind the screen under a shade, darker at night.
 - **Own photo:** Screens → Wallpaper photo → Use my own photo. It's resized to 1920 px, saved as JPEG on that panel only (localStorage), and "Use Haven's photos" removes it.
 - **Tiles:** dark frosted glass (76% opaque, so text stays readable over any photo) with a round icon in each kind's color: amber lights, green fans, orange heat, blue cooling, violet garage, green/red locks, blue water, yellow electricity. A light's round icon is its on/off switch; the thick pill is its dimmer.
 - **Weather card:** clock and date, current conditions, four days with low-to-high range bars, the next six hours with rain chance, and where the forecast came from.
@@ -51,7 +55,7 @@ The four photos were made with ElevenLabs (GPT Image 2): the evening photo first
 - Evening: "A modern single-story new-build home seen from across a calm, freshly cut lawn at dusk. Low flat roofline, warm cedar siding with dark charcoal panels, large floor-to-ceiling windows glowing warm amber from inside, a few low landscape path lights along a stone walkway. A young ornamental tree to one side. Sky: deep blue at the top fading to a band of orange and soft rose sunset just above the horizon… The house sits in the lower third; the upper two thirds is mostly sky with smooth gradients. Eye-level camera, 24mm lens, realistic photograph… no people, no cars, no text."
 - Morning / day / night: "Change: the time of day to [early morning just after sunrise, low pale-gold sun and mist / a clear early afternoon / late night with stars and a crescent moon]… Preserve: the same house, architecture, materials, camera position, lens, framing and composition…" with the evening photo as the reference image.
 
-`npm run build:catalog` captures every screen in both finishes from the demo build into a one-page catalog for clients (`dist/catalog/haven-screen-library.html`).
+`npm run build:catalog` captures every screen from the demo build (Wallpaper in each finish) into a one-page catalog for clients (`dist/catalog/haven-screen-library.html`).
 
 ## Home map
 An isometric cutaway model of the floor plan (rooms placed by `plan` in config/home.json), drawn in SVG back to front. It shows only real state:
@@ -109,14 +113,14 @@ Keynote clarity from the hero-shot prompts: vivid accents that still mean someth
 - **Type:** the system face (SF Pro on Apple devices), Inter elsewhere; big numbers at 700–800 with tight tracking; section headings in bold sentence case.
 - **Appearance:** Screens → Appearance: Auto (follows the device), Light or Dark. `?look=vivid&theme=dark` in a link.
 
-## Studio screen and the agent row
-Built from the builder-showcase render: a large orb in the middle (tap it to talk), a waveform under it, and a row of Haven's agents (Lighting, Climate, Security, Energy), with the time and weather, climate (a 55–85°F range bar with the set point and the current temperature), lighting, electricity and doors around it.
-- **Orb:** a ring in the finish's three colors; it turns amber or red with the house state, spins only while listening, thinking or speaking, and swells with the voice.
+## The voice line and the agent row (Glass)
+The Glass screen carries Haven's voice: a line along the bottom with an orb (tap to talk), what Haven last said, and a waveform, with the agent row (Lighting, Climate, Security, Energy) under it. (Until October 10 this was the Studio screen's orb.)
+- **Orb:** champagne glass; it turns coral while listening, pulses while thinking, and its ring swells with the real voice level.
 - **Waveform:** driven by real speech signals only: words the recognizer hears, each word the browser voice says, and the measured loudness of the ElevenLabs audio (after the first touch, when the browser allows audio measurement). It is never a looping animation.
 - **Agents:** each glows while it's working (a light on; heating or cooling; everyone away or something needing attention; power above the always-on load) and pulses when it just acted. The lines between them flow only when one event involves several (a scene, or actions in two systems within three seconds), for four seconds.
 
 ## Model home showcase
-A per-panel switch (Screens → Model home showcase) for builders' model homes. After a minute untouched, Haven switches to Studio and every 14 seconds runs one scene (Welcome home, Movie night, Goodnight, Good morning) through the normal safety checks, saying what it did. It never starts while something needs attention or a confirmation is waiting, stops if an alert appears, and any touch returns the panel to its own screen. No garage opening or unlocking is ever part of the tour.
+A per-panel switch (Screens → Model home showcase) for builders' model homes. After a minute untouched, Haven switches to Glass and every 14 seconds runs one scene (Welcome home, Movie night, Goodnight, Good morning) through the normal safety checks, saying what it did. It never starts while something needs attention or a confirmation is waiting, stops if an alert appears, and any touch returns the panel to its own screen. No garage opening or unlocking is ever part of the tour.
 
 ## Lighting and weather previews (every finish)
 - A lit tile or light row glows as brightly as the light is set (`--glow` = brightness).

@@ -5,7 +5,7 @@
 //   img/                       the security package pictures (website/img)
 //   build.jpg, linden.jpg      the Homes cards, captured from meridian.html and residence.html
 //   meridian-film.mp4, poster  the merged film (npm run assemble:film)
-//   shots/<finish>-<screen>    the screen pictures (npm run build:catalog)
+//   shots/<screen>, shots/<finish>-wallpaper   the screen pictures (npm run build:catalog)
 //   panel-<finish>.html        the live panel in each finish (npm run build:demo)
 //   meridian.html              "Watch a home build itself" (npm run build:sites)
 //   residence.html             Linden House, the sample listing
@@ -57,7 +57,7 @@ copyFileSync(need("docs/poster.jpg"), `${OUT}/poster.jpg`);
 mkdirSync(`${OUT}/voices`, { recursive: true });
 for (const v of ["lily", "sia", "richard", "charlotte"]) copyFileSync(need(`docs/voice/haven-voice-${v}.mp3`), `${OUT}/voices/${v}.mp3`);
 const shots = readdirSync(need("dist/catalog/shots")).filter((f) => f.endsWith(".jpg"));
-if (shots.length !== 32) throw new Error(`expected 32 screen pictures, found ${shots.length}`);
+if (shots.length !== 13) throw new Error(`expected 13 screen pictures (9 screens, and Wallpaper in 4 finishes), found ${shots.length}`);
 for (const f of shots) copyFileSync(`dist/catalog/shots/${f}`, `${OUT}/shots/${f}`);
 
 for (const finish of ["grounded", "futuristic", "vivid"]) writeFileSync(`${OUT}/panel-${finish}.html`, page(`dist/demo/haven-${finish}.html`));

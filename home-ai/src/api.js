@@ -5,6 +5,7 @@
 import { SENSOR_TYPES } from "./core/registry.js";
 import { blockOf } from "./learning.js";
 import { localParts } from "./core/time.js";
+import { describeScene } from "./scenes.js";
 
 export function createRoutes(home) {
   return [
@@ -15,6 +16,7 @@ export function createRoutes(home) {
       people: home.presence.list(),
       pending: home.controller.pendingList(),
       scenes: Object.fromEntries(Object.entries(home.config.scenes).map(([k, v]) => [k, v.label])),
+      sceneInfo: Object.fromEntries(Object.entries(home.config.scenes).map(([k, v]) => [k, describeScene(v, (id) => home.registry.get(id)?.name || id)])),
       agent: { kind: home.agent.kind, model: home.agent.model || null },
       adapter: home.adapter.name,
       channels: home.notifier.channelNames(),

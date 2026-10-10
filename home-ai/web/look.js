@@ -8,6 +8,10 @@
   try { saved = localStorage.getItem("haven.look"); theme = localStorage.getItem("haven.theme"); } catch (e) {}
   var q = params.get("look"), t = params.get("theme");
   var look = looks.indexOf(q) >= 0 ? q : looks.indexOf(saved) >= 0 ? saved : "grounded";
+  // The finish dresses the Wallpaper screen; every other screen has its own look on the plain base.
+  var screen = location.hash.replace("#", "");
+  try { screen = screen || localStorage.getItem("haven.screen") || ""; } catch (e) {}
+  if (screen !== "wallpaper") look = "grounded";
   document.documentElement.setAttribute("data-look", look);
   theme = t === "light" || t === "dark" ? t : theme;
   if (theme === "light" || theme === "dark") document.documentElement.setAttribute("data-theme", theme);
