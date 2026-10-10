@@ -3131,3 +3131,12 @@ Otis: the small screens' top corners were not rounded; the big (website) screen 
 - Corners: compared with the untouched clip, the glass turns its corners on a curve into the aluminium side, but our dark bezel filled the curve square. The phone and tablet screens now sit inside the band cut back to the rim, ringed by the bezel, and the visible face is opened with a disc (4.5% of the pane's width in frame). Checked all four corners of both panes at 8 points through the loop on the decoded video.
 - QA: static 0 FAIL / 7 known WARN; browser 0 FAIL / 2 WARN (Drone Command "Straight down" and "Portrait" did not click under load; a drone-only re-run passed 6/6, 0 WARN).
 - Website preview/hero-flow 85f68bd, Vercel status success (checked via the GitHub commit status; the Vercel connector returned 403 for the team). Live main still d16fce6. Backend tools 0a07c3a.
+
+### 10 Oct (evening): glass-panes hero LIVE on main
+Otis: debug, run a system diagnostic, fix everything, then upload the new design to the main website.
+- Hero code: HeroBackdrop.tsx sound (wide screens only, still frame for reduced motion / Save-Data / 2G, pauses off screen and in a hidden tab). Stale text fixed: the comment and DESIGN.md said "joined by threads of light" (erased) and "51 KB" still frame (now 92 KB).
+- Playback test, 5 modes on the build: desktop plays the webm (1920x1080, 19.92 s), pauses scrolled away, resumes, wraps at the loop; reduced motion and Save-Data show the still and never request the video; 900 px tablet and phone request neither.
+- Found: for ~5.4 s of each 20 s loop (frames 1-129) the tablet pane passes edge-on behind the line ends of the headline and body copy (at most 3% of that area; never behind the buttons). The clip is left as is; the h1 and body copy get a soft dark text shadow on lg so every letter stays clear of it.
+- QA on e8de10c: static 0 FAIL / 7 known WARN; browser 0 FAIL / 0 WARN; screenshots looked at.
+- Backend: 13 cron jobs, 0 failures in 24 h; every function call 200 except the known 97 x 404 from security-watch/audit calling security-agent, which is still NOT deployed (Otis's deploy command, Sep 30 entry). Security advisor: only INFO rls_enabled_no_policy (service-role tables, by design).
+- main fast-forwarded d16fce6 -> e8de10c (preview/hero-flow's five commits). Vercel status success (HAZC35vBMEGzSFK1go54GvffZmP5), checked via the GitHub commit status; the sandbox cannot load meridianinterface.com.
