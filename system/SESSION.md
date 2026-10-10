@@ -3116,3 +3116,11 @@ Otis: "remove the lines that connect the panels... they just don't connect right
 Otis attached his Higgsfield clip 7a0a3c5a ("make a preview with this in the background") and asked not to spend credits; none were. Website branch `preview/hero-video2` (f825e9e), Vercel preview; live still d16fce6; the glass-panes rework stays on `preview/hero-flow`.
 - The clip has hard cuts at 40-41 and 77-78, so the loop uses the settled square only (79-121), graded with the navy LUT learned from the earlier approved polish, half speed, eased forward-back: 9 s, VP9 1.5 MB. Tools: `system/media/video2/`.
 - With the earlier layout the demo cards covered the square completely at 1440 wide, so on wide screens the cards are not rendered and the square holds the right half beside the headline. Live test: plays at 1440 and 1920, phone unchanged, 0 errors.
+
+## 10 Oct 2026: glass panes chosen; rims, fourth pane, camera sync (preview/hero-flow, NOT live)
+
+Otis chose the glass panes (preview/hero-flow) over the light square. His notes: lines still on the phone's frame, the fourth pane blank, screens not moving with the design.
+- Lines: the threads had lit short stubs on each pane's aluminium sides (the thread mask skipped them, the rim being bright), plus the anchor dots on the tablet's edge merged with the rim in the blob test. `clean.py`: a median along the edge direction over a band on every side edge, and the tracked dots (dots.json) added to the mask. Verified at full size on frames 100/110/149/190.
+- Fourth pane: coplanar with the big pane (edges fixed in its plane to 2 px over frames 166-193; `clip/paneD.json`). Carries the Meridian lockup (real mark + site fonts, `clip/logo/`), seated like the others; only its left part is ever on screen, so the mark sits left.
+- Sync: `phase(n)` = camera travel round the loop; the phone and tablet sequences, their product changes (offset half a slot from the camera's rests) and the home page scroll all key off it. Measured on the decoded video: the phone screen moves 0.6 px/frame while the camera rests and 9 px/frame while it moves.
+- Checks: camera max speed change 0.72 px, seam continuous; live test clean on 4 modes; static 0 FAIL / 7 known WARN. Website preview/hero-flow pushed; Vercel preview; live still d16fce6.
