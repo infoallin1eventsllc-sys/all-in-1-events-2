@@ -53,6 +53,10 @@ Rebuild (after the site or a demo changes):
    is `clip/logo/logo-d.png`, rendered from `logo-d.html` with the site's fonts and the
    real mark (`node shoot.mjs logo-d.html out.png 836 585`; the mark is `meridian-mark.png`
    from the meridian-brand skill, never redrawn); copy it to `<dir>/logo-d.png`.
+   Since 10 Oct the pane shows Otis's own lockup on its light ground instead:
+   `python clip/logo/logo-d-light.py <brand>/meridian-lockup.png <dir>/logo-d.png`
+   (mark and wordmark cropped from the master, left-aligned, because only the left
+   15-18% of this pane is ever on camera). The dark `logo-d.html` version is kept.
 5d. Every screen's motion is keyed to the camera's phase (`phase(n)`, the distance the
    camera has travelled round the loop): pages scroll as the camera moves and rest when
    it rests; product changes sit mid-way between the camera's two rests; the home page
