@@ -89,7 +89,7 @@ const card = (s, i) => `
     ${s.id === "wallpaper" ? `<div class="finish" role="group" aria-label="Finish shown in the picture">
       ${FINISHES.map((f, k) => `<button type="button" data-finish="${f.key}" aria-pressed="${k === 0}">${f.label}</button>`).join("\n      ")}
     </div>` : ""}
-    ${Object.values(LIVE).some(Boolean) ? `<p class="links">${(s.id === "wallpaper" ? [["grounded", "Grounded"], ["futuristic", "Futuristic"], ["vivid", "Vivid"]] : [["grounded", ""]]).filter(([k]) => LIVE[k]).map(([k, l]) => `<a href="${LIVE[k]}#${s.id}">Open live${l ? ` · ${l}` : ""}</a>`).join("")}</p>` : ""}
+    ${Object.values(LIVE).some(Boolean) ? `<p class="links">${(s.id === "wallpaper" ? [["grounded", "Grounded"], ["futuristic", "Futuristic"], ["vivid", "Vivid"]] : [["grounded", ""]]).filter(([k]) => LIVE[k]).map(([k, l]) => `<a href="${LIVE[k]}#${s.id}" data-finish="${k}">Open live${l ? ` · ${l}` : ""}</a>`).join("")}</p>` : ""}
   </div>
 </article>`;
 

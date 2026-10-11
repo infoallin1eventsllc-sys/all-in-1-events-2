@@ -11,7 +11,7 @@
 <style>
   :root {
     color-scheme: dark;
-    --bg: #05080e; --bar: #0a1119; --line: rgba(90, 210, 255, 0.18); --cyan: #5ad2ff; --ink: #e9f0f5; --muted: #8ca2b4;
+    --bg: #05080e; --bar: #0a1119; --line: rgba(90, 210, 255, 0.18); --cyan: #5ad2ff; --amber: #ffb35c; --ink: #e9f0f5; --muted: #8ca2b4;
     --display: "Archivo", "Helvetica Neue", Arial, sans-serif; --body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
   }
   * { box-sizing: border-box; }
@@ -70,6 +70,14 @@
   .tour .prog { height: 2px; margin: 14px -18px -16px; background: rgba(90, 210, 255, 0.15); border-radius: 0 0 14px 14px; overflow: hidden; }
   .tour .prog i { display: block; height: 100%; width: 0; background: var(--cyan); transition: width 0.3s; }
   @media (max-width: 600px) { .tour { right: 8px; left: 8px; width: auto; } }
+  /* Steps that use the panel's talk bar put the card at the top, clear of the bar. */
+  .tour.top { bottom: auto; }
+  /* Phones: the tabs get their own scrolling row under the name. */
+  @media (max-width: 700px) {
+    .bar { flex-wrap: wrap; row-gap: 4px; padding-block: 8px 4px; }
+    .bar nav { order: 3; flex: 1 0 100%; margin-left: 0; }
+    .btn.tour-btn { margin-left: auto; }
+  }
   .vis { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
 </head>
@@ -168,7 +176,8 @@
     for (const [k, el] of Object.entries(views)) { if (k === key) el.setAttribute("data-on", ""); else el.removeAttribute("data-on"); }
     if (key !== "film") { const v = $("video"); v.pause(); }
     if (key === "live") load(views.live, "film.html");
-    if (key === "panel") load(views.panel, `panel-${state.finish}.html#${state.screen}`);
+    else views.live.removeAttribute("src"); // the live film draws every frame; unload it when it is out of sight
+    if (key === "panel") load(views.panel, `panel-${state.finish}.html?look=${state.finish}#${state.screen}`);
     if (key === "site") load(views.site, "meridian.html");
     if (key === "residence") load(views.residence, "residence.html");
     if (key === "library") load(views.library, "library.html");
@@ -207,9 +216,9 @@
   // The guided demo: each step sets the app's state and says what to try.
   const TOUR = [
     { tab: "film", film: "cut", title: "The film", text: "The house designs itself as a hologram, becomes real, and its guide walks the client through to the panel. Press play; it runs 1:19, with sound.", go: () => $("video").play().catch(() => {}) },
-    { tab: "panel", finish: "grounded", screen: "command", title: "The wall panel", text: "This is the panel a family sees in the great room. Everything on it works; it is running on a simulated house.", tip: "Type <b>I'm cold</b> in the bar at the bottom. Haven warms the room and remembers it for this time of day." },
-    { tab: "panel", finish: "grounded", screen: "command", title: "It asks before anything risky", text: "Haven never unlocks a door or opens the garage on its own. The rule is in the code, not the brochure.", tip: "Type <b>open the garage</b>. It asks you to confirm first." },
-    { tab: "panel", finish: "grounded", screen: "glass", title: "Glass", text: "Haven's voice line along the bottom, and above it the four agents: lighting, climate, security and energy. They light up only when something real happens.", tip: "Tap the voice line and say <b>goodnight</b>, or type it, and watch the agents hand off to each other." },
+    { tab: "panel", finish: "grounded", screen: "command", title: "The wall panel", text: "This is the panel a family sees in the great room. Everything on it works; it is running on a simulated house.", tip: "Type <b>I'm cold</b> in the bar at the bottom. Haven warms the room and remembers it for this time of day.", top: true },
+    { tab: "panel", finish: "grounded", screen: "command", title: "It asks before anything risky", text: "Haven never unlocks a door or opens the garage on its own. The rule is in the code, not the brochure.", tip: "Type <b>open the garage</b>. It asks you to confirm first.", top: true },
+    { tab: "panel", finish: "grounded", screen: "glass", title: "Glass", text: "Haven's voice line along the bottom, and above it the four agents: lighting, climate, security and energy. They light up only when something real happens.", tip: "Tap the voice line and say <b>goodnight</b>, or type it, and watch the agents hand off to each other.", top: true },
     { tab: "panel", finish: "grounded", screen: "evening", title: "Good Evening", text: "The kitchen screen: a greeting, climate and the water heater, the forecast, scenes, and a card for every room.", tip: "Tap a light's round button on a room card." },
     { tab: "panel", finish: "grounded", screen: "console", title: "Security Console", text: "The screen by the door you leave by: every lock and sensor, the cameras, and one tap to say you're leaving.", tip: "Press <b>I'm leaving</b>. Lights off, doors locked, the house set back." },
     { tab: "panel", finish: "grounded", screen: "wall", title: "Everything Wall", text: "Everything at once for the office: the numbers that matter, every switch, each room, and today's electricity.", tip: "Tap a room's light bar to switch it." },
@@ -225,6 +234,8 @@
     Object.assign(state, { tab: t.tab }, t.film ? { film: t.film } : {}, t.finish ? { finish: t.finish } : {}, t.screen ? { screen: t.screen } : {});
     if (t.screen && views.panel.getAttribute("src")?.startsWith(`panel-${t.finish}.html`)) changeScreen(t.screen); else show();
     if (t.go) t.go();
+    tour.classList.toggle("top", !!t.top);
+    tour.style.top = t.top ? `${$("main").getBoundingClientRect().top + 12}px` : ""; // just under the bars, over the picture
     $("#tour-step").textContent = `Step ${i + 1} of ${TOUR.length}`;
     $("#tour-title").textContent = t.title; $("#tour-text").textContent = t.text;
     const tip = $("#tour-try"); tip.hidden = !t.tip; tip.innerHTML = t.tip ? `Try it: ${t.tip}` : "";
@@ -260,6 +271,7 @@
   state.screen = OLD[state.screen] || state.screen;
   if (location.hash.length > 1) welcome.hidden = true;
   show();
+  if (!welcome.hidden) $("#start-tour").focus(); // the welcome is a modal: focus starts inside it
 })();
 </script>
 </body>

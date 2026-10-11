@@ -746,6 +746,20 @@ async function exercise(page, { garageTravelMs, home }) {
   await page.setViewportSize({ width: 1280, height: 800 });
   await useScreen("command");
 
+  // A reply never leaves the screen's last buttons stuck under the voice bar, and a tap away puts it away.
+  await chat("How's the house?");
+  await check("With a reply showing, the page keeps room under it for the whole voice bar", async () => page.evaluate(() => {
+    const room = parseFloat(getComputedStyle(document.querySelector("#app")).paddingBottom);
+    return !document.querySelector("#chat-log").hidden && room >= document.querySelector(".voicebar").offsetHeight;
+  }));
+  await check("The screen's last item scrolls clear of the voice bar", async () => page.evaluate(async () => {
+    window.scrollTo(0, document.documentElement.scrollHeight); await new Promise((r) => setTimeout(r, 100));
+    return document.querySelector("#alt .brand-mark").getBoundingClientRect().bottom <= document.querySelector(".voicebar").getBoundingClientRect().top;
+  }));
+  await page.mouse.click(5, 5);
+  await check("A tap outside the voice bar puts the conversation away", async () => page.locator("#chat-log").isHidden());
+  await page.evaluate(() => window.scrollTo(0, 0));
+
   // ----- layout -----
   for (const [w, h] of [[1280, 800], [390, 844]]) {
     await page.setViewportSize({ width: w, height: h });

@@ -45,6 +45,25 @@ Haven is several parts with separate jobs. Only two of them use a language model
 | 5 | **Safety controller** | No | The only path to hardware, for every part above and for the homeowner. Hard limits, the leak interlock, and permissions by origin. | `src/core/controller.js`, `src/safety.js` |
 | 6 | **Briefing writer** | Claude, template fallback | Short scheduled updates that fit a watch face, including new suggestions. | `src/briefings.js` |
 
+## How the code is layered
+
+Each layer only calls the one below it, so a change in one place can't skip a safety check.
+
+| Layer | What it does | Code |
+|---|---|---|
+| Devices | Home Assistant or the simulator; the only code that talks to real equipment | `src/adapters/` |
+| Core | Device registry, event bus, store, clock, and the **safety controller**, the one path to the devices | `src/core/`, `src/safety.js` |
+| Home services | Agents, learner, automations, briefings, energy, weather, cameras, voice, scene summaries | `src/agent/`, `src/*.js` |
+| Routes | Every `/api/...` route, shared by the server and the browser demo | `src/api.js` |
+| Transport | The HTTP server (sign-in, security headers, panel files) or, in the demo, the in-page stand-in | `src/http.js`, `web/demo/setup.js` |
+| Panel | Talks only to the routes (`api()` in `web/app.js`) | `web/` |
+
+Inside the panel (`web/`):
+- `dom.js`: building blocks (`$`, `el`, `svg`, safe storage, `timeAgo`); no panel state.
+- `icons.js`: every icon as path data (devices, weather, scenes, rooms).
+- `app.js`: the panel itself, in sections: talking to the server, sign-in, looks, state helpers, All controls (the stage and the glass), About you, conversation and voice, the screen library, cameras, the house explorer, Haven's agents, the ten designed screens (`SCREEN_VIEW`), the model home showcase, and rendering with live updates.
+- `voice.js` (speech in and out), `holo.js` + `vendor/three.js` (the 3D house), `map.js` + `mapzoom.js` (the drawn house), `building.js` + `homes.js` (any home's plan), `energy-chart.js`, `look.js` (finish before first paint).
+
 ## Showing the agents at work
 
 The Glass screen shows the agents under Haven's voice line: Lighting, Climate, Security and Energy. Each glows only while it's doing something real, pulses when it just acted, and the lines between them flow when one event involves several at once (a scene, "I'm leaving", an automation touching lights and locks together). They're driven by the same action and scene events the activity feed shows, so homeowners and builders see the coordination as it happens rather than taking it on faith. Model home showcase (docs/DESIGN.md) runs a live tour of scenes so this is visible on a model-home walkthrough.

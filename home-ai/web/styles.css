@@ -173,7 +173,8 @@ input::placeholder { color: var(--muted); }
   display: grid;
   grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.4fr);
   gap: 20px;
-  padding: 20px 20px 120px;
+  /* Room under the page for the voice bar, however tall its conversation grows (--voicebar-space, set in app.js). */
+  padding: 20px 20px calc(var(--voicebar-space, 100px) + 20px);
   background: var(--bg);
 }
 
@@ -400,7 +401,7 @@ footer { text-align: center; }
 
 /* ---------- phone ---------- */
 @media (max-width: 900px) {
-  .panel { grid-template-columns: 1fr; padding: 12px 12px 150px; gap: 12px; }
+  .panel { grid-template-columns: 1fr; padding: 12px 12px calc(var(--voicebar-space, 130px) + 20px); gap: 12px; }
   .stage { position: static; height: auto; min-height: 0; padding: 18px; gap: 18px; }
   .map { height: 230px; }
   .stage h1 { font-size: 2rem; }
@@ -782,12 +783,10 @@ footer { text-align: center; }
 .panel.alt-mode .stage, .panel.alt-mode .glass { display: none; }
 .alt { display: grid; gap: 16px; min-width: 0; align-content: start; }
 .xcard { display: grid; gap: 12px; align-content: start; min-width: 0; padding: 16px; border-radius: var(--radius); background: var(--glass); border: 1px solid var(--line); box-shadow: var(--shadow); }
-.xcard .scenes { grid-auto-columns: minmax(120px, 1fr); }
 
 .alt-map { height: 260px; }
 .briefing-card .brief { display: grid; gap: 6px; }
 .brief-title { font-family: var(--font-display); font-size: 1.2rem; font-weight: 650; }
-.briefing-card .when { font-size: 0.78rem; color: var(--muted); }
 
 .room-devs { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
 .room-dev { display: grid; gap: 6px; justify-items: start; align-content: start; text-align: left; padding: 12px; min-height: 104px; border-radius: var(--radius-sm); background: var(--tile); border: 1px solid var(--line); }
@@ -800,7 +799,6 @@ footer { text-align: center; }
 
 .lights-list, .sec-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
 .lights-list li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px 10px; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--tile); }
-.lights-list .ll-slider { grid-column: 2 / -1; }
 .lights-list li button:not(.switch) { min-height: 36px; padding: 4px 12px; }
 .lights-list li.on .tile-icon { background: color-mix(in srgb, var(--on) 25%, transparent); color: var(--on); }
 .ll-text { display: grid; min-width: 0; }

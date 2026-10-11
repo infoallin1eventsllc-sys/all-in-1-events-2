@@ -110,7 +110,9 @@ for (const finish of ["grounded", "futuristic", "vivid"]) writeFileSync(`${OUT}/
   writeFileSync(`${OUT}/tour.html`, html);
 }
 writeFileSync(`${OUT}/film.html`, page("dist/film/meridian-film.html"));
-writeFileSync(`${OUT}/library.html`, page("dist/catalog/haven-screen-library.html"));
+// The catalog's "Open live" links point at the published demos; beside the panel pages, open those instead.
+const localLive = (html) => html.replace(/href="[^"]*#(\w+)" data-finish="(\w+)"/g, 'href="panel-$2.html?look=$2#$1" data-finish="$2"');
+writeFileSync(`${OUT}/library.html`, localLive(page("dist/catalog/haven-screen-library.html")));
 
 // The Homes cards: one frame of each page they open, so the two pictures say what's behind them.
 {

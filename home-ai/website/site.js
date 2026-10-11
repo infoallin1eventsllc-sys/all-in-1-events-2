@@ -225,7 +225,7 @@
     $("#live-finishes").closest(".chip-set").hidden = live.screen !== "wallpaper"; // only Wallpaper comes in finishes
     $("#frame").style.setProperty("--poster", `url('${shot(live.finish, live.screen)}')`);
     if (!live.loaded) return;
-    const src = `panel-${live.finish}.html#${live.screen}`;
+    const src = `panel-${live.finish}.html?look=${live.finish}#${live.screen}`;
     if (!frame) {
       frame = document.createElement("iframe");
       frame.title = "The Haven wall panel, running on a simulated house";

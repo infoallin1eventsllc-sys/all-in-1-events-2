@@ -1,9 +1,9 @@
 # Haven: Where Things Stand
 
-_Last updated: October 11, 2026 (the Meridian Interface mark on the panels and in the website pictures). Branch `claude/inspiring-fermi-jpi3vh` in `infoallin1eventsllc-sys/all-in-1-events-2`, folder `home-ai/`._
+_Last updated: October 11, 2026 (a full debug pass: every button on every screen, the website and the showroom). Branch `claude/inspiring-fermi-jpi3vh` in `infoallin1eventsllc-sys/all-in-1-events-2`, folder `home-ai/`._
 
 ## Pick up here (next session)
-**State:** everything is committed and pushed; the working tree is clean. The last full run (September 27, after the debug pass) was all passing: 124 unit tests and 397 browser checks across the server panel and the demo, with 0 accessibility violations. The published demo links still have the build from before the debug pass; republish them (CLAUDE.md, Published demos) to pick up the fixes.
+**State:** everything is committed and pushed. The last full `npm run check` (October 11, after the debug pass) passed: 139 unit tests and 535 browser checks across the server panel and the demo, with 0 accessibility violations. The demos, screen library, website and showroom were republished after it.
 
 **Waiting on you:**
 - An empty GitHub repository (suggested name `haven`) to move Haven out of this one (Next steps, item 5). Haven's history on its own is made with `git subtree split --prefix=home-ai -b haven-export` (a local branch; it isn't pushed, so a new cloud session has to recreate it before pushing it to the new repository). This session's GitHub access can't create repositories.
@@ -11,9 +11,10 @@ _Last updated: October 11, 2026 (the Meridian Interface mark on the panels and i
 
 **Suggested order for tomorrow:**
 1. `npm test` (about 10 s), then `npm run build:demo`.
-2. Open the Grounded demo on a real tablet or phone and try the hologram: drag, pinch, tap a room, Screens → Home style → Two-story Colonial, and the explorer's floor buttons. It's only been checked in software rendering (SwiftShader), never on a real tablet's GPU.
-3. Work down "Known issues" below; each one says where to look.
-4. When the repo exists: move Haven, then add the API key and run the live check.
+2. Open the Grounded demo on a real wall tablet and phone: go through all ten screens, press their buttons, talk to Haven, and try the 3D house (drag, pinch, tap a room). Everything has been checked in a test browser with software 3D, never on a real tablet's GPU.
+3. Open the showroom on a phone: the tabs now sit on their own row, and the guided tour's card moves to the top when it asks you to use the talk bar.
+4. Still waiting from earlier: the three other voices (Sia, Richard, Charlotte) reading Haven's own lines once ElevenLabs credits return; republishing the showroom and the overview with the new film (needs your go-ahead); your answer on the line "The future, in your hands" for the Meridian page.
+5. Work down "Known issues" below; each one says where to look.
 
 **Known issues (not fixed yet):**
 - **Two-story homes glow too brightly** in the hologram. The layers of see-through walls add up, so the Colonial and Contemporary look washed out, especially zoomed in on a phone. Look at the rim and edge opacity in `makeMats()` in `web/holo.js`; dimming the floors that aren't selected (already done when a room is picked) could also apply at the whole-house view.
@@ -23,6 +24,18 @@ _Last updated: October 11, 2026 (the Meridian Interface mark on the panels and i
 - **The drawn model** (the fallback without WebGL) shows an L-shaped room as its largest rectangle, so the rest of that room is left empty. It shows one floor at a time.
 - **Not measured:** hologram frame rate and battery use on a real wall tablet; how a 4,000 sq ft, three-floor home looks.
 - **The browser run is slow** (about 15 minutes per target) because WebGL runs in software here.
+
+## October 11: debug pass
+Every button on every screen was pressed in a browser (all ten screens and All controls, each from a fresh load), and a second pass went through the website and showroom: every link, tab, chip, tour step, form path and picture. What was found and fixed:
+- **Haven's reply could cover buttons.** The conversation above the talk bar grows with each reply (up to a third of the screen) and stayed for 20 seconds, over whatever was under it, and the page only kept a fixed 120 px under the bar, so the last buttons on a screen could not be scrolled clear of it. The page now keeps exactly the bar's height free (`--voicebar-space`, from a ResizeObserver), and a tap anywhere outside the bar puts the conversation away. e2e checks both.
+- **Finish buttons stopped working after the first panel** on the website's live demo, the showroom's finish chips and tour step 8: every panel page there shares one saved finish, so whichever loaded first won. Each panel is now opened with `?look=<finish>`, which the demo pages honour first.
+- **The showroom's tabs were invisible on a phone** (squeezed to 11 px beside the name). Under 700 px they now get their own scrolling row.
+- **"Open live" in the screen library left the site** for the published demos when opened from the website or showroom. Their copies now open the panel pages beside them (`localLive()` in build-website and build-showroom, from `data-finish` on each link).
+- **The tour card covered the talk bar** it asked the client to type in (steps 2–4). Those steps put the card at the top, under the bars.
+- Smaller: the tour tip's amber edge wasn't drawn (`--amber` was never defined); the welcome dialog now takes focus; the showroom unloads the live film when it is out of sight (it kept drawing at zero size).
+- **Clean-up:** three CSS rules for classes nothing makes any more, and two leftovers of the old Studio orb. No unused functions were found.
+- **Structure:** the panel's building blocks and icons moved out of `web/app.js` into `web/dom.js` and `web/icons.js`; docs/AGENTS.md has a new section on how the code is layered, from the devices up to the panel.
+- **Checked and fine:** Glass's "Home" and Lagoon's "Overview" are "you are here" markers, so pressing them does nothing on purpose. Aurora's "Add your photo" opens the file picker. The showroom's film and the website's tour page play MP4 only; every real browser plays it (only the test browser can't).
 
 ## October 11: the Meridian Interface mark
 The client read "All secure" in the website's pictures as a stray brand name and asked for Meridian Interface there. In the every-screen picture, the security package and the wall panel close-up (`website/img/every-screen.webp`, `package.webp`, `p-panel.webp`), "All secure" is repainted as "Meridian Interface" in the same color and size, with the shield and "Your home is protected" kept (the shield moved so the line stays centred). On the live panels the status line still says "All secure" (it is how the family knows nothing is wrong, and it changes when something is); instead every screen and All controls end with a small "Meridian / Interface" mark in that screen's quiet text color (`brandMark()` in `web/app.js`, `.brand-mark` in styles.css; e2e checks it on all ten screens).

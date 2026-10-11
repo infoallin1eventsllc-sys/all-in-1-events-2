@@ -23,12 +23,15 @@ const FILES = {
 };
 const missing = Object.values(FILES).filter((f) => !existsSync(f));
 if (missing.length) throw new Error(`missing: ${missing.join(", ")} (run build:demo, build:film, assemble:film, build:sites, build:catalog)`);
+// The catalog's "Open live" links point at the published demos; beside the panel pages, open those instead.
+const localLive = (html) => html.replace(/href="[^"]*#(\w+)" data-finish="(\w+)"/g, 'href="panel-$2.html?look=$2#$1" data-finish="$2"');
 for (const [to, from] of Object.entries(FILES)) {
   if (!to.endsWith(".html")) { copyFileSync(from, `${OUT}/${to}`); continue; }
   // The demo and catalog builds write a bare <html>; served as their own pages they need a doctype.
   let html = readFileSync(from, "utf8");
   if (!/name="viewport"/.test(html)) html = `<meta name="viewport" content="width=device-width, initial-scale=1">\n${html}`;
   if (!/^\s*<!doctype/i.test(html)) html = `<!doctype html>\n${html}`;
+  if (to === "library.html") html = localLive(html);
   writeFileSync(`${OUT}/${to}`, html);
 }
 console.log(`${OUT}/: ${Object.keys(FILES).length} files`);
