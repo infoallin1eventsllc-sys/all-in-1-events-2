@@ -40,7 +40,8 @@ const TIMEOUT = 10_000;
 /** Same gate as keycheck: the run secret, or a service-role caller. */
 async function authorized(req: Request): Promise<boolean> {
   const sb = serviceClient();
-  const { data } = await sb.from("settings").select("value").eq("key", "run_secret").maybeSingle();
+  const { data, error } = await sb.from("settings").select("value").eq("key", "run_secret").maybeSingle();
+  if (error) return false; // a failed read refuses the run; it must never open the gate (see _shared/runauth.ts)
   const expected = String((data?.value as { value?: string } | null)?.value ?? "");
   if (!expected) return true;
   if (req.headers.get("x-run-secret") === expected) return true;

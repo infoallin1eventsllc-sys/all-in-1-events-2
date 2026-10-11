@@ -18,12 +18,16 @@
 // only) rather than an env secret, so rotating it is one UPDATE with no
 // redeploy — and there is exactly one copy for both the SQL side and this one.
 // An empty/absent setting leaves the gate open, so seeding order can never
-// lock the system out of itself.
+// lock the system out of itself. A read that FAILS is not an absent setting:
+// the platform briefly refuses a few of these reads (5 of ~1,700 on 11 Oct),
+// and treating that as "not configured" opened the gate. A failed read refuses
+// the run instead; the next scheduled tick simply tries again.
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
-import { getSetting } from "./supabase.ts";
 
 export async function authorizedRun(req: Request, sb: SupabaseClient): Promise<boolean> {
-  const { value: expected } = await getSetting<{ value: string }>(sb, "run_secret", { value: "" });
+  const { data, error } = await sb.from("settings").select("value").eq("key", "run_secret").maybeSingle();
+  if (error) return false; // could not read the gate: refuse rather than open it
+  const expected = String((data?.value as { value?: string } | null)?.value ?? "");
   if (!expected) return true; // gate not yet configured — never self-lockout
 
   if (req.headers.get("x-run-secret") === expected) return true;
