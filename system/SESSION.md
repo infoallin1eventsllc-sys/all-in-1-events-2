@@ -3178,3 +3178,9 @@ Otis: nothing redundant, an easy path for customers and recruiters, every featur
 - Tests: 35 typed commands + 3 confirm-gated (garage, front door, water back on) + spoken commands via the recognizer path + spoken replies + 14 simulator buttons, on grounded/vivid/futuristic: 0 FAIL each. 12 navigation flows 0 FAIL. Live hologram + soundtrack in the tour. Tile 9/9. Static 0 FAIL. Browser QA 0 FAIL (Haven 61 controls; Drone Command "Straight down" timing WARN, known).
 - Website preview/haven 86c74fc, Vercel preview success (meridian-interface-website-jcgb65kz9.vercel.app). Main still 8c09ef8.
 - Noted, not changed (Haven product wording, would need a panel rebuild): "Water Heater is already vacation at 120°F" after "turn on the water heater"; "will it rain tomorrow?" answers with today's forecast.
+
+### 11 Oct (late): Haven live demo in a hardware bezel (preview)
+Otis: the live demo's panel had no border and no end; frame it like a real panel, updating when touched.
+- #haven-panel-bezel (packager, home page): dark glass bezel, brushed-aluminium rim, sensor dot; dimmed screen picture before start, the screen wakes in place on "Start the live panel".
+- haven/site-edits/haven-frame.js: on wider screens the panel runs at its designed 1440 px and is scaled into the bezel, so the whole screen shows (before: cut off under the talk bar). site.css caps iframes at max-width:100%; lifted for this one. Phones: own size, slimmer bezel.
+- Checks: 19/19 (fills edge to edge on all 10 screens and 3 finishes, updates in place, typing/tapping, resize, phone); flows 0 FAIL; static 0 FAIL; Haven browser QA 0 FAIL (62 controls). preview/haven 35fa24f, Vercel preview success (meridian-interface-website-67iex273c.vercel.app). Main still 8c09ef8.
