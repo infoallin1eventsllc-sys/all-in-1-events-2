@@ -194,7 +194,7 @@ input[aria-invalid="true"], textarea[aria-invalid="true"] { border-color: var(--
 
 /* Footer */
 footer { padding: 48px var(--gutter) calc(40px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line-2); color: var(--muted); font-size: 14px; }
-footer .wrap { grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); gap: 28px; }
+footer .wrap { grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); gap: 28px; }
 footer h4 { margin: 0 0 10px; font: 500 12px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--soft); }
 footer ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 footer ul a { display: inline-flex; align-items: center; min-height: 28px; }
@@ -204,6 +204,7 @@ footer .brand { color: var(--paper); }
 footer .about p { margin: 12px 0 18px; max-width: 40ch; }
 footer small { grid-column: 1 / -1; font-size: 13px; padding-top: 18px; border-top: 1px solid var(--line-2); }
 @media (max-width: 860px) { footer .wrap { grid-template-columns: repeat(2, minmax(0, 1fr)); } footer .about { grid-column: 1 / -1; } }
+@media (max-width: 480px) { footer .wrap { grid-template-columns: 1fr; } }
 
 /* ---- Motion: one idea, things drawn in light. Everything rests visible; motion only adds. ---- */
 @media (prefers-reduced-motion: no-preference) {
@@ -393,3 +394,49 @@ footer small { grid-column: 1 / -1; font-size: 13px; padding-top: 18px; border-t
   color: var(--paper);
 }
 .home-card, .steps li, .shot, .frame { box-shadow: 0 1px 2px rgba(15, 28, 46, 0.06); }
+
+/* FAQ: the heading beside the questions on wide screens. */
+.faq-wrap { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); align-items: start; gap: clamp(28px, 5vw, 72px); }
+.faq-wrap .head { position: sticky; top: calc(var(--nav-h) + 24px); }
+.faq-wrap .faq { max-width: none; }
+.faq details p a { color: var(--cyan); }
+@media (max-width: 900px) { .faq-wrap { grid-template-columns: 1fr; } .faq-wrap .head { position: static; } }
+
+/* Built by Meridian Interface: what we make, for anyone who wants a site like this. */
+.services { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.services li { display: grid; gap: 8px; align-content: start; padding: 22px 20px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--panel); box-shadow: 0 1px 2px rgba(15, 28, 46, 0.06); }
+.services li::before { content: ""; width: 28px; height: 2px; background: var(--cyan); margin-bottom: 6px; }
+.services p { margin: 0; color: var(--muted); font-size: 15.5px; }
+@media (max-width: 960px) { .services { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .services { grid-template-columns: 1fr; } }
+
+/* The maker, at the bottom of every page: logo, what we do, how to reach us. */
+footer .maker { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 20px 32px; padding-top: 28px; border-top: 1px solid var(--line-2); }
+footer .maker img { width: 168px; height: auto; }
+footer .maker-text { display: grid; gap: 8px; max-width: 56ch; }
+footer .maker-text p { margin: 0; color: var(--soft); }
+footer .maker-k { font: 500 12px/1.3 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--paper) !important; }
+footer .maker a { color: var(--cyan); }
+footer .maker a:hover { text-decoration: underline; }
+
+/* Plain pages (how it was built, privacy, accessibility): one readable column. */
+.doc { max-width: 760px; margin: 0 auto; padding: clamp(48px, 7vw, 96px) var(--gutter); }
+.doc h1 { margin: 10px 0 18px; font: 300 clamp(34px, 5vw, 56px)/1.05 var(--display); font-stretch: 112%; text-wrap: balance; }
+.doc h1 em, .doc h2 em { font-style: normal; color: var(--cyan); font-weight: 500; }
+.doc h2 { margin: 48px 0 12px; font-size: clamp(24px, 3vw, 32px); }
+.doc p, .doc li { color: var(--soft); }
+.doc ul { padding-left: 1.2em; display: grid; gap: 8px; }
+.doc a { color: var(--cyan); }
+.doc .lede { font-size: 19px; color: var(--paper); }
+.doc .facts { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 28px 0 8px; }
+.doc .facts li { padding: 18px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--panel); display: grid; gap: 4px; }
+.doc .facts b { font: 300 34px/1 var(--display); color: var(--paper); }
+.doc .facts span { font-size: 14px; color: var(--muted); }
+.doc table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.doc th, .doc td { text-align: left; vertical-align: top; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line-2); }
+.doc th { font: 500 12px/1.3 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.doc td:first-child { color: var(--paper); font-weight: 600; white-space: nowrap; }
+.doc .back { display: inline-flex; margin-top: 40px; }
+@media (max-width: 640px) { .doc .facts { grid-template-columns: 1fr; } .doc td:first-child { white-space: normal; } }
+.nav-back { margin-left: auto; }
+@media (max-width: 520px) { .nav-back { display: none; } } /* the name links home, and the page ends with the same button */

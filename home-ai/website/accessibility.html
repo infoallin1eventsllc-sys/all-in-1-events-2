@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Accessibility · Meridian Interface</title>
+<meta name="description" content="How the Meridian Interface website and Haven panels are built and tested for accessibility.">
+<meta name="theme-color" content="#f4f5f7">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f1c2e'/%3E%3Cpath d='M7 23V9l9 8 9-8v14' fill='none' stroke='%23f4f5f7' stroke-width='2.6' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112,300;112,500;112,600;125,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="nav">
+  <a class="brand" href="index.html">Meridian<span>&nbsp;/&nbsp;</span>Interface</a>
+  <a class="btn quiet small nav-back" href="index.html">Back to the site</a>
+</header>
+<main id="main" class="doc">
+  <p class="eyebrow">Accessibility</p>
+  <h1>Built for everyone <em>in the house.</em></h1>
+  <p class="lede">We aim for WCAG 2.2 at level AA on this site and on every Haven panel.</p>
+
+  <h2>What we do</h2>
+  <ul>
+    <li><strong>Tested on every build.</strong> Automated browser checks audit every panel screen, each finish and the panel at phone width with axe-core. The current build has no violations.</li>
+    <li><strong>Words, not only colors.</strong> A door, a lock or a sensor always says its state in words; color is never the only signal.</li>
+    <li><strong>Keyboard.</strong> Every control can be reached and used with a keyboard, with a visible focus ring, and a link to skip to the content.</li>
+    <li><strong>Captions.</strong> The full film has captions of the guide&rsquo;s words, shown beneath the picture.</li>
+    <li><strong>Less motion.</strong> With Reduce Motion on, the site and the panels stop their animations.</li>
+    <li><strong>Talk or touch.</strong> Haven can be used by voice or by touch, and it speaks its replies aloud unless you turn that off.</li>
+  </ul>
+
+  <h2>Known limits</h2>
+  <ul>
+    <li>The 3D house is a picture for sighted visitors. Every room in it is also a labelled button, and the same information is in the rooms list.</li>
+    <li>Automated checks find most problems, not all. We test by hand as well, and we fix what people tell us.</li>
+  </ul>
+
+  <h2>Tell us</h2>
+  <p>If something on this site or a panel doesn&rsquo;t work for you, email <a href="mailto:otis@meridianinterface.com">otis@meridianinterface.com</a> and we will fix it.</p>
+  <p class="muted">Last updated October 11, 2026.</p>
+  <a class="btn back" href="index.html">Back to the site</a>
+</main>
+<footer>
+  <div class="wrap">
+    <div class="about">
+      <a class="brand" href="index.html#top">Meridian<span>&nbsp;/&nbsp;</span>Interface</a>
+      <p>The hologram, the wall panels and Haven, all made from one plan.</p>
+      <a class="btn small" href="index.html#contact">Book a walkthrough</a>
+    </div>
+    <div><h4>Haven</h4><ul><li><a href="index.html#haven">What Haven does</a></li><li><a href="index.html#screens">Screens</a></li><li><a href="index.html#live">Live demo</a></li><li><a href="tour.html">Guided tour</a></li><li><a href="index.html#security">Security</a></li><li><a href="index.html#faq">Questions</a></li></ul></div>
+    <div><h4>Homes</h4><ul><li><a href="meridian.html">Watch a home build</a></li><li><a href="residence.html">Linden House</a></li><li><a href="index.html#builders">For builders</a></li></ul></div>
+    <div><h4>This site</h4><ul><li><a href="build.html">How it was built</a></li><li><a href="privacy.html">Privacy</a></li><li><a href="accessibility.html">Accessibility</a></li></ul></div>
+    <div class="maker">
+      <img src="img/meridian-logo.webp" alt="Meridian Interface" width="511" height="300">
+      <div class="maker-text">
+        <p class="maker-k">Built by Meridian Interface</p>
+        <p>Web design, mobile app interfaces, analytics &amp; CRM dashboards, and brand identity systems.</p>
+        <p><a href="mailto:otis@meridianinterface.com">otis@meridianinterface.com</a><br><a href="https://meridianinterface.com">meridianinterface.com</a></p>
+      </div>
+    </div>
+    <small>&copy; 2026 Meridian Interface. The homes shown are sample plans. The live panel runs on a simulated house, with sample weather.</small>
+  </div>
+</footer>
+</body>
+</html>

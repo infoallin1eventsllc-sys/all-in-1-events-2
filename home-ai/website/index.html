@@ -7,7 +7,11 @@
 <meta name="description" content="Meridian Interface designs homes in light and builds Haven into them: an AI home agent with a wall panel for every room, that runs the house, watches over it, and never unlocks a door without you.">
 <meta property="og:title" content="Meridian Interface">
 <meta property="og:description" content="Homes designed in light, with Haven, the AI home agent, built in.">
+<meta property="og:type" content="website">
 <meta property="og:image" content="poster.jpg">
+<meta property="og:image:alt" content="A home drawn in light by the Meridian Interface film.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="author" content="Meridian Interface">
 <meta name="theme-color" content="#f4f5f7">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f1c2e'/%3E%3Cpath d='M7 23V9l9 8 9-8v14' fill='none' stroke='%23f4f5f7' stroke-width='2.6' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -312,10 +316,11 @@
   </section>
 
   <section id="faq" aria-labelledby="faq-h">
-    <div class="wrap">
+    <div class="wrap faq-wrap">
       <div class="head">
         <p class="eyebrow">Questions</p>
         <h2 id="faq-h">What people ask <em>before they buy.</em></h2>
+        <p>Anything else, ask us in the walkthrough request below.</p>
       </div>
       <div class="faq">
         <details><summary>Does it need the internet?</summary><p>For conversation, yes. Without it, Haven keeps running its safety rules and automations on the server in the house, still stops a leak, and still understands simple commands like &ldquo;goodnight&rdquo;.</p></details>
@@ -323,6 +328,9 @@
         <details><summary>What does it learn about us, and can we delete it?</summary><p>Comfort preferences by time of day, likes and dislikes, and routines you&rsquo;ve accepted. Habits it notices only become suggestions; nothing it learns runs until someone says yes. All of it is listed on the panel under About you, and you can forget one item or everything.</p></details>
         <details><summary>What leaves the house?</summary><p>Conversations go to the AI service that powers Haven&rsquo;s understanding. If you choose the premium voice, the sentences Haven speaks go to the voice service. Weather requests send only the home&rsquo;s location. Nothing else leaves.</p></details>
         <details><summary>Can we change a room&rsquo;s screen later?</summary><p>Yes. Every panel picks its own screen, and the family can change it at any time from the panel itself.</p></details>
+        <details><summary>Is the panel on this page the real software?</summary><p>Yes. It is the same panel software a home runs, working on a simulated house inside your browser. Nothing you press reaches a real device, and its weather, camera pictures and electricity use are samples, marked as such.</p></details>
+        <details><summary>Does it work with an iPhone and an Apple Watch?</summary><p>Yes. Talk to Haven, run scenes and hear its briefings through Siri on an iPhone, an Apple Watch or in the car. A ring at the door sends its picture to your phone and watch.</p></details>
+        <details><summary>Is it accessible?</summary><p>The panels are tested against WCAG 2.2 AA on every build, and the state of a door or a sensor is always said in words, never by color alone. See the <a href="accessibility.html">accessibility statement</a>.</p></details>
       </div>
     </div>
   </section>
@@ -353,10 +361,31 @@
         <div class="trap" aria-hidden="true"><label>Leave this empty<input id="f-trap" name="website" tabindex="-1" autocomplete="off"></label></div>
         <div class="form-foot">
           <button class="btn solid" type="submit" id="f-send">Request a walkthrough</button>
-          <p>We use your details only to reply about your project.</p>
+          <p>We use your details only to reply about your project. <a href="privacy.html">Privacy</a></p>
         </div>
         <div class="result" id="f-result" role="status" hidden></div>
       </form>
+    </div>
+  </section>
+
+  <section id="built" class="built" aria-labelledby="built-h">
+    <div class="wrap">
+      <div class="head">
+        <p class="eyebrow">Built by Meridian Interface</p>
+        <h2 id="built-h">Want a website <em>like this one?</em></h2>
+        <p>Meridian Interface designed and built everything here: the film, this site, the live wall panel and the software behind it. We build the same kind of work for other businesses.</p>
+      </div>
+      <ul class="services">
+        <li><h3>Web design</h3><p>Sites like this one: a film for a landing page, a live product demo, and a booking form that lands in your CRM.</p></li>
+        <li><h3>Mobile app interfaces</h3><p>Screens that work on a phone, a tablet and a wall, like Haven&rsquo;s ten panel screens.</p></li>
+        <li><h3>Analytics &amp; CRM dashboards</h3><p>The numbers that matter at a glance, like the panel&rsquo;s electricity and security cards.</p></li>
+        <li><h3>Brand identity systems</h3><p>A mark, colors and type that hold together everywhere, from the film to the footer.</p></li>
+      </ul>
+      <div class="row">
+        <a class="btn solid" href="https://meridianinterface.com">Services and pricing</a>
+        <a class="btn" href="build.html">How this site was built</a>
+        <a class="btn quiet" href="mailto:otis@meridianinterface.com">otis@meridianinterface.com</a>
+      </div>
     </div>
   </section>
 </main>
@@ -370,6 +399,15 @@
     </div>
     <div><h4>Haven</h4><ul><li><a href="#haven">What Haven does</a></li><li><a href="#screens">Screens</a></li><li><a href="#live">Live demo</a></li><li><a href="tour.html">Guided tour</a></li><li><a href="#security">Security</a></li><li><a href="#faq">Questions</a></li></ul></div>
     <div><h4>Homes</h4><ul><li><a href="meridian.html">Watch a home build</a></li><li><a href="residence.html">Linden House</a></li><li><a href="#builders">For builders</a></li></ul></div>
+    <div><h4>This site</h4><ul><li><a href="build.html">How it was built</a></li><li><a href="privacy.html">Privacy</a></li><li><a href="accessibility.html">Accessibility</a></li></ul></div>
+    <div class="maker">
+      <img src="img/meridian-logo.webp" alt="Meridian Interface" width="511" height="300">
+      <div class="maker-text">
+        <p class="maker-k">Built by Meridian Interface</p>
+        <p>Web design, mobile app interfaces, analytics &amp; CRM dashboards, and brand identity systems.</p>
+        <p><a href="mailto:otis@meridianinterface.com">otis@meridianinterface.com</a><br><a href="https://meridianinterface.com">meridianinterface.com</a></p>
+      </div>
+    </div>
     <small>&copy; 2026 Meridian Interface. The homes shown are sample plans. The live panel runs on a simulated house, with sample weather.</small>
   </div>
 </footer>

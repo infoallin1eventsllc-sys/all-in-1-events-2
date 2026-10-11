@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>How this site was built · Meridian Interface</title>
+<meta name="description" content="How Meridian Interface designed and built the Haven website, the live wall panel and the home agent behind it.">
+<meta name="theme-color" content="#f4f5f7">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f1c2e'/%3E%3Cpath d='M7 23V9l9 8 9-8v14' fill='none' stroke='%23f4f5f7' stroke-width='2.6' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112,300;112,500;112,600;125,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="nav">
+  <a class="brand" href="index.html">Meridian<span>&nbsp;/&nbsp;</span>Interface</a>
+  <a class="btn quiet small nav-back" href="index.html">Back to the site</a>
+</header>
+<main id="main" class="doc">
+  <p class="eyebrow">Case study</p>
+  <h1>How this site <em>was built.</em></h1>
+  <p class="lede">Haven is an AI agent for a new home, with a wall panel in every room. Meridian Interface designed and built all of it: the product, the panel software, the film and this website. This page says what is real, what is a sample, and how it is made.</p>
+  <ul class="facts" aria-label="In numbers">
+    <li><b>10</b><span>panel screens, one for each kind of room</span></li>
+    <li><b>535</b><span>automated browser checks on every build</span></li>
+    <li><b>0</b><span>WCAG 2.2 AA violations found by those checks</span></li>
+  </ul>
+
+  <h2>The brief</h2>
+  <p>Show a family, a home builder and an architect what living with Haven is like before a home exists: the house drawn in light, a panel they can use right now, and a clear account of what keeps them safe. Then let them book a walkthrough that lands straight in the sales pipeline.</p>
+
+  <h2>What is real, and what is a sample</h2>
+  <table>
+    <thead><tr><th scope="col">Part</th><th scope="col">What it is</th></tr></thead>
+    <tbody>
+      <tr><td>The live panel</td><td>The real panel software, all ten screens, running in your browser on a simulated house. Nothing you press reaches a real device.</td></tr>
+      <tr><td>The home server</td><td>Real and working: it talks to Home Assistant, runs the safety rules, learns comfort preferences and speaks in the chosen voice.</td></tr>
+      <tr><td>Weather, cameras, electricity</td><td>Samples in the demo, labelled as such on every screen. A real home shows its own.</td></tr>
+      <tr><td>The homes</td><td>Sample plans. The walk-through and Linden House are drawn from them.</td></tr>
+      <tr><td>Product pictures</td><td>Renderings made for this site, not photographs of a specific brand&rsquo;s hardware.</td></tr>
+      <tr><td>The film</td><td>The house is drawn by the site&rsquo;s own engine; the live-action shots are generated clips; the guide is a synthetic voice.</td></tr>
+      <tr><td>The booking form</td><td>Real: it sends your request to Meridian Interface&rsquo;s CRM.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>How it is put together</h2>
+  <ul>
+    <li><strong>Layers that can&rsquo;t be skipped.</strong> Devices, then a single safety controller, then the home&rsquo;s services and agents, then the routes the panels call. Nothing reaches a door, a lock or the garage except through the controller, and the AI&rsquo;s tools have no way to say &ldquo;confirmed&rdquo;: unlocking and opening wait for a person.</li>
+    <li><strong>One codebase, two places.</strong> The same routes serve the home server and the browser demo, so the panel on this page is the panel a home runs.</li>
+    <li><strong>Learning that asks first.</strong> Habits Haven notices become suggestions. Nothing it learns runs until someone says yes.</li>
+    <li><strong>Honest numbers.</strong> Electricity is marked as an estimate unless a meter measures it, and the demo&rsquo;s weather and camera pictures say they are samples.</li>
+  </ul>
+
+  <h2>Tools and technology</h2>
+  <ul>
+    <li>Node.js with a single runtime dependency: Anthropic&rsquo;s Claude API, for conversation, with an offline parser as a fallback</li>
+    <li>Plain HTML, CSS and JavaScript for the panels and this site, with no framework; Three.js for the 3D house</li>
+    <li>Home Assistant for devices and cameras; ElevenLabs for the premium voice; Open-Meteo for weather</li>
+    <li>Supabase for the CRM the booking form writes to</li>
+    <li>Playwright and axe-core for the browser checks; esbuild to package the demos; FFmpeg to assemble the film</li>
+  </ul>
+
+  <h2>How it is tested</h2>
+  <p>Every change runs 139 unit and integration tests and 535 browser checks, split between the home server and the demo. The checks press the controls on every screen, follow the safety confirmations, and audit each screen for WCAG 2.2 AA with axe-core. Before release, a crawler pressed every button on every screen, and every link and control on this site.</p>
+
+  <h2>Who made it</h2>
+  <p>Meridian Interface: web design, mobile app interfaces, analytics &amp; CRM dashboards, and brand identity systems. <a href="mailto:otis@meridianinterface.com">otis@meridianinterface.com</a> &middot; <a href="https://meridianinterface.com">meridianinterface.com</a></p>
+  <a class="btn back" href="index.html">Back to the site</a>
+</main>
+<footer>
+  <div class="wrap">
+    <div class="about">
+      <a class="brand" href="index.html#top">Meridian<span>&nbsp;/&nbsp;</span>Interface</a>
+      <p>The hologram, the wall panels and Haven, all made from one plan.</p>
+      <a class="btn small" href="index.html#contact">Book a walkthrough</a>
+    </div>
+    <div><h4>Haven</h4><ul><li><a href="index.html#haven">What Haven does</a></li><li><a href="index.html#screens">Screens</a></li><li><a href="index.html#live">Live demo</a></li><li><a href="tour.html">Guided tour</a></li><li><a href="index.html#security">Security</a></li><li><a href="index.html#faq">Questions</a></li></ul></div>
+    <div><h4>Homes</h4><ul><li><a href="meridian.html">Watch a home build</a></li><li><a href="residence.html">Linden House</a></li><li><a href="index.html#builders">For builders</a></li></ul></div>
+    <div><h4>This site</h4><ul><li><a href="build.html">How it was built</a></li><li><a href="privacy.html">Privacy</a></li><li><a href="accessibility.html">Accessibility</a></li></ul></div>
+    <div class="maker">
+      <img src="img/meridian-logo.webp" alt="Meridian Interface" width="511" height="300">
+      <div class="maker-text">
+        <p class="maker-k">Built by Meridian Interface</p>
+        <p>Web design, mobile app interfaces, analytics &amp; CRM dashboards, and brand identity systems.</p>
+        <p><a href="mailto:otis@meridianinterface.com">otis@meridianinterface.com</a><br><a href="https://meridianinterface.com">meridianinterface.com</a></p>
+      </div>
+    </div>
+    <small>&copy; 2026 Meridian Interface. The homes shown are sample plans. The live panel runs on a simulated house, with sample weather.</small>
+  </div>
+</footer>
+</body>
+</html>

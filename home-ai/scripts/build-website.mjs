@@ -2,6 +2,7 @@
 // a screen for every room, the live panel, Haven, security, homes, builders, FAQ and the
 // contact form) with every page and asset it links to, in dist/website/:
 //   index.html                 the site
+//   build.html, privacy.html, accessibility.html   the plain pages (how it was built, privacy, accessibility)
 //   img/                       the security package pictures (website/img)
 //   build.jpg, linden.jpg      the Homes cards, captured from meridian.html and residence.html
 //   meridian-film.mp4, poster  the merged film (npm run assemble:film)
@@ -39,6 +40,9 @@ const swap = (html, from, to, where) => {
 };
 
 for (const f of ["site.css", "site.js"]) copyFileSync(need(`website/${f}`), `${OUT}/${f}`);
+// The plain pages: how the site was built (for recruiters and clients), privacy and accessibility.
+const DOCS = ["build.html", "privacy.html", "accessibility.html"];
+for (const f of DOCS) copyFileSync(need(`website/${f}`), `${OUT}/${f}`);
 // The page, with the film's captions filled in (the guide's words; the film itself carries no words on
 // its picture, and some hosts won't serve a .vtt file).
 writeFileSync(`${OUT}/index.html`, swap(readFileSync(need("website/index.html"), "utf8"), '<script type="text/vtt" id="film-captions"></script>',
@@ -135,10 +139,12 @@ writeFileSync(`${OUT}/library.html`, localLive(page("dist/catalog/haven-screen-l
 
 // Every local link and asset the site's pages name must exist.
 const files = new Set(readdirSync(OUT).concat(shots.map((f) => `shots/${f}`), imgs.map((f) => `img/${f}`), readdirSync(`${OUT}/voices`).map((f) => `voices/${f}`)));
-const index = readFileSync(`${OUT}/index.html`, "utf8");
-const refs = [...index.matchAll(/(?:href|src|poster)="([^"#:]+)(?:#[^"]*)?"/g)].map((m) => m[1]).filter((r) => !r.startsWith("//"));
-const missing = refs.filter((r) => !files.has(r));
-if (missing.length) throw new Error(`index.html links to missing files: ${[...new Set(missing)].join(", ")}`);
+for (const f of ["index.html", ...DOCS]) {
+  const html = readFileSync(`${OUT}/${f}`, "utf8");
+  const refs = [...html.matchAll(/(?:href|src|poster)="([^"#:]+)(?:#[^"]*)?"/g)].map((m) => m[1]).filter((r) => !r.startsWith("//"));
+  const missing = refs.filter((r) => !files.has(r));
+  if (missing.length) throw new Error(`${f} links to missing files: ${[...new Set(missing)].join(", ")}`);
+}
 const pieces = [...readFileSync(`${OUT}/site.js`, "utf8").matchAll(/\{ id: "([a-z-]+)", label:/g)].map((m) => `img/p-${m[1]}.webp`);
 if (pieces.length < 9 || pieces.some((f) => !files.has(f))) throw new Error(`site.js names missing package pictures: ${pieces.filter((f) => !files.has(f)).join(", ") || "(none found)"}`);
 console.log(`${OUT}/: ${files.size} files`);
