@@ -3143,3 +3143,13 @@ Otis: debug, run a system diagnostic, fix everything, then upload the new design
 
 ### 10 Oct (night): Otis's lockup on the fourth pane (preview only)
 Otis sent his logo (identical, pixel for pixel, to brand `meridian-logo-square.png`) for the last screen. Only the left 15-18% of that pane is ever on camera (output frames 12-118), so the mark and the one-line wordmark, cropped from `meridian-lockup.png`, are set left-aligned on the square file's off-white (`clip/logo/logo-d-light.py`, rebuilds the image exactly). 107 frames re-rendered, the rest reused; static 0 FAIL / 7 known WARN; hero modes 5/5. Website preview/hero-flow 03e0aa7, Vercel preview success (8oYnrAoNrD9GZJHxWuw9Vk8XdPaB). Live main still e8de10c (dark lockup) until Otis says go.
+
+### 11 Oct: lockup live; website diagnostic and fixes
+- Otis approved the fourth-pane lockup. QA on 03e0aa7: static 0 FAIL / 7 known WARN, browser 0 FAIL / 0 WARN. main fast-forwarded e8de10c -> 03e0aa7; GitHub deployment record: Production success.
+- Diagnostic (his ask: debug, structure, fix what is broken):
+  - Typecheck with unused-locals/params; React hooks lint (rules-of-hooks, exhaustive-deps) over 59 files: 0 issues; noscript fallback matches the hero copy.
+  - BUG fixed: My Appointments' details panel was built but nothing opened it. Each row now has View details; the panel is a labelled dialog, takes focus, closes on Escape / outside click / close button, status in the row's colour. 20/20 browser checks at desktop and phone.
+  - Removed, not wired: the unused "request a change" handler (it only set In Review in the visitor's localStorage and promised a follow-up nothing sent). Two unused imports out.
+  - Left on purpose: Showreel.tsx (Otis took it off services 9 Sep, kept to restore) and BuiltBy.tsx (the signature plate for client sites); neither is imported, so neither ships. Unused props onOpenBookModal (HomeView, ImpactView) and onTabChange (SolutionsView) are harmless.
+  - QA on 8c09ef8: static 0 FAIL / 7 known WARN, browser 0 FAIL / 0 WARN. main 03e0aa7 -> 8c09ef8, Production success; the live bundle (index-DZcx5V8n.js, fetched via Firecrawl) contains the new button and not the removed handler.
+- Backend: 13 cron jobs 0 failures; functions all 200 except the known security-agent 404s (still undeployed). Found 5 x 401 on settings.run_secret reads from the functions themselves; the gate treated a failed read as "not configured" and let the run through (fail-open). Fixed in 04e6e7b (_shared/runauth.ts and mailcheck): a read error refuses the run. 5 gate cases tested; deno check clean. NEEDS DEPLOY by Otis: every function importing runauth (orchestrator runner report media analyze compose-reply notify-owner security-agent) plus mailcheck.
