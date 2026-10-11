@@ -1955,3 +1955,7 @@ input[type="range"].pill-range::-moz-range-thumb { width: 8px; height: 26px; bor
   .wa-cams, .ev-cams, .la-pair, .la-stats, .cl-doors, .cl-tiles, .cl-cams { grid-template-columns: minmax(0, 1fr); }
   .gl-clock { font-size: 3rem; }
 }
+
+/* The Meridian Interface mark under every screen (brandMark() in app.js). */
+.brand-mark { margin: 4px 0 6px; text-align: center; font: 600 11px/1.4 var(--font, "Hanken Grotesk", sans-serif); letter-spacing: 0.32em; text-transform: uppercase; color: var(--muted); }
+.brand-mark span { letter-spacing: 0.12em; }

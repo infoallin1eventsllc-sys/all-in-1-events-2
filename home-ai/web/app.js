@@ -2472,11 +2472,14 @@ function removeNightPhoto() {
 
 const SCREEN_VIEW = { command: commandScreen, wallpaper: wallpaperScreen, glass: glassScreen, wall: wallScreen, evening: eveningScreen, aurora: auroraScreen, console: consoleScreen, classic: classicScreen, neon: neonScreen, lagoon: lagoonScreen };
 let introFor = null; // a screen draws itself in once when it opens, not on every live update
+// The maker's mark under every screen, in that screen's own quiet text color.
+const brandMark = () => el("p", { class: "brand-mark" }, "Meridian", el("span", { "aria-hidden": "true" }, " / "), "Interface");
+
 function renderAlt() {
   const alt = $("#alt");
   const view = (SCREEN_VIEW[screen] || commandScreen)();
   if (introFor !== screen) { introFor = screen; view.classList.add("intro"); }
-  alt.replaceChildren(view);
+  alt.replaceChildren(view, brandMark());
   loadCameraPictures();
   const slot = alt.querySelector(".chart-slot");
   if (slot && energy) renderEnergyChart(slot, energy, slot.clientWidth || 600);

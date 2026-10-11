@@ -1,6 +1,6 @@
 # Haven: Where Things Stand
 
-_Last updated: October 10, 2026 (ten new screens from the client's reference dashboards). Branch `claude/inspiring-fermi-jpi3vh` in `infoallin1eventsllc-sys/all-in-1-events-2`, folder `home-ai/`._
+_Last updated: October 11, 2026 (the Meridian Interface mark on the panels and in the website pictures). Branch `claude/inspiring-fermi-jpi3vh` in `infoallin1eventsllc-sys/all-in-1-events-2`, folder `home-ai/`._
 
 ## Pick up here (next session)
 **State:** everything is committed and pushed; the working tree is clean. The last full run (September 27, after the debug pass) was all passing: 124 unit tests and 397 browser checks across the server panel and the demo, with 0 accessibility violations. The published demo links still have the build from before the debug pass; republish them (CLAUDE.md, Published demos) to pick up the fixes.
@@ -23,6 +23,9 @@ _Last updated: October 10, 2026 (ten new screens from the client's reference das
 - **The drawn model** (the fallback without WebGL) shows an L-shaped room as its largest rectangle, so the rest of that room is left empty. It shows one floor at a time.
 - **Not measured:** hologram frame rate and battery use on a real wall tablet; how a 4,000 sq ft, three-floor home looks.
 - **The browser run is slow** (about 15 minutes per target) because WebGL runs in software here.
+
+## October 11: the Meridian Interface mark
+The client read "All secure" in the website's pictures as a stray brand name and asked for Meridian Interface there. In the every-screen picture, the security package and the wall panel close-up (`website/img/every-screen.webp`, `package.webp`, `p-panel.webp`), "All secure" is repainted as "Meridian Interface" in the same color and size, with the shield and "Your home is protected" kept (the shield moved so the line stays centred). On the live panels the status line still says "All secure" (it is how the family knows nothing is wrong, and it changes when something is); instead every screen and All controls end with a small "Meridian / Interface" mark in that screen's quiet text color (`brandMark()` in `web/app.js`, `.brand-mark` in styles.css; e2e checks it on all ten screens).
 
 ## October 10: ten new screens, from the client's reference dashboards
 The client chose new wall-panel designs (two sets of reference photos, made into nine mockups on the design canvas https://claude.ai/artifact/8gMYjg13PrHj1GZNdZB4Rd) and asked for them to replace seven screens on the website and the panel, keeping Wallpaper. All nine are now real screens in the panel, each with its own look: **Command** (the new main screen; replaces Signature), **Glass** (replaces Studio: the voice line, the agents and a thermostat dial), **Everything Wall** (replaces Command Center), **Good Evening** (replaces Family Hub), **Aurora** (replaces Nightstand, with the bedroom photo), **Security Console** (replaces Entry; the doorbell opens its camera here), **Portrait Classic** (replaces Rooms), **Neon Frame** and **Lagoon** (new). Wallpaper stays and is the one screen that comes in the three finishes. Old links and saved choices map to the new screens.

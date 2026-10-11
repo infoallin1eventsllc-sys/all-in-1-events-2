@@ -124,6 +124,7 @@ async function exercise(page, { garageTravelMs, home }) {
   await page.locator(".controls-open:visible").first().click();
   await check("All controls opens over the screen", async () => (await page.getAttribute("#app", "data-screen")) === "controls" && await page.locator("#tiles").isVisible() && (await page.textContent("#controls-close")) === "Back to Command");
   await check("Status starts at 'All secure'", async () => (await headline()) === "All secure");
+  await check("All controls carries the Meridian Interface mark", async () => (await page.locator("#footer + .brand-mark").isVisible()) && (await page.locator("#alt .brand-mark").count()) === 0);
   await check("Greeting states the indoor temperature", async () => /It's [\d.]+°F inside/.test(await page.textContent("#greeting")));
   await check("Clock shows the time", async () => /\d:\d\d/.test(await page.textContent("#clock")));
   await audit(page, "All controls, Grounded");
@@ -740,6 +741,7 @@ async function exercise(page, { garageTravelMs, home }) {
     await useScreen(id);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
     report(!overflow, `${id}: no sideways scrolling at 390px`);
+    report((await page.locator("#alt .brand-mark").innerText()).replace(/\s+/g, " ") === "MERIDIAN / INTERFACE" && await page.locator("#alt .brand-mark").isVisible(), `${id}: carries the Meridian Interface mark`);
   }
   await page.setViewportSize({ width: 1280, height: 800 });
   await useScreen("command");
