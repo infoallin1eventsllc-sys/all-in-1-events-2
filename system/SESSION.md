@@ -3169,3 +3169,12 @@ Otis: the demo was only the panel and a few pictures; he wants the whole Haven w
 - vercel.json: the tour frames its own pages; /demos/haven/ alone gets X-Frame-Options SAMEORIGIN + frame-ancestors 'self' (rest identical; mic still blocked). NEEDS OTIS'S OK before main.
 - QA script (browser.mjs): a demo with a playing video now counts as loaded at readyState complete with only media in flight (networkidle never comes while video streams).
 - Checks: 12 pages x 1440/390 under real headers, film + soundtrack play, tour's 5 views in frames, panels answer, voices load, form posts once (stubbed); tile 9/9; static 0 FAIL; browser 0 FAIL. Preview/haven b60ef98, Vercel preview success (4jP722zy33QmBgK5M2bz654qTEZy; Vercel login required). Main untouched (8c09ef8).
+
+### 11 Oct (night): Haven site review pass, preview only
+Otis: nothing redundant, an easy path for customers and recruiters, every feature and voice command working; nothing to main until he reviews.
+- Audit: no repeated sentence on or across the 12 Haven pages; home-page product pictures appearing twice are the device picker's tabs (by design). Every referenced file exists; img/meridian-mark.webp unused, now skipped by the packager.
+- Fixed via haven/site-edits/haven-nav.js (injected by the packager into film, library and the panels): the tour's library "Open live" links now switch the tour to the Wall panel tab (before: the library frame became a panel and the Library tab could not bring it back); those pages opened on their own now open inside the tour (before: no way back).
+- vercel.json, Haven folder only: microphone=(self) so voice input works (same-site frames inherit). Needs Otis's OK with the framing change before main.
+- Tests: 35 typed commands + 3 confirm-gated (garage, front door, water back on) + spoken commands via the recognizer path + spoken replies + 14 simulator buttons, on grounded/vivid/futuristic: 0 FAIL each. 12 navigation flows 0 FAIL. Live hologram + soundtrack in the tour. Tile 9/9. Static 0 FAIL. Browser QA 0 FAIL (Haven 61 controls; Drone Command "Straight down" timing WARN, known).
+- Website preview/haven 86c74fc, Vercel preview success (meridian-interface-website-jcgb65kz9.vercel.app). Main still 8c09ef8.
+- Noted, not changed (Haven product wording, would need a panel rebuild): "Water Heater is already vacation at 120°F" after "turn on the water heater"; "will it rain tomorrow?" answers with today's forecast.
