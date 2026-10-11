@@ -223,7 +223,18 @@ if (ONLY !== 'site') {
     const ctx = await b.newContext({ viewport: { width: 1366, height: 850 }, acceptDownloads: true }); await prod(ctx);
     const p = await ctx.newPage(); const where = () => `demo ${d}`; watch(p, where);
     const off = new Set(); p.on('request', r => { const u = r.url(); if (!u.startsWith(BASE) && !/^(data|blob):/.test(u) && !(ALLOW_OFFSITE[d] && ALLOW_OFFSITE[d].test(u))) off.add(u.slice(0, 100)); });
-    await p.goto(base, { waitUntil: 'networkidle' }).catch(e => FAIL(`${where()}: does not load: ${e.message.slice(0, 80)}`));
+    // 'networkidle' never comes on a page whose video is playing: the browser keeps the media
+    // download open and fetches as it plays (the Haven site's film, 11 Oct). So the page must
+    // finish loading, and then nothing may still be in flight except audio and video.
+    const inflight = new Map();
+    p.on('request', r => inflight.set(r, r.resourceType()));
+    p.on('requestfinished', r => inflight.delete(r)); p.on('requestfailed', r => inflight.delete(r));
+    await p.goto(base, { waitUntil: 'networkidle' }).catch(async (e) => {
+      const loaded = await p.evaluate(() => document.readyState).catch(() => '');
+      await p.waitForTimeout(1500);
+      const busy = [...inflight].filter(([, t]) => t !== 'media').map(([r]) => r.url().slice(0, 80));
+      if (loaded !== 'complete' || busy.length) FAIL(`${where()}: does not load: ${e.message.slice(0, 80)}${busy.length ? ' (still loading ' + busy.slice(0, 2).join(', ') + ')' : ''}`);
+    });
     await p.waitForTimeout(1200);
     const rootLen = await p.evaluate(() => (document.getElementById('root') || document.body).innerText.length);
     if (rootLen < 200) FAIL(`${where()}: page is nearly empty (${rootLen} chars)`);
