@@ -3218,3 +3218,15 @@ Otis sent the lockup + "Built by Meridian Interface / Web design, mobile app int
 Otis asked about agents that answer the phone and email, take briefs, build client sites in Claude Code and run demo revisions; before anything is built: "we have to create safety rails for the agents... barriers and rules and regulations for safety".
 - system/AGENT-SAFETY.md: three layers (walls = DB/server checks, keys = per-agent credentials, instructions = the file); Otis-only approval; injected instructions are data; six agents with can / never tables; inside rules (data, code, money, DB), outside rules (AI disclosure, reply-only contact, no promises, escalation triggers, no signups/purchases/posting), laws table (FCC AI-voice consent, recording consent, CAN-SPAM, TCPA, privacy, ADA, copyright), limits for Otis to set, pause-all switch, built-vs-to-build table.
 - DRAFT: nothing enforced by the file itself. Next, once Otis approves: build the "to build" walls before any client-facing agent is switched on.
+
+### START HERE (saved 12 Oct, end of day): open items for Otis
+Everything is committed and pushed. Website: preview/haven at 0782710 (Vercel preview meridian-interface-website-jiygwyo2t.vercel.app/demos/haven/, login required); main untouched at 8c09ef8 (live). Backend: this branch.
+Waiting on Otis, in rough order:
+1. Agent safety rules (system/AGENT-SAFETY.md, DRAFT): approve or change; set the money limits in section 8 (per build, per day). Then build the "to build" walls (section 10) BEFORE any client-facing agent.
+2. Haven site review, then "go" to push preview/haven to main (run meridian-prelaunch-qa first). Includes his OK on the two Haven-only header changes in vercel.json: frame-ancestors 'self' / X-Frame-Options SAMEORIGIN, and microphone=(self), for /demos/haven/ only.
+3. Monitoring plans: confirm the plan features (24/7 professional monitoring, cellular backup, video verification); add a Call button with 281-882-9198 (number from the main site footer)?
+4. Rewrite the remaining home-building wording (hero lede, Builders section, tour Walk-through + Property site tabs, contact role lines, film)?
+5. Delete or keep the unlinked /demos/finsight and /demos/orchestra folders.
+6. Hero video's tablet pane: swap FinSight for Haven on the next re-render?
+7. Otis still has to deploy the functions himself: supabase functions deploy orchestrator runner report media analyze compose-reply notify-owner security-agent mailcheck --project-ref glzodwhyavexpuusbqjy
+Haven packaging, for whoever picks it up: node haven/scripts/package-website.mjs <artifact download> ; node tools/brand-demos.mjs ; cp public/brand/meridian-mark.png public/demos/haven/brand/ . The artifact download is not in git (it was in a scratchpad); re-read it with the Artifact tool from https://claude.ai/artifact/DSiDLzQfDefZV6gTP78e3e if the packager must run again.
