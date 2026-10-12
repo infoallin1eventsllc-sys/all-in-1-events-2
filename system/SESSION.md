@@ -3191,3 +3191,10 @@ Otis: tapping a voice under "Haven's voice" did nothing; then: check every butto
 - Diagnostic: voice pick 4 voices x 3 finishes ok; voice/commands 46 checks x 3 finishes 0 FAIL; flows 0 FAIL; bezel 0 FAIL; static 0 FAIL (7 WARN, known: xlsx no-fix, unlinked finsight/orchestra folders, orchestra pictures unused, demo-notice reminders); browser QA 0 FAIL 0 WARN (every page at 4 widths, 12 demos, Haven 58 controls). Hero loop check flaked once under load, passed on rerun.
 - Old scratch tests haven-test.mjs (single-panel era) and havensite-test film checks (film.html now opens inside the tour; Playwright has no H.264) are out of date, not site faults.
 - Website preview/haven c55a2ad, Vercel preview success (meridian-interface-website-kwwtq18p1.vercel.app). Main still 8c09ef8.
+
+### 12 Oct: every Haven panel screen in the bezel (preview)
+Otis: the Screens section showed a bare screen; every panel a client can see or use must be framed.
+- Packager: one shared bezel() style (glass bezel, aluminium rim, sensor dot) now used by the live demo, the home page room chooser (#screens .pick .shot), all 10 screen-library pictures (.screen .shot, picture keeps 16:10 inside), and the tour's Wall panel.
+- haven/site-edits/haven-tour-frame.js: adds a bezel behind the tour's #view-panel, shown only on that tab; places the panel inside it and scales it from 1440 px design width (s <= 1) so the whole screen shows; phones run at own size, 10 px bezel. A tap still lands on the right control (scale via transform).
+- Checks: frames-test (desktop, laptop, phone): 30 finish/screen views inside the bezel, typing works, bezel only on the panel tab, 10/10 library screens, 10/10 chooser rooms, live demo: 0 FAIL. Voice/commands grounded+vivid 0 FAIL, flows 0 FAIL, bezel 0 FAIL, voice pick 30 ok, static 0 FAIL, browser demos 0 FAIL (Haven 62 controls).
+- Website preview/haven 84d8e05, Vercel preview success (meridian-interface-website-oywiipnnt.vercel.app). Main still 8c09ef8.
