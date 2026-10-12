@@ -1,20 +1,37 @@
 name: Fetch media into the repo
 
-# Downloads a media file from a URL (for example a finished render in the
-# agency's Higgsfield library) and commits it to the branch the workflow runs
-# on. Used when a cloud session cannot reach the media host itself.
+# Downloads one or more media files from URLs (for example finished renders in
+# the agency's Higgsfield library) and commits them to the branch the workflow
+# runs on. Used when a cloud session cannot reach the media host itself.
+#
+#   url   one URL, or several separated by spaces or newlines
+#   dest  a file path (one URL) or a directory ending in "/" (several URLs; each
+#         file keeps its own name, or the names in `names`, in order)
+#   names optional space-separated file names for the downloads, in order
+#   fit   optional "WxH" to resize images to that size as JPEG before committing,
+#         so large renders do not bloat the repository history
 on:
   workflow_dispatch:
     inputs:
       url:
-        description: "HTTPS URL of the file to fetch"
+        description: "HTTPS URL(s) of the file(s) to fetch"
         required: true
         type: string
       dest:
-        description: "Path inside the repository to write it to"
+        description: "Path inside the repository to write to (a directory if it ends with /)"
         required: true
         type: string
         default: marketing/film/higgsfield/master.mp4
+      names:
+        description: "Optional file names for the downloads, in order, space-separated"
+        required: false
+        type: string
+        default: ""
+      fit:
+        description: "Optional WxH: resize images to this and save as JPEG"
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: write
@@ -27,15 +44,43 @@ jobs:
         with:
           ref: ${{ github.ref }}
       - name: Download
+        env:
+          URLS: ${{ inputs.url }}
+          DEST: ${{ inputs.dest }}
+          NAMES: ${{ inputs.names }}
+          FIT: ${{ inputs.fit }}
         run: |
-          mkdir -p "$(dirname "${{ inputs.dest }}")"
-          curl -fsSL --retry 3 -o "${{ inputs.dest }}" "${{ inputs.url }}"
-          ls -la "${{ inputs.dest }}"
-          file "${{ inputs.dest }}"
+          set -eu
+          read -r -a urls <<< "$(echo "$URLS" | tr '\n' ' ')"
+          read -r -a names <<< "$NAMES"
+          if [[ "$DEST" == */ ]]; then mkdir -p "$DEST"; else mkdir -p "$(dirname "$DEST")"; fi
+          i=0
+          for u in "${urls[@]}"; do
+            if [[ "$DEST" == */ ]]; then
+              name="${names[$i]:-$(basename "${u%%\?*}")}"
+              out="$DEST$name"
+            else
+              out="$DEST"
+            fi
+            curl -fsSL --retry 3 -o "$out" "$u"
+            if [ -n "$FIT" ]; then
+              case "$(file -b --mime-type "$out")" in
+                image/*)
+                  jpg="${out%.*}.jpg"
+                  convert "$out" -resize "${FIT}!" -quality 93 -sampling-factor 1x1 "$jpg"
+                  [ "$jpg" != "$out" ] && rm -f "$out"
+                  out="$jpg" ;;
+              esac
+            fi
+            ls -la "$out"; file "$out"
+            i=$((i+1))
+          done
       - name: Commit
+        env:
+          DEST: ${{ inputs.dest }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "${{ inputs.dest }}"
-          git commit -m "Fetch ${{ inputs.dest }} from its media host" || echo "nothing to commit"
+          git add -A "$DEST"
+          git commit -m "Fetch $DEST from its media host" || echo "nothing to commit"
           git push
