@@ -80,3 +80,22 @@ p { margin: 0; }
 .ss-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 28px; border-radius: 2px; border: 1px solid currentColor; text-decoration: none; font-size: 11px; letter-spacing: 0.26em; text-transform: uppercase; transition: background 0.35s var(--ease), color 0.35s var(--ease); }
 .ss-btn:hover { background: var(--fg); color: var(--ground); }
 @media (prefers-reduced-motion: reduce) { .ss-cue::after { animation: none; } * { scroll-behavior: auto !important; } }
+
+/* ---------- the plate: photograph, glow and light sweep as one element ----------
+   The packshot's ground is the exact page colour, so the product is photographed "on" the page.
+   A radial mask softens the plate's rectangle; the glow sits behind it in the product's own tone. */
+.ss-plate { position: relative; width: min(100%, 540px); aspect-ratio: 3 / 4; isolation: isolate; }
+.ss-plate::before { content: ""; position: absolute; z-index: -1; inset: -18%; border-radius: 50%; background: radial-gradient(ellipse at 50% 55%, var(--tone) 0%, transparent 62%); opacity: 0; filter: blur(34px); transition: opacity 1.6s var(--ease); }
+.ss-pic { display: block; width: 100%; height: 100%; object-fit: cover;
+  -webkit-mask-image: radial-gradient(ellipse 74% 72% at 50% 50%, #000 52%, transparent 100%); mask-image: radial-gradient(ellipse 74% 72% at 50% 50%, #000 52%, transparent 100%); }
+.ss-sheen { position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  background: linear-gradient(112deg, transparent 38%, rgba(255, 255, 255, 0.16) 48%, rgba(255, 255, 255, 0.05) 52%, transparent 62%);
+  -webkit-mask-image: radial-gradient(ellipse 60% 62% at 50% 50%, #000 40%, transparent 100%); mask-image: radial-gradient(ellipse 60% 62% at 50% 50%, #000 40%, transparent 100%);
+  transform: translateX(-70%); }
+.lit .ss-plate::before { opacity: 0.5; }
+.night .lit .ss-sheen { animation: ss-sweep 1.7s cubic-bezier(0.3, 0.6, 0.2, 1) 0.35s 1 both; }
+@keyframes ss-sweep { 0% { opacity: 0; transform: translateX(-70%); } 15% { opacity: 1; } 100% { opacity: 0; transform: translateX(70%); } }
+/* once settled, the product breathes very slowly, so the page never feels frozen */
+.lit .ss-pic { animation: ss-breathe 7s ease-in-out infinite; }
+@keyframes ss-breathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@media (prefers-reduced-motion: reduce) { .lit .ss-pic, .night .lit .ss-sheen { animation: none; } }

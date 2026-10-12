@@ -4,22 +4,30 @@
    Sound starts only from the Sound button (browsers block audio until the
    shopper interacts). Music loops softly and ducks under the narration; a
    caption shows each line whether sound is on or off.
+   Images: img/night/<id>.webp and img/ivory/<id>.webp are studio packshots
+   whose ground is the exact page colour, so the product sits *on* the page.
    ============================================================= */
 (function () {
   "use strict";
 
   var PRODUCTS = [
-    { id: "moon-flower", name: "Moon Flower", kind: "Signature Candle", notes: "Bergamot · Leather · Labdanum", price: 35, tone: "#8c1906",
+    { id: "moon-flower", name: "Moon Flower", kind: "Signature Candle", notes: "Bergamot · Leather · Labdanum", price: 35, tone: "#6a5a4e",
       line: "Moon Flower. Our signature. Bright bergamot, wrapped in soft leather and warm labdanum. Moody, and magnetic." },
-    { id: "brewed-elixir", name: "Brewed Elixir", kind: "Signature Candle", notes: "Coffee · Hazelnut · Vanilla", price: 35, tone: "#917057",
+    { id: "brewed-elixir", name: "Brewed Elixir", kind: "Signature Candle", notes: "Coffee · Hazelnut · Vanilla", price: 35, tone: "#8a5a2e",
       line: "Brewed Elixir. Fresh coffee, toasted hazelnut, and a soft swirl of vanilla. Two wicks, hand-poured in soy." },
-    { id: "inferno-dreams", name: "Inferno Dreams", kind: "Signature Candle", notes: "Saffron · Sandalwood · Embers", price: 35, tone: "#8e8375",
+    { id: "inferno-dreams", name: "Inferno Dreams", kind: "Signature Candle", notes: "Saffron · Sandalwood · Embers", price: 35, tone: "#9a5a22",
       line: "Inferno Dreams. Saffron and sandalwood, with the warm glow of embers. Made for late nights." },
-    { id: "exotic-peach-spray", name: "Exotic Peach", kind: "Room Spray", notes: "Peach · Coconut · Mango", price: 22, tone: "#c78d46",
+    { id: "exotic-peach", name: "Exotic Peach", kind: "Signature Candle", notes: "Mango · Coconut · Peach", price: 35, tone: "#b07a3a",
+      line: "Exotic Peach. Mango, coconut and ripe peach, in black glass with a wooden lid. Sunshine, in a candle." },
+    { id: "harlem-smock", name: "Harlem Smock", kind: "Signature Candle", notes: "Santal · Sandalwood · Vetiver", price: 38, tone: "#6e6150",
+      line: "Harlem Smock. Santal, sandalwood and vetiver. Smooth, grounding, and a little bit smoky. Our best seller." },
+    { id: "exotic-peach-spray", name: "Exotic Peach", kind: "Room Spray", notes: "Peach · Coconut · Mango", price: 22, tone: "#c08a48",
       line: "Exotic Peach room spray. Ripe peach, creamy coconut, and mango. A spritz of summer, any time of year." },
-    { id: "amber-blush-spray", name: "Amber Blush", kind: "Room Spray", notes: "Vanilla · White Amber · Jasmine", price: 22, tone: "#8a5d3d",
+    { id: "amber-blush-spray", name: "Amber Blush", kind: "Room Spray", notes: "Vanilla · White Amber · Jasmine", price: 22, tone: "#a0704a",
       line: "Amber Blush. Vanilla, white amber, and jasmine. Soft, warm, and a little bit romantic." },
-    { id: "citrus-grove", name: "No.7 Citrus Grove", kind: "Reed Diffuser", notes: "Citrus · Green Vetiver · Amber", price: 28, tone: "#a6a192",
+    { id: "moon-flower-spray", name: "Moon Flower", kind: "Room Spray", notes: "Bergamot · Leather · Labdanum", price: 22, tone: "#7a7a86",
+      line: "Moon Flower room spray. The signature scent, in a two ounce mist. Bergamot, leather and labdanum, anywhere you like." },
+    { id: "citrus-grove", name: "No.7 Citrus Grove", kind: "Reed Diffuser", notes: "Citrus · Green Vetiver · Amber", price: 28, tone: "#9a9a62",
       line: "Number Seven, Citrus Grove. Bright citrus over green vetiver and amber. Fragrance all day, no flame needed." }
   ];
   var WELCOME = "Welcome to Secrets of Cint. Just scroll, and let the collection come to you.";
@@ -63,9 +71,11 @@
 
   /* ---------- narration ---------- */
   var focused = null, lastSaid = null, settle;
+  var listeners = [];
   function say(id) {
     var text = id === "welcome" ? WELCOME : BY_ID[id].line;
     if (speaking) { speaking.pause(); speaking = null; }
+    listeners.forEach(function (f) { f(id); });
     if (!on) { caption(text, 6500); return; }
     var a = voice(id);
     a.currentTime = 0; speaking = a;
@@ -73,7 +83,7 @@
     a.play().catch(function () { speaking = null; });
     caption(text, a.duration ? a.duration * 1000 + 900 : 9500);
   }
-  // A product has to rest in view for a moment before it speaks, so a fast scroll doesn't stutter through six voices.
+  // A product has to rest in view for a moment before it speaks, so a fast scroll doesn't stutter through nine voices.
   function focus(id) {
     focused = id;
     clearTimeout(settle);
@@ -104,7 +114,7 @@
   function add(id) {
     count += 1;
     document.querySelectorAll("[data-cart-count]").forEach(function (n) { n.textContent = String(count); });
-    toastEl.textContent = BY_ID[id].name + " added to the sample cart";
+    toastEl.textContent = BY_ID[id].name + (BY_ID[id].kind === "Room Spray" ? " room spray" : "") + " added to the sample cart";
     toastEl.classList.add("show");
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { toastEl.classList.remove("show"); }, 2400);
@@ -142,7 +152,14 @@
       '<div class="ss-buy"><span class="ss-price">$' + p.price.toFixed(2) + '</span>' +
       '<button type="button" class="ss-add" data-add="' + p.id + '">Add to Cart</button></div>';
   }
+  // The photograph as a "plate": the picture, its reflection in the page and its glow, all one element
+  function plateHTML(p, ground, eager) {
+    var src = "img/" + ground + "/" + p.id + ".webp";
+    return '<div class="ss-plate" style="--tone:' + p.tone + '">' +
+      '<img class="ss-pic" src="' + src + '" width="1050" height="1400" alt="' + p.name + ' ' + p.kind.toLowerCase() + ' — ' + p.notes + '" loading="' + (eager ? "eager" : "lazy") + '" decoding="async" />' +
+      '<span class="ss-sheen" aria-hidden="true"></span></div>';
+  }
 
-  window.SOC_SHOP = { products: PRODUCTS, reduce: reduce, focus: focus, infoHTML: infoHTML, add: add };
+  window.SOC_SHOP = { products: PRODUCTS, reduce: reduce, focus: focus, infoHTML: infoHTML, plateHTML: plateHTML, add: add, onSay: function (f) { listeners.push(f); } };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount); else mount();
 })();

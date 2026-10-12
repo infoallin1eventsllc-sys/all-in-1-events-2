@@ -25,8 +25,9 @@
     .floor { position: absolute; left: 0; right: 0; bottom: 0; height: 38%; z-index: 0; background: linear-gradient(transparent, rgba(255, 255, 255, 0.045)); }
     .pics, .infos { position: relative; z-index: 1; height: 100%; display: grid; align-items: center; }
     .pics { justify-items: center; }
-    .pics img, .infos .card { grid-area: 1 / 1; }
-    .pics img { width: min(100%, 560px); max-height: 78svh; object-fit: contain; filter: drop-shadow(0 60px 60px rgba(0, 0, 0, 0.7)); will-change: transform, opacity; }
+    .pics .pw, .infos .card { grid-area: 1 / 1; }
+    .pics .pw { width: min(100%, 560px); max-height: 80svh; will-change: transform, opacity; display: grid; place-items: center; }
+    .pics .pw .ss-plate { max-height: 80svh; }
     .infos .card { max-width: 480px; will-change: transform, opacity; }
     .dots { position: absolute; z-index: 2; right: clamp(16px, 3vw, 32px); top: 50%; transform: translateY(-50%); display: grid; gap: 14px; }
     .dots button { width: 44px; height: 24px; display: grid; place-items: end center; background: none; border: 0; cursor: pointer; padding: 0; }
@@ -37,7 +38,7 @@
     @media (max-width: 760px) {
       /* leave room under the text for the caption and the sound button */
       .stage { grid-template-columns: 1fr; grid-template-rows: 1fr auto; padding-top: 70px; padding-bottom: 210px; gap: 8px; }
-      .pics img { max-height: 38svh; }
+      .pics .pw, .pics .pw .ss-plate { max-height: 40svh; width: min(100%, 300px); }
       .infos .card .ss-name { font-size: 36px; }
       .infos { align-items: start; }
       .dots { right: 12px; }
@@ -45,11 +46,11 @@
     @media (prefers-reduced-motion: reduce) {
       /* no pinning, no motion: the six products simply stack */
       .track { height: auto; } .stage { position: static; height: auto; display: block; padding: 40px clamp(20px, 6vw, 96px); } .pics, .infos { display: block; height: auto; }
-      .pics img, .infos .card { position: static; opacity: 1 !important; transform: none !important; margin: 40px auto; } .dots, .spot, .floor { display: none; }
+      .pics .pw, .infos .card { position: static; opacity: 1 !important; transform: none !important; margin: 40px auto; } .dots, .spot, .floor { display: none; }
     }
   </style>
 </head>
-<body>
+<body class="night">
   <header class="ss-bar">
     <a class="ss-brand" href="index.html">Secrets of Cint</a>
     <nav aria-label="Sample">

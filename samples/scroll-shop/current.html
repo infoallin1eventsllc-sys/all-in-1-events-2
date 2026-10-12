@@ -22,7 +22,8 @@
     .rail { position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--line); }
     .rail::after { content: ""; position: absolute; left: 50%; top: -5px; width: 11px; height: 11px; border: 1px solid var(--muted); border-radius: 50%; transform: translateX(-50%); background: var(--ground); }
     .item { position: absolute; top: 50%; left: 50%; width: min(78vw, 440px); transform: translate(-50%, -50%); display: grid; justify-items: center; text-align: center; will-change: transform, opacity; }
-    .item img { width: min(100%, 400px); max-height: 46svh; object-fit: contain; filter: drop-shadow(0 30px 40px rgba(31, 29, 26, 0.25)); }
+    .item .ss-plate { width: min(100%, 420px); max-height: 48svh; }
+    .item .ss-plate::before { display: none; }   /* no coloured glow on the ivory page: the shadow in the photograph does the grounding */
     .item .info { margin-top: 18px; width: min(100%, 440px); }
     .item .ss-name { font-size: clamp(32px, 4vw, 54px); }
     .item .ss-buy { justify-content: center; }
@@ -30,7 +31,7 @@
     .progress i { display: block; height: 100%; background: var(--ink); width: 0; transform-origin: left; }
     .outro { min-height: 70svh; display: grid; place-content: center; text-align: center; padding: 60px clamp(20px, 6vw, 96px) 140px; gap: 22px; }
     .outro h2 { font-size: clamp(36px, 5vw, 64px); }
-    @media (max-width: 760px) { .item img { max-height: 34svh; } .item { width: min(86vw, 440px); } .item .ss-name { font-size: 32px; } }
+    @media (max-width: 760px) { .item .ss-plate { max-height: 36svh; width: min(100%, 270px); } .item { width: min(86vw, 440px); } .item .ss-name { font-size: 32px; } }
     @media (prefers-reduced-motion: reduce) {
       .track { height: auto; } .stream { position: static; height: auto; overflow: visible; padding: 40px 0; } .rail { display: none; }
       .item { position: static; transform: none !important; opacity: 1 !important; margin: 56px auto; }
