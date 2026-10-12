@@ -3198,3 +3198,11 @@ Otis: the Screens section showed a bare screen; every panel a client can see or 
 - haven/site-edits/haven-tour-frame.js: adds a bezel behind the tour's #view-panel, shown only on that tab; places the panel inside it and scales it from 1440 px design width (s <= 1) so the whole screen shows; phones run at own size, 10 px bezel. A tap still lands on the right control (scale via transform).
 - Checks: frames-test (desktop, laptop, phone): 30 finish/screen views inside the bezel, typing works, bezel only on the panel tab, 10/10 library screens, 10/10 chooser rooms, live demo: 0 FAIL. Voice/commands grounded+vivid 0 FAIL, flows 0 FAIL, bezel 0 FAIL, voice pick 30 ok, static 0 FAIL, browser demos 0 FAIL (Haven 62 controls).
 - Website preview/haven 84d8e05, Vercel preview success (meridian-interface-website-oywiipnnt.vercel.app). Main still 8c09ef8.
+
+### 12 Oct: Haven monitoring plans replace "See the home before it's built" (preview)
+Otis: Meridian doesn't build homes; replace the Homes section with plan pricing like ADT's ($24.99 / $29.99 / $39.99, Get a free quote).
+- haven/site-edits/plans.html (swapped in by the packager): Secure $24.99, Smart $29.99 (Recommended), Complete $39.99, features in Haven's own words; each "Get a free quote" -> #contact with the plan chosen (haven-plans.js sets #f-plan); site.js patched so "Plan: X" goes in the intake message. Nav Homes -> Plans; footer Homes column -> Plans; contact eyebrow/intro mention the free quote; build.jpg + linden.jpg no longer published.
+- No phone button (no business number given). Plan features need Otis's confirmation (24/7 professional monitoring, cellular backup, video verification).
+- Still home-building themed, asked Otis: hero lede, Builders section, tour Walk-through + Property site tabs, contact role/dl lines, the film.
+- Checks: plans-test 0 FAIL (desktop + phone: prices, nav, each quote button preselects, plan reaches intake, no sideways scroll, no CSP blocks), frames 0 FAIL, static 0 FAIL, browser demos 0 FAIL (Haven 63 controls; Drone Command timing WARN, known).
+- Website preview/haven 000ef28, Vercel preview success (meridian-interface-website-hehm3au39.vercel.app). Main still 8c09ef8.
