@@ -22,6 +22,7 @@
 
   <script src="assets/js/head.js"></script>
   <link rel="stylesheet" href="assets/css/styles.css" />
+  <link rel="stylesheet" href="assets/css/scroll-shop.css" />
 </head>
 <body>
 
@@ -93,11 +94,11 @@
             <h1>A new life candle <em>experience.</em></h1>
             <p class="hero-lead">Affordable luxury soy candles and room sprays, hand-poured in small batches — 100% natural soy wax, phthalate-free fragrance, set in reusable black glass.</p>
             <div class="hero-cta">
-              <a href="#collection" class="btn on-sage">Explore the Scents<svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+              <a href="#scents" class="btn on-sage">Explore the Scents<svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
               <a href="#story" class="btn ghost-light">Our Story</a>
             </div>
           </div>
-          <p class="hero-scents reveal" data-delay="3"><span class="lbl">In the film</span><a href="#p-exotic-peach" data-from="3.0" data-to="6.3">Exotic Peach</a><a href="#p-brewed-elixir" data-from="6.3" data-to="9.6">Brewed Elixir</a><a href="#p-inferno-dreams" data-from="9.6" data-to="12.9">Inferno Dreams</a></p>
+          <p class="hero-scents reveal" data-delay="3"><span class="lbl">In the film</span><a href="#scent-exotic-peach" data-from="3.0" data-to="6.3">Exotic Peach</a><a href="#scent-brewed-elixir" data-from="6.3" data-to="9.6">Brewed Elixir</a><a href="#scent-inferno-dreams" data-from="9.6" data-to="12.9">Inferno Dreams</a></p>
         </div>
         <figure class="hero-film reveal">
           <video id="heroFilm" width="720" height="1280" autoplay muted loop playsinline preload="auto" poster="assets/video/hero-film-poster.jpg" aria-describedby="heroFilmCaption">
@@ -112,6 +113,16 @@
           <figcaption class="sr-only" id="heroFilmCaption">A 15-second black-and-white film: a match strikes and lights a candle, then Exotic Peach, Brewed Elixir and Inferno Dreams, ending on the Secrets of Cint logo.</figcaption>
         </figure>
       </div>
+    </section>
+
+    <!-- ============ THE SCENTS, BY SCROLL — on the film's black; each scent drifts in and the voice introduces it (assets/js/scroll-shop.js) ============ -->
+    <section class="scents" id="scents" aria-labelledby="scentsTitle">
+      <div class="scents-lead">
+        <p class="eyebrow reveal">The Collection</p>
+        <h2 id="scentsTitle" class="reveal" data-delay="1">Scroll, and the scents <em>come to you.</em></h2>
+        <p class="lead reveal" data-delay="2">No grid, no clicking through. Each scent drifts in on its own, with a word about what it is. Turn on sound for the music and the voice.</p>
+      </div>
+      <div id="scentsList"><!-- scents injected --></div>
     </section>
 
     <!-- ============ MARQUEE ============ -->
@@ -131,9 +142,9 @@
       <div class="wrap">
         <div class="head-row reveal">
           <div class="head">
-            <p class="eyebrow">The Signature Collection</p>
-            <h2>Mood-setting luxury scents</h2>
-            <p>Hand-poured soy candles and room sprays in reusable black glass with natural wood lids — crafted in small batches in San Francisco.</p>
+            <p class="eyebrow">The Full Collection</p>
+            <h2>Every scent, at a glance</h2>
+            <p>Hand-poured soy candles and room sprays in reusable black glass with natural wood lids — crafted in small batches in San Francisco. Filter by what you are after.</p>
           </div>
           <div class="filters" id="filters" role="group" aria-label="Filter products">
             <button type="button" class="chip active" data-filter="all" aria-pressed="true">All</button>
@@ -312,6 +323,7 @@
 
   <script src="assets/js/hero-film.js"></script>
   <script src="assets/js/main.js"></script>
+  <script src="assets/js/scroll-shop.js"></script>
   <script src="assets/js/jszip.min.js"></script>
   <script src="assets/js/portal.js"></script>
 </body>

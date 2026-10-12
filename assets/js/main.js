@@ -90,6 +90,7 @@
       body: "You can feel the love and culture poured into every candle. The vessels are reusable and gorgeous. Ordering a few more right now." }
   ];
 
+  window.SOC_PRODUCTS = PRODUCTS;   // the scents-by-scroll section (assets/js/scroll-shop.js) reads names, prices and notes from here
   var BADGE_TEXT = { best: "Best Seller", ltd: "Seasonal", new: "New Arrival" };
 
   /* ---------- Helpers ---------- */
@@ -230,9 +231,10 @@
     renderProducts(chip.getAttribute("data-filter"));
   });
 
-  /* ---------- Spotlight add button ---------- */
-  document.querySelectorAll("[data-add]").forEach(function (btn) {
-    btn.addEventListener("click", function () { addToCart(btn.getAttribute("data-add")); });
+  /* ---------- Add buttons outside the grid (spotlight, the scents by scroll) ---------- */
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-add]");
+    if (btn) addToCart(btn.getAttribute("data-add"));
   });
   document.getElementById("cartBtn").addEventListener("click", function () {
     showToast(cart > 0 ? "You have " + cart + " item" + (cart > 1 ? "s" : "") + " in your cart" : "Your cart is empty — start with our Signature");

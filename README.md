@@ -14,13 +14,18 @@ product photography) that deploys to Netlify or Vercel with no build step.
 ├── index.html                 # The whole site
 ├── assets/
 │   ├── css/styles.css         # Design system and all styling (no framework)
+│   ├── css/scroll-shop.css    # The scents by scroll (the section under the hero film)
 │   ├── js/head.js             # Adds the .js class before paint (reveals stay visible without JS)
 │   ├── js/hero-film.js        # Hero film: muted autoplay, Sound on/off, scent line follows the film
 │   ├── js/main.js             # Products, filters, wishlist, cart, reviews, menu, newsletter
+│   ├── js/scroll-shop.js      # The scents by scroll: drift-in plates, music, narration, captions
 │   ├── js/portal.js           # Owner Photo Control (PIN-gated photo swaps + ZIP export)
 │   ├── js/jszip.min.js        # ZIP export for the portal
 │   ├── images/                # Product and brand photography
+│   ├── images/scents/         # Studio packshots on pure black for the scents by scroll
+│   ├── audio/scents/          # Music loop and the nine narration lines (plus a welcome)
 │   └── video/                 # Hero film (WebM, MP4, poster)
+├── samples/scroll-shop/       # The three scroll-to-shop experiments (Sample A is now on the site)
 ├── marketing/film/            # Film sources, shot lists and build scripts
 ├── DESIGN.md                  # Design system, decisions and every QA pass
 ├── CLIENT-APPROVAL-STATUS.md  # What is done and what waits on the client
@@ -33,9 +38,16 @@ product photography) that deploys to Netlify or Vercel with no build step.
 - **Header**: logo, section links, cart count, menu sheet on phones and tablets.
 - **Hero**: the 15-second black-and-white film (match strike, Exotic Peach, Brewed
   Elixir, Inferno Dreams, logo). It plays muted; **Sound on** restarts it with sound.
-  The "In the film" line lights the scent on screen and links to its card.
-- **Collection**: 13 products (8 candles, 4 room sprays, 1 reed diffuser) with
-  filters, wishlist hearts and Add to Cart.
+  The "In the film" line lights the scent on screen and links to it in the section below.
+- **The scents, by scroll**: directly under the film, on the same black. The nine
+  photographed products arrive one per screen: each drifts in from the side, settles
+  beside its name, notes and price, and lights up while a voice says a line about it
+  over soft music. Sound starts only from its **Sound on** button (with sound off the
+  line is a caption); the film and this section never play sound at the same time.
+  The pictures are studio packshots generated from the real photos on pure black, so
+  each product sits on the page rather than in a box.
+- **Collection**: the full catalogue, 13 products (8 candles, 4 room sprays, 1 reed
+  diffuser) with filters, wishlist hearts and Add to Cart.
 - **Pop-up**: The Crossing, San Francisco.
 - **Signature**: Moon Flower, with its notes and an Add to Cart button.
 - **Our Story**: the house, plus a spec list (wax, fragrance, vessel, house).

@@ -21,16 +21,27 @@
   // If autoplay is blocked (low-power mode, data saver), show the poster instead of a black box.
   setTimeout(function () { if (video.paused && !video.classList.contains("playing")) video.setAttribute("data-still", ""); }, 2500);
 
+  function setSound(on) {
+    video.muted = !on;
+    if (!btn) return;
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.setAttribute("aria-label", on ? "Turn sound off" : "Turn sound on");
+    btn.querySelector(".lbl").textContent = on ? "Sound off" : "Sound on";
+  }
   if (btn) {
     btn.addEventListener("click", function () {
       var on = video.muted;
-      video.muted = !on;
-      btn.setAttribute("aria-pressed", on ? "true" : "false");
-      btn.setAttribute("aria-label", on ? "Turn sound off" : "Turn sound on");
-      btn.querySelector(".lbl").textContent = on ? "Sound off" : "Sound on";
-      if (on) { video.currentTime = 0; userPaused = false; play(); }
+      setSound(on);
+      if (on) {
+        // one sound at a time on the page: the scents below go quiet when the film speaks
+        document.dispatchEvent(new CustomEvent("soc:sound", { detail: { source: "film" } }));
+        video.currentTime = 0; userPaused = false; play();
+      }
     });
   }
+  document.addEventListener("soc:sound", function (e) {
+    if (!video.muted && e.detail && e.detail.source !== "film") setSound(false);
+  });
 
   if ("IntersectionObserver" in window) {
     new IntersectionObserver(function (es) {

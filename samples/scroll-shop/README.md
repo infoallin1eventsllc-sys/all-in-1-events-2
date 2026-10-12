@@ -2,7 +2,7 @@
 
 Three takes on shopping by scroll instead of a product grid: the shopper scrolls, the
 scents arrive one at a time, and a voice says a line about each over soft music.
-Nothing here is linked from the live site.
+Sample A (Float) is now on the live site, directly under the hero film (`assets/js/scroll-shop.js`); the other two stay here as alternatives.
 
 - `index.html` picks a sample.
 - `float.html` **Sample A, Float.** Night page; each scent drifts in from a different side, settles
