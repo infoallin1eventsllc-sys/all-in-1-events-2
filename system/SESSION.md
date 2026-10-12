@@ -3206,3 +3206,10 @@ Otis: Meridian doesn't build homes; replace the Homes section with plan pricing 
 - Still home-building themed, asked Otis: hero lede, Builders section, tour Walk-through + Property site tabs, contact role/dl lines, the film.
 - Checks: plans-test 0 FAIL (desktop + phone: prices, nav, each quote button preselects, plan reaches intake, no sideways scroll, no CSP blocks), frames 0 FAIL, static 0 FAIL, browser demos 0 FAIL (Haven 63 controls; Drone Command timing WARN, known).
 - Website preview/haven 000ef28, Vercel preview success (meridian-interface-website-hehm3au39.vercel.app). Main still 8c09ef8.
+
+### 12 Oct: "Built by Meridian Interface" block on every Haven page (preview)
+Otis sent the lockup + "Built by Meridian Interface / Web design, mobile app interfaces, analytics & CRM dashboards, and brand identity systems. / otis@meridianinterface.com / meridianinterface.com" for the bottom of the page.
+- Already in the footer of index, privacy, accessibility, build. Packager now appends the same block (.mi-maker, white card so the near-black wordmark reads on dark pages, per meridian-brand) after the footer of library, residence (Linden House) and meridian (walk-through). Panels, tour and film are full-screen apps: none.
+- Checks: maker test 7 pages x desktop/phone (logo loads, both links, no sideways scroll, no errors) 0 FAIL; plans 0 FAIL; frames 0 FAIL; static 0 FAIL; browser demos 0 FAIL 0 WARN (Haven 60 controls).
+- Website preview/haven 0782710, Vercel preview success (meridian-interface-website-jiygwyo2t.vercel.app). Main still 8c09ef8.
+- Open: main site footer lists 281-882-9198; asked Otis whether it should be a Call button on the plans.
