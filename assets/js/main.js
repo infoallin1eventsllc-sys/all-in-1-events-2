@@ -359,6 +359,8 @@
   function setNav(open, restoreFocus) {
     mNav.classList.toggle("open", open);
     if (open) mNav.removeAttribute("inert"); else mNav.setAttribute("inert", "");
+    // the page behind the sheet is out of reach while it is open, as behind any modal
+    document.querySelectorAll("#header, main, footer").forEach(function (n) { if (open) n.setAttribute("inert", ""); else n.removeAttribute("inert"); });
     burger.setAttribute("aria-expanded", open ? "true" : "false");
     document.body.style.overflow = open ? "hidden" : "";
     if (open) mClose.focus();

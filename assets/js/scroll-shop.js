@@ -181,19 +181,18 @@
   });
 
   /* ---------- the section's presence: music and the UI only while the scents are on screen ---------- */
+  function setActive(next) {   // a scent is near the middle of the screen: the sound button, caption and music belong to this state
+    if (next === active) return;
+    active = next;
+    ui.classList.toggle("show", active);
+    if (!active) { music.forEach(function (a) { fadeTo(a, 0); }); }
+    else if (on) { var m = music[mi]; if (m.paused) m.play().catch(function () {}); }
+  }
   if ("IntersectionObserver" in window) {
-    new IntersectionObserver(function (es) {
-      active = es[0].isIntersecting;
-      ui.classList.toggle("show", active);
-      if (!active) { music.forEach(function (a) { fadeTo(a, 0); }); }
-      else if (on) { var m = music[mi]; if (m.paused) m.play().catch(function () {}); }
-    }, { threshold: 0, rootMargin: "-20% 0px -20% 0px" }).observe(section);
-
     // drift in once a third of the scent is on screen
     var reveal = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); reveal.unobserve(e.target); } }); }, { threshold: 0.3 });
     scents.forEach(function (s) { reveal.observe(s); });
   } else {
-    active = true; ui.classList.add("show");
     scents.forEach(function (s) { s.classList.add("in"); });
   }
 
@@ -205,14 +204,18 @@
      The same pass sets the depth drift: the picture moves at 88% of the page's speed, the words at 100%. */
   var ticking = false;
   function track() {
-    var mid = innerHeight / 2, near = null, nearD = Infinity, spoken = null;
+    var mid = innerHeight / 2, near = null, nearD = Infinity, nearSigned = 0, spoken = null;
     scents.forEach(function (s) {
       var r = s.getBoundingClientRect();
       var d = r.top + r.height / 2 - mid;                  // px from the screen's middle
       if (!reduce && r.bottom > -200 && r.top < innerHeight + 200) s.querySelector(".scent-pic").style.setProperty("--drift", (d * 0.12).toFixed(1) + "px");
-      if (Math.abs(d) < nearD) { nearD = Math.abs(d); near = s; }
+      if (Math.abs(d) < nearD) { nearD = Math.abs(d); nearSigned = d; near = s; }
       if (s.getAttribute("data-id") === speakingId) spoken = d;
     });
+    // the chip and music belong to the scents: they arrive with the first scent and leave with the last,
+    // never over the lead-in above or the collection heading below
+    var atEdge = (near === scents[0] && nearSigned > innerHeight * 0.3) || (near === scents[scents.length - 1] && nearSigned < -innerHeight * 0.3);
+    setActive(nearD < innerHeight * 0.6 && !atEdge);
     focus(near && nearD < innerHeight * 0.35 ? near.getAttribute("data-id") : null);
     if (spoken !== null && Math.abs(spoken) > innerHeight * 0.6) {
       hush(); cap.classList.remove("show");
