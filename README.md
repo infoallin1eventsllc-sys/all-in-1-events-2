@@ -54,7 +54,7 @@ product photography) that deploys to Netlify or Vercel with no build step.
 - **Reviews**: labelled sample reviews with visible fill-in slots for name and city
   until real reviews arrive. No ratings are shown, because none have been collected.
 - **Newsletter** and **footer** (contact details, social icons as slots until the
-  profile links arrive, Owner Login).
+  profile links arrive, the "Built by Meridian Interface" credit, Owner Login).
 
 ## Design
 

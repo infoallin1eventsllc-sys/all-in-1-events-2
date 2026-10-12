@@ -414,6 +414,18 @@ b, strong { font-weight: 500; }
 .footer-bottom { border-top: 1px solid rgba(247, 244, 239, 0.14); padding-block: 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 12px; letter-spacing: 0.06em; color: rgba(247, 244, 239, 0.6); }
 .footer-bottom .credit { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 0 10px; }
 .footer-bottom .credit b { color: rgba(247, 244, 239, 0.8); font-weight: 400; }
+/* Agency credit, above the bottom line */
+.built-by { display: flex; align-items: center; gap: 28px; padding-block: 32px; border-top: 1px solid rgba(247, 244, 239, 0.14); }
+.built-logo { flex-shrink: 0; display: grid; place-items: center; width: 148px; height: 86px; padding: 12px 16px; background: #fff; border-radius: var(--radius-lg); transition: transform 0.25s var(--ease); }
+.built-logo:hover { transform: translateY(-2px); }
+.built-logo:focus-visible { outline: 1px solid var(--on-sage); outline-offset: 4px; }
+.built-logo img { width: 100%; height: 100%; object-fit: contain; }
+.built-k { margin: 0; color: var(--on-sage); font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase; font-weight: 400; }
+.built-d { margin: 10px 0 0; font-size: 14px; line-height: 1.7; color: rgba(247, 244, 239, 0.62); max-width: 52ch; text-wrap: pretty; }
+.built-links { margin: 10px 0 0; font-size: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.built-links a { color: rgba(247, 244, 239, 0.8); transition: color 0.3s; }
+.built-links a:hover { color: var(--on-sage); }
+.built-links .sep { color: rgba(247, 244, 239, 0.35); }
 
 /* =============================================================
    Toast
@@ -551,6 +563,9 @@ b, strong { font-weight: 500; }
   .hero-badge .dot:last-child { display: none; }   /* one hairline, so the badge stays on one line */
   .card-cat { letter-spacing: 0.22em; }            /* "Signature Candle" fits a two-column card on one line */
   .footer-bottom { flex-direction: column; align-items: flex-start; gap: 14px; }
+  .built-by { flex-direction: column; align-items: flex-start; gap: 20px; }
+  .built-links .sep { display: none; }
+  .built-links { flex-direction: column; align-items: flex-start; }
   .footer-bottom .credit .sep { display: none; }
   .footer-bottom .credit .tag { flex-basis: 100%; }
   .footer-bottom .owner-login { padding-left: 0; }   /* aligns the lock with the lines above (beats the base rule further down) */
