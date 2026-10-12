@@ -32,7 +32,7 @@
   <!-- ============ ANNOUNCEMENT ============ -->
   <aside class="announce" aria-label="Shipping and pickup">
     <span>Complimentary shipping on orders over <b>$100</b></span><span class="sep" aria-hidden="true">&nbsp;•&nbsp;</span><span>Free local pickup in <b>San Francisco</b></span>
-  </aside>
+  </div>
 
   <!-- ============ HEADER ============ -->
   <header class="site-header" id="header">
@@ -53,7 +53,7 @@
       </nav>
 
       <div class="nav-actions">
-        <button type="button" class="cart-btn" id="cartBtn" aria-label="Cart, 0 items">
+        <button type="button" class="cart-btn" id="cartBtn" aria-label="Cart, 0 items" aria-haspopup="dialog" aria-expanded="false" aria-controls="cartDrawer">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="20" height="20"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
           <span class="cart-count" id="cartCount">0</span>
         </button>
@@ -79,6 +79,23 @@
     </nav>
     <div class="m-foot">
       <a href="#collection" class="btn">Shop the Collection</a>
+    </div>
+  </div>
+
+  <!-- Cart drawer. The cart is a front-end demo kept in this browser until real commerce is wired in (CLIENT-APPROVAL-STATUS.md). -->
+  <div class="cart-backdrop" id="cartBackdrop" aria-hidden="true"></div>
+  <div class="cart-drawer" id="cartDrawer" role="dialog" aria-modal="true" aria-labelledby="cartTitle" inert>
+    <div class="cart-head">
+      <h2 id="cartTitle">Your Cart</h2>
+      <button type="button" class="cart-close" id="cartClose" aria-label="Close cart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <p class="cart-empty" id="cartEmpty">Your cart is empty.<br /><a href="#scents">Explore the scents</a></p>
+    <ul class="cart-items" id="cartItems" hidden><!-- items injected --></ul>
+    <div class="cart-foot" id="cartFoot" hidden>
+      <div class="cart-total-row"><span>Subtotal</span><strong id="cartTotal">$0.00</strong></div>
+      <p class="cart-note">Shipping and taxes are worked out at checkout.</p>
+      <a class="btn cart-checkout" href="https://www.secretsofcint.com" target="_blank" rel="noopener">Checkout<svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      <p class="cart-note">Checkout opens the current store in a new tab until this site's own checkout is connected.</p>
     </div>
   </div>
 

@@ -35,7 +35,10 @@ product photography) that deploys to Netlify or Vercel with no build step.
 
 ## The page
 
-- **Header**: logo, section links, cart count, menu sheet on phones and tablets.
+- **Header**: logo, section links, cart button, menu sheet on phones and tablets. The
+  cart opens a drawer listing what was added (quantity, line total, remove, subtotal);
+  it is kept in the browser until real checkout is wired in, and its Checkout button
+  opens the current store in a new tab until then.
 - **Hero**: the 15-second black-and-white film (match strike, Exotic Peach, Brewed
   Elixir, Inferno Dreams, logo). It plays muted; **Sound on** restarts it with sound.
   The "In the film" line lights the scent on screen and links to it in the section below.
