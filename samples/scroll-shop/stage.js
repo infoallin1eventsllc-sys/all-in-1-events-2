@@ -23,8 +23,8 @@
     for (var i = 0; i < n; i++) {
       var d = pos - i;                                               // -1 … 0 … 1 : arriving … in the light … leaving
       var a = Math.max(0, 1 - Math.abs(d));
-      // only the nearer scent is ever visible: the last one is fully gone before the next one appears
-      var k = a > 0.5 ? ease((a - 0.5) * 2) : 0;
+      // the last scent is almost gone before the next one appears: a short, faint hand-off, never two in the light
+      var k = a > 0.35 ? ease((a - 0.35) / 0.65) : 0;
       // arriving: rises from well below, slightly small and turned; leaving: keeps rising and is gone
       // before the next one is bright, so two scents are never both in the light
       plates[i].style.opacity = k * k;
