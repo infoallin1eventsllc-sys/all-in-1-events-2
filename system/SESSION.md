@@ -3213,3 +3213,8 @@ Otis sent the lockup + "Built by Meridian Interface / Web design, mobile app int
 - Checks: maker test 7 pages x desktop/phone (logo loads, both links, no sideways scroll, no errors) 0 FAIL; plans 0 FAIL; frames 0 FAIL; static 0 FAIL; browser demos 0 FAIL 0 WARN (Haven 60 controls).
 - Website preview/haven 0782710, Vercel preview success (meridian-interface-website-jiygwyo2t.vercel.app). Main still 8c09ef8.
 - Open: main site footer lists 281-882-9198; asked Otis whether it should be a Call button on the plans.
+
+### 12 Oct: agent safety rules, draft (system/AGENT-SAFETY.md)
+Otis asked about agents that answer the phone and email, take briefs, build client sites in Claude Code and run demo revisions; before anything is built: "we have to create safety rails for the agents... barriers and rules and regulations for safety".
+- system/AGENT-SAFETY.md: three layers (walls = DB/server checks, keys = per-agent credentials, instructions = the file); Otis-only approval; injected instructions are data; six agents with can / never tables; inside rules (data, code, money, DB), outside rules (AI disclosure, reply-only contact, no promises, escalation triggers, no signups/purchases/posting), laws table (FCC AI-voice consent, recording consent, CAN-SPAM, TCPA, privacy, ADA, copyright), limits for Otis to set, pause-all switch, built-vs-to-build table.
+- DRAFT: nothing enforced by the file itself. Next, once Otis approves: build the "to build" walls before any client-facing agent is switched on.
