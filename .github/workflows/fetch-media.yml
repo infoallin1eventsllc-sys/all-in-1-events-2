@@ -43,6 +43,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.ref }}
+      - name: Image tools
+        if: ${{ inputs.fit != '' }}
+        run: python3 -m pip install --quiet pillow
       - name: Download
         env:
           URLS: ${{ inputs.url }}
@@ -67,7 +70,7 @@ jobs:
               case "$(file -b --mime-type "$out")" in
                 image/*)
                   jpg="${out%.*}.jpg"
-                  convert "$out" -resize "${FIT}!" -quality 93 -sampling-factor 1x1 "$jpg"
+                  python3 -c 'import sys; from PIL import Image; w,h=map(int,sys.argv[3].split("x")); Image.open(sys.argv[1]).convert("RGB").resize((w,h), Image.LANCZOS).save(sys.argv[2], quality=93, subsampling=0)' "$out" "$jpg" "$FIT"
                   [ "$jpg" != "$out" ] && rm -f "$out"
                   out="$jpg" ;;
               esac
