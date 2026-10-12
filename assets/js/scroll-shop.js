@@ -132,16 +132,20 @@
   }
 
   /* ---------- narration ---------- */
-  var focused = null, lastSaid = null, settle;
+  var focused = null, lastSaid = null, settle, speakingId = null;
+  function hush() {   // stop the voice mid-line (the scent it is about has left the screen, or another is up)
+    if (speaking) { speaking.pause(); speaking = null; }
+    speakingId = null;
+  }
   function say(id) {
     var text = id === "welcome" ? WELCOME : VOICE[id].line;
-    if (speaking) { speaking.pause(); speaking = null; }
+    hush();
     scents.forEach(function (s) { s.classList.toggle("lit", s.getAttribute("data-id") === id); });
     if (!on) { caption(text, 6500); return; }
     var a = voice(id);
-    a.currentTime = 0; speaking = a;
-    a.onended = function () { if (speaking === a) speaking = null; };
-    a.play().catch(function () { speaking = null; });
+    a.currentTime = 0; speaking = a; speakingId = id;
+    a.onended = function () { if (speaking === a) { speaking = null; speakingId = null; } };
+    a.play().catch(function () { if (speaking === a) { speaking = null; speakingId = null; } });
     caption(text, a.duration ? a.duration * 1000 + 900 : 9500);
   }
   // A scent has to rest in view for a moment before it speaks, so a fast scroll doesn't stutter through nine voices.
@@ -185,28 +189,39 @@
       else if (on) { var m = music[mi]; if (m.paused) m.play().catch(function () {}); }
     }, { threshold: 0, rootMargin: "-20% 0px -20% 0px" }).observe(section);
 
-    // drift in once a third of the scent is on screen; speak when it reaches the middle of the screen
+    // drift in once a third of the scent is on screen
     var reveal = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); reveal.unobserve(e.target); } }); }, { threshold: 0.3 });
-    var middle = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) focus(e.target.getAttribute("data-id")); }); }, { rootMargin: "-45% 0px -45% 0px", threshold: 0 });
-    scents.forEach(function (s) { reveal.observe(s); middle.observe(s); });
+    scents.forEach(function (s) { reveal.observe(s); });
   } else {
     active = true; ui.classList.add("show");
     scents.forEach(function (s) { s.classList.add("in"); });
   }
 
-  /* ---------- depth: the picture moves at 88% of the page's speed while the words move at 100% ---------- */
-  if (reduce) return;
+  /* ---------- which scent is on screen ----------
+     The voice is always about the scent whose centre is nearest the middle of the screen, and only
+     once that centre is inside the middle 70% of the screen (so the scent above has mostly gone). If
+     the shopper scrolls on while a line is still playing, the line stops the moment its scent has
+     mostly left the screen, so the voice never describes a candle that is no longer in view.
+     The same pass sets the depth drift: the picture moves at 88% of the page's speed, the words at 100%. */
   var ticking = false;
-  function drift() {
-    var mid = innerHeight / 2;
+  function track() {
+    var mid = innerHeight / 2, near = null, nearD = Infinity, spoken = null;
     scents.forEach(function (s) {
       var r = s.getBoundingClientRect();
-      if (r.bottom < -200 || r.top > innerHeight + 200) return;
       var d = r.top + r.height / 2 - mid;                  // px from the screen's middle
-      s.querySelector(".scent-pic").style.setProperty("--drift", (d * 0.12).toFixed(1) + "px");
+      if (!reduce && r.bottom > -200 && r.top < innerHeight + 200) s.querySelector(".scent-pic").style.setProperty("--drift", (d * 0.12).toFixed(1) + "px");
+      if (Math.abs(d) < nearD) { nearD = Math.abs(d); near = s; }
+      if (s.getAttribute("data-id") === speakingId) spoken = d;
     });
+    focus(near && nearD < innerHeight * 0.35 ? near.getAttribute("data-id") : null);
+    if (spoken !== null && Math.abs(spoken) > innerHeight * 0.6) {
+      hush(); cap.classList.remove("show");
+      scents.forEach(function (s) { s.classList.remove("lit"); });
+      lastSaid = null;                                     // coming back to it later should say the line again
+    }
     ticking = false;
   }
-  addEventListener("scroll", function () { if (!ticking) { ticking = true; requestAnimationFrame(drift); } }, { passive: true });
-  drift();
+  addEventListener("scroll", function () { if (!ticking) { ticking = true; requestAnimationFrame(track); } }, { passive: true });
+  addEventListener("resize", track);
+  track();
 })();
