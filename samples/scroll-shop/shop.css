@@ -1,0 +1,82 @@
+/* Secrets of Cint — scroll shop samples: shared tokens and the sound / caption / cart UI.
+   Same brand system as the site: ivory, porcelain and charcoal; Cormorant Garamond + Jost. */
+:root {
+  --ivory: #faf8f5; --stone: #f2efea; --porcelain: #fffefc;
+  --ink: #1f1d1a; --ink-soft: #4f4b45; --muted: #645f59; --line: #e8e4dd;
+  --night: #000; --on-night: #f7f4ef; --on-night-soft: rgba(247, 244, 239, 0.72);
+  --serif: "Cormorant Garamond", "Playfair Display", Georgia, serif;
+  --sans: "Jost", "Inter", system-ui, -apple-system, sans-serif;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* each page sets these for its own ground */
+  --fg: var(--ink); --fg-soft: var(--ink-soft); --fg-muted: var(--muted); --ground: var(--ivory); --chip: rgba(31, 29, 26, 0.92); --chip-fg: var(--on-night);
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--ground); color: var(--fg); font-family: var(--sans); font-weight: 300; font-size: 16.5px; line-height: 1.7; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+img { max-width: 100%; display: block; }
+a { color: inherit; }
+h1, h2, h3 { font-family: var(--serif); font-weight: 300; margin: 0; line-height: 1.04; text-wrap: balance; }
+p { margin: 0; }
+:focus-visible { outline: 1px solid currentColor; outline-offset: 4px; }
+
+/* ---------- top bar ---------- */
+.ss-bar { position: fixed; z-index: 40; left: 0; right: 0; top: 0; padding: calc(env(safe-area-inset-top, 0px) + 18px) clamp(16px, 4vw, 44px) 14px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; color: var(--fg); pointer-events: none; }
+.ss-bar > * { pointer-events: auto; }
+.ss-brand { font-family: var(--serif); font-size: 22px; letter-spacing: 0.04em; text-decoration: none; white-space: nowrap; }
+.ss-bar nav { display: flex; align-items: center; gap: 18px; }
+.ss-link { font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase; text-decoration: none; color: var(--fg-soft); min-height: 44px; display: inline-flex; align-items: center; }
+.ss-link:hover { color: var(--fg); }
+.ss-cart { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; min-height: 44px; display: inline-flex; align-items: center; gap: 8px; color: var(--fg-soft); }
+.ss-cart b { font-weight: 400; color: var(--fg); min-width: 1ch; }
+
+/* ---------- product info (shared typography) ---------- */
+.ss-kind { font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--fg-muted); }
+.ss-name { font-size: clamp(40px, 5.4vw, 76px); letter-spacing: -0.02em; margin-top: 12px; color: var(--fg); }
+.ss-notes { font-family: var(--serif); font-style: italic; font-size: clamp(18px, 1.7vw, 22px); color: var(--fg-soft); margin-top: 10px; }
+.ss-buy { display: flex; align-items: center; gap: 22px; margin-top: 22px; flex-wrap: wrap; }
+.ss-price { font-family: var(--serif); font-size: 26px; color: var(--fg); }
+.ss-add { font: 400 11px/1 var(--sans); letter-spacing: 0.26em; text-transform: uppercase; color: var(--fg); background: transparent; border: 1px solid currentColor; border-radius: 2px; min-height: 44px; padding: 0 22px; cursor: pointer; transition: background 0.35s var(--ease), color 0.35s var(--ease), transform 0.2s var(--ease); }
+.ss-add:hover { background: var(--fg); color: var(--ground); transform: translateY(-2px); }
+.ss-add:active { transform: translateY(0) scale(0.98); }
+
+/* ---------- sound button, caption, toast ---------- */
+.ss-sound-wrap { position: fixed; z-index: 60; right: clamp(16px, 3vw, 32px); bottom: calc(env(safe-area-inset-bottom, 0px) + clamp(16px, 3vw, 28px)); display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.ss-sound { display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 20px; border-radius: 999px; border: 1px solid rgba(247, 244, 239, 0.28);
+  background: var(--chip); color: var(--chip-fg); font: 400 11px/1 var(--sans); letter-spacing: 0.24em; text-transform: uppercase; cursor: pointer;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: 0 10px 30px -14px rgba(0, 0, 0, 0.5); transition: transform 0.2s var(--ease); }
+.ss-sound:active { transform: scale(0.97); }
+.ss-sound .i-on, .ss-sound[aria-pressed="true"] .i-off { display: none; }
+.ss-sound[aria-pressed="true"] .i-on { display: block; }
+@media (prefers-reduced-transparency: reduce) { .ss-sound { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--ink); } }
+.ss-hint { font-size: 12px; letter-spacing: 0.04em; background: var(--chip); color: var(--chip-fg); padding: 9px 14px; border-radius: 10px; max-width: 220px; text-align: right; transition: opacity 0.8s var(--ease); }
+.ss-hint.fade { opacity: 0; pointer-events: none; }
+.ss-caption { position: fixed; z-index: 55; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + clamp(16px, 3vw, 28px)); transform: translate(-50%, 16px); width: min(560px, calc(100vw - 32px));
+  background: var(--chip); color: var(--chip-fg); border-radius: 14px; padding: 14px 20px; display: grid; gap: 4px; opacity: 0; pointer-events: none;
+  transition: opacity 0.5s var(--ease), transform 0.5s var(--ease); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.ss-caption.show { opacity: 1; transform: translate(-50%, 0); }
+.ss-cap-k { font-size: 10.5px; letter-spacing: 0.28em; text-transform: uppercase; opacity: 0.7; }
+.ss-cap-t { font-family: var(--serif); font-size: 19px; line-height: 1.4; }
+.ss-toast { position: fixed; z-index: 70; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 76px); transform: translate(-50%, -12px); width: max-content; max-width: calc(100vw - 32px);
+  background: var(--chip); color: var(--chip-fg); border-radius: 999px; padding: 12px 20px; font-size: 12px; letter-spacing: 0.08em; opacity: 0; pointer-events: none; transition: opacity 0.4s var(--ease), transform 0.4s var(--ease); }
+.ss-toast.show { opacity: 1; transform: translate(-50%, 0); }
+/* while a caption is up, the hint steps aside (the caption already says what the button does) */
+.ss-caption.show ~ .ss-sound-wrap .ss-hint { opacity: 0; pointer-events: none; }
+@media (max-width: 760px) {
+  /* caption sits above the sound button on phones so they never overlap */
+  .ss-caption { bottom: calc(env(safe-area-inset-bottom, 0px) + 80px); width: calc(100vw - 32px); }
+  .ss-cap-t { font-size: 17px; }
+  .ss-hint { max-width: 180px; }
+  .ss-link.hide-sm { display: none; }
+}
+
+/* ---------- intro / outro blocks used by every sample ---------- */
+.ss-eyebrow { font-size: 11px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--fg-muted); display: inline-flex; align-items: center; gap: 14px; }
+.ss-eyebrow::before { content: ""; width: 28px; height: 1px; background: currentColor; opacity: 0.6; }
+.ss-lead { font-size: clamp(16.5px, 1.4vw, 19px); color: var(--fg-soft); max-width: 46ch; margin-top: 22px; text-wrap: pretty; }
+.ss-cue { margin-top: 40px; font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--fg-muted); display: inline-flex; flex-direction: column; align-items: flex-start; gap: 14px; }
+.ss-cue::after { content: ""; width: 1px; height: 54px; background: linear-gradient(currentColor, transparent); animation: ss-cue 2.4s var(--ease) infinite; transform-origin: top; }
+@keyframes ss-cue { 0% { transform: scaleY(0); opacity: 1; } 70% { transform: scaleY(1); opacity: 1; } 100% { transform: scaleY(1); opacity: 0; } }
+.ss-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 28px; border-radius: 2px; border: 1px solid currentColor; text-decoration: none; font-size: 11px; letter-spacing: 0.26em; text-transform: uppercase; transition: background 0.35s var(--ease), color 0.35s var(--ease); }
+.ss-btn:hover { background: var(--fg); color: var(--ground); }
+@media (prefers-reduced-motion: reduce) { .ss-cue::after { animation: none; } * { scroll-behavior: auto !important; } }

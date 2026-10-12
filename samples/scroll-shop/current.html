@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Secrets of Cint — Scroll Shop sample C: Current</title>
+  <meta name="robots" content="noindex" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@300;400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="shop.css" />
+  <style>
+    /* Sample C: Current. Ivory ground. Scrolling down carries the products sideways across the screen
+       like a slow stream; each one pauses in the middle while the voice speaks, then drifts on. */
+    :root { --ground: var(--ivory); --chip: rgba(31, 29, 26, 0.92); }
+    .intro { min-height: 100svh; display: grid; align-content: center; padding: clamp(110px, 16vh, 160px) clamp(20px, 6vw, 96px) 80px; }
+    .intro h1 { font-size: clamp(48px, 7.4vw, 108px); letter-spacing: -0.03em; margin-top: 22px; }
+    .intro h1 em { font-style: italic; color: var(--fg-muted); }
+    .track { position: relative; height: calc(var(--n) * 90svh); }
+    .stream { position: sticky; top: 0; height: 100svh; overflow: hidden; }
+    @media (max-width: 760px) { .item { top: 44%; } }
+    .rail { position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--line); }
+    .rail::after { content: ""; position: absolute; left: 50%; top: -5px; width: 11px; height: 11px; border: 1px solid var(--muted); border-radius: 50%; transform: translateX(-50%); background: var(--ground); }
+    .item { position: absolute; top: 50%; left: 50%; width: min(78vw, 440px); transform: translate(-50%, -50%); display: grid; justify-items: center; text-align: center; will-change: transform, opacity; }
+    .item img { width: min(100%, 400px); max-height: 46svh; object-fit: contain; filter: drop-shadow(0 30px 40px rgba(31, 29, 26, 0.25)); }
+    .item .info { margin-top: 18px; width: min(100%, 440px); }
+    .item .ss-name { font-size: clamp(32px, 4vw, 54px); }
+    .item .ss-buy { justify-content: center; }
+    .progress { position: fixed; z-index: 45; left: 0; right: 0; top: calc(env(safe-area-inset-top, 0px) + 70px); height: 1px; background: var(--line); pointer-events: none; }
+    .progress i { display: block; height: 100%; background: var(--ink); width: 0; transform-origin: left; }
+    .outro { min-height: 70svh; display: grid; place-content: center; text-align: center; padding: 60px clamp(20px, 6vw, 96px) 140px; gap: 22px; }
+    .outro h2 { font-size: clamp(36px, 5vw, 64px); }
+    @media (max-width: 760px) { .item img { max-height: 34svh; } .item { width: min(86vw, 440px); } .item .ss-name { font-size: 32px; } }
+    @media (prefers-reduced-motion: reduce) {
+      .track { height: auto; } .stream { position: static; height: auto; overflow: visible; padding: 40px 0; } .rail { display: none; }
+      .item { position: static; transform: none !important; opacity: 1 !important; margin: 56px auto; }
+    }
+  </style>
+</head>
+<body>
+  <header class="ss-bar">
+    <a class="ss-brand" href="index.html">Secrets of Cint</a>
+    <nav aria-label="Sample">
+      <a class="ss-link hide-sm" href="index.html">All samples</a>
+      <span class="ss-cart" aria-live="polite">Cart <b data-cart-count>0</b></span>
+    </nav>
+  </header>
+  <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+
+  <main>
+    <section class="intro">
+      <p class="ss-eyebrow">Sample C · Current</p>
+      <h1>Scroll down, <em>and the scents drift by.</em></h1>
+      <p class="ss-lead">A quieter take on the ivory page. Each scent floats in from the right, pauses in the middle while the voice speaks, then drifts on to make room for the next.</p>
+      <p class="ss-cue">Scroll</p>
+    </section>
+
+    <div class="track" id="track">
+      <div class="stream" id="stream"><div class="rail"></div></div>
+    </div>
+
+    <section class="outro">
+      <p class="ss-eyebrow">That's the collection</p>
+      <h2>Six scents, one scroll.</h2>
+      <a class="ss-btn" href="index.html">Compare the other samples</a>
+    </section>
+  </main>
+
+  <script src="shop.js"></script>
+  <script src="current.js"></script>
+</body>
+</html>

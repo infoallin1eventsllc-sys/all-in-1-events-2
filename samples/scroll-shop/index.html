@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Secrets of Cint — Scroll Shop samples</title>
+  <meta name="robots" content="noindex" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@300;400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="shop.css" />
+  <style>
+    .wrap { max-width: 1100px; margin: 0 auto; padding: clamp(100px, 14vh, 150px) clamp(20px, 6vw, 72px) 120px; }
+    h1 { font-size: clamp(44px, 6vw, 84px); letter-spacing: -0.03em; margin-top: 22px; }
+    h1 em { font-style: italic; color: var(--muted); }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; margin-top: 56px; }
+    .card { display: grid; gap: 14px; padding: 28px; border: 1px solid var(--line); border-radius: 4px; text-decoration: none; color: inherit; background: var(--porcelain); transition: transform 0.3s var(--ease), border-color 0.3s; }
+    .card:hover { transform: translateY(-3px); border-color: var(--ink); }
+    .card.dark { background: var(--night); color: var(--on-night); border-color: #2a2a2a; }
+    .card .k { font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; opacity: 0.7; }
+    .card h2 { font-size: 40px; }
+    .card p { font-size: 15.5px; line-height: 1.65; opacity: 0.85; }
+    .card .go { font-size: 11px; letter-spacing: 0.26em; text-transform: uppercase; margin-top: 10px; }
+    .note { margin-top: 56px; padding-top: 28px; border-top: 1px solid var(--line); color: var(--ink-soft); max-width: 68ch; font-size: 15.5px; }
+    .note b { font-weight: 400; color: var(--ink); }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <p class="ss-eyebrow">Secrets of Cint · experiments</p>
+    <h1>Shopping by scroll, <em>three ways.</em></h1>
+    <p class="ss-lead">Three samples of the same idea: no product grid, no clicking through. The shopper scrolls, the scents arrive one at a time, and a voice says a line about each over soft music. Nothing here touches the live site.</p>
+
+    <div class="cards">
+      <a class="card dark" href="float.html">
+        <span class="k">Sample A</span><h2>Float</h2>
+        <p>Night page. Each scent drifts in from a different side with its own glow and settles beside its name, notes and price.</p>
+        <span class="go">Open sample →</span>
+      </a>
+      <a class="card dark" href="stage.html">
+        <span class="k">Sample B</span><h2>Stage</h2>
+        <p>One scent in the spotlight at a time. The stage stays put; scrolling swaps the next one in as the last sinks away.</p>
+        <span class="go">Open sample →</span>
+      </a>
+      <a class="card" href="current.html">
+        <span class="k">Sample C</span><h2>Current</h2>
+        <p>Ivory page. Scrolling down carries the scents sideways in a slow stream; each pauses in the middle while the voice speaks.</p>
+        <span class="go">Open sample →</span>
+      </a>
+    </div>
+
+    <p class="note"><b>About the sound.</b> Browsers never play audio until the visitor taps something, so every sample starts silent with a <b>Sound on</b> button. With sound off, the narration still appears as a caption. The voice is a Higgsfield preset called Sloane; the music is the ambient piano written for the hero film. Six products are included to keep the samples short.</p>
+  </main>
+</body>
+</html>

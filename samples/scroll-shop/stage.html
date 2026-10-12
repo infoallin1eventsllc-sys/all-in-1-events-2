@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Secrets of Cint — Scroll Shop sample B: Stage</title>
+  <meta name="robots" content="noindex" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@300;400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="shop.css" />
+  <style>
+    /* Sample B: Stage. The stage stays put; scrolling moves the shopper from one spotlit product to the next.
+       Each product rises into the light as the one before it sinks away. */
+    :root { --fg: var(--on-night); --fg-soft: var(--on-night-soft); --fg-muted: rgba(247, 244, 239, 0.6); --ground: #070707; --chip: rgba(20, 20, 20, 0.78); }
+    body { color-scheme: dark; }
+    .intro { min-height: 100svh; display: grid; align-content: center; justify-items: center; text-align: center; padding: clamp(110px, 16vh, 160px) clamp(20px, 6vw, 96px) 80px; }
+    .intro h1 { font-size: clamp(48px, 7.4vw, 108px); letter-spacing: -0.03em; margin-top: 22px; }
+    .intro h1 em { font-style: italic; color: var(--fg-muted); }
+    .intro .ss-cue { align-items: center; }
+    /* the track gives the scroll its length; the stage is pinned inside it */
+    .track { position: relative; height: calc(var(--n) * 100svh); }
+    .stage { position: sticky; top: 0; height: 100svh; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr); align-items: center; gap: clamp(20px, 4vw, 60px); padding: 0 clamp(20px, 6vw, 96px); }
+    .spot { position: absolute; inset: 0; z-index: 0; background: radial-gradient(ellipse 60% 70% at 38% 55%, var(--tone, #333) 0%, transparent 60%); opacity: 0.34; filter: blur(40px); transition: background 1.2s var(--ease); }
+    .floor { position: absolute; left: 0; right: 0; bottom: 0; height: 38%; z-index: 0; background: linear-gradient(transparent, rgba(255, 255, 255, 0.045)); }
+    .pics, .infos { position: relative; z-index: 1; height: 100%; display: grid; align-items: center; }
+    .pics { justify-items: center; }
+    .pics img, .infos .card { grid-area: 1 / 1; }
+    .pics img { width: min(100%, 560px); max-height: 78svh; object-fit: contain; filter: drop-shadow(0 60px 60px rgba(0, 0, 0, 0.7)); will-change: transform, opacity; }
+    .infos .card { max-width: 480px; will-change: transform, opacity; }
+    .dots { position: absolute; z-index: 2; right: clamp(16px, 3vw, 32px); top: 50%; transform: translateY(-50%); display: grid; gap: 14px; }
+    .dots button { width: 44px; height: 24px; display: grid; place-items: end center; background: none; border: 0; cursor: pointer; padding: 0; }
+    .dots i { display: block; width: 6px; height: 6px; border-radius: 50%; background: var(--fg); opacity: 0.3; transition: opacity 0.4s, transform 0.4s var(--ease); }
+    .dots button[aria-current="true"] i { opacity: 1; transform: scale(1.5); }
+    .outro { min-height: 70svh; display: grid; place-content: center; text-align: center; padding: 60px clamp(20px, 6vw, 96px) 140px; gap: 22px; }
+    .outro h2 { font-size: clamp(36px, 5vw, 64px); }
+    @media (max-width: 760px) {
+      /* leave room under the text for the caption and the sound button */
+      .stage { grid-template-columns: 1fr; grid-template-rows: 1fr auto; padding-top: 70px; padding-bottom: 210px; gap: 8px; }
+      .pics img { max-height: 38svh; }
+      .infos .card .ss-name { font-size: 36px; }
+      .infos { align-items: start; }
+      .dots { right: 12px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      /* no pinning, no motion: the six products simply stack */
+      .track { height: auto; } .stage { position: static; height: auto; display: block; padding: 40px clamp(20px, 6vw, 96px); } .pics, .infos { display: block; height: auto; }
+      .pics img, .infos .card { position: static; opacity: 1 !important; transform: none !important; margin: 40px auto; } .dots, .spot, .floor { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="ss-bar">
+    <a class="ss-brand" href="index.html">Secrets of Cint</a>
+    <nav aria-label="Sample">
+      <a class="ss-link hide-sm" href="index.html">All samples</a>
+      <span class="ss-cart" aria-live="polite">Cart <b data-cart-count>0</b></span>
+    </nav>
+  </header>
+
+  <main>
+    <section class="intro">
+      <p class="ss-eyebrow">Sample B · Stage</p>
+      <h1>One scent <em>in the light</em> at a time.</h1>
+      <p class="ss-lead">The stage holds still. Scrolling brings the next scent up into the spotlight while the last one sinks away, and the voice introduces each one.</p>
+      <p class="ss-cue">Scroll</p>
+    </section>
+
+    <div class="track" id="track">
+      <div class="stage" id="stage">
+        <div class="spot" id="spot"></div>
+        <div class="floor"></div>
+        <div class="pics" id="pics"></div>
+        <div class="infos" id="infos"></div>
+        <nav class="dots" id="dots" aria-label="Products"></nav>
+      </div>
+    </div>
+
+    <section class="outro">
+      <p class="ss-eyebrow">That's the collection</p>
+      <h2>Six scents, one scroll.</h2>
+      <a class="ss-btn" href="index.html">Compare the other samples</a>
+    </section>
+  </main>
+
+  <script src="shop.js"></script>
+  <script src="stage.js"></script>
+</body>
+</html>
