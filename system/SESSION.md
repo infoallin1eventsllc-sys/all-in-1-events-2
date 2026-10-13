@@ -3278,3 +3278,13 @@ Otis: replace the video on that panel with an ad made in Higgsfield ("Ads Studio
 - Checks: brand-ad test desktop + phone 0 FAIL (plays webm 12.07 s, poster, other services keep the reel, no errors); static 0 FAIL (known WARNs); browser full 0 FAIL 0 WARN. Main fast-forwarded to 9f239df, Vercel success, poster served live (200).
 
 - 13 Oct, Otis: no more demos to upload for now. The "second new demo" item is closed; the site keeps its 10 projects.
+
+### 13 Oct (evening): full website diagnostic, one fix shipped
+Otis: diagnostic of the whole website, page by page; every feature, function, video and voice; fix anything broken.
+- Code: tsc clean, build clean, static.sh 0 FAIL (known WARNs only: xlsx no-fix x2, orchestra leftovers, demo-notice and AI-badge reminders).
+- Feature suite (run-all.sh, now incl. brandad.mjs): Haven voice tests x3 finishes 46/46 each, flows 12, frames 21, bezel 19, voice picker 30, plans 21, Cint 20, featured 8, removed 12, Frame Shop legal 9, maker 14, booking 20, tiles 9, brand ad 10: all 0 FAIL.
+- Media audit (imageio-ffmpeg): all 38 video/audio files under public/ decode end to end with no errors; every file with sound has no silent gap over 2.5 s; silent by design: hero-showcase, earth-loop, Haven hero cut. Every media path in src/ exists; the 4 "missing" demo hits were false positives (a .webmanifest name, a Pexels URL template, an HTML comment).
+- FIXED 973466a: Frame Shop hero film was H.264-only, so a browser without that decoder (the QA browser, some Linux/Chromium builds) showed a dead frame. Added a VP9/Opus WebM second source (5.6 MB) via tools/package-frame-shop.mjs (needs video/hero-1080.webm beside the MP4). Now plays desktop + phone, "Hear it" unmutes with sound.
+- Drone Command "Straight down" WARN explained: QA Chromium renders WebGL in SwiftShader at ~3 frames/s, and Playwright's stable-element wait starves; the button is enabled, static, and clicks when scrolled to. Not a site fault. Final browser run 0 FAIL 0 WARN (6/6 menu items).
+- Backend: website functions healthy (site-images 33x200, planner 4x200; intake/owner/pay/leads/unsubscribe no traffic in 24 h); advisors INFO only; 13 cron jobs 0 failures. Still open: security-agent 404 (Otis's deploy), notify-owner one 520.
+- Live: bundle contains the brand ad code; Frame Shop WebM served as video/webm; Vercel success on 973466a.
