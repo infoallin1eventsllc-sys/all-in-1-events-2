@@ -3249,3 +3249,12 @@ Otis: retrieve the client promotional website from its session and upload it as 
 
 ### 13 Oct: home page featured demos swapped (preview)
 Otis: Secrets of Cint and Haven on the home page, Drone Command and CarePulse to the Portfolio page. HomeView FEATURED_IDS p11,p1,p2 -> p13,p12,p2 (Frame Shop stays third). featured test desktop+phone 0 FAIL; static 0 FAIL; browser site 0 FAIL 0 WARN. Website preview/haven b6feb80. Main still 8c09ef8.
+
+### 13 Oct: The Frame Shop updated to the 8 Oct version (preview)
+Otis: the Frame Shop session has new graphics; the site shows an old version. The newest version exists only as the artifact "The Frame Shop" (6GNnNSJjNXPWXdLApS9NM6, v1791481564-bb94, 8 Oct; Frameshop session_01L1XdkLfLg9mvzXTYJT4qjQ); its repos (FRAME-SHOP-frame-Alignment-, the-frame-shop-website, claude/frameshop-project-9m7udu) are all from August.
+- tools/package-frame-shop.mjs (website repo): shell stripped; inline app script -> js/; 3 Unsplash photos -> the demo's own images (CSP blocks other hosts); hero-captions.vtt written (no speech); booking/contact confirmations re-patched to "demonstration, not sent, call (832) 628-5226" (the 2 Oct fix was lost in the new build); legal pages (/privacy /terms /refunds /cookies) routed as ?page=... inside the demo and Home links -> ./ (they landed on the Meridian home page; QA caught it by the main site's posthog/site-images requests); canonical/og:url dropped; icons + manifest relinked.
+- Tile pictures (frame-shop, -booking, -work, -mobile) and hero/hero-website.webp recaptured. No Photo Control override on p2 (overrides: p7, p10 only). frame-shop/ source marked as the older version.
+- Hero video is H.264 MP4 only: Playwright's Chromium cannot decode it (canPlayType ''), real browsers do; poster shows meanwhile.
+- New build's "DEMO · test data only" badge overlaps text on phones; left as Otis's design, offered to move it.
+- Checks: fs-test (bar, nothing pinned under it, pictures, no external, no errors) ok except the video (test-browser codec); booking gives ticket + demo wording; legal 0 FAIL; static 0 FAIL; browser full 0 FAIL (frame-shop 70 controls; Drone Command timing WARN, known).
+- Website preview/haven 3201d6a. Main still 8c09ef8.
