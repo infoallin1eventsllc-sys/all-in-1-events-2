@@ -3276,3 +3276,5 @@ Otis: replace the video on that panel with an ad made in Higgsfield ("Ads Studio
 - Review: logo and "MERIDIAN INTERFACE" exact; the five demo screens recognisable; small body text on the screens is AI scribble (fine at panel size, visible full screen). Audio not checked here (Otis to listen).
 - Site 9f239df: BRAND_AD in src/lib/reel.ts; SolutionsView plays it only on web_design, every other service keeps the reel; ReelPlayer gained `seconds`; the two players are keyed apart (a playing film used to carry into the next service; found by the test).
 - Checks: brand-ad test desktop + phone 0 FAIL (plays webm 12.07 s, poster, other services keep the reel, no errors); static 0 FAIL (known WARNs); browser full 0 FAIL 0 WARN. Main fast-forwarded to 9f239df, Vercel success, poster served live (200).
+
+- 13 Oct, Otis: no more demos to upload for now. The "second new demo" item is closed; the site keeps its 10 projects.
