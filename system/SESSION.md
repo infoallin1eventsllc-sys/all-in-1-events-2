@@ -3239,3 +3239,10 @@ Otis: remove "Data Analytics Intelligence Hub" and "FinSight: Financial & Revenu
 - Checks: removal test 0 FAIL (desktop + phone, no names left, pictures load, hero frame opens CarePulse); static 0 FAIL; browser full 0 FAIL, 0 WARN after the repeat fix.
 - Still showing FinSight: the wide-screen hero video (a glass pane) and the studio reel film; re-render with the new demos.
 - Vercel preview success (meridian-interface-website-pymi0dcm0.vercel.app). Main still 8c09ef8: the live site keeps both until Otis says go.
+
+### 13 Oct: Secrets of Cint hosted as a demo (preview)
+Otis: retrieve the client promotional website from its session and upload it as a demo. Found: session "Client promotional website design" (session_01PMK5g4nxhcaAUgXB4RPocX), branch claude/client-promo-website-5ct9i8 of THIS repo (a static site; the branch is the client project, not this system). Never push to that branch from here.
+- Website preview/haven 048486a: /demos/secrets-of-cint/ via tools/package-secrets-of-cint.mjs (git archive FETCH_HEAD index.html assets; Fontsource Cormorant Garamond + Jost self-hosted; newsletter says it is a demo; #root; header/cart drawer/phone menu below the bar). Tile p13 (web_design, "Secrets of Cint: Candle House Promotional Website"), cover + 3 gallery shots at 1600x900.
+- Checks: cint test desktop + phone (bar, header below it, fonts, film plays, pictures, cart drawer, newsletter demo text, no external requests, no CSP blocks) 0 FAIL; phone film plays once scrolled into view (IntersectionObserver, by design). static 0 FAIL; browser full 0 FAIL 0 WARN (secrets-of-cint 30 controls).
+- Vercel preview success (meridian-interface-website-1hyxjooco.vercel.app). Main still 8c09ef8.
+- Asked Otis: client permission to show their real business in the portfolio (their design approval list is still open); hide the Owner Login (PIN 1234, browser-local) on the demo?; what the second new demo is.
