@@ -3230,3 +3230,12 @@ Waiting on Otis, in rough order:
 6. Hero video's tablet pane: swap FinSight for Haven on the next re-render?
 7. Otis still has to deploy the functions himself: supabase functions deploy orchestrator runner report media analyze compose-reply notify-owner security-agent mailcheck --project-ref glzodwhyavexpuusbqjy
 Haven packaging, for whoever picks it up: node haven/scripts/package-website.mjs <artifact download> ; node tools/brand-demos.mjs ; cp public/brand/meridian-mark.png public/demos/haven/brand/ . The artifact download is not in git (it was in a scratchpad); re-read it with the Artifact tool from https://claude.ai/artifact/DSiDLzQfDefZV6gTP78e3e if the packager must run again.
+
+### 13 Oct: Analytics Hub and FinSight demos removed (preview), room for two new demos
+Otis: remove "Data Analytics Intelligence Hub" and "FinSight: Financial & Revenue Dashboard"; he will upload two new demos next.
+- Website preview/haven 0e8967e + 301158a: p9 tile, its 4 portfolio pictures, /demos/analytics-hub/ and /demos/finsight/ deleted; brand-demos labels, demos README (incl. the analytics-hub bundle-edit notes), CREDITS updated.
+- Things that pointed at the Analytics Hub now use CarePulse: Dashboard design service card (carepulse-doctor.jpg, since carepulse.jpg is already its home tile) and the phone/tablet hero frame (fresh 1200x750 webp capture of /demos/healthcare/, id p1).
+- QA script: menu lists for the two removed demos dropped.
+- Checks: removal test 0 FAIL (desktop + phone, no names left, pictures load, hero frame opens CarePulse); static 0 FAIL; browser full 0 FAIL, 0 WARN after the repeat fix.
+- Still showing FinSight: the wide-screen hero video (a glass pane) and the studio reel film; re-render with the new demos.
+- Vercel preview success (meridian-interface-website-pymi0dcm0.vercel.app). Main still 8c09ef8: the live site keeps both until Otis says go.
