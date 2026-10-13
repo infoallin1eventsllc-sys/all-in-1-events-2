@@ -202,8 +202,6 @@ if (ONLY !== 'site') {
   const MENUS = {
     'meridian-crm': ['Leads Funnel', 'Operations Projects', 'Memos & Reports', 'Client Contacts', 'Kanban Board', 'Manage Invoices', 'SaaS Expenses', 'Gmail Inbox', 'Tutorial Logs', 'AI Voice & n8n', 'Google Search Fixer', 'Overview'],
     'stack-planner': ['Build your stack', 'Watch a workflow run', 'Department playbooks', 'What it frees up', 'Governance', 'AI advisor', 'The five layers'],
-    'analytics-hub': ['Trend Models', 'Cohort Analysis', 'Anomaly Sentinel', 'Dashboard Overview'],
-    'finsight': ['Executive Summary', 'Real-Time Revenue', 'P&L & Forecasts', 'Cash Flow & Runway', 'Treasury & FX', 'Export Center'],
     'modern-street': ['New Arrivals', 'Collections', 'About'],
     // Aircraft-panel controls first: choosing a mode replaces that panel.
     'drone-command': ['Straight down', 'Portrait', 'Landed', 'Light show', 'Site survey', 'Surveillance'],
