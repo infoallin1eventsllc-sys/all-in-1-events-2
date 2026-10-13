@@ -3246,3 +3246,6 @@ Otis: retrieve the client promotional website from its session and upload it as 
 - Checks: cint test desktop + phone (bar, header below it, fonts, film plays, pictures, cart drawer, newsletter demo text, no external requests, no CSP blocks) 0 FAIL; phone film plays once scrolled into view (IntersectionObserver, by design). static 0 FAIL; browser full 0 FAIL 0 WARN (secrets-of-cint 30 controls).
 - Vercel preview success (meridian-interface-website-1hyxjooco.vercel.app). Main still 8c09ef8.
 - Asked Otis: client permission to show their real business in the portfolio (their design approval list is still open); hide the Owner Login (PIN 1234, browser-local) on the demo?; what the second new demo is.
+
+### 13 Oct: home page featured demos swapped (preview)
+Otis: Secrets of Cint and Haven on the home page, Drone Command and CarePulse to the Portfolio page. HomeView FEATURED_IDS p11,p1,p2 -> p13,p12,p2 (Frame Shop stays third). featured test desktop+phone 0 FAIL; static 0 FAIL; browser site 0 FAIL 0 WARN. Website preview/haven b6feb80. Main still 8c09ef8.
