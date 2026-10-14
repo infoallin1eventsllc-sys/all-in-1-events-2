@@ -3294,3 +3294,5 @@ Otis: a dynamic promotional video ad about Meridian Interface for Facebook, Link
 - Built in system/promo-ad/ (ad.html timeline rendered frame by frame with Playwright, ffmpeg encode, music.py original synth score at 120 BPM, hits on the cuts, -14 LUFS). Brand per meridian-brand skill: mark + live wordmark, Hanken Grotesk 800 / Inter, ink #0f172a, accent #2563eb.
 - Delivered (sent in chat, files not in git): square 1080, vertical 1080x1920, wide 1920x1080, each with music and silent (21 s, H.264, 5.6-8.5 MB); email GIF 480px 2 MB (products + end card); email poster with play button.
 - Contact on the end card: meridianinterface.com, 281-882-9198, otis@meridianinterface.com; site address pinned at the bottom from 3.7 s to the end card.
+
+- 14 Oct: commercial cut of the services-page brand ad: original voice/music kept, contact strip 0.8-9.3 s, appointment button + site + phone + email under the logo from 9.9 s, last frame held 3 s (15.06 s, 1080p, 5.8 MB). Audio identical to the original over the first 12 s (mean -21.1 dB both). Sent to Otis; source in system/promo-ad/.
