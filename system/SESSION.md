@@ -3288,3 +3288,9 @@ Otis: diagnostic of the whole website, page by page; every feature, function, vi
 - Drone Command "Straight down" WARN explained: QA Chromium renders WebGL in SwiftShader at ~3 frames/s, and Playwright's stable-element wait starves; the button is enabled, static, and clicks when scrolled to. Not a site fault. Final browser run 0 FAIL 0 WARN (6/6 menu items).
 - Backend: website functions healthy (site-images 33x200, planner 4x200; intake/owner/pay/leads/unsubscribe no traffic in 24 h); advisors INFO only; 13 cron jobs 0 failures. Still open: security-agent 404 (Otis's deploy), notify-owner one 520.
 - Live: bundle contains the brand ad code; Frame Shop WebM served as video/webm; Vercel success on 973466a.
+
+### 14 Oct: promo video ad for social and email (no credits spent)
+Otis: a dynamic promotional video ad about Meridian Interface for Facebook, LinkedIn, Instagram and email, products (websites, dashboards, CRM, logos), with contact info; then music, with and without versions.
+- Built in system/promo-ad/ (ad.html timeline rendered frame by frame with Playwright, ffmpeg encode, music.py original synth score at 120 BPM, hits on the cuts, -14 LUFS). Brand per meridian-brand skill: mark + live wordmark, Hanken Grotesk 800 / Inter, ink #0f172a, accent #2563eb.
+- Delivered (sent in chat, files not in git): square 1080, vertical 1080x1920, wide 1920x1080, each with music and silent (21 s, H.264, 5.6-8.5 MB); email GIF 480px 2 MB (products + end card); email poster with play button.
+- Contact on the end card: meridianinterface.com, 281-882-9198, otis@meridianinterface.com; site address pinned at the bottom from 3.7 s to the end card.

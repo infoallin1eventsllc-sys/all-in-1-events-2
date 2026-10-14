@@ -1,0 +1,260 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Meridian Interface promo</title>
+<style>
+@font-face { font-family: "Hanken Grotesk"; src: url(fonts/hanken-grotesk-var-latin.woff2) format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Inter"; src: url(fonts/inter-var-latin.woff2) format("woff2"); font-weight: 100 900; }
+:root { --ink: #0f172a; --ink2: #0b1222; --accent: #2563eb; --accent2: #60a5fa; --muted: #cbd5e1; --u: 1px; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: var(--ink2); }
+#stage { position: relative; width: 100vw; height: 100vh; overflow: hidden; color: #fff; font-family: "Inter", sans-serif;
+  background: radial-gradient(120% 90% at 50% 0%, #16213b 0%, #0f172a 55%, #0a1020 100%); }
+.grid { position: absolute; inset: -20%; opacity: .07;
+  background-image: linear-gradient(#93c5fd 1px, transparent 1px), linear-gradient(90deg, #93c5fd 1px, transparent 1px);
+  background-size: calc(var(--u) * 90) calc(var(--u) * 90); }
+.scene { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; }
+.display { font-family: "Hanken Grotesk", sans-serif; font-weight: 800; letter-spacing: -0.02em; line-height: .95; }
+.eyebrow { font-weight: 700; letter-spacing: .28em; text-transform: uppercase; color: var(--accent2); font-size: calc(var(--u) * 22); }
+.line { display: block; overflow: hidden; }
+.line > span { display: inline-block; will-change: transform; }
+
+/* 1: hook */
+#s1 .display { font-size: calc(var(--u) * 112); text-align: center; }
+#s1 .tpl { position: relative; color: #94a3b8; }
+#s1 .strike { position: absolute; left: -2%; top: 52%; height: calc(var(--u) * 12); width: 104%; background: var(--accent); transform-origin: left center; border-radius: 6px; }
+#s1 .sub { margin-top: calc(var(--u) * 40); font-size: calc(var(--u) * 42); color: var(--muted); font-weight: 500; text-align: center; }
+
+/* 2: products */
+.prod { position: absolute; inset: 0; opacity: 0; }
+.prod .label { position: absolute; font-family: "Hanken Grotesk"; font-weight: 800; font-size: calc(var(--u) * 92); letter-spacing: -0.02em; line-height: .95; }
+.prod .label small { display: block; font-family: "Inter"; font-weight: 600; font-size: calc(var(--u) * 26); letter-spacing: .02em; color: var(--muted); margin-top: calc(var(--u) * 18); line-height: 1.3; }
+.prod .num { position: absolute; font-weight: 700; letter-spacing: .28em; color: var(--accent2); font-size: calc(var(--u) * 22); }
+.card { position: absolute; border-radius: calc(var(--u) * 18); overflow: hidden; background: #0b1222;
+  box-shadow: 0 calc(var(--u) * 40) calc(var(--u) * 90) rgba(0,0,0,.55), 0 0 0 calc(var(--u) * 2) rgba(148,163,184,.25); }
+.card .bar { height: calc(var(--u) * 30); background: #1e293b; display: flex; align-items: center; gap: calc(var(--u) * 8); padding: 0 calc(var(--u) * 14); }
+.card .bar i { width: calc(var(--u) * 10); height: calc(var(--u) * 10); border-radius: 50%; background: #475569; display: block; }
+.card .shot { position: absolute; top: calc(var(--u) * 30); left: 0; right: 0; bottom: 0; background-size: cover; background-position: center top; will-change: transform; }
+.chip { position: absolute; padding: calc(var(--u) * 10) calc(var(--u) * 18); border-radius: 999px; background: var(--accent); font-weight: 700; font-size: calc(var(--u) * 22); letter-spacing: .04em; }
+
+/* 3: montage */
+#s3 .tiles { position: absolute; inset: 0; }
+#s3 .t { position: absolute; border-radius: calc(var(--u) * 14); background-size: cover; background-position: center top;
+  box-shadow: 0 calc(var(--u) * 24) calc(var(--u) * 60) rgba(0,0,0,.5), 0 0 0 calc(var(--u) * 2) rgba(148,163,184,.25); }
+#s3 .head { position: absolute; left: 50%; text-align: center; padding: calc(var(--u) * 34) calc(var(--u) * 54); border-radius: calc(var(--u) * 24); background: rgba(10,16,32,.9); box-shadow: 0 0 0 calc(var(--u) * 2) rgba(96,165,250,.35), 0 calc(var(--u) * 30) calc(var(--u) * 80) rgba(0,0,0,.6); white-space: nowrap; }
+#s3 .head .eyebrow { margin-bottom: calc(var(--u) * 16); }
+#s3 .head .display { font-size: calc(var(--u) * 84); }
+
+/* 4: proof */
+#s4 .rows { display: flex; flex-direction: column; gap: calc(var(--u) * 30); }
+#s4 .row { display: flex; align-items: center; gap: calc(var(--u) * 26); font-family: "Hanken Grotesk"; font-weight: 800; font-size: calc(var(--u) * 58); letter-spacing: -0.01em; }
+#s4 .tick { flex: none; width: calc(var(--u) * 54); height: calc(var(--u) * 54); border-radius: 50%; background: var(--accent); display: grid; place-items: center; }
+#s4 .tick svg { width: 58%; height: 58%; }
+
+/* 5: end card */
+#s5 .lock { display: flex; align-items: center; gap: calc(var(--u) * 34); }
+.portrait #s5 { transform-origin: center; }
+#s5 .lock img { height: calc(var(--u) * 150); width: auto; }
+#s5 .wm1 { font-family: "Hanken Grotesk"; font-weight: 800; font-size: calc(var(--u) * 76); letter-spacing: .2em; line-height: 1; }
+#s5 .wm2 { font-family: "Inter"; font-weight: 600; font-size: calc(var(--u) * 46); letter-spacing: .28em; color: var(--muted); margin-top: calc(var(--u) * 16); line-height: 1; }
+#s5 .what { margin-top: calc(var(--u) * 46); font-size: calc(var(--u) * 30); font-weight: 600; color: var(--muted); letter-spacing: .04em; text-align: center; }
+#s5 .cta { margin-top: calc(var(--u) * 40); padding: calc(var(--u) * 24) calc(var(--u) * 46); background: var(--accent); border-radius: calc(var(--u) * 14); font-family: "Hanken Grotesk"; font-weight: 800; font-size: calc(var(--u) * 40); letter-spacing: .02em; }
+#s5 .contact { margin-top: calc(var(--u) * 46); display: flex; flex-direction: column; align-items: center; gap: calc(var(--u) * 16); font-size: calc(var(--u) * 42); font-weight: 600; }
+#s5 .contact .web { font-family: "Hanken Grotesk"; font-weight: 800; font-size: calc(var(--u) * 58); color: #fff; }
+#s5 .contact .sub { color: #e2e8f0; }
+#s5 .contact b { color: var(--accent2); font-weight: 700; }
+.foot { position: absolute; left: 50%; bottom: calc(var(--u) * 44); transform: translateX(-50%); display: flex; align-items: center; gap: calc(var(--u) * 14); padding: calc(var(--u) * 12) calc(var(--u) * 24) calc(var(--u) * 12) calc(var(--u) * 16); border-radius: 999px; background: rgba(15,23,42,.85); box-shadow: 0 0 0 calc(var(--u) * 2) rgba(148,163,184,.25); font-family: "Hanken Grotesk"; font-weight: 800; font-size: calc(var(--u) * 30); letter-spacing: .02em; opacity: 0; }
+.foot img { height: calc(var(--u) * 40); width: auto; }
+.sweep { position: absolute; top: 0; bottom: 0; width: 40%; background: linear-gradient(90deg, transparent, rgba(96,165,250,.18), transparent); transform: skewX(-18deg); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="grid" id="grid"></div>
+
+  <section class="scene" id="s1">
+    <div class="display">
+      <span class="line"><span id="h1a">Your business</span></span>
+      <span class="line"><span id="h1b">isn't a <span class="tpl" id="tpl">template.<i class="strike" id="strike"></i></span></span></span>
+    </div>
+    <div class="sub" id="h1sub">So we build yours from scratch.</div>
+  </section>
+
+  <section class="scene" id="s2"></section>
+
+  <section class="scene" id="s3">
+    <div class="tiles" id="tiles"></div>
+    <div class="head" id="s3head"><div class="eyebrow">Real products. Working today.</div><div class="display" id="s3title">Built for how<br>you work.</div></div>
+  </section>
+
+  <section class="scene" id="s4">
+    <div class="rows">
+      <div class="row" id="r1"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>Demos you can open today</div>
+      <div class="row" id="r2"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>A written, itemised quote</div>
+      <div class="row" id="r3"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>You own everything we build</div>
+    </div>
+  </section>
+
+  <section class="scene" id="s5">
+    <div class="lock" id="lock">
+      <img src="img/meridian-mark.png" alt="">
+      <div><div class="wm1">MERIDIAN</div><div class="wm2">INTERFACE</div></div>
+    </div>
+    <div class="what" id="what">Websites · Dashboards · CRM · Logos</div>
+    <div class="cta" id="cta">Book your 1-on-1 appointment</div>
+    <div class="contact" id="contact">
+      <div class="web">meridianinterface.com</div>
+      <div class="sub"><b>Call</b> 281-882-9198</div>
+      <div class="sub"><b>Email</b> otis@meridianinterface.com</div>
+    </div>
+  </section>
+  <div class="foot" id="foot"><img src="img/meridian-mark.png" alt=""><span>meridianinterface.com</span></div>
+  <div class="sweep" id="sweep"></div>
+</div>
+
+<script>
+// Every frame is a pure function of t (seconds), so a render is exact and repeatable.
+const DURATION = 21;
+const PRODUCTS = [
+  { label: "Websites", sub: "Sites that sell, book and take orders", img: "secrets-of-cint.jpg", tag: "Secrets of Cint" },
+  { label: "Dashboards", sub: "Your numbers, live, on one screen", img: "carepulse.jpg", tag: "CarePulse" },
+  { label: "CRM systems", sub: "Every lead, deal and invoice in one place", img: "meridian-crm.jpg", tag: "Meridian CRM" },
+  { label: "Logos & brands", sub: "An identity people remember", img: "fog-city-roasters.jpg", tag: "Fog City Roasters" },
+];
+const MONTAGE = ["frame-shop.jpg", "haven-ai-home-wallpaper.jpg", "big-boy-subs.jpg", "drone-command.jpg", "meridian-crm-invoices.jpg", "secrets-of-cint.jpg"];
+const P0 = 3.4, PD = 2.3;            // products start, per product
+const M0 = P0 + PD * 4, M1 = M0 + 2.4;  // montage
+const R0 = M1, R1 = R0 + 2.4;        // proof rows
+const E0 = R1;                        // end card
+
+const W = innerWidth, H = innerHeight;
+const portrait = H / W > 1.3, wide = W / H > 1.5;
+const base = portrait ? W * 1.1 : Math.min(W, H);
+document.documentElement.style.setProperty("--u", (base / 1080) + "px");
+const u = base / 1080;
+const $ = (id) => document.getElementById(id);
+
+// products scene
+const s2 = $("s2");
+PRODUCTS.forEach((p, i) => {
+  const el = document.createElement("div"); el.className = "prod"; el.id = "p" + i;
+  el.innerHTML = `<div class="num">0${i + 1} / 04</div><div class="label">${p.label}<small>${p.sub}</small></div>
+    <div class="card"><div class="bar"><i></i><i></i><i></i></div><div class="shot" style="background-image:url(img/${p.img})"></div></div>
+    <div class="chip">${p.tag}</div>`;
+  s2.appendChild(el);
+});
+// montage tiles
+const tiles = $("tiles");
+MONTAGE.forEach((m, i) => { const d = document.createElement("div"); d.className = "t"; d.style.backgroundImage = `url(img/${m})`; tiles.appendChild(d); });
+
+const clamp = (x) => Math.max(0, Math.min(1, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const outCubic = (x) => 1 - Math.pow(1 - x, 3);
+const outBack = (x) => { const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+const inCubic = (x) => x * x * x;
+const fade = (t, a, b, c, d) => Math.min(seg(t, a, b), 1 - seg(t, c, d));
+
+function layoutProduct(el, k) {
+  const label = el.querySelector(".label"), card = el.querySelector(".card"), num = el.querySelector(".num"), chip = el.querySelector(".chip");
+  let cw, ch, cx, cy, lx, ly;
+  if (portrait) { cw = W * .88; ch = cw * .98; cx = (W - cw) / 2; cy = H * .37; lx = W * .07; ly = H * .2; }
+  else if (wide) { cw = W * .54; ch = cw * 9 / 16 * 1.05; cx = W * .42; cy = (H - ch) / 2; lx = W * .06; ly = H * .34; }
+  else { cw = W * .86; ch = cw * .56; cx = (W - cw) / 2; cy = H * .32; lx = W * .07; ly = H * .09; }
+  Object.assign(card.style, { left: cx + "px", top: cy + "px", width: cw + "px", height: ch + "px" });
+  Object.assign(label.style, { left: lx + "px", top: ly + "px", maxWidth: (wide ? W * .34 : W * .86) + "px" });
+  Object.assign(num.style, { left: lx + "px", top: (ly - 44 * u) + "px" });
+  Object.assign(chip.style, { left: (cx + cw - 30 * u) + "px", top: (cy + ch - 24 * u) + "px", transform: "translate(-100%,-100%)" });
+}
+
+function render(t) {
+  // background drift
+  $("grid").style.transform = `translate(${-(t * 6) % 90 * u}px, ${-(t * 4) % 90 * u}px)`;
+
+  // S1 hook
+  const s1 = $("s1");
+  s1.style.opacity = 1 - seg(t, 3.0, 3.4);
+  $("h1a").style.transform = `translateY(${(1 - outCubic(seg(t, 0.1, 0.6))) * 110}%)`;
+  $("h1b").style.transform = `translateY(${(1 - outCubic(seg(t, 0.35, 0.85))) * 110}%)`;
+  $("strike").style.transform = `scaleX(${outCubic(seg(t, 1.15, 1.55))})`;
+  $("tpl").style.opacity = 1 - .45 * seg(t, 1.2, 1.6);
+  $("h1sub").style.opacity = seg(t, 1.7, 2.1);
+  $("h1sub").style.transform = `translateY(${(1 - outCubic(seg(t, 1.7, 2.2))) * 30 * u}px)`;
+  s1.style.transform = `scale(${1 + .04 * seg(t, 0, 3.4)})`;
+
+  // S2 products
+  const s2o = t >= P0 - .1 && t < M0 + .2;
+  $("s2").style.opacity = s2o ? 1 : 0;
+  PRODUCTS.forEach((p, i) => {
+    const el = $("p" + i), a = P0 + i * PD, b = a + PD;
+    layoutProduct(el, i);
+    const vis = fade(t, a - .05, a + .25, b - .25, b + .05);
+    el.style.opacity = vis;
+    const inP = outCubic(seg(t, a, a + .55)), outP = inCubic(seg(t, b - .3, b + .05));
+    const dir = i % 2 ? -1 : 1;
+    const card = el.querySelector(".card"), label = el.querySelector(".label"), shot = el.querySelector(".shot"), chip = el.querySelector(".chip");
+    card.style.transform = `perspective(${1400 * u}px) translateX(${(1 - inP) * 160 * dir * u - outP * 120 * dir * u}px) rotateY(${(1 - inP) * -14 * dir}deg) scale(${.92 + .08 * inP})`;
+    shot.style.transform = `scale(${1.04 + .1 * seg(t, a, b)}) translateY(${-3 * seg(t, a, b)}%)`;
+    label.style.transform = `translateY(${(1 - outCubic(seg(t, a + .1, a + .55))) * 60 * u}px)`;
+    label.style.opacity = seg(t, a + .1, a + .5);
+    chip.style.opacity = seg(t, a + .55, a + .8);
+    chip.style.transform = `translate(-100%,-100%) scale(${.6 + .4 * outBack(seg(t, a + .55, a + .9))})`;
+  });
+
+  // S3 montage
+  const s3 = $("s3");
+  s3.style.opacity = fade(t, M0 - .05, M0 + .25, M1 - .2, M1 + .05);
+  const n = MONTAGE.length;
+  [...tiles.children].forEach((d, i) => {
+    const cols = portrait ? 2 : 3, rows = Math.ceil(n / cols);
+    const tw = portrait ? W * .42 : W * (wide ? .27 : .29), th = tw * 9 / 16;
+    const gx = (W - cols * tw - (cols - 1) * 24 * u) / 2, gy = (H - rows * th - (rows - 1) * 24 * u) / 2;
+    const c = i % cols, r = Math.floor(i / cols);
+    const p = outCubic(seg(t, M0 + i * .08, M0 + .5 + i * .08));
+    const x = gx + c * (tw + 24 * u), y = gy + r * (th + 24 * u);
+    Object.assign(d.style, { left: x + "px", top: y + "px", width: tw + "px", height: th + "px", opacity: p * .8 });
+    d.style.transform = `translateY(${(1 - p) * 80 * u}px) scale(${.9 + .1 * p + .03 * seg(t, M0, M1)})`;
+  });
+  const hd = $("s3head");
+  hd.style.top = (H / 2) + "px";
+  hd.style.opacity = seg(t, M0 + .5, M0 + .85);
+  hd.style.transform = `translate(-50%,-50%) scale(${.9 + .1 * outBack(seg(t, M0 + .5, M0 + .95))})`;
+
+  // S4 proof
+  const s4 = $("s4");
+  s4.style.opacity = fade(t, R0 - .05, R0 + .2, R1 - .2, R1 + .05);
+  ["r1", "r2", "r3"].forEach((id, i) => {
+    const p = outCubic(seg(t, R0 + .15 + i * .32, R0 + .6 + i * .32));
+    $(id).style.opacity = p; $(id).style.transform = `translateX(${(1 - p) * -70 * u}px)`;
+  });
+  if (portrait) document.querySelectorAll("#s4 .row").forEach(r => r.style.fontSize = (50 * u) + "px");
+
+  // S5 end card
+  const s5 = $("s5");
+  s5.style.opacity = seg(t, E0 - .05, E0 + .25);
+  const lp = outBack(seg(t, E0 + .05, E0 + .6));
+  $("lock").style.transform = `scale(${.8 + .2 * lp})`; $("lock").style.opacity = seg(t, E0 + .05, E0 + .35);
+  [["what", .45], ["cta", .7], ["contact", .95]].forEach(([id, d]) => {
+    const p = outCubic(seg(t, E0 + d, E0 + d + .45));
+    $(id).style.opacity = p; $(id).style.transform = `translateY(${(1 - p) * 40 * u}px)`;
+  });
+  const pulse = t > E0 + 1.6 ? 1 + .035 * Math.sin((t - E0 - 1.6) * Math.PI * 1.4) : 1;
+  $("cta").style.transform += ` scale(${pulse})`;
+
+  // the address stays on screen from the first product to the end card
+  $("foot").style.opacity = fade(t, P0 + .3, P0 + .7, E0 - .2, E0 + .1);
+
+  // a light sweep on each scene change
+  const cuts = [P0, M0, R0, E0 + .6];
+  let sw = -1; for (const c of cuts) if (t >= c - .05 && t < c + .55) sw = seg(t, c - .05, c + .55);
+  const sweep = $("sweep");
+  sweep.style.opacity = sw < 0 ? 0 : Math.sin(sw * Math.PI);
+  sweep.style.left = (-50 + sw * 160) + "%";
+}
+window.render = render; window.DURATION = DURATION;
+const q = new URLSearchParams(location.search);
+render(q.has("t") ? +q.get("t") : 0);
+window.readyForFrames = document.fonts.ready.then(() => Promise.all([...document.images].map(i => i.decode().catch(() => {}))));
+</script>
+</body>
+</html>
