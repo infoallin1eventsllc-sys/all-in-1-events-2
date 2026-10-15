@@ -27,11 +27,15 @@
     
     # Content Security Policy
     # - default-src: restrict to same-origin
-    # - img-src: allow images from Google's CDN and data URIs
+    # - img-src: Google's CDN (legacy Stitch links), Raylight asset storage
+    #   (where the Archive product photography is hosted), and data URIs
     # - style-src: allow inline styles (Tailwind), Google Fonts
     # - script-src: allow inline + Tailwind CDN
     # - connect-src: allow Anthropic API
-    Content-Security-Policy = "default-src 'self'; img-src 'self' https://lh3.googleusercontent.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; connect-src 'self' https://api.anthropic.com"
+    # img-src must include blob: — the photo portal renders IndexedDB images
+    # through object URLs, which are blob: and would otherwise be blocked.
+    # frame-src covers PayPal's button iframes; Stripe Checkout is a redirect.
+    Content-Security-Policy = "default-src 'self'; img-src 'self' https://lh3.googleusercontent.com https://jkfgfwhjinktxvvmhpiy.supabase.co data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://identity.netlify.com https://www.paypal.com https://js.stripe.com; frame-src https://www.paypal.com https://js.stripe.com https://open.spotify.com https://embed.music.apple.com https://www.youtube-nocookie.com; connect-src 'self' https://api.anthropic.com https://identity.netlify.com https://api.stripe.com https://www.paypal.com; form-action 'self' https://checkout.stripe.com"
     
     # Permissions policy (formerly Feature Policy)
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
@@ -41,12 +45,42 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
+# ===== CACHING =====
+# Netlify's default for static files is revalidate-every-time (max-age=0 plus
+# an ETag). That is right for the HTML, CSS and JS here, because none of them
+# carry a content hash in the filename: a day-old products.js after a price
+# change would be a real problem, and a 304 is cheap. Media is different - a
+# new cut gets a new filename, so what is there never changes in place and can
+# sit in the browser for a week.
+[[headers]]
+  for = "/420-friendly/assets/video/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/420-friendly/assets/products/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/420-friendly/assets/brand/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/420-friendly/assets/social/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
 # ===== REDIRECTS =====
-# No redirects needed for this static site, but here's an example:
-# [[redirects]]
-#   from = "/api/*"
-#   to = "/.netlify/functions/:splat"
-#   status = 200
+# A missing path under the shop gets the shop's own 404, in the brand chrome.
+# Netlify applies a rule like this only when no file matches (there is no
+# `force`), so it cannot shadow a real page. Anything else that is missing
+# falls through to /404.html at the root.
+[[redirects]]
+  from = "/420-friendly/*"
+  to = "/420-friendly/404.html"
+  status = 404
 
 # ===== ENVIRONMENT VARIABLES =====
 # Set ANTHROPIC_API_KEY in the Netlify dashboard:

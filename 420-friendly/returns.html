@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>420 FRIENDLY — Returns</title>
+<meta name="description" content="420 Friendly returns and exchanges: the 30-day window, what qualifies, and how limited drops work."/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="420 FRIENDLY"/>
+<meta property="og:title" content="420 FRIENDLY — Returns"/>
+<meta property="og:description" content="420 Friendly returns and exchanges: the 30-day window, what qualifies, and how limited drops work."/>
+<meta property="og:image" content="https://allin1-events.netlify.app/420-friendly/assets/og-image.jpg"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<link href="assets/tailwind.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link rel="icon" href="assets/favicon.ico" sizes="any"/>
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+<main class="pt-20 md:pt-[116px] max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+  <div id="policy-root"></div>
+</main>
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+<script src="assets/products.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/soundtrack.js"></script>
+<script src="assets/policy.js"></script>
+<script>
+  renderChrome("SHOP ALL");
+  renderPolicyPage({
+    kicker: "RETURNS",
+    title: "If it is not right",
+    standfirst: "Small runs do not restock, which changes how returns work here. Read the second section before ordering a limited drop.",
+    body:
+      h("Standard items") +
+      p("Return within <strong>" + POLICY.returnWindowDays + " days</strong> of delivery, " +
+        esc(POLICY.returnCondition) + ". Refund lands " + esc(POLICY.refundDays) + ".") +
+      h("Limited drops") +
+      p("A limited drop is <strong>" + esc(POLICY.limitedDropRule) + "</strong>. When a run is gone it is gone, so we cannot " +
+        "refund a piece back into stock that will not exist again. Exchange for a different size in the same piece, " +
+        "subject to what is left.") +
+      p("This is stated on every limited-drop product page before you buy, not discovered afterwards.") +
+      h("What we cannot take back") +
+      ul([
+        "Worn or washed pieces.",
+        "Anything without tags.",
+        "Anything returned after the " + POLICY.returnWindowDays + "-day window."
+      ]) +
+      h("Who pays return postage") +
+      p(POLICY.whoPaysReturn
+        ? esc(String(POLICY.whoPaysReturn))
+        : policyMissing("RETURN POSTAGE POLICY") +
+          " — this decides whether the customer pays to send it back. It must be answered before the store takes orders.") +
+      h("How to start one") +
+      p("Email " + pv(POLICY.contactEmail, "CONTACT EMAIL") + " with your order number and what is wrong. " +
+        "Do not post anything back before you hear from us — an unannounced parcel is hard to match to an order.") +
+      h("Where returns go") +
+      p(pv(POLICY.returnsAddress, "RETURNS ADDRESS"))
+  });
+</script>
+</body>
+</html>
