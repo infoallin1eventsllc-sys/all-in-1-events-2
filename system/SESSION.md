@@ -3335,3 +3335,10 @@ Otis: on the AI home integration video the music is too loud over the hologram t
 - tools/haven-film-remix.py: voice +4 dB, music -12 dB only during lines (cues from the film's WebVTT; the mp3 from its own voice stem), raised-cosine 0.35 s in / 0.9 s out, lines <1.6 s apart share one dip, no overall gain change (intro/pause/ending identical). Results: +12.3 dB and +20.9 dB median. Video copied (-c:v copy, identical stream), audio sync 0.0 ms.
 - If haven/scripts/package-website.mjs is ever re-run from the original download it restores the old mixes: redo with the tool.
 - Before/after clips sent to Otis. Checks: static 0 FAIL, Haven flow/frames/voice green, sound sweep ALL OK, browser Haven 67 controls 0 FAIL; film plays with sound from the homepage button. Vercel production dpl_EFvGoRYZ on 0795bf7.
+
+### 15 Oct: video share kit + email to otis@meridianinterface.com (live 1044edd)
+Otis: send the website and two videos (Higgsfield brand ad, promo wide with music) to otis@meridianinterface.com; they will be posted on platforms, in emails and text messages, so they must play in all of those and on the site.
+- Together 32 MB, over Gmail's 25 MB limit, and attachments go through the model as base64, so the email carries links instead.
+- The Higgsfield original is HEVC with moov at the end (many Android/Windows/email clients cannot play it): re-encoded H.264 High, 48 kHz AAC, faststart. The site's own brand ad has 32 kHz audio (below Instagram/TikTok's 44.1-48 kHz).
+- public/video/share/ (unlisted): brand ad wide/square/vertical (blurred fill), promo wide/square/vertical (v2), text-message versions 640x360 H.264 Main 3.0 under 1 MB (MMS), email play-button posters and GIF previews. All MP4s checked: H.264, yuv420p, AAC, faststart, 0 decode errors.
+- Email sent from the connected Gmail to otis@meridianinterface.com (Gmail message 1a141489043acecc): website button, each video's thumbnail linked to the wide cut, per-platform links, how-to-save notes. Links and posters verified live first.
