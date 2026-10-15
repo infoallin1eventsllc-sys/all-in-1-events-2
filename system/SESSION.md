@@ -3296,3 +3296,5 @@ Otis: a dynamic promotional video ad about Meridian Interface for Facebook, Link
 - Contact on the end card: meridianinterface.com, 281-882-9198, otis@meridianinterface.com; site address pinned at the bottom from 3.7 s to the end card.
 
 - 14 Oct: commercial cut of the services-page brand ad: original voice/music kept, contact strip 0.8-9.3 s, appointment button + site + phone + email under the logo from 9.9 s, last frame held 3 s (15.06 s, 1080p, 5.8 MB). Audio identical to the original over the first 12 s (mean -21.1 dB both). Sent to Otis; source in system/promo-ad/.
+
+- 15 Oct: promo re-rendered over Otis's background film (Higgsfield clip hf_20261007_010907, 5 s: intro once, then 2.6-5.0 s boomerang, navy tint 42%). Text pools added behind hook, promises and end card for contrast. First pass came out 20.7-20.9 s (tint overlay with shortest=1); rebuilt with drawbox, all six files 21.00 s, -14.2 LUFS. Email GIF 2.2 MB + poster. Sent to Otis; source in system/promo-ad/.

@@ -253,6 +253,21 @@ function render(t) {
 }
 window.render = render; window.DURATION = DURATION;
 const q = new URLSearchParams(location.search);
+// ?clear=1: no backdrop of our own, so the frames can be laid over a background film.
+if (q.get("clear") === "1") {
+  document.documentElement.style.background = "transparent"; document.body.style.background = "transparent";
+  $("stage").style.background = "transparent"; $("grid").style.display = "none";
+  // Over a bright film the hook and the end card need a quiet ground of their own:
+  // a soft navy pool behind the words, and a shadow on the type itself.
+  const css = document.createElement("style");
+  css.textContent = `
+    #s1::before, #s4::before, #s5::before { content: ""; position: absolute; left: 50%; top: 50%; width: 140%; height: 120%;
+      transform: translate(-50%, -50%); background: radial-gradient(closest-side, rgba(9,14,28,.86) 0%, rgba(9,14,28,.72) 45%, rgba(9,14,28,0) 100%); z-index: -1; }
+    #s1, #s4, #s5 { isolation: isolate; }
+    .display, #s4 .row, #s5 .wm1, #s5 .wm2, #s5 .what, #s5 .contact, #s1 .sub { text-shadow: 0 2px 18px rgba(0,0,0,.65); }
+    #s1 .tpl { color: #cbd5e1; }`;
+  document.head.appendChild(css);
+}
 render(q.has("t") ? +q.get("t") : 0);
 window.readyForFrames = document.fonts.ready.then(() => Promise.all([...document.images].map(i => i.decode().catch(() => {}))));
 </script>
