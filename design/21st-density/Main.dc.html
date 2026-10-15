@@ -1,0 +1,284 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Sora:wght@600;700;800&display=swap">
+  <style>
+    body { margin: 0; background: #111317; font-family: "Plus Jakarta Sans", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #ecb2ff; text-decoration: none; }
+    a:hover { color: #f6d9ff; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    .cd { display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; background: #1a1c20; overflow: hidden; transition: border-color .18s ease, transform .18s ease; }
+    .cd:hover { border-color: rgba(236,178,255,0.45); transform: translateY(-2px); }
+    .pv { height: 148px; display: flex; align-items: center; justify-content: center; background-color: #0c0e12; border-bottom: 1px solid rgba(255,255,255,0.07); background-image: radial-gradient(rgba(255,255,255,0.09) 1px, transparent 1px); background-size: 12px 12px; }
+    .rate { border-bottom: 1px dashed #514255; padding-bottom: 1px; }
+    .chip { font-size: 10px; letter-spacing: 0.12em; font-weight: 600; padding: 3px 8px; border-radius: 9999px; border: 1px solid rgba(236,178,255,0.22); background: rgba(236,178,255,0.07); color: #ecb2ff; }
+    .chip.cy { border-color: rgba(0,238,252,0.22); background: rgba(0,238,252,0.07); color: #7df4ff; }
+    .fl { display: flex; align-items: center; gap: 9px; font-size: 13px; color: #d4c0d7; cursor: pointer; }
+    .bx { width: 14px; height: 14px; border-radius: 4px; border: 1px solid #514255; background: #0c0e12; flex-shrink: 0; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; min-height: 1120px; background: #111317; color: #e2e2e8; display: flex; flex-direction: column;">
+
+  <!-- top bar -->
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 32px; padding: 0 64px; height: 64px; border-bottom: 1px solid rgba(255,255,255,0.07); flex-shrink: 0;">
+    <div style="display: flex; align-items: center; gap: 40px;">
+      <div style="font-family: Sora, system-ui, sans-serif; font-weight: 700; font-size: 17px; letter-spacing: -0.02em; color: {{accent}};">All in 1 Events</div>
+      <div style="display: flex; align-items: center; gap: 26px;">
+        <a href="#catalog" style="font-size: 12px; font-weight: 600; letter-spacing: 0.05em; color: #e2e2e8; border-bottom: 2px solid {{accent}}; padding-bottom: 3px;">Catalog</a>
+        <a href="#portfolio" style="font-size: 12px; font-weight: 600; letter-spacing: 0.05em; color: #d4c0d7;">Portfolio</a>
+        <a href="#vip" style="font-size: 12px; font-weight: 600; letter-spacing: 0.05em; color: #d4c0d7;">VIP Lounge</a>
+        <a href="#contact" style="font-size: 12px; font-weight: 600; letter-spacing: 0.05em; color: #d4c0d7;">Contact</a>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <div style="display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px 0 12px; border: 1px solid #514255; border-radius: 8px; background: #0c0e12; min-width: 210px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9d8ba0" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+        <span style="flex-grow: 1; font-size: 12px; color: #9d8ba0;">Search the catalog</span>
+        <span class="mono" style="font-size: 10px; color: #9d8ba0; border: 1px solid #514255; border-radius: 4px; padding: 2px 5px;">⌘K</span>
+      </div>
+      <button style="height: 32px; padding: 0 16px; border: 0; border-radius: 9999px; background: {{accent}}; color: #520071; font-family: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; cursor: pointer;">Book Now</button>
+    </div>
+  </div>
+
+  <!-- page head -->
+  <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; padding: 44px 64px 0;">
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div class="mono" style="font-size: 11px; letter-spacing: 0.18em; color: #9d8ba0;">EVERYTHING WE OWN, IN ONE PLACE</div>
+      <h1 style="margin: 0; font-family: Sora, system-ui, sans-serif; font-weight: 700; font-size: 44px; line-height: 1.05; letter-spacing: -0.03em; color: #e2e2e8;">Catalog</h1>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span class="mono" style="font-size: 11px; letter-spacing: 0.12em; color: #9d8ba0;">SORT</span>
+      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border: 1px solid #514255; border-radius: 8px; background: #1a1c20; font-size: 12px; color: #d4c0d7;">
+        Most requested
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9d8ba0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- category tabs -->
+  <div style="display: flex; align-items: center; gap: 8px; padding: 28px 64px 0;">
+    <button onClick="{{pickAll}}" style="{{tabAll}}">All <span class="mono" style="opacity: .6; margin-left: 5px;">09</span></button>
+    <button onClick="{{pickBooths}}" style="{{tabBooths}}">Photo Booths <span class="mono" style="opacity: .6; margin-left: 5px;">03</span></button>
+    <button onClick="{{pickLight}}" style="{{tabLight}}">Lighting <span class="mono" style="opacity: .6; margin-left: 5px;">02</span></button>
+    <button onClick="{{pickLounge}}" style="{{tabLounge}}">Lounge <span class="mono" style="opacity: .6; margin-left: 5px;">02</span></button>
+    <button onClick="{{pickPlan}}" style="{{tabPlan}}">Planning <span class="mono" style="opacity: .6; margin-left: 5px;">02</span></button>
+  </div>
+
+  <div style="display: flex; align-items: flex-start; gap: 40px; padding: 28px 64px 40px;">
+
+    <!-- filter rail -->
+    <div style="display: flex; flex-direction: column; gap: 28px; width: 200px; flex-shrink: 0; padding-top: 4px;">
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="mono" style="font-size: 10px; letter-spacing: 0.16em; color: #9d8ba0;">GUEST COUNT</div>
+        <div class="fl"><span class="bx"></span> Under 75</div>
+        <div class="fl"><span class="bx"></span> 75 – 200</div>
+        <div class="fl"><span class="bx" style="border-color: #ecb2ff; background: #ecb2ff;"></span> 200 – 500</div>
+        <div class="fl"><span class="bx"></span> 500+</div>
+      </div>
+      <div style="height: 1px; background: rgba(255,255,255,0.07);"></div>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="mono" style="font-size: 10px; letter-spacing: 0.16em; color: #9d8ba0;">SETUP</div>
+        <div class="fl"><span class="bx"></span> Indoor</div>
+        <div class="fl"><span class="bx"></span> Outdoor rated</div>
+        <div class="fl"><span class="bx"></span> Staffed</div>
+      </div>
+      <div style="height: 1px; background: rgba(255,255,255,0.07);"></div>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="mono" style="font-size: 10px; letter-spacing: 0.16em; color: #9d8ba0;">AVAILABILITY</div>
+        <div class="fl"><span class="bx"></span> This weekend</div>
+        <div class="fl"><span class="bx"></span> Next 30 days</div>
+      </div>
+    </div>
+
+    <!-- grid -->
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; flex-grow: 1;">
+
+      <sc-if value="{{sBooths}}" hint-placeholder-val="{{true}}">
+      <div class="cd">
+        <div class="pv"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#ecb2ff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2.5" width="14" height="19" rx="3"></rect><path d="M9 18.5h6"></path><path d="M12 6.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z"></path></svg></div>
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 16px 18px 18px;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+            <span style="font-family: Sora, system-ui, sans-serif; font-weight: 600; font-size: 16px; color: #e2e2e8;">Magic Mirror</span>
+            <span class="mono rate" style="font-size: 11px; color: #9d8ba0;">[RATE]</span>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 20px; color: #d4c0d7;">Full-length interactive touch mirror — animations, emojis and digital props.</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px; padding-top: 2px;"><span class="chip">POPULAR</span><span class="chip cy">INTERACTIVE</span></div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{sBooths}}" hint-placeholder-val="{{true}}">
+      <div class="cd">
+        <div class="pv"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#ecb2ff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="12" rx="9" ry="4"></ellipse><circle cx="12" cy="12" r="3"></circle><path d="M12 3v3"></path><path d="M12 18v3"></path></svg></div>
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 16px 18px 18px;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+            <span style="font-family: Sora, system-ui, sans-serif; font-weight: 600; font-size: 16px; color: #e2e2e8;">360 Spin Booth</span>
+            <span class="mono rate" style="font-size: 11px; color: #9d8ba0;">[RATE]</span>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 20px; color: #d4c0d7;">Slow-motion orbiting camera arm on a lit platform. Instant share-outs.</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px; padding-top: 2px;"><span class="chip cy">VIDEO</span><span class="chip">STAFFED</span></div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{sBooths}}" hint-placeholder-val="{{true}}">
+      <div class="cd">
+        <div class="pv"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#ecb2ff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6.5" width="19" height="12" rx="2.5"></rect><circle cx="12" cy="12.5" r="3.2"></circle><path d="M8 6.5l1.4-2.2h5.2L16 6.5"></path></svg></div>
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 16px 18px 18px;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+            <span style="font-family: Sora, system-ui, sans-serif; font-weight: 600; font-size: 16px; color: #e2e2e8;">Open-Air Booth</span>
+            <span class="mono rate" style="font-size: 11px; color: #9d8ba0;">[RATE]</span>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 20px; color: #d4c0d7;">Backdrop and DSLR on an open floor plan — fits larger group shots.</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px; padding-top: 2px;"><span class="chip">PRINTS</span><span class="chip cy">GROUPS</span></div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{sLight}}" hint-placeholder-val="{{true}}">
+      <div class="cd">
+        <div class="pv"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#00eefc" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5h18"></path><path d="M7 4.5v3"></path><path d="M17 4.5v3"></path><path d="M7 7.5l-3.5 13"></path><path d="M7 7.5l3.5 13"></path><path d="M17 7.5l-3.5 13"></path><path d="M17 7.5l3.5 13"></path></svg></div>
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 16px 18px 18px;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+            <span style="font-family: Sora, system-ui, sans-serif; font-weight: 600; font-size: 16px; color: #e2e2e8;">Atmospheric Rig</span>
+            <span class="mono rate" style="font-size: 11px; color: #9d8ba0;">[RATE]</span>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 20px; color: #d4c0d7;">DMX-controlled beam effects and intelligent fixtures, designed per room.</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px; padding-top: 2px;"><span class="chip cy">DMX</span><span class="chip">DESIGNED</span></div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{sLight}}" hint-placeholder-val="{{true}}">
+      <div class="cd">
+        <div class="pv"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#00eefc" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20.5h6"></path><rect x="9" y="17.5" width="6" height="3" rx="1"></rect><path d="M12 17.5V11"></path><path d="M12 11L5.5 3.5"></path><path d="M12 11l6.5-7.5"></path><path d="M12 11V2.5"></path></svg></div>
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 16px 18px 18px;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+            <span style="font-family: Sora, system-ui, sans-serif; font-weight: 600; font-size: 16px; color: #e2e2e8;">Uplighting Package</span>
+            <span class="mono rate" style="font-size: 11px; color: #9d8ba0;">[RATE]</span>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 20px; color: #d4c0d7;">Perimeter wash in any colour, set to your palette before doors open.</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px; padding-top: 2px;"><span class="chip">WIRELESS</span><span class="chip cy">ANY COLOUR</span></div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{sLounge}}" hint-placeholder-val="{{true}}">
+      <div class="cd">
+        <div class="pv"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#ffb1c3" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12.5" width="18" height="6" rx="2"></rect><path d="M4.5 18.5v2"></path><path d="M19.5 18.5v2"></path><path d="M5.5 12.5V8a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v4.5"></path></svg></div>
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 16px 18px 18px;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+            <span style="font-family: Sora, system-ui, sans-serif; font-weight: 600; font-size: 16px; color: #e2e2e8;">VIP Lounge Set</span>
+            <span class="mono rate" style="font-size: 11px; color: #9d8ba0;">[RATE]</span>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 20px; color: #d4c0d7;">White leather seating and plush velvet decor to carve out an exclusive zone.</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px; padding-top: 2px;"><span class="chip">DELIVERED</span><span class="chip cy">MODULAR</span></div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{sLounge}}" hint-placeholder-val="{{true}}">
+      <div class="cd">
+        <div class="pv"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#ffb1c3" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="7" rx="7" ry="2.6"></ellipse><path d="M5 7v3c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V7"></path><path d="M12 12.6v6"></path><path d="M7.5 20.5h9"></path></svg></div>
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 16px 18px 18px;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+            <span style="font-family: Sora, system-ui, sans-serif; font-weight: 600; font-size: 16px; color: #e2e2e8;">LED Cocktail Tables</span>
+            <span class="mono rate" style="font-size: 11px; color: #9d8ba0;">[RATE]</span>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 20px; color: #d4c0d7;">Colour-matched glow tables, cordless, rechargeable through a full night.</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px; padding-top: 2px;"><span class="chip cy">CORDLESS</span><span class="chip">STACKS</span></div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{sPlan}}" hint-placeholder-val="{{true}}">
+      <div class="cd">
+        <div class="pv"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#7df4ff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2.5"></rect><path d="M3 10h18"></path><path d="M8 3v4"></path><path d="M16 3v4"></path><path d="M9 15l2 2 4-4"></path></svg></div>
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 16px 18px 18px;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+            <span style="font-family: Sora, system-ui, sans-serif; font-weight: 600; font-size: 16px; color: #e2e2e8;">Bespoke Planning</span>
+            <span class="mono rate" style="font-size: 11px; color: #9d8ba0;">[RATE]</span>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 20px; color: #d4c0d7;">VIP table management through full-scale logistics. We hold the precision.</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px; padding-top: 2px;"><span class="chip">END TO END</span><span class="chip cy">RETAINER</span></div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{sPlan}}" hint-placeholder-val="{{true}}">
+      <div class="cd">
+        <div class="pv"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#7df4ff" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11z"></path><circle cx="12" cy="10" r="2.6"></circle></svg></div>
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 16px 18px 18px;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+            <span style="font-family: Sora, system-ui, sans-serif; font-weight: 600; font-size: 16px; color: #e2e2e8;">Venue Scouting</span>
+            <span class="mono rate" style="font-size: 11px; color: #9d8ba0;">[RATE]</span>
+          </div>
+          <p style="margin: 0; font-size: 13px; line-height: 20px; color: #d4c0d7;">Shortlists with load-in notes, power draw and capacity checked in advance.</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px; padding-top: 2px;"><span class="chip">SHORTLIST</span><span class="chip cy">SITE VISIT</span></div>
+        </div>
+      </div>
+      </sc-if>
+
+    </div>
+  </div>
+
+  <!-- inquiry tray -->
+  <div style="display: flex; align-items: center; justify-content: space-between; gap: 24px; margin: 0 64px 40px; padding: 16px 20px; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; background: #0c0e12;">
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <span class="mono" style="font-size: 10px; letter-spacing: 0.16em; color: #9d8ba0;">INQUIRY</span>
+      <span class="mono" style="font-size: 13px; color: #e2e2e8;">3 items · 220 guests · [EVENT DATE]</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <button style="display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px; border: 1px solid #514255; border-radius: 8px; background: transparent; color: #d4c0d7; font-family: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"></path></svg>
+        Copy list
+      </button>
+      <button style="height: 34px; padding: 0 18px; border: 0; border-radius: 8px; background: {{accent}}; color: #520071; font-family: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; cursor: pointer;">Send inquiry</button>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"accent":{"editor":"color","default":"#ecb2ff","options":["#ecb2ff","#00eefc","#ffb1c3","#7df4ff"],"section":"Theme"}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { cat: 'all' };
+  }
+  tabStyle(on, accent) {
+    const base = 'height: 32px; padding: 0 14px; border-radius: 9999px; font-family: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; transition: all .15s ease; ';
+    return on
+      ? base + 'border: 1px solid ' + accent + '; background: rgba(236,178,255,0.12); color: ' + accent + ';'
+      : base + 'border: 1px solid #514255; background: transparent; color: #d4c0d7;';
+  }
+  renderVals() {
+    const accent = this.props.accent ?? '#ecb2ff';
+    const c = this.state.cat;
+    const set = (v) => () => this.setState({ cat: v });
+    return {
+      accent,
+      sBooths: c === 'all' || c === 'booths',
+      sLight:  c === 'all' || c === 'light',
+      sLounge: c === 'all' || c === 'lounge',
+      sPlan:   c === 'all' || c === 'plan',
+      tabAll:    this.tabStyle(c === 'all', accent),
+      tabBooths: this.tabStyle(c === 'booths', accent),
+      tabLight:  this.tabStyle(c === 'light', accent),
+      tabLounge: this.tabStyle(c === 'lounge', accent),
+      tabPlan:   this.tabStyle(c === 'plan', accent),
+      pickAll: set('all'), pickBooths: set('booths'), pickLight: set('light'),
+      pickLounge: set('lounge'), pickPlan: set('plan')
+    };
+  }
+}
+</script>
+</body>
+</html>

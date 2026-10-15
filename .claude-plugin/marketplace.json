@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "meridian",
+  "description": "Otis Williams's Claude Code plugins for All in 1 Events and Meridian Interface projects.",
+  "owner": {
+    "name": "Otis Williams",
+    "email": "infoallin1eventsllc@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "meridian-toolkit",
+      "source": "./plugin/meridian-toolkit",
+      "description": "Stack map, engineering rules, auth architecture, taste and design craft \u2014 the context every Otis project needs."
+    }
+  ]
+}

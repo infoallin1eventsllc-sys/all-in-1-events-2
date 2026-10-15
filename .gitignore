@@ -16,3 +16,12 @@ node_modules/
 # Video build scratch: contact sheets and the raw pre-encode render
 420-friendly/tools/_*
 __pycache__/
+
+# Rendered frames regenerate from scene.html
+design/lounge-set-04/frames/
+design/lounge-set-04/web/
+design/lounge-set-04/node_modules/
+
+# Remotion — deps and render output are rebuildable
+design/remotion/node_modules/
+design/remotion/out/

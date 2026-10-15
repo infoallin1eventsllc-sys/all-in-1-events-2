@@ -1,0 +1,263 @@
+<title>420 Friendly Mark</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@500;600;800&display=swap">
+<style>
+:root{
+  --ground:#0B0C0A;        /* near-black, biased a touch green so it sits under the leaf */
+  --panel:#141613;
+  --panel-2:#1C1F1A;
+  --paper:#F2F4EE;         /* the light garment ground */
+  --leaf:#62C24A;          /* the working green */
+  --leaf-deep:#1B5E2C;
+  --ink:#EDEFE8;
+  --ash:#9AA093;
+  --ash-2:#6B7064;
+  --hair:rgba(255,255,255,.09);
+  --disp:'Anton',Impact,sans-serif;
+  --ui:'Archivo',system-ui,-apple-system,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font:500 15px/1.6 var(--ui);
+  -webkit-font-smoothing:antialiased;overflow-x:hidden}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:20px}
+@media(min-width:820px){.wrap{padding-inline:56px}}
+h1,h2{font-family:var(--ui);font-weight:800;margin:0;letter-spacing:-.028em;line-height:1.03;text-wrap:balance}
+h1{font-size:clamp(30px,5vw,50px)}
+h2{font-size:clamp(21px,2.6vw,30px)}
+p{margin:0;max-width:66ch;color:var(--ash)}
+.lab{font-family:var(--mono);font-size:10px;letter-spacing:.17em;text-transform:uppercase;color:var(--ash-2)}
+section{padding-block:clamp(52px,7vw,84px);border-top:1px solid var(--hair)}
+.head{display:flex;flex-direction:column;gap:13px;margin-bottom:34px}
+
+/* ---------- the mark ---------- */
+.mark{display:inline-flex;flex-direction:column;align-items:center;gap:.10em;line-height:1}
+.mark .leaf{width:.56em;height:.56em;display:block;margin-bottom:.04em}
+.mark .num{font-family:var(--disp);font-size:1em;letter-spacing:-.012em;line-height:.82;
+  color:var(--ink);font-variant-numeric:lining-nums}
+.mark .bar{background:var(--leaf);color:#07140A;font:800 .163em/1 var(--ui);
+  letter-spacing:.30em;text-indent:.30em;padding:.62em .55em .58em;width:100%;text-align:center}
+/* variants */
+.mark.mono .num,.mark.mono .leaf{color:var(--ink);fill:var(--ink)}
+.mark.mono .bar{background:var(--ink);color:var(--ground)}
+.mark.on-paper .num{color:#111} .mark.on-paper .leaf{fill:var(--leaf-deep)}
+.mark.on-paper .bar{background:var(--leaf-deep);color:#F2F4EE}
+.mark.ink .num{color:#111} .mark.ink .leaf{fill:#111}
+.mark.ink .bar{background:#111;color:var(--paper)}
+.leaf{fill:var(--leaf)}
+
+.stage{background:var(--panel);border:1px solid var(--hair);border-radius:14px;
+  padding:clamp(36px,6vw,72px);display:flex;justify-content:center;align-items:center}
+.stage .mark{font-size:clamp(72px,13vw,148px)}
+
+/* ---------- grids ---------- */
+.grid{display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:560px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:900px){.grid.four{grid-template-columns:repeat(4,1fr)}}
+.tile{background:var(--panel);border:1px solid var(--hair);border-radius:12px;
+  min-height:186px;padding:26px 20px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:20px;text-align:center}
+.tile.paper{background:var(--paper);border-color:#DDE0D6}
+.tile.paper .cap{color:#5C6156}
+.tile .mark{font-size:46px}
+.tile .mark.sm{font-size:22px}
+.cap{font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ash-2)}
+
+/* ---------- garment ---------- */
+.gar{border-radius:14px;border:1px solid var(--hair);overflow:hidden;position:relative;
+  min-height:300px;display:flex;align-items:center;justify-content:center;padding:40px}
+.gar.black{background:radial-gradient(120% 90% at 50% 30%,#26291F 0%,#0D0F0B 72%)}
+.gar.red{background:radial-gradient(120% 90% at 50% 30%,#B2413A 0%,#6E231F 78%)}
+.gar .mark{font-size:clamp(44px,8vw,74px)}
+.gar .tag{position:absolute;left:16px;bottom:14px}
+
+/* ---------- construction ---------- */
+.rules{display:grid;gap:0;grid-template-columns:1fr}
+.rule{display:grid;grid-template-columns:22px 1fr;gap:15px;padding:16px 0;border-top:1px solid var(--hair)}
+.rule:last-child{border-bottom:1px solid var(--hair)}
+.rule .k{font-family:var(--mono);font-size:11px;color:var(--leaf);padding-top:3px}
+.rule b{display:block;font-weight:600;color:var(--ink);margin-bottom:3px}
+.rule p{font-size:14px}
+
+/* ---------- spec table ---------- */
+.spec{width:100%;border-collapse:collapse;font-size:14px}
+.spec caption{text-align:left;margin-bottom:14px;color:var(--ash);font-size:14px}
+.spec th,.spec td{padding:11px 14px;border-bottom:1px solid var(--hair);text-align:left;vertical-align:top}
+.spec th{font:600 10px/1.4 var(--mono);letter-spacing:.15em;text-transform:uppercase;color:var(--ash-2)}
+.spec td:last-child{font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap}
+.tw{overflow-x:auto}
+.warn{margin-top:26px;border-left:2px solid var(--leaf);background:var(--panel-2);
+  padding:17px 20px;border-radius:0 10px 10px 0}
+.warn p{color:var(--ash);font-size:14px}
+.warn b{color:var(--ink)}
+footer{border-top:1px solid var(--hair);padding-block:28px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<!-- One leaf, authored once, used everywhere. Seven leaflets on a common origin,
+     each a rotated copy of the same serrated lobe — so it is symmetric by construction. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <path id="lflt" d="M0,0 L3.2,-6 L1.7,-7.4 L4.6,-13.2 L2.8,-14.6 L5.2,-20.5 L3.2,-22
+      L4.6,-28 L2.4,-29.4 L2.8,-35 L0,-41 L-2.8,-35 L-2.4,-29.4 L-4.6,-28 L-3.2,-22
+      L-5.2,-20.5 L-2.8,-14.6 L-4.6,-13.2 L-1.7,-7.4 L-3.2,-6 Z"/>
+    <g id="leafmark">
+      <use href="#lflt"/>
+      <use href="#lflt" transform="rotate(30) scale(.90)"/>
+      <use href="#lflt" transform="rotate(-30) scale(.90)"/>
+      <use href="#lflt" transform="rotate(62) scale(.72)"/>
+      <use href="#lflt" transform="rotate(-62) scale(.72)"/>
+      <use href="#lflt" transform="rotate(95) scale(.50)"/>
+      <use href="#lflt" transform="rotate(-95) scale(.50)"/>
+      <rect x="-1.5" y="-1" width="3" height="7" rx="1.4"/>
+    </g>
+  </defs>
+</svg>
+
+<header class="wrap" style="padding-block:clamp(52px,8vw,92px) 0">
+  <span class="lab">420 Friendly &middot; Brand mark</span>
+  <h1 style="margin-top:14px">One mark. Every garment.<br>Never redrawn.</h1>
+  <p style="margin-top:18px">The four mockups on file are pictures of a logo, not a logo. Three of them
+    print the wrong words. This is the replacement: drawn as vector, identical at every size,
+    on any colour, forever.</p>
+</header>
+
+<section class="wrap">
+  <div class="stage">
+    <div class="mark">
+      <svg class="leaf" viewBox="-26 -44 52 54" aria-hidden="true"><use href="#leafmark"/></svg>
+      <span class="num">420</span>
+      <span class="bar">FRIENDLY</span>
+    </div>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="head">
+    <span class="lab">Why the old files fail</span>
+    <h2>Three of four are unprintable.</h2>
+  </div>
+  <div class="tw">
+    <table class="spec">
+      <caption>Read literally, this is what each supplied mockup says.</caption>
+      <thead><tr><th>File</th><th>Reads as</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>Red hoodie</td><td>4&thinsp;&#9670;&thinsp;0&nbsp;FRIENDLY &mdash; leaf covers the 2</td><td>Reject</td></tr>
+        <tr><td>Black hoodie, white</td><td>420 FRIENDLY, in three mismatched colours</td><td>Rework</td></tr>
+        <tr><td>Red sweatpants</td><td>4&thinsp;&#9670;&thinsp;0&nbsp;FRIENDLY &mdash; same broken 2</td><td>Reject</td></tr>
+        <tr><td>Black hoodie, green</td><td>420 FRIENDL &mdash; the Y is gone</td><td>Reject</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="warn">
+    <p><b>The real fault is underneath the typos.</b> The mark is different in all four:
+      different letterforms, different leaf placement, different colour logic. A generator
+      draws a new logo every time you ask. A brand needs the same one every time, which is
+      what a vector file is for.</p>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="head">
+    <span class="lab">Construction</span>
+    <h2>Five rules that hold it together.</h2>
+  </div>
+  <div class="rules">
+    <div class="rule"><span class="k">01</span><div><b>The leaf never touches a character</b>
+      <p>It crowns the numerals with clear space above them. That single decision is what makes
+        "420" unbreakable &mdash; the failure in three of the four mockups was a leaf sitting on the 2.</p></div></div>
+    <div class="rule"><span class="k">02</span><div><b>FRIENDLY is a bar, not loose type</b>
+      <p>Reversed out of a solid block at 0.30&thinsp;em tracking. The block gives the lockup a
+        base, survives a bad embroidery digitisation, and reads at chest size across a room.</p></div></div>
+    <div class="rule"><span class="k">03</span><div><b>Two colours, maximum</b>
+      <p>Green and one neutral. Every extra thread colour is a real line item on an
+        embroidery quote and a screen on a print quote.</p></div></div>
+    <div class="rule"><span class="k">04</span><div><b>It has to work in one colour</b>
+      <p>Single-colour versions below. If a mark only survives in full colour it fails on a
+        woven label, an embossed box and a one-colour sleeve hit.</p></div></div>
+    <div class="rule"><span class="k">05</span><div><b>Below 20&thinsp;mm the leaf comes off</b>
+      <p>Serrations fill in at small sizes and turn to mush. The small lockup drops the leaf and
+        keeps the words, which is the half that carries the name.</p></div></div>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="head">
+    <span class="lab">Lockups</span>
+    <h2>Four versions. No others.</h2>
+  </div>
+  <div class="grid four">
+    <div class="tile">
+      <div class="mark"><svg class="leaf" viewBox="-26 -44 52 54"><use href="#leafmark"/></svg>
+        <span class="num">420</span><span class="bar">FRIENDLY</span></div>
+      <span class="cap">Primary &middot; on dark</span>
+    </div>
+    <div class="tile paper">
+      <div class="mark on-paper"><svg class="leaf" viewBox="-26 -44 52 54"><use href="#leafmark"/></svg>
+        <span class="num">420</span><span class="bar">FRIENDLY</span></div>
+      <span class="cap">Primary &middot; on light</span>
+    </div>
+    <div class="tile">
+      <div class="mark mono"><svg class="leaf" viewBox="-26 -44 52 54"><use href="#leafmark"/></svg>
+        <span class="num">420</span><span class="bar">FRIENDLY</span></div>
+      <span class="cap">One colour &middot; reversed</span>
+    </div>
+    <div class="tile paper">
+      <div class="mark ink sm"><span class="num">420</span><span class="bar">FRIENDLY</span></div>
+      <span class="cap">Small &middot; under 20 mm</span>
+    </div>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="head">
+    <span class="lab">Applied</span>
+    <h2>On the two garment grounds.</h2>
+  </div>
+  <div class="grid">
+    <div class="gar black">
+      <div class="mark"><svg class="leaf" viewBox="-26 -44 52 54"><use href="#leafmark"/></svg>
+        <span class="num">420</span><span class="bar">FRIENDLY</span></div>
+      <span class="cap tag">Black &middot; full colour</span>
+    </div>
+    <div class="gar red">
+      <div class="mark mono"><svg class="leaf" viewBox="-26 -44 52 54"><use href="#leafmark"/></svg>
+        <span class="num">420</span><span class="bar">FRIENDLY</span></div>
+      <span class="cap tag">Red &middot; one colour, reversed</span>
+    </div>
+  </div>
+  <div class="warn">
+    <p><b>On red, drop the green.</b> Green on red is the lowest-contrast pair on the wheel
+      and the two fight at any distance. The reversed one-colour version is the red garment's
+      version &mdash; not a compromise, the correct choice.</p>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="head">
+    <span class="lab">Production</span>
+    <h2>What to hand a printer.</h2>
+  </div>
+  <div class="tw">
+    <table class="spec">
+      <tbody>
+        <tr><th>Display face</th><td>Anton &middot; SIL Open Font License, commercial use allowed</td></tr>
+        <tr><th>Bar face</th><td>Archivo 800 &middot; SIL Open Font License</td></tr>
+        <tr><th>Type in the final file</th><td>Converted to outlines, always</td></tr>
+        <tr><th>Green</th><td>#62C24A &middot; deep variant #1B5E2C for light grounds</td></tr>
+        <tr><th>Neutral</th><td>#EDEFE8 reversed &middot; #111111 positive</td></tr>
+        <tr><th>Screen print</th><td>Vector SVG or AI, one layer per colour</td></tr>
+        <tr><th>Embroidery</th><td>Bar and numerals only below 60 mm; satin stitch on the bar</td></tr>
+        <tr><th>Minimum clear space</th><td>Height of the bar, on all four sides</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="warn">
+    <p><b>Everything on this page is vector.</b> The leaf is seven rotated copies of one
+      serrated lobe, so it is symmetric by construction rather than by luck. Nothing here was
+      generated, which is why it will be the same mark on the next garment and the one after.</p>
+  </div>
+</section>
+
+<footer class="wrap">
+  <span class="lab">420 Friendly &middot; Mark sheet &middot; Drawn, not generated</span>
+</footer>

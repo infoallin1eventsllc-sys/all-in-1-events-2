@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;600&display=swap">
+  <style>
+    body { margin: 0; background: #0F1418; font-family: Archivo, system-ui, sans-serif; }
+    a { color: #4FD98A; } a:hover { color: #7FE9AC; }
+    @keyframes drift1 { 0% { transform: translate(0,0); opacity: 0; } 15% { opacity: .85; } 100% { transform: translate(26px,-190px); opacity: 0; } }
+    @keyframes drift2 { 0% { transform: translate(0,0); opacity: 0; } 20% { opacity: .7; } 100% { transform: translate(-34px,-210px); opacity: 0; } }
+    @keyframes drift3 { 0% { transform: translate(0,0); opacity: 0; } 18% { opacity: .6; } 100% { transform: translate(14px,-230px); opacity: 0; } }
+    @keyframes breathe { 0%,100% { opacity: .30; transform: scale(1); } 50% { opacity: .55; transform: scale(1.06); } }
+    .s1 { animation: drift1 7s ease-out infinite; }
+    .s2 { animation: drift2 8.5s ease-out infinite 1.4s; }
+    .s3 { animation: drift3 9.5s ease-out infinite 3s; }
+    .halo { animation: breathe 6s ease-in-out infinite; transform-origin: 540px 470px; }
+    @media (prefers-reduced-motion: reduce) { .s1,.s2,.s3,.halo { animation: none; } }
+  </style>
+</helmet>
+
+<div style="width: 1080px; height: 1080px; background: #0F1418; overflow: hidden;">
+  <svg width="1080" height="1080" viewBox="0 0 1080 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="glow" cx="50%" cy="44%" r="50%">
+        <stop offset="0%" stop-color="{{green}}" stop-opacity="0.55"></stop>
+        <stop offset="55%" stop-color="{{green}}" stop-opacity="0.10"></stop>
+        <stop offset="100%" stop-color="{{green}}" stop-opacity="0"></stop>
+      </radialGradient>
+      <filter id="soft" x="-60%" y="-60%" width="220%" height="220%">
+        <feGaussianBlur stdDeviation="18"></feGaussianBlur>
+      </filter>
+    </defs>
+
+    <circle class="halo" cx="540" cy="470" r="360" fill="url(#glow)"></circle>
+
+    <!-- smoke, monoline, rising -->
+    <g stroke="{{green}}" stroke-width="3.5" fill="none" stroke-linecap="round" opacity="0.9">
+      <path class="s1" d="M398 690 C368 640, 430 612, 400 560 C374 516, 424 492, 404 456"></path>
+      <path class="s2" d="M540 706 C574 652, 508 620, 542 566 C572 518, 514 494, 540 452"></path>
+      <path class="s3" d="M684 690 C716 642, 654 614, 686 562 C712 518, 660 494, 684 458"></path>
+    </g>
+
+    <!-- 420 -->
+    <text x="540" y="500" text-anchor="middle" fill="{{green}}" opacity="0.45" filter="url(#soft)"
+          font-family="'Archivo Black', Archivo, sans-serif" font-size="300">420</text>
+    <text x="540" y="500" text-anchor="middle" fill="#FFFFFF"
+          font-family="'Archivo Black', Archivo, sans-serif" font-size="300" letter-spacing="-6">420</text>
+
+    <!-- leaf, seated above the numerals -->
+    <g transform="translate(540, 258) scale(0.62)" stroke="{{green}}" stroke-width="16" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M0 0 C-13 -35, -12 -72, 0 -100 C12 -72, 13 -35, 0 0 Z"></path>
+      <path d="M0 0 C-11 -29, -10 -60, 0 -84 C10 -60, 11 -29, 0 0 Z" transform="rotate(33)"></path>
+      <path d="M0 0 C-11 -29, -10 -60, 0 -84 C10 -60, 11 -29, 0 0 Z" transform="rotate(-33)"></path>
+      <path d="M0 0 C-9 -22, -8 -45, 0 -62 C8 -45, 9 -22, 0 0 Z" transform="rotate(66)"></path>
+      <path d="M0 0 C-9 -22, -8 -45, 0 -62 C8 -45, 9 -22, 0 0 Z" transform="rotate(-66)"></path>
+      <path d="M0 0 C-7 -14, -6 -29, 0 -40 C6 -29, 7 -14, 0 0 Z" transform="rotate(100)"></path>
+      <path d="M0 0 C-7 -14, -6 -29, 0 -40 C6 -29, 7 -14, 0 0 Z" transform="rotate(-100)"></path>
+      <path d="M0 0 L0 18"></path>
+    </g>
+
+    <!-- rule + wordmark -->
+    <path d="M300 596 L780 596" stroke="{{green}}" stroke-width="2" opacity="0.5"></path>
+    <text x="540" y="672" text-anchor="middle" fill="#FFFFFF" font-family="Archivo, sans-serif"
+          font-size="72" font-weight="600" letter-spacing="34">FRIENDLY</text>
+    <text x="540" y="740" text-anchor="middle" fill="#6F7C84" font-family="Archivo, sans-serif"
+          font-size="20" font-weight="400" letter-spacing="14">ELEVATED EVENTS · EST. [YEAR]</text>
+  </svg>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"green":{"editor":"color","default":"#3FBF75","options":["#3FBF75","#2E7D4F","#4FD98A","#6BE39C"],"section":"Brand"}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { green: this.props.green ?? '#3FBF75' };
+  }
+}
+</script>
+</body>
+</html>

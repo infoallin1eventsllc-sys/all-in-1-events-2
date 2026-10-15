@@ -90,6 +90,16 @@ Compact record of what was built and the current state, so work can resume later
   - OPEN (Otis's call): 24 images hotlinked from images.unsplash.com — works, but
     the visual identity depends on a third party. Worth self-hosting.
 - **MERGED TO `main`** (commit 01fa062). main = the fixed, tested version.
+- **Analytics (Sep 11):** `@vercel/analytics` wired in `src/main.tsx` on branch
+  `claude/vercel-web-analytics` (not merged). Chosen over GA/Plausible because it
+  serves from our own origin (`/_vercel/insights/*`) and the site's strict CSP is
+  `script-src 'self'` — a third-party tag needs that policy loosened. Also excluded
+  `_vercel/` from the SPA catch-all rewrite in `vercel.json`, which would otherwise
+  return index.html for the script and fail silently. KNOWN LIMIT: tab-switching SPA
+  with no router, so every visit records as one view of `/`. Visitors, referrers,
+  geo and device are correct; section-level interest is not captured.
+  `src/lib/attribution.ts` remains the conversion half (which channel earned a
+  booking); this is the traffic half (the denominator).
 - **Deploy status:** NOT deployed. Next step is Otis doing a Vercel preview
   deploy (vercel.com → Add New → Project → import the repo → Deploy; Vite is
   auto-detected, zero config, no env vars needed). Explained to him that a

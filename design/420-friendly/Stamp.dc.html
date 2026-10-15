@@ -1,0 +1,79 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Protest+Guerrilla&family=Archivo:wght@400;600;700&display=swap">
+  <style>
+    body { margin: 0; background: #1A1E23; font-family: Archivo, system-ui, sans-serif; }
+    a { color: #2E7D4F; } a:hover { color: #4FD98A; }
+    @keyframes turn { to { transform: rotate(-360deg); } }
+    @keyframes pulse { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+    .ring { animation: turn 44s linear infinite; transform-origin: 540px 470px; }
+    .tick { animation: pulse 4s ease-in-out infinite; }
+    @media (prefers-reduced-motion: reduce) { .ring,.tick { animation: none; } }
+  </style>
+</helmet>
+
+<div style="width: 1080px; height: 1080px; background: #1A1E23; overflow: hidden;">
+  <svg width="1080" height="1080" viewBox="0 0 1080 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <path id="arctop" d="M255 470 A 285 285 0 0 1 825 470"></path>
+      <path id="arcbottom" d="M270 470 A 270 270 0 0 0 810 470"></path>
+    </defs>
+
+    <!-- badge rings -->
+    <circle cx="540" cy="470" r="330" stroke="{{green}}" stroke-width="3" fill="none" opacity="0.45"></circle>
+    <circle cx="540" cy="470" r="312" stroke="{{green}}" stroke-width="9" fill="none"></circle>
+    <g class="ring tick">
+      <circle cx="540" cy="470" r="348" stroke="{{green}}" stroke-width="4" fill="none"
+              stroke-dasharray="3 26" stroke-linecap="round"></circle>
+    </g>
+
+    <!-- arced type -->
+    <text fill="{{green}}" font-family="'Protest Guerrilla', Archivo, sans-serif" font-size="62" letter-spacing="8">
+      <textPath href="#arctop" startOffset="50%" text-anchor="middle">FRIENDLY</textPath>
+    </text>
+    <text fill="#8A949B" font-family="Archivo, sans-serif" font-size="26" font-weight="600" letter-spacing="12">
+      <textPath href="#arcbottom" startOffset="50%" text-anchor="middle">NO JUDGEMENT · JUST VIBES</textPath>
+    </text>
+
+    <!-- leaf, filled silhouette for weight -->
+    <g transform="translate(540, 388) scale(0.72)" stroke="{{green}}" stroke-width="20" fill="{{green}}"
+       fill-opacity="0.16" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M0 0 C-13 -35, -12 -72, 0 -100 C12 -72, 13 -35, 0 0 Z"></path>
+      <path d="M0 0 C-11 -29, -10 -60, 0 -84 C10 -60, 11 -29, 0 0 Z" transform="rotate(33)"></path>
+      <path d="M0 0 C-11 -29, -10 -60, 0 -84 C10 -60, 11 -29, 0 0 Z" transform="rotate(-33)"></path>
+      <path d="M0 0 C-9 -22, -8 -45, 0 -62 C8 -45, 9 -22, 0 0 Z" transform="rotate(66)"></path>
+      <path d="M0 0 C-9 -22, -8 -45, 0 -62 C8 -45, 9 -22, 0 0 Z" transform="rotate(-66)"></path>
+      <path d="M0 0 C-7 -14, -6 -29, 0 -40 C6 -29, 7 -14, 0 0 Z" transform="rotate(100)"></path>
+      <path d="M0 0 C-7 -14, -6 -29, 0 -40 C6 -29, 7 -14, 0 0 Z" transform="rotate(-100)"></path>
+      <path d="M0 0 L0 18"></path>
+    </g>
+
+    <!-- 420 slab -->
+    <rect x="352" y="432" width="376" height="128" rx="10" fill="{{green}}"></rect>
+    <text x="540" y="534" text-anchor="middle" fill="#1A1E23"
+          font-family="'Protest Guerrilla', Archivo, sans-serif" font-size="118">420</text>
+
+    <path d="M420 606 L660 606" stroke="{{green}}" stroke-width="3" opacity="0.6"></path>
+
+    <text x="540" y="906" text-anchor="middle" fill="#FFFFFF" font-family="Archivo, sans-serif"
+          font-size="30" font-weight="700" letter-spacing="20">EST. [YEAR]</text>
+  </svg>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"green":{"editor":"color","default":"#4FD98A","options":["#4FD98A","#2E7D4F","#3FBF75"],"section":"Brand"}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { green: this.props.green ?? '#4FD98A' };
+  }
+}
+</script>
+</body>
+</html>
