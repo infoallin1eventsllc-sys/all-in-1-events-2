@@ -70,3 +70,8 @@ Add real numbers (views, bookings) once the ads have run.
   and Bing's index also feeds DuckDuckGo, Yahoo, Ecosia, ChatGPT search and Copilot.
   Otis's part: Bing Webmaster Tools (import from Search Console or add + DNS verify),
   submit sitemap.xml, request indexing of the homepage.
+
+## Still ad (16 Oct): Higgsfield "The custom studio you're looking for." + contact details
+system/promo-ad/still/: wide 2000x1131 (Facebook, LinkedIn, X), feed 1080x1350 (Instagram/Facebook 4:5),
+story 1080x1920 (Stories, Reels cover, TikTok photo; contact kept above the bottom 330 px app overlay).
+Source image from Otis (Higgsfield); type is Hanken Grotesk / Inter from the site. Layouts: wide.html, tall.html.
