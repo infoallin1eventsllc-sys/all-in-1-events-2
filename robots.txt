@@ -25,6 +25,9 @@ Disallow: /420-friendly/favorites.html
 # A stale snapshot of an old catalogue, kept for reference only.
 Disallow: /420-friendly/preview.html
 
+# Design mockups and render scratch from main, not pages.
+Disallow: /design/
+
 # Serverless endpoints.
 Disallow: /.netlify/
 

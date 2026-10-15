@@ -21,7 +21,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const SKIP = new Set(["node_modules", ".git", ".netlify", ".claude"]);
+// design/ is mockups and render scratch (Claude Design exports that expect
+// their own runtime, frame sequences that .gitignore excludes). None of it is
+// a page the storefront links to, so it is skipped like node_modules rather
+// than carried as thirty allowlist entries.
+const SKIP = new Set(["node_modules", ".git", ".netlify", ".claude", "design"]);
 
 /* ---------- gather files ---------- */
 function walk(dir, out = []) {
