@@ -64,3 +64,9 @@ Add real numbers (views, bookings) once the ads have run.
 - Facebook page, Instagram (business or creator account, link in bio), TikTok (business account, link in bio).
 - Optional: posting from here needs the accounts linked to a connector (Higgsfield has TikTok publishing, vidIQ has Instagram Reels); otherwise Otis posts from his phone.
 - After the first posts: check visitors in PostHog and Vercel usage.
+- IndexNow (Otis said yes, 15 Oct): add the key file to the website (public/<key>.txt), then
+  notify Bing/Yandex of the sitemap URLs after each deploy so changes are indexed in hours.
+  Background: a Bing site: search on 15 Oct returned ZERO pages of meridianinterface.com,
+  and Bing's index also feeds DuckDuckGo, Yahoo, Ecosia, ChatGPT search and Copilot.
+  Otis's part: Bing Webmaster Tools (import from Search Console or add + DNS verify),
+  submit sitemap.xml, request indexing of the homepage.
