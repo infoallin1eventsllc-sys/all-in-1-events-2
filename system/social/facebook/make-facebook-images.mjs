@@ -21,7 +21,7 @@ const pages = {
       <div style="font-family:Inter;font-weight:700;letter-spacing:.28em;font-size:46px;line-height:1;color:#cbd5e1;margin-top:12px">INTERFACE</div></div>
     </div>
     <div style="position:relative;font-family:Hanken;font-weight:700;font-size:40px;color:#e2e8f0">Custom websites, apps, dashboards &amp; video ads</div>
-    <div style="position:relative;font-family:Inter;font-weight:600;font-size:32px;color:#93c5fd">meridianinterface.com · Houston, TX</div>
+    <div style="position:relative;font-family:Inter;font-weight:600;font-size:32px;color:#93c5fd">meridianinterface.com</div>
   </body>`],
 };
 const b = await chromium.launch();
