@@ -71,7 +71,19 @@ Add real numbers (views, bookings) once the ads have run.
   Otis's part: Bing Webmaster Tools (import from Search Console or add + DNS verify),
   submit sitemap.xml, request indexing of the homepage.
 
-## Still ad (16 Oct): Higgsfield "The custom studio you're looking for." + contact details
-system/promo-ad/still/: wide 2000x1131 (Facebook, LinkedIn, X), feed 1080x1350 (Instagram/Facebook 4:5),
-story 1080x1920 (Stories, Reels cover, TikTok photo; contact kept above the bottom 330 px app overlay).
-Source image from Otis (Higgsfield); type is Hanken Grotesk / Inter from the site. Layouts: wide.html, tall.html.
+## Still ads (16 Oct) and their click-through links
+system/promo-ad/still/meridian-ad-{conveyor,devices}-{wide,feed,story}.jpg and meridian-ad-one-studio-{feed,story}.jpg:
+your real logo, contact details on every one. wide 2000x1131 (Facebook, LinkedIn, X, email), feed 1080x1350
+(Instagram/Facebook), story 1080x1920 (Stories, Reels, TikTok; contact kept above the bottom app overlay).
+The custom-studio ad ("The custom studio you're looking for.") is retired: Otis does not want it used.
+
+A picture uploaded to a social app cannot carry a link. These links carry the picture instead: paste one
+into a Facebook, LinkedIn or X post, a text message or WhatsApp, and the ad appears as a large card that
+opens the website when tapped.
+- https://meridianinterface.com/go/conveyor/  (card: "If your business is unique, why is your software generic?")
+- https://meridianinterface.com/go/devices/   (card: "Custom web design, mobile apps & data dashboards")
+Each forwards to the homepage tagged utm_campaign=ad-conveyor / ad-devices (PostHog shows which ad brought
+whom). Facebook caches cards: after any change, re-fetch at developers.facebook.com/tools/debug
+("Scrape Again"); LinkedIn: linkedin.com/post-inspector. Instagram and TikTok show no link cards: use
+the profile link ("Link in bio"), the Stories link sticker, or a paid ad with the website destination.
+Website files: public/go/, public/images/share-*.jpg, tools/make-share-links.mjs (regenerates the pages).
