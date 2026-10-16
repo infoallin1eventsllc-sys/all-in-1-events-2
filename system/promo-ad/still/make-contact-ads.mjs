@@ -20,14 +20,21 @@ body{font-family:Inter,sans-serif;color:#fff;position:relative;background:#060d1
 .line{font-weight:600;white-space:nowrap}.line b{color:#60a5fa;font-weight:700;margin-right:10px}
 .sep{color:#64748b;margin:0 22px}
 ${extra}</style></head><body>`;
-const src = n => `file://${D}/src${n}.png`;
+const src = n => `file://${D}/fixed${n}.png`;
+// A clean ground in each picture's own colours (no blurred smear under the art).
+const BG = {
+  '22': 'radial-gradient(120% 80% at 50% 25%,#0b1d42 0%,#081530 45%,#050c1c 100%)',
+  '23': 'radial-gradient(120% 80% at 50% 25%,#1a2537 0%,#121b29 50%,#0b111c 100%)',
+  '25': 'radial-gradient(130% 70% at 50% 35%,#0c3a86 0%,#0a2a63 40%,#071a40 75%,#06142f 100%)',
+};
+const ground = n => `<div style="position:absolute;inset:0;background:${BG[n]}"></div>`;
 const jobs = [];
 
 // ---------- WIDE 2000x1131: art scaled to 0.875 at top, contact band below ----------
 for (const [n, btn] of [['22', false], ['23', true]]) {
   const k = 0.875, aw = 2000 * k, ah = 1131 * k;
   jobs.push([`wide-${n}`, 2000, 1131, head(2000, 1131, '') +
-    `<div class="blur" style="background-image:url(${src(n)})"></div>
+    `${ground(n)}
      <div class="art feather" style="left:${(2000 - aw) / 2}px;top:0;width:${aw}px;height:${ah}px;background-image:url(${src(n)});background-size:${aw}px ${ah}px"></div>
      <div class="contact" style="top:${ah - 4}px;gap:12px">
        <div class="row" style="gap:30px">${btn ? '<div class="btn blue" style="font-size:30px;padding:11px 26px">Book your 1-on-1 appointment</div>' : ''}<div class="site" style="font-size:${btn ? 46 : 52}px">meridianinterface.com</div></div>
@@ -42,7 +49,7 @@ const tall = (n, w, h, artH, artTop, contactTop, btnCol, sizes) => {
   const button = btnCol ? `<div class="btn ${btnCol}" style="font-size:${sizes.btn}px;padding:${sizes.btn * .5}px ${sizes.btn}px">Book your 1-on-1 appointment</div>` : '';
   const aw = artH * 2000 / 1131;
   return head(w, h, '') +
-    `<div class="blur" style="background-image:url(${src(n)})"></div>
+    `${ground(n)}
      <div class="art feather" style="left:0;top:${artTop}px;width:${w}px;height:${artH}px;background-image:url(${src(n)});background-size:${aw}px ${artH}px;background-position:center 0"></div>
      <div class="contact" style="top:${contactTop}px;gap:${sizes.gap}px">
        ${button}
@@ -57,6 +64,16 @@ jobs.push(['feed-22', 1080, 1350, tall('22', 1080, 1350, 900, 0, 0, '', { gap: 1
 jobs.push(['story-22', 1080, 1920, tall('22', 1080, 1920, 1000, 230, 0, '', { gap: 20, btn: 42, site: 62, line: 40 })]);
 jobs.push(['feed-23', 1080, 1350, tall('23', 1080, 1350, 760, 10, 0, 'blue', { gap: 18, btn: 40, site: 56, line: 36 })]);
 jobs.push(['story-23', 1080, 1920, tall('23', 1080, 1920, 800, 250, 0, 'blue', { gap: 20, btn: 42, site: 58, line: 38 })]);
+
+jobs.push(['wide-25', 2000, 1131, head(2000, 1131, '') +
+  `<div class="art" style="left:0;top:0;width:2000px;height:1131px;background-image:url(${src('25')});background-size:2000px 1131px"></div>
+   <div style="position:absolute;left:0;right:0;bottom:0;height:230px;background:linear-gradient(to bottom,rgba(5,12,32,0) 0%,rgba(5,12,32,.62) 45%,rgba(5,12,32,.82) 100%)"></div>
+   <div class="contact" style="top:968px;gap:16px">
+     <div class="row" style="gap:34px"><div class="btn blue" style="font-size:33px;padding:15px 30px">Book your 1-on-1 appointment</div><div class="site" style="font-size:50px">meridianinterface.com</div></div>
+     <div class="line" style="font-size:31px"><b>Call</b>281-882-9198<span class="sep">|</span><b>Email</b>otis@meridianinterface.com</div>
+   </div></body></html>`]);
+jobs.push(['feed-25', 1080, 1350, tall('25', 1080, 1350, 780, 20, 0, 'blue', { gap: 18, btn: 40, site: 56, line: 36 })]);
+jobs.push(['story-25', 1080, 1920, tall('25', 1080, 1920, 760, 280, 0, 'blue', { gap: 20, btn: 42, site: 58, line: 38 })]);
 
 // ---------- 24: white text card ----------
 const white = (w, h, scale, srcTop, srcBottom, top, contactTop, sz) => {
