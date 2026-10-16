@@ -3361,3 +3361,8 @@ Otis: do whatever on SECURITY-CHECKLIST.md Claude can do, and list the rest for 
 - legal/REFUND-POLICY-DRAFT.md: deposit, mid-project cancellation, milestones, monthly plans, our-fault refunds, how refunds are paid; every business term marked [CHOOSE]. Not published.
 - Uptime watch not built: system_alerts reach Otis only through the portal (notify-owner emails bookings only), so an alert nobody sees adds nothing; UptimeRobot (free, emails him directly) stays on his list.
 - SECURITY-CHECKLIST.md: new "Otis's to-do list" at the top, 13 items in order (domain lock, 2-step on the key accounts, portal 2-step, the three SQL files, password manager, other accounts, Mac backup, devices, Vercel spend, security-agent deploy, refund policy, SMS consent, uptime).
+
+### 16 Oct: three more still ads with contact details
+Otis sent four still ads to add contact details to. The fourth ("The custom studio you're looking for.") is pixel-identical to yesterday's source-higgsfield.png, already done as meridian-ad-contact-*.
+- promo-ad/still/meridian-ad-{conveyor,devices}-{wide,feed,story}.jpg and meridian-ad-one-studio-{feed,story}.jpg (portrait text card, no wide cut). Sources source-{conveyor,devices,one-studio}.png; generator make-contact-ads.mjs (paths point at the session scratchpad; copy the sources there to re-run).
+- Contact on every one: meridianinterface.com, Call 281-882-9198, Email otis@meridianinterface.com. Conveyor keeps its own green "Book an appointment" button (no second button added); the others get the blue "Book your 1-on-1 appointment" button. Wide cuts scale the art to 87.5% over a blurred copy of itself with a contact band beneath; stories end their contact block above y=1540 (the apps' bottom overlay).
