@@ -200,8 +200,11 @@ const outBack = (x) => { const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) 
 const fade = (t, a, b, c, d) => Math.min(seg(t, a, b), 1 - seg(t, c, d));
 
 // timeline (seconds, from the cut out of the film)
-const H0 = 0, C1 = 3.0, C2 = 6.2, C3 = 9.4, A0 = 12.6, E0 = 15.4;
-const DURATION = 21.0;
+const MODE = new URLSearchParams(location.search).get("mode");
+// mode=end: only the end card, straight after the film (the voice cut has no checks)
+const END_ONLY = MODE === "end";
+const H0 = END_ONLY ? -99 : 0, C1 = END_ONLY ? -99 : 3.0, C2 = END_ONLY ? -99 : 6.2, C3 = END_ONLY ? -99 : 9.4, A0 = END_ONLY ? -99 : 12.6, E0 = END_ONLY ? 0.05 : 15.4;
+const DURATION = END_ONLY ? 6.0 : 21.0;
 const FOOT_ONLY = new URLSearchParams(location.search).has("foot");
 const QUERY = "bakery near me";
 

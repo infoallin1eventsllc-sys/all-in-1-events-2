@@ -5,7 +5,7 @@
 import { createRequire } from 'module';
 import fs from 'node:fs';
 const pw = createRequire(import.meta.url)('/opt/node22/lib/node_modules/playwright');
-const [dir, name, w, h] = process.argv.slice(2);
+const [dir, name, w, h, query] = process.argv.slice(2);   // query: extra scenes.html params, e.g. mode=end
 const FPS = 24;
 const out = `${dir}/frames-${name}`;
 fs.rmSync(out, { recursive: true, force: true }); fs.mkdirSync(out, { recursive: true });
@@ -16,7 +16,7 @@ await p.goto(`file://${dir}/scenes.html?foot=1`, { waitUntil: 'load' });
 await p.evaluate(() => window.readyForFrames); await p.waitForTimeout(500);
 await p.screenshot({ path: `${dir}/foot-${name}.png`, omitBackground: true });
 
-await p.goto(`file://${dir}/scenes.html`, { waitUntil: 'load' });
+await p.goto(`file://${dir}/scenes.html${query ? '?' + query : ''}`, { waitUntil: 'load' });
 await p.evaluate(() => window.readyForFrames); await p.waitForTimeout(500);
 const n = Math.round((await p.evaluate(() => window.DURATION)) * FPS);
 for (let i = 0; i < n; i++) {

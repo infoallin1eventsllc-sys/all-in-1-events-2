@@ -13,6 +13,16 @@ screen, then three quick website checks, the answer, and the end card.
   light, on the screen, the end card and the contact bar. Cut-out:
   `m3d/meridian-m-3d.png`, made by `m3d/cut.py` from `m3d/source-custom-studio.webp`.
 
+## Landing-page cut (previews)
+
+`out/meridian-page-ad-{still,moving}-{wide,reels}.mp4`, 12 s. The same clip
+with the hand replaced by the Meridian Interface landing page popping up on the
+monolith screen as the clip's own voice says "we put the future in your hands"
+(the website headline), then the end card. `still` holds the hero; `moving`
+scrolls the page the way a visitor would. Built by `build-page.sh` with the
+website served locally; `composite-page.py` does the screen replacement,
+`music.py ... voice` the bed (ducked under the voice).
+
 ## Reels safe zone
 
 Each Reels app lays its own buttons over the video, so everything that matters

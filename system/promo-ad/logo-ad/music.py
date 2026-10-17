@@ -13,11 +13,14 @@ from scipy.signal import lfilter
 
 SR = 44100
 FILM = 151 / 24
-DUR = FILM + 21.0
+VOICE = len(sys.argv) > 2 and sys.argv[2] == "voice"   # the clip's own voice over the film, end card straight after
+DUR = FILM + (6.0 if VOICE else 21.0)
 N = int(SR * DUR)
 BPM = 120
 BEAT = 60 / BPM
 C1, C2, C3, A0, E0 = (FILM + x for x in (3.0, 6.2, 9.4, 12.6, 15.4))
+if VOICE:
+    E0 = FILM
 
 t_all = np.arange(N) / SR
 mix_l = np.zeros(N)
@@ -146,56 +149,58 @@ def tick():
 
 # --- film: the room, the mark forming -----------------------------------------
 add(pad([38, 45, 50, 53], FILM + 0.3, 600), 0.0, 0.42)
-add(pad([62, 69], 3.0, 1600), 1.4, 0.10)
-# particles: a shimmer of glassy notes that speeds up as they converge
-notes = [74, 77, 81, 84, 86, 89]
-k = 0
-tt = 1.55
-while tt < 3.25:
-    add(chime(notes[k % 6] + (12 if k % 5 == 4 else 0), 0.9), tt, 0.07 + 0.05 * (tt - 1.55), -0.6 + 1.2 * ((k * 7) % 11) / 10)
-    tt += 0.16 - 0.08 * (tt - 1.55) / 1.7
-    k += 1
-add(riser(1.8), 1.5, 0.22)
-# formed: a bell chord, then the cut to the close-up
-for m, p in ((62, -.3), (69, .3), (74, 0), (81, 0)):
-    add(chime(m, 3.0), 3.3, 0.22, p)
-add(impact(), 3.67, 0.45)
-add(pad([50, 57, 62, 65], FILM - 3.67, 1300), 3.67, 0.2)
-add(chime(93, 1.2), 4.2, 0.12, 0.4)          # the glint
+if not VOICE:
+    add(pad([62, 69], 3.0, 1600), 1.4, 0.10)
+    # particles: a shimmer of glassy notes that speeds up as they converge
+    notes = [74, 77, 81, 84, 86, 89]
+    k = 0
+    tt = 1.55
+    while tt < 3.25:
+        add(chime(notes[k % 6] + (12 if k % 5 == 4 else 0), 0.9), tt, 0.07 + 0.05 * (tt - 1.55), -0.6 + 1.2 * ((k * 7) % 11) / 10)
+        tt += 0.16 - 0.08 * (tt - 1.55) / 1.7
+        k += 1
+    add(riser(1.8), 1.5, 0.22)
+    # formed: a bell chord, then the cut to the close-up
+    for m, p in ((62, -.3), (69, .3), (74, 0), (81, 0)):
+        add(chime(m, 3.0), 3.3, 0.22, p)
+    add(impact(), 3.67, 0.45)
+    add(pad([50, 57, 62, 65], FILM - 3.67, 1300), 3.67, 0.2)
+    add(chime(93, 1.2), 4.2, 0.12, 0.4)          # the glint
 add(riser(1.4), FILM - 1.4, 0.32)
 add(impact(), FILM, 0.85)
 
-# --- scenes: a light groove under the checks -------------------------------------
-CHORDS = [(50, [50, 53, 57]), (46, [46, 50, 53]), (53, [53, 57, 60]), (48, [48, 52, 55])]  # Dm Bb F C
-BAR = BEAT * 4
-t = FILM
-bar = 0
-while t < E0 - 0.01:
-    root, chord = CHORDS[bar % 4]
-    for b in range(4):
-        bt = t + b * BEAT
-        if bt >= E0 - 0.01:
-            break
-        if bt >= C1 - 0.01:
-            add(kick(), bt, 0.85)
-            if b % 2 == 1:
-                add(clap(), bt, 0.4)
-        add(hat(), bt + BEAT / 2, 0.2, 0.3)
-        for kk in range(2):
-            add(bass(root - 12, BEAT / 2 - 0.02), bt + kk * BEAT / 2, 0.38)
-            add(pluck(chord[(b * 2 + kk) % 3] + 12), bt + kk * BEAT / 2, 0.13, -0.3 + 0.6 * kk)
-    add(pad([n + 12 for n in chord], min(BAR, E0 - t), 1800), t, 0.12)
-    t += BAR
-    bar += 1
-for c in (C1, C2, C3):
-    add(tick(), c + 0.2, 0.25)
-add(chime(81, 1.0), C1 + 1.35, 0.14)          # "ready"
-add(chime(84, 1.0), C2 + 1.0, 0.14)           # the tap
-add(chime(86, 1.0), C3 + 1.45, 0.14)          # results
-for i in range(3):                             # the three ticks
-    add(chime([74, 78, 81][i], 1.2), A0 + 0.7 + i * 0.3, 0.2)
-add(riser(1.1), E0 - 1.1, 0.28)
-add(impact(), E0, 0.8)
+if not VOICE:
+    # --- scenes: a light groove under the checks -------------------------------------
+    CHORDS = [(50, [50, 53, 57]), (46, [46, 50, 53]), (53, [53, 57, 60]), (48, [48, 52, 55])]  # Dm Bb F C
+    BAR = BEAT * 4
+    t = FILM
+    bar = 0
+    while t < E0 - 0.01:
+        root, chord = CHORDS[bar % 4]
+        for b in range(4):
+            bt = t + b * BEAT
+            if bt >= E0 - 0.01:
+                break
+            if bt >= C1 - 0.01:
+                add(kick(), bt, 0.85)
+                if b % 2 == 1:
+                    add(clap(), bt, 0.4)
+            add(hat(), bt + BEAT / 2, 0.2, 0.3)
+            for kk in range(2):
+                add(bass(root - 12, BEAT / 2 - 0.02), bt + kk * BEAT / 2, 0.38)
+                add(pluck(chord[(b * 2 + kk) % 3] + 12), bt + kk * BEAT / 2, 0.13, -0.3 + 0.6 * kk)
+        add(pad([n + 12 for n in chord], min(BAR, E0 - t), 1800), t, 0.12)
+        t += BAR
+        bar += 1
+    for c in (C1, C2, C3):
+        add(tick(), c + 0.2, 0.25)
+    add(chime(81, 1.0), C1 + 1.35, 0.14)          # "ready"
+    add(chime(84, 1.0), C2 + 1.0, 0.14)           # the tap
+    add(chime(86, 1.0), C3 + 1.45, 0.14)          # results
+    for i in range(3):                             # the three ticks
+        add(chime([74, 78, 81][i], 1.2), A0 + 0.7 + i * 0.3, 0.2)
+    add(riser(1.1), E0 - 1.1, 0.28)
+    add(impact(), E0, 0.8)
 end_len = DUR - E0
 add(pad([50, 57, 62, 65, 69], end_len, 2200), E0, 0.3)
 add(bass(38, end_len - 0.3), E0, 0.32)
