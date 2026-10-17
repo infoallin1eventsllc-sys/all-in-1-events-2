@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Card QR assets</title>
+<style>
+/* Two layouts from one file, picked by ?v=wallpaper or ?v=print (make-qr-assets.mjs).
+   wallpaper: phone lock screen. The top third stays clear for the clock and the
+   bottom strip for the flashlight and camera buttons.
+   print: US Letter sheet for flyers, a table sign or a front desk. */
+@font-face { font-family: "Hanken Grotesk"; src: url(fonts/hanken-grotesk-var-latin.woff2) format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Inter"; src: url(fonts/inter-var-latin.woff2) format("woff2"); font-weight: 100 900; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; }
+body { font-family: "Inter", sans-serif; color: #fff; }
+.wm b { display: block; font-family: "Hanken Grotesk"; font-weight: 800; letter-spacing: .2em; line-height: 1; }
+.wm span { display: block; font-weight: 700; letter-spacing: .28em; color: #cbd5e1; line-height: 1; }
+.lock { display: flex; align-items: center; }
+.qrbox { background: #fff; display: grid; place-items: center; }
+.qrbox img { display: block; width: 100%; height: 100%; }
+
+/* wallpaper, 1179x2556 */
+.wallpaper body { background: radial-gradient(100% 45% at 50% 58%, #1b2742 0%, #0f172a 60%, #0a1020 100%); }
+.wallpaper main { position: absolute; left: 0; right: 0; top: 37%; display: flex; flex-direction: column; align-items: center; gap: 56px; }
+.wallpaper .qrbox { width: 620px; height: 620px; padding: 34px; border-radius: 56px; box-shadow: 0 0 0 10px rgba(96,165,250,.25), 0 40px 120px rgba(0,0,0,.6); }
+.wallpaper .cap { text-align: center; }
+.wallpaper .cap .t { font-family: "Hanken Grotesk"; font-weight: 800; font-size: 64px; letter-spacing: -.01em; }
+.wallpaper .cap .s { margin-top: 14px; font-size: 40px; color: #cbd5e1; font-weight: 500; }
+.wallpaper .lock { gap: 26px; margin-top: 30px; }
+.wallpaper .lock img { height: 110px; }
+.wallpaper .wm b { font-size: 46px; } .wallpaper .wm span { font-size: 27px; margin-top: 10px; }
+
+/* print, US Letter at 96 dpi = 816x1056 */
+.print body { background: #fff; color: #0f172a; }
+.print main { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 34px; padding: 60px; text-align: center; }
+.print .lock { gap: 18px; }
+.print .lock img { height: 78px; }
+.print .wm b { font-size: 34px; color: #0f172a; } .print .wm span { font-size: 20px; color: #475569; margin-top: 8px; }
+.print h1 { font-family: "Hanken Grotesk"; font-weight: 800; font-size: 46px; line-height: 1.1; letter-spacing: -.01em; }
+.print .qrbox { width: 380px; height: 380px; padding: 18px; border-radius: 28px; box-shadow: 0 0 0 3px #0f172a; }
+.print .how { font-size: 21px; color: #334155; max-width: 30ch; }
+.print .who { display: grid; gap: 4px; font-size: 21px; color: #334155; }
+.print .who b { font-family: "Hanken Grotesk"; font-size: 28px; color: #0f172a; }
+.print .url { font-family: "Hanken Grotesk"; font-weight: 800; font-size: 26px; color: #2563eb; }
+</style>
+</head>
+<body>
+<main id="m"></main>
+<script>
+const v = new URLSearchParams(location.search).get("v") || "wallpaper";
+document.documentElement.className = v;
+const lock = (light) => `<div class="lock"><img src="meridian-mark.png" alt=""><div class="wm"><b>MERIDIAN</b><span>INTERFACE</span></div></div>`;
+document.getElementById("m").innerHTML = v === "print"
+  ? `${lock()}
+     <h1>Scan for my digital<br>business card</h1>
+     <div class="qrbox"><img src="qr.svg" alt=""></div>
+     <p class="how">Point your phone camera at the code, then tap Save to contacts.</p>
+     <div class="who"><b>Otis Williams</b>Web Designer &amp; Developer<br>281-882-9198 · otis@meridianinterface.com</div>
+     <div class="url">meridianinterface.com/card</div>`
+  : `<div class="qrbox"><img src="qr.svg" alt=""></div>
+     <div class="cap"><div class="t">Scan to save my contact</div><div class="s">Otis Williams · Web Designer &amp; Developer</div></div>
+     ${lock()}`;
+window.ready = document.fonts.ready;
+</script>
+</body>
+</html>
