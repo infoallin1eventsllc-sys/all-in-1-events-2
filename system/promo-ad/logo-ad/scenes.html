@@ -1,0 +1,268 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Meridian logo ad scenes</title>
+<style>
+@font-face { font-family: "Hanken Grotesk"; src: url(fonts/hanken-grotesk-var-latin.woff2) format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Inter"; src: url(fonts/inter-var-latin.woff2) format("woff2"); font-weight: 100 900; }
+:root { --ink: #0f172a; --accent: #2563eb; --accent2: #60a5fa; --muted: #cbd5e1; --u: 1px; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0b1222; }
+#stage { position: relative; width: 100vw; height: 100vh; overflow: hidden; color: #fff; font-family: "Inter", sans-serif;
+  background: radial-gradient(110% 80% at 50% 0%, #1b2742 0%, #0f172a 55%, #0a1020 100%); }
+/* light rays from above, the same motif as the monolith room */
+.rays { position: absolute; inset: 0; opacity: .5;
+  background: repeating-linear-gradient(90deg, rgba(147,197,253,0) 0, rgba(147,197,253,.05) calc(var(--u) * 30), rgba(147,197,253,0) calc(var(--u) * 70));
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 70%); mask-image: linear-gradient(to bottom, #000 0%, transparent 70%); }
+.scene { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; }
+.display { font-family: "Hanken Grotesk", sans-serif; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
+.eyebrow { font-weight: 700; letter-spacing: .28em; text-transform: uppercase; color: var(--accent2); font-size: calc(var(--u) * 24); }
+
+/* hook */
+#s1 { flex-direction: column; text-align: center; gap: calc(var(--u) * 34); }
+#s1 .display { font-size: calc(var(--u) * 100); }
+.portrait #s1 .br { display: block; }
+#s1 .l2 { color: #94a3b8; margin-top: calc(var(--u) * 14); }
+
+/* checks */
+.check { gap: calc(var(--u) * 110); }
+.check .copy { width: calc(var(--u) * 880); }
+.check .num { font-family: "Hanken Grotesk"; font-weight: 800; color: var(--accent2); font-size: calc(var(--u) * 30); letter-spacing: .2em; }
+.check .q { font-size: calc(var(--u) * 84); margin-top: calc(var(--u) * 22); }
+.check .why { margin-top: calc(var(--u) * 30); font-size: calc(var(--u) * 36); line-height: 1.35; color: var(--muted); font-weight: 500; }
+.phone { position: relative; flex: none; width: calc(var(--u) * 330); height: calc(var(--u) * 640); border-radius: calc(var(--u) * 52);
+  background: #0b1222; box-shadow: 0 0 0 calc(var(--u) * 10) #1e293b, 0 0 0 calc(var(--u) * 12) #334155, 0 calc(var(--u) * 40) calc(var(--u) * 90) rgba(0,0,0,.55); overflow: hidden; }
+.phone .notch { position: absolute; top: calc(var(--u) * 16); left: 50%; width: calc(var(--u) * 96); height: calc(var(--u) * 26); border-radius: 99px; background: #000; transform: translateX(-50%); z-index: 3; }
+.screen { position: absolute; inset: calc(var(--u) * 58) calc(var(--u) * 22) calc(var(--u) * 22); display: flex; flex-direction: column; gap: calc(var(--u) * 16); }
+.bar { position: absolute; top: calc(var(--u) * 50); left: 0; height: calc(var(--u) * 6); background: var(--accent2); border-radius: 99px; }
+.sk { border-radius: calc(var(--u) * 14); background: #1e293b; }
+.sk.hero { height: calc(var(--u) * 170); background: linear-gradient(135deg, #1d4ed8, #0ea5e9); }
+.sk.line { height: calc(var(--u) * 20); }
+.sk.btn { height: calc(var(--u) * 64); background: var(--accent); }
+.chip { position: absolute; left: 50%; bottom: calc(var(--u) * 40); transform: translateX(-50%); padding: calc(var(--u) * 12) calc(var(--u) * 22); border-radius: 99px;
+  background: #22c55e; color: #052e16; font-weight: 800; font-size: calc(var(--u) * 24); white-space: nowrap; z-index: 4; }
+.cta2 { height: calc(var(--u) * 84); border-radius: calc(var(--u) * 18); display: flex; align-items: center; justify-content: center; gap: calc(var(--u) * 12);
+  font-family: "Hanken Grotesk"; font-weight: 800; font-size: calc(var(--u) * 30); }
+.cta2.call { background: #1e293b; }
+.cta2.book { background: var(--accent); }
+.cta2 svg { width: calc(var(--u) * 30); height: calc(var(--u) * 30); }
+.tap { position: absolute; width: calc(var(--u) * 70); height: calc(var(--u) * 70); border-radius: 50%; border: calc(var(--u) * 5) solid #fff; z-index: 5; pointer-events: none; }
+.search { flex: none; width: calc(var(--u) * 560); display: flex; flex-direction: column; gap: calc(var(--u) * 16); }
+.sbox { height: calc(var(--u) * 84); border-radius: 99px; background: #f8fafc; color: #0f172a; display: flex; align-items: center; gap: calc(var(--u) * 16);
+  padding: 0 calc(var(--u) * 30); font-size: calc(var(--u) * 32); font-weight: 500; }
+.sbox svg { width: calc(var(--u) * 32); height: calc(var(--u) * 32); flex: none; }
+.caret { display: inline-block; width: calc(var(--u) * 3); height: calc(var(--u) * 36); background: #2563eb; vertical-align: middle; margin-left: calc(var(--u) * 2); }
+.res { border-radius: calc(var(--u) * 20); background: #111a2e; padding: calc(var(--u) * 20) calc(var(--u) * 26); }
+.res .t { font-family: "Hanken Grotesk"; font-weight: 800; font-size: calc(var(--u) * 30); color: #93c5fd; }
+.res .d { margin-top: calc(var(--u) * 10); height: calc(var(--u) * 14); width: 80%; border-radius: 99px; background: #1e293b; }
+.res.you { box-shadow: 0 0 0 calc(var(--u) * 4) var(--accent2), 0 0 calc(var(--u) * 50) rgba(96,165,250,.45); background: #13244a; }
+.res.you .t { color: #fff; }
+
+/* answer */
+#s3 { flex-direction: column; gap: calc(var(--u) * 52); }
+#s3 .display { font-size: calc(var(--u) * 76); text-align: center; line-height: 1.08; }
+#s3 .display b { color: var(--accent2); font-weight: 800; }
+#s3 .rows { display: flex; flex-direction: column; gap: calc(var(--u) * 26); }
+#s3 .row { display: flex; align-items: center; gap: calc(var(--u) * 24); font-family: "Hanken Grotesk"; font-weight: 800; font-size: calc(var(--u) * 50); }
+.tick { flex: none; width: calc(var(--u) * 52); height: calc(var(--u) * 52); border-radius: 50%; background: var(--accent); display: grid; place-items: center; }
+.tick svg { width: 58%; height: 58%; }
+
+/* end card */
+#s4 { flex-direction: column; }
+#s4 .lock { display: flex; align-items: center; gap: calc(var(--u) * 34); }
+#s4 .lock img { height: calc(var(--u) * 150); width: auto; }
+#s4 .wm1 { font-family: "Hanken Grotesk"; font-weight: 800; font-size: calc(var(--u) * 76); letter-spacing: .2em; line-height: 1; }
+#s4 .wm2 { font-family: "Inter"; font-weight: 700; font-size: calc(var(--u) * 46); letter-spacing: .28em; color: var(--muted); margin-top: calc(var(--u) * 17); line-height: 1; }
+#s4 .what { margin-top: calc(var(--u) * 46); font-size: calc(var(--u) * 30); font-weight: 600; color: var(--muted); letter-spacing: .04em; text-align: center; }
+#s4 .cta { margin-top: calc(var(--u) * 40); padding: calc(var(--u) * 24) calc(var(--u) * 46); background: var(--accent); border-radius: calc(var(--u) * 14); font-family: "Hanken Grotesk"; font-weight: 800; font-size: calc(var(--u) * 40); letter-spacing: .02em; }
+#s4 .contact { margin-top: calc(var(--u) * 46); display: flex; flex-direction: column; align-items: center; gap: calc(var(--u) * 16); font-size: calc(var(--u) * 42); font-weight: 600; }
+#s4 .contact .web { font-family: "Hanken Grotesk"; font-weight: 800; font-size: calc(var(--u) * 58); }
+#s4 .contact .sub { color: #e2e8f0; }
+#s4 .contact b { color: var(--accent2); font-weight: 700; }
+.foot { position: absolute; left: 50%; bottom: calc(var(--u) * 40); transform: translateX(-50%); display: flex; align-items: center; gap: calc(var(--u) * 14);
+  padding: calc(var(--u) * 12) calc(var(--u) * 24) calc(var(--u) * 12) calc(var(--u) * 16); border-radius: 999px; background: rgba(15,23,42,.85);
+  box-shadow: 0 0 0 calc(var(--u) * 2) rgba(148,163,184,.25); font-family: "Hanken Grotesk"; font-weight: 800; font-size: calc(var(--u) * 30); letter-spacing: .02em; opacity: 0; white-space: nowrap; z-index: 10; }
+.foot .dot { color: var(--accent2); }
+.foot img { height: calc(var(--u) * 40); width: auto; }
+#flash { position: absolute; inset: 0; background: #eaf1ff; pointer-events: none; }
+
+/* portrait: visual above copy */
+.portrait .check { flex-direction: column; gap: calc(var(--u) * 70); }
+.portrait .check .copy { width: calc(var(--u) * 920); text-align: center; }
+.portrait .check .q { font-size: calc(var(--u) * 78); }
+.portrait #s1 { padding: 0 calc(var(--u) * 60); }
+.portrait #s1 .display { font-size: calc(var(--u) * 96); line-height: 1.04; }
+.portrait .phone { width: calc(var(--u) * 400); height: calc(var(--u) * 780); }
+.portrait .sk.hero { height: calc(var(--u) * 230); }
+.portrait .search { width: calc(var(--u) * 800); gap: calc(var(--u) * 20); }
+.portrait .sbox { height: calc(var(--u) * 104); font-size: calc(var(--u) * 40); }
+.portrait .res { padding: calc(var(--u) * 26) calc(var(--u) * 32); }
+.portrait .res .t { font-size: calc(var(--u) * 38); }
+.portrait .check .why { font-size: calc(var(--u) * 40); }
+.portrait #s4 { transform: scale(1.18); }
+.portrait .foot { font-size: calc(var(--u) * 36); }
+.portrait .foot img { height: calc(var(--u) * 48); }
+.portrait #s3 .display { font-size: calc(var(--u) * 78); }
+.portrait #s3 .row { font-size: calc(var(--u) * 54); }
+.portrait #s3 .tick { width: calc(var(--u) * 60); height: calc(var(--u) * 60); }
+.portrait #s4 .lock { flex-direction: column; text-align: center; gap: calc(var(--u) * 30); }
+.portrait #s4 .lock img { height: calc(var(--u) * 190); }
+.portrait #s4 .what { font-size: calc(var(--u) * 34); }
+.portrait #s4 .cta { font-size: calc(var(--u) * 44); }
+.portrait .foot { bottom: calc(var(--u) * 150); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="rays" id="rays"></div>
+
+  <section class="scene" id="s1">
+    <div class="eyebrow">Quick website check</div>
+    <div class="display"><div id="h1">Is your website <span class="br"></span>working for you,</div><div class="l2" id="h2">or just sitting there?</div></div>
+  </section>
+
+  <section class="scene check" id="c1">
+    <div class="phone" id="p1"><div class="notch"></div><div class="bar" id="bar"></div>
+      <div class="screen"><div class="sk hero" id="k1"></div><div class="sk line" id="k2"></div><div class="sk line" id="k3" style="width:70%"></div><div class="sk btn" id="k4"></div></div>
+      <div class="chip" id="chip1">Ready in a blink</div>
+    </div>
+    <div class="copy"><div class="num">CHECK 1 OF 3</div><div class="display q">Does it load fast on a phone?</div><div class="why">Slow pages lose people before they ever see what you offer.</div></div>
+  </section>
+
+  <section class="scene check" id="c2">
+    <div class="phone" id="p2"><div class="notch"></div>
+      <div class="screen"><div class="sk hero"></div><div class="sk line"></div><div class="sk line" style="width:60%"></div>
+        <div class="cta2 call"><svg viewBox="0 0 24 24" fill="#fff"><path d="M6.6 10.8a15.1 15.1 0 006.6 6.6l2.2-2.2a1 1 0 011-.25 11.4 11.4 0 003.6.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1z"/></svg>Call now</div>
+        <div class="cta2 book" id="book">Book online</div></div>
+      <div class="tap" id="tap"></div>
+      <div class="chip" id="chip2">Booked</div>
+    </div>
+    <div class="copy"><div class="num">CHECK 2 OF 3</div><div class="display q">Can customers call or book in one tap?</div><div class="why">If they have to hunt for your number, they call someone else.</div></div>
+  </section>
+
+  <section class="scene check" id="c3">
+    <div class="search">
+      <div class="sbox"><svg viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><span id="typed"></span><span class="caret" id="caret"></span></div>
+      <div class="res you" id="r1"><div class="t">Your Business</div><div class="d"></div></div>
+      <div class="res" id="r2"><div class="t">Another bakery</div><div class="d" style="width:65%"></div></div>
+      <div class="res" id="r3"><div class="t">One more bakery</div><div class="d" style="width:72%"></div></div>
+    </div>
+    <div class="copy"><div class="num">CHECK 3 OF 3</div><div class="display q">Does it show up on Google?</div><div class="why">If customers can't find you, they can't choose you.</div></div>
+  </section>
+
+  <section class="scene" id="s3">
+    <div class="display">Meridian Interface builds sites<br><b>that pass all three.</b></div>
+    <div class="rows">
+      <div class="row" id="a1"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>Fast on every phone</div>
+      <div class="row" id="a2"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>One tap to call or book</div>
+      <div class="row" id="a3"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>Built to be found on Google</div>
+    </div>
+  </section>
+
+  <section class="scene" id="s4">
+    <div class="lock" id="lock">
+      <img src="img/meridian-mark.png" alt="">
+      <div><div class="wm1">MERIDIAN</div><div class="wm2">INTERFACE</div></div>
+    </div>
+    <div class="what" id="what">Websites · Dashboards · CRM · Logos</div>
+    <div class="cta" id="cta">Book your 1-on-1 appointment</div>
+    <div class="contact" id="contact">
+      <div class="web">meridianinterface.com</div>
+      <div class="sub"><b>Call</b> 281-882-9198</div>
+      <div class="sub"><b>Email</b> otis@meridianinterface.com</div>
+    </div>
+  </section>
+  <div class="foot" id="foot"><img src="img/meridian-mark.png" alt=""><span>meridianinterface.com</span><span class="dot">·</span><span>281-882-9198</span></div>
+  <div id="flash"></div>
+</div>
+
+<script>
+// Every frame is a pure function of t (seconds), so a render is exact and repeatable.
+const $ = (id) => document.getElementById(id);
+const W = innerWidth, H = innerHeight, portrait = H > W;
+const u = portrait ? W / 1080 : H / 1080;
+document.documentElement.style.setProperty("--u", u + "px");
+if (portrait) document.body.classList.add("portrait");
+const seg = (t, a, b) => Math.min(1, Math.max(0, (t - a) / (b - a)));
+const outCubic = (x) => 1 - Math.pow(1 - x, 3);
+const outBack = (x) => { const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+const fade = (t, a, b, c, d) => Math.min(seg(t, a, b), 1 - seg(t, c, d));
+
+// timeline (seconds, from the cut out of the film)
+const H0 = 0, C1 = 3.0, C2 = 6.2, C3 = 9.4, A0 = 12.6, E0 = 15.4;
+const DURATION = 21.0;
+const FOOT_ONLY = new URLSearchParams(location.search).has("foot");
+const QUERY = "bakery near me";
+
+function rise(el, p, dist = 50) { el.style.opacity = p; el.style.transform = `translateY(${(1 - p) * dist * u}px)`; }
+
+function render(t) {
+  $("flash").style.opacity = 1 - outCubic(seg(t, 0, .55));
+  $("rays").style.transform = `translateX(${(t * 6) % 70 * u}px)`;
+
+  // hook
+  $("s1").style.opacity = fade(t, H0, H0 + .15, C1 - .25, C1);
+  rise($("h1"), outCubic(seg(t, .25, .8)));
+  rise($("h2"), outCubic(seg(t, 1.0, 1.55)));
+  document.querySelector("#s1 .eyebrow").style.opacity = seg(t, .1, .5);
+
+  // checks
+  [["c1", C1, C2], ["c2", C2, C3], ["c3", C3, A0]].forEach(([id, a, b]) => {
+    const s = $(id);
+    s.style.opacity = fade(t, a - .05, a + .2, b - .25, b);
+    const vis = s.firstElementChild, copy = s.querySelector(".copy");
+    const p = outCubic(seg(t, a, a + .5));
+    vis.style.transform = portrait ? `translateY(${(1 - p) * -60 * u}px)` : `translateX(${(1 - p) * -80 * u}px)`;
+    vis.style.opacity = p;
+    rise(copy.querySelector(".num"), outCubic(seg(t, a + .1, a + .5)), 30);
+    rise(copy.querySelector(".q"), outCubic(seg(t, a + .2, a + .7)));
+    rise(copy.querySelector(".why"), outCubic(seg(t, a + .7, a + 1.2)), 30);
+  });
+  // 1: page snaps in
+  const lb = outCubic(seg(t, C1 + .45, C1 + 1.05));
+  $("bar").style.width = (lb * 100) + "%"; $("bar").style.opacity = 1 - seg(t, C1 + 1.1, C1 + 1.3);
+  ["k1", "k2", "k3", "k4"].forEach((k, i) => { const q = outBack(seg(t, C1 + .8 + i * .1, C1 + 1.15 + i * .1)); $(k).style.opacity = Math.min(1, q); $(k).style.transform = `scale(${.85 + .15 * q})`; });
+  const c1 = outBack(seg(t, C1 + 1.35, C1 + 1.7)); $("chip1").style.opacity = Math.min(1, c1); $("chip1").style.transform = `translateX(-50%) scale(${.6 + .4 * c1})`;
+  // 2: tap to book
+  const book = $("book"), ph = $("p2");
+  const tp = seg(t, C2 + 1.0, C2 + 1.45);
+  const br = book.getBoundingClientRect(), pr = ph.getBoundingClientRect();
+  const tapEl = $("tap");
+  tapEl.style.left = (br.left - pr.left + br.width * .62 - 35 * u) + "px"; tapEl.style.top = (br.top - pr.top + br.height / 2 - 35 * u) + "px";
+  tapEl.style.opacity = tp > 0 && tp < 1 ? 1 - tp : 0; tapEl.style.transform = `scale(${.4 + tp * 1.4})`;
+  book.style.transform = `scale(${tp > 0 && tp < .5 ? .94 : 1})`;
+  const c2 = outBack(seg(t, C2 + 1.3, C2 + 1.65)); $("chip2").style.opacity = Math.min(1, c2); $("chip2").style.transform = `translateX(-50%) scale(${.6 + .4 * c2})`;
+  // 3: search, then results with yours on top
+  const n = Math.round(seg(t, C3 + .5, C3 + 1.3) * QUERY.length);
+  $("typed").textContent = QUERY.slice(0, n);
+  $("caret").style.opacity = (Math.floor(t * 3) % 2 || n < QUERY.length) && t < C3 + 1.5 ? 1 : 0;
+  ["r1", "r2", "r3"].forEach((r, i) => rise($(r), outCubic(seg(t, C3 + 1.45 + i * .12, C3 + 1.85 + i * .12)), 30));
+
+  // answer
+  $("s3").style.opacity = fade(t, A0 - .05, A0 + .2, E0 - .25, E0);
+  rise(document.querySelector("#s3 .display"), outCubic(seg(t, A0, A0 + .5)));
+  ["a1", "a2", "a3"].forEach((id, i) => {
+    const p = outCubic(seg(t, A0 + .6 + i * .3, A0 + 1.05 + i * .3));
+    $(id).style.opacity = p; $(id).style.transform = `translateX(${(1 - p) * -70 * u}px)`;
+  });
+
+  // end card
+  $("s4").style.opacity = seg(t, E0 - .05, E0 + .25);
+  const lp = outBack(seg(t, E0 + .05, E0 + .6));
+  $("lock").style.transform = `scale(${.8 + .2 * lp})`; $("lock").style.opacity = seg(t, E0 + .05, E0 + .35);
+  [["what", .45], ["cta", .7], ["contact", .95]].forEach(([id, d]) => rise($(id), outCubic(seg(t, E0 + d, E0 + d + .45)), 40));
+  const pulse = t > E0 + 1.6 ? 1 + .035 * Math.sin((t - E0 - 1.6) * Math.PI * 1.4) : 1;
+  $("cta").style.transform += ` scale(${pulse})`;
+
+  // site and phone stay on screen, unbroken from the film, until the end card takes over (?foot=1 renders the bar alone, for the film part)
+  $("foot").style.opacity = FOOT_ONLY ? 1 : 1 - seg(t, E0 - .2, E0 + .1);
+}
+window.render = render; window.DURATION = DURATION;
+window.readyForFrames = document.fonts.ready;
+const q = new URLSearchParams(location.search);
+if (FOOT_ONLY) { document.documentElement.style.background = document.body.style.background = "transparent"; $("stage").style.background = "transparent"; document.querySelectorAll(".scene, #rays, #flash").forEach(e => e.style.display = "none"); }
+render(q.has("t") ? +q.get("t") : 0);
+</script>
+</body>
+</html>
