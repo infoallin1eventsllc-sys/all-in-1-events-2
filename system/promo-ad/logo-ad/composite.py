@@ -6,12 +6,16 @@ particles drift in, an outline traces up the shape, the real artwork fills in
 behind it, then it glows. The artwork is meridian-mark.png itself; the light
 effects are derived from its alpha, so the mark is never redrawn.
 
-    python composite.py <frames_dir> <quads.json> <mark.png> <out_dir>
+    python composite.py <frames_dir> <quads.json> <mark.png> <out_dir> [flat|3d]
 
 frames_dir  the clip as 0001.png ... (ffmpeg -i clip.mp4 frames/%04d.png)
 quads.json  {"smooth": {"35": [[x,y] tl, tr, br, bl], ...}} from track.py
 out_dir     receives 0001.png ... plus HOLD extra frames that keep pushing in
             on the last frame and flash to light for the cut to the text scenes
+flat|3d     flat (default): meridian-mark.png, lifted a little, cool white light.
+            3d: the rendered 3D M from Otis's "custom studio" image
+            (m3d/meridian-m-3d.png), already lit, so no lift, and blue light
+            to match that image.
 """
 import json
 import os
@@ -27,6 +31,7 @@ HOLD = 30                    # frames added after the clip (1.25 s)
 FLASH = 9                    # last frames of the hold flash to light
 
 frames_dir, quads_path, mark_path, out_dir = sys.argv[1:5]
+STYLE = sys.argv[5] if len(sys.argv) > 5 else "flat"
 os.makedirs(out_dir, exist_ok=True)
 quads = {int(k): np.float32(v) for k, v in json.load(open(quads_path))["smooth"].items()}
 src = np.float32([[0, 0], [TW, 0], [TW, TH], [0, TH]])
@@ -60,14 +65,15 @@ M_rgb = np.zeros((TH, TW, 3), np.float32)
 M_a = np.zeros((TH, TW), np.float32)
 M_rgb[my:my + mh, mx:mx + mw] = mark[..., :3]
 M_a[my:my + mh, mx:mx + mw] = mark[..., 3]
-# lift the slate ramp a little so it reads as lit glass, not a sticker
-M_rgb = np.clip(M_rgb * 1.18 + 0.04, 0, 1)
+if STYLE == "flat":
+    # lift the slate ramp a little so it reads as lit glass, not a sticker
+    M_rgb = np.clip(M_rgb * 1.18 + 0.04, 0, 1)
 edge = cv2.morphologyEx((M_a > 0.5).astype(np.uint8), cv2.MORPH_GRADIENT, np.ones((3, 3), np.uint8)).astype(np.float32)
 edge = cv2.GaussianBlur(edge, (0, 0), 0.8)
 ys_m, xs_m = np.nonzero(M_a > 0.6)
 m_top, m_bot = ys_m.min(), ys_m.max()
 
-LIGHT = np.float32([1.0, 0.93, 0.80])     # BGR: cool white-blue
+LIGHT = np.float32([1.0, 0.93, 0.80]) if STYLE == "flat" else np.float32([1.0, 0.80, 0.45])  # BGR
 rng = np.random.default_rng(11)
 NP = 1400
 pick = rng.integers(0, len(xs_m), NP)

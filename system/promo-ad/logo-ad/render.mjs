@@ -1,7 +1,7 @@
 // Renders scenes.html to numbered JPEG frames, and the contact bar alone as a
 // transparent PNG for laying over the film part.
 //   node render.mjs <work_dir> <name> <width> <height>
-// <work_dir> must hold scenes.html, fonts/ and img/meridian-mark.png (build.sh sets it up).
+// <work_dir> must hold scenes.html, fonts/ and img/mark.png (build.sh sets it up).
 import { createRequire } from 'module';
 import fs from 'node:fs';
 const pw = createRequire(import.meta.url)('/opt/node22/lib/node_modules/playwright');
