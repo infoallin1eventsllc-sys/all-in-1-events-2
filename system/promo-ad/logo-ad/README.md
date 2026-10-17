@@ -4,12 +4,29 @@
 glowing hand replaced by the real Meridian mark forming out of light on the
 screen, then three quick website checks, the answer, and the end card.
 
-- `out/meridian-logo-ad-wide.mp4` 1920x1080, for YouTube, Facebook feed, LinkedIn
-- `out/meridian-logo-ad-story.mp4` 1080x1920, for Reels, TikTok, Stories
-- `out/meridian-logo-ad-3d-{wide,story}.mp4` the same ad with the 3D M from
+- `out/meridian-logo-ad-reels.mp4` 1080x1920, the Reels file: Instagram Reels,
+  Facebook Reels, TikTok, YouTube Shorts (and Stories)
+- `out/meridian-logo-ad-wide.mp4` 1920x1080, for YouTube, Facebook feed, LinkedIn.
+  Not for Reels: Reels plays vertical full screen, a wide video shows as a strip.
+- `out/meridian-logo-ad-3d-{reels,wide}.mp4` the same ad with the 3D M from
   Otis's "custom studio" image (just the M: no grid, no tagline), with blue
   light, on the screen, the end card and the contact bar. Cut-out:
   `m3d/meridian-m-3d.png`, made by `m3d/cut.py` from `m3d/source-custom-studio.webp`.
+
+## Reels safe zone
+
+Each Reels app lays its own buttons over the video, so everything that matters
+in the reels cut sits inside the area none of them covers, checked frame by
+frame with the zones drawn on:
+
+- top 14% (269 px) clear: app header, "Reels", "Following | For You"
+- bottom 35% (672 px) clear: caption, username, music, and the ad button when
+  boosted (Meta's Reels-ads rule; stricter than TikTok and Shorts)
+- 120 px each side clear: like / comment / share column
+
+Safe box x 120-960, y 270-1248. The contact bar sits at the top of it. Encoded
+1080x1920, H.264 High 4.1, 24 fps, 2 s keyframes, BT.709, AAC 48 kHz 192k,
+-14 LUFS, 27 s: inside every platform's limits.
 
 Contact details are on screen the whole time: a bar with meridianinterface.com
 and 281-882-9198 from 0.6 s to the end card, which carries the site, phone,

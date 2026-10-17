@@ -57,7 +57,7 @@ def seg(t, a, b):
 
 # --- the mark, placed on the glass --------------------------------------------
 mark = cv2.imread(mark_path, cv2.IMREAD_UNCHANGED).astype(np.float32) / 255
-mw = int(TW * 0.58)
+mw = int(TW * 0.50)          # half the glass: keeps the M inside the Reels side margins
 mh = int(mark.shape[0] * mw / mark.shape[1])
 mark = cv2.resize(mark, (mw, mh), interpolation=cv2.INTER_CUBIC)
 mx, my = (TW - mw) // 2, int(TH * 0.44 - mh / 2)

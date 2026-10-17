@@ -22,7 +22,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #0b1222; }
 /* hook */
 #s1 { flex-direction: column; text-align: center; gap: calc(var(--u) * 34); }
 #s1 .display { font-size: calc(var(--u) * 100); }
-.portrait #s1 .br { display: block; }
+.portrait .br { display: block; }
 #s1 .l2 { color: #94a3b8; margin-top: calc(var(--u) * 14); }
 
 /* checks */
@@ -87,30 +87,40 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #0b1222; }
 .foot img { height: calc(var(--u) * 40); width: auto; }
 #flash { position: absolute; inset: 0; background: #eaf1ff; pointer-events: none; }
 
-/* portrait: visual above copy */
-.portrait .check { flex-direction: column; gap: calc(var(--u) * 70); }
-.portrait .check .copy { width: calc(var(--u) * 920); text-align: center; }
-.portrait .check .q { font-size: calc(var(--u) * 78); }
-.portrait #s1 { padding: 0 calc(var(--u) * 60); }
-.portrait #s1 .display { font-size: calc(var(--u) * 96); line-height: 1.04; }
-.portrait .phone { width: calc(var(--u) * 400); height: calc(var(--u) * 780); }
-.portrait .sk.hero { height: calc(var(--u) * 230); }
-.portrait .search { width: calc(var(--u) * 800); gap: calc(var(--u) * 20); }
-.portrait .sbox { height: calc(var(--u) * 104); font-size: calc(var(--u) * 40); }
-.portrait .res { padding: calc(var(--u) * 26) calc(var(--u) * 32); }
-.portrait .res .t { font-size: calc(var(--u) * 38); }
-.portrait .check .why { font-size: calc(var(--u) * 40); }
-.portrait #s4 { transform: scale(1.18); }
-.portrait .foot { font-size: calc(var(--u) * 36); }
-.portrait .foot img { height: calc(var(--u) * 48); }
-.portrait #s3 .display { font-size: calc(var(--u) * 78); }
-.portrait #s3 .row { font-size: calc(var(--u) * 54); }
-.portrait #s3 .tick { width: calc(var(--u) * 60); height: calc(var(--u) * 60); }
-.portrait #s4 .lock { flex-direction: column; text-align: center; gap: calc(var(--u) * 30); }
-.portrait #s4 .lock img { height: calc(var(--u) * 190); }
-.portrait #s4 .what { font-size: calc(var(--u) * 34); }
-.portrait #s4 .cta { font-size: calc(var(--u) * 44); }
-.portrait .foot { bottom: calc(var(--u) * 150); }
+/* portrait = Reels (Instagram, Facebook, TikTok, YouTube Shorts). Everything sits
+   inside the area no platform covers: top 14% clear of the app header, bottom 35%
+   clear of caption, username and ad button (Meta's Reels-ads rule, the strictest),
+   120px each side clear of the like/comment/share column. Safe box x 120-960,
+   y 270-1248. The contact bar rides at the top of it; scenes fill the rest. */
+.portrait .scene { inset: calc(var(--u) * 370) calc(var(--u) * 120) calc(var(--u) * 672); }
+.portrait #s4 { inset: calc(var(--u) * 270) calc(var(--u) * 120) calc(var(--u) * 672); }
+.portrait .foot { top: calc(var(--u) * 280); bottom: auto; font-size: calc(var(--u) * 34); }
+.portrait .foot img { height: calc(var(--u) * 46); }
+.portrait #s1 .display { font-size: calc(var(--u) * 84); line-height: 1.05; }
+.portrait #s1 .eyebrow { font-size: calc(var(--u) * 26); }
+.portrait .check { flex-direction: column; gap: calc(var(--u) * 40); }
+.portrait .check .copy { width: calc(var(--u) * 790); text-align: center; }
+.portrait .check .num { font-size: calc(var(--u) * 26); }
+.portrait .check .q { font-size: calc(var(--u) * 62); margin-top: calc(var(--u) * 16); }
+.portrait .check .why { font-size: calc(var(--u) * 34); margin-top: calc(var(--u) * 20); }
+.portrait .phone { width: calc(var(--u) * 260); height: calc(var(--u) * 480); border-radius: calc(var(--u) * 40); }
+.portrait .phone .screen { inset: calc(var(--u) * 48) calc(var(--u) * 16) calc(var(--u) * 16); gap: calc(var(--u) * 12); }
+.portrait .sk.hero { height: calc(var(--u) * 130); }
+.portrait .cta2 { height: calc(var(--u) * 64); font-size: calc(var(--u) * 24); }
+.portrait .chip { bottom: calc(var(--u) * 26); font-size: calc(var(--u) * 20); }
+.portrait .search { width: calc(var(--u) * 760); gap: calc(var(--u) * 16); }
+.portrait .sbox { height: calc(var(--u) * 92); font-size: calc(var(--u) * 36); }
+.portrait .res { padding: calc(var(--u) * 20) calc(var(--u) * 28); }
+.portrait .res .t { font-size: calc(var(--u) * 34); }
+.portrait #s3 { gap: calc(var(--u) * 44); }
+.portrait #s3 .display { font-size: calc(var(--u) * 72); max-width: calc(var(--u) * 840); }
+.portrait #s3 .row { font-size: calc(var(--u) * 46); }
+.portrait #s3 .tick { width: calc(var(--u) * 54); height: calc(var(--u) * 54); }
+.portrait #s4 .lock { flex-direction: column; text-align: center; gap: calc(var(--u) * 26); }
+.portrait #s4 .lock img { height: calc(var(--u) * 170); }
+.portrait #s4 .what { font-size: calc(var(--u) * 32); margin-top: calc(var(--u) * 36); }
+.portrait #s4 .cta { font-size: calc(var(--u) * 42); margin-top: calc(var(--u) * 32); }
+.portrait #s4 .contact { margin-top: calc(var(--u) * 36); }
 </style>
 </head>
 <body>
@@ -152,7 +162,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #0b1222; }
   </section>
 
   <section class="scene" id="s3">
-    <div class="display">Meridian Interface builds sites<br><b>that pass all three.</b></div>
+    <div class="display">Meridian Interface <span class="br"></span>builds sites<br><b>that pass all three.</b></div>
     <div class="rows">
       <div class="row" id="a1"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>Fast on every phone</div>
       <div class="row" id="a2"><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>One tap to call or book</div>
