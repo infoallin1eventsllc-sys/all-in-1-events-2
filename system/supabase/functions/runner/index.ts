@@ -7,6 +7,7 @@ import { serviceClient, getSetting } from "../_shared/supabase.ts";
 import { callClaude, DEFAULT_MODEL } from "../_shared/claude.ts";
 import { contextBlock } from "../_shared/context.ts";
 import { sendEmail, sendSms, publishContent } from "../_shared/channels.ts";
+import { withSignature } from "../_shared/signature.ts";
 import { cardDataUri, kickerFor } from "../_shared/card.ts";
 import { hostCard } from "../_shared/cardhost.ts";
 import { submitRender, collectRender, parseScript, videoKey, videoConfigured, type VideoScript, type RenderHandle } from "../_shared/video.ts";
@@ -485,7 +486,9 @@ async function sendEmailTask(sb: SupabaseClient, task: Task) {
   const messageId = String(task.payload.message_id ?? "");
   const { data: msg } = await sb.from("messages").select("*").eq("id", messageId).maybeSingle();
   if (!msg) throw new Error(`message ${messageId} not found`);
-  const res = await sendEmail({ to: msg.to_addr, subject: msg.subject ?? "", body: msg.body ?? "" });
+  // The owner approved the draft as written; the signature adds his card
+  // underneath it (skipped if the draft already carries the card link).
+  const res = await sendEmail({ to: msg.to_addr, subject: msg.subject ?? "", body: withSignature(msg.body ?? "") });
   const notConnected = res.mocked ? "no email provider connected — set SENDGRID_API_KEY and SENDGRID_FROM_EMAIL" : null;
   const sent = res.ok && !res.mocked;
   await sb.from("messages").update({

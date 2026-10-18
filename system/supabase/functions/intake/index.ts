@@ -26,6 +26,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { serviceClient } from "../_shared/supabase.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
 import { sendEmail } from "../_shared/email.ts";
+import { withSignature } from "../_shared/signature.ts";
 import { allow, callerKey } from "../_shared/ratelimit.ts";
 
 /* ------------------------------------------------------------ the limits --
@@ -279,7 +280,7 @@ Deno.serve(async (req) => {
           ? `We have your booking request${when ? ` for ${when}` : ""}`
           : "We have your message";
 
-        const body = [
+        const bodyText = [
           `Hi ${first},`,
           "",
           isAppointment
@@ -296,6 +297,9 @@ Deno.serve(async (req) => {
           "",
           studio,
         ].filter((line) => line !== null).join("\n");
+        // Every client email ends with Otis's card: one tap to call, book or
+        // save his contact. The card is the first thing a new client gets.
+        const body = withSignature(bodyText);
 
         const res = await sendEmail({ to: email, subject, body });
 
