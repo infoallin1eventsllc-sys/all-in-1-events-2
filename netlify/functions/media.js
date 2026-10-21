@@ -13,6 +13,10 @@
  * than the whole upload, and the owner sees real progress instead of a spinner
  * that either succeeds or does not.
  *
+ * YouTube music videos are the other kind of item: no file, just a validated
+ * id (`link`). They sit in the same index so hide, rename and delete work the
+ * same way for all three kinds.
+ *
  * Everything that writes requires the owner session. The public list lives in
  * `media-public.js` and returns only what the landing page needs, so nothing
  * here has to decide per-caller what is safe to reveal.
@@ -29,6 +33,9 @@ const {
   writeIndex
 } = require("../shared/media-store");
 const { verifyToken, tokenFromEvent, normalizePasscode } = require("../shared/owner-session");
+// The same parsers the storefront uses, so the server cannot accept a link
+// the pages would refuse, or the other way round. Bundled in at deploy.
+const { parseYouTubeAny } = require("../../420-friendly/assets/media-links");
 
 // An upload that stalls half-done should not keep its slices forever.
 const UPLOAD_TTL_MS = 60 * 60 * 1000;
@@ -92,6 +99,8 @@ exports.handler = async (event) => {
         return await remove(store, body);
       case "rename":
         return await rename(store, body);
+      case "link":
+        return await addLink(store, body);
       default:
         return json(400, { error: "unknown_action", message: "Unknown action." });
     }
@@ -236,6 +245,45 @@ async function finalize(store, body) {
   await writeIndex(store, items);
   await discard(store, id, total);
 
+  return json(200, { ok: true, item });
+}
+
+/* A YouTube music video or playlist, by link. Nothing is uploaded: the index
+ * records the kind and the id the parser captured, never the pasted text, so
+ * what reaches a visitor's iframe is always a URL rebuilt from an id of a
+ * known shape. The pages fetch the embed only when someone presses play. */
+async function addLink(store, body) {
+  const parsed = parseYouTubeAny(body.url);
+  if (!parsed) {
+    return json(400, {
+      error: "bad_link",
+      message:
+        "That is not a YouTube link this site can read. Use the link from YouTube's " +
+        "Share button — it looks like https://youtu.be/XXXXXXXXXXX for a video, or " +
+        "https://www.youtube.com/playlist?list=… for a playlist."
+    });
+  }
+
+  const items = await readIndex(store);
+  const dup = items.find((i) => i.kind === "youtube" && i.ytId === parsed.id);
+  if (dup) {
+    return json(409, {
+      error: "duplicate",
+      message: 'That one is already on the site as "' + dup.label + '".'
+    });
+  }
+
+  const item = {
+    id: newId(),
+    kind: "youtube",
+    ytKind: parsed.kind,
+    ytId: parsed.id,
+    label: safeLabel(body.label, parsed.kind === "playlist" ? "Music video playlist" : "Music video"),
+    addedAt: new Date().toISOString(),
+    visible: true
+  };
+  items.unshift(item);
+  await writeIndex(store, items);
   return json(200, { ok: true, item });
 }
 

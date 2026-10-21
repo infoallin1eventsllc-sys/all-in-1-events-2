@@ -158,6 +158,24 @@ function parseYouTubeVideo(value) {
   };
 }
 
+/* Either YouTube shape, for the owner portal: a video link or a playlist
+ * link, whichever was pasted. A watch link that also carries `&list=` is
+ * treated as the video — that is the thing on screen when Share was pressed.
+ * Returns { kind: "video" | "playlist", id, embed, page } or null. */
+function parseYouTubeAny(value) {
+  const video = parseYouTubeVideo(value);
+  if (video) {
+    const id = video.page.slice("https://www.youtube.com/watch?v=".length);
+    return { kind: "video", id, embed: video.embed, page: video.page };
+  }
+  const list = parseYouTubePlaylist(value);
+  if (list) {
+    const id = list.page.slice("https://www.youtube.com/playlist?list=".length);
+    return { kind: "playlist", id, embed: list.embed, page: list.page };
+  }
+  return null;
+}
+
 // Local media only: a relative path, no scheme, no parent traversal. Blocks
 // `javascript:` and anything pointing off-site.
 function parseLocalPath(value) {
@@ -219,4 +237,11 @@ function playGlyph(size) {
     '<path d="M19.5 15.2 34 24l-14.5 8.8Z" fill="currentColor"/>' +
     "</svg>"
   );
+}
+
+/* Under Node this file is also required by the media function, so a link the
+ * owner pastes in the portal is checked server-side by the very same parsers
+ * the pages use. One definition of "a YouTube link", not two that drift. */
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { parseSpotify, parseAppleMusic, parseYouTubePlaylist, parseYouTubeVideo, parseYouTubeAny, parseLocalPath };
 }

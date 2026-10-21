@@ -577,6 +577,108 @@ await test("no retired-collection copy on any customer page", async ({ page }) =
   assert.deepEqual(hits, []);
 });
 
+/* ======================================================================
+   owner portal: the YouTube slot
+   ====================================================================== */
+group("owner portal");
+
+// The media function stood in by a stateful mock: it remembers what the
+// owner added so the list the page re-reads is the one it wrote.
+function mediaMock(mocks) {
+  const items = [];
+  mocks["owner-auth"] = (route, call) => (call.body && call.body.passcode === "right-passcode-123")
+    ? jsonOk({ ok: true, token: "payload.sig", expiresIn: 1000 })(route)
+    : jsonErr(401, { ok: false, error: "wrong_passcode", message: "That passcode is not right." })(route);
+  mocks.media = (route, call) => {
+    if (!route.request().headers()["x-owner-token"]) return jsonErr(401, { error: "unauthorized", message: "Enter the owner passcode." })(route);
+    const b = call.body;
+    if (!b) return jsonOk({ items })(route);
+    if (b.action === "link") {
+      const m = String(b.url).match(/^https:\/\/youtu\.be\/([A-Za-z0-9_-]{11})/);
+      if (!m) return jsonErr(400, { error: "bad_link", message: "Use the link from YouTube's Share button." })(route);
+      const item = { id: "f".repeat(31) + items.length, kind: "youtube", ytKind: "video", ytId: m[1], label: b.label || "Music video", visible: true };
+      items.unshift(item);
+      return jsonOk({ ok: true, item })(route);
+    }
+    if (b.action === "rename") {
+      const it = items.find((i) => i.id === b.id);
+      if (typeof b.visible === "boolean") it.visible = b.visible;
+      if (typeof b.label === "string") it.label = b.label;
+      return jsonOk({ ok: true, items })(route);
+    }
+    if (b.action === "delete") { items.splice(items.findIndex((i) => i.id === b.id), 1); return jsonOk({ ok: true, items })(route); }
+    return jsonErr(400, { error: "unknown_action" })(route);
+  };
+  return items;
+}
+
+await test("a wrong passcode is refused at the gate; the right one opens the media portal", async ({ page, mocks }) => {
+  mediaMock(mocks);
+  await go(page, "media.html");
+  await page.fill("#gate-passcode", "nope");
+  await page.click("#gate-submit");
+  await page.locator("#gate-error", { hasText: "That passcode is not right." }).waitFor();
+  assert.equal(await page.locator("#media-content").isVisible(), false);
+  await page.fill("#gate-passcode", "right-passcode-123");
+  await page.click("#gate-submit");
+  await page.locator("#yt-form").waitFor();
+  assert.equal(await page.inputValue("#gate-passcode").catch(() => ""), "", "the passcode does not linger in the field");
+});
+
+await test("paste a YouTube link, press ADD: it is sent, listed with an OPEN link, hideable, deletable", async ({ page, mocks, calls }) => {
+  const items = mediaMock(mocks);
+  await go(page, "media.html");
+  await page.fill("#gate-passcode", "right-passcode-123");
+  await page.click("#gate-submit");
+  await page.locator("#yt-form").waitFor();
+  await page.getByText("Nothing uploaded yet").waitFor();
+
+  await page.fill("#yt-url", "https://youtu.be/dQw4w9WgXcQ?si=abc");
+  await page.fill("#yt-title", "Our Anthem");
+  await page.click("#yt-add");
+  await page.locator("#yt-status", { hasText: 'ADDED — "Our Anthem" IS ON THE SITE' }).waitFor();
+  const sent = callsTo(calls, "media").filter((c) => c.body && c.body.action === "link");
+  assert.equal(sent.length, 1);
+  assert.deepEqual(sent[0].body, { action: "link", url: "https://youtu.be/dQw4w9WgXcQ?si=abc", label: "Our Anthem" });
+  assert.equal(await page.inputValue("#yt-url"), "", "the slot is cleared for the next one");
+  assert.equal(items.length, 1);
+
+  // The title is an editable text box, so it is read as a value, not as text.
+  await page.locator("#media-list").getByText("YOUTUBE · MUSIC VIDEO").waitFor();
+  assert.equal(await page.inputValue('#media-list input[aria-label="Title"]'), "Our Anthem");
+  const open = page.locator('#media-list a[href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"]');
+  assert.equal(await open.count(), 1, "an OPEN link rebuilt from the id");
+  assert.equal(await open.getAttribute("target"), "_blank");
+  assert.match(await open.getAttribute("rel"), /noopener/);
+
+  await page.locator("#media-list button", { hasText: "HIDE" }).click();
+  await page.getByText("YOUTUBE · MUSIC VIDEO · HIDDEN").waitFor();
+  assert.equal(items[0].visible, false);
+  page.on("dialog", (d) => d.accept());
+  await page.locator("#media-list button", { hasText: "DELETE" }).click();
+  await page.getByText("Nothing uploaded yet").waitFor();
+  assert.equal(items.length, 0);
+});
+
+await test("a link that is not YouTube is explained before anything is sent; the function's refusal is shown too", async ({ page, mocks, calls }) => {
+  mediaMock(mocks);
+  await go(page, "media.html");
+  await page.fill("#gate-passcode", "right-passcode-123");
+  await page.click("#gate-submit");
+  await page.locator("#yt-form").waitFor();
+  await page.click("#yt-add");
+  await page.locator("#yt-status", { hasText: "PASTE A YOUTUBE LINK FIRST" }).waitFor();
+  await page.fill("#yt-url", "https://vimeo.com/123456");
+  await page.click("#yt-add");
+  await page.locator("#yt-status", { hasText: "DOES NOT LOOK LIKE A YOUTUBE LINK" }).waitFor();
+  assert.equal(callsTo(calls, "media").filter((c) => c.body && c.body.action === "link").length, 0, "nothing sent for a bad link");
+  // A shape the page accepts but the mock function refuses: its message is shown.
+  await page.fill("#yt-url", "https://www.youtube.com/playlist?list=PLabc123def456");
+  await page.click("#yt-add");
+  await page.locator("#yt-status", { hasText: "USE THE LINK FROM YOUTUBE'S SHARE BUTTON." }).waitFor();
+  await page.waitForFunction(() => !document.getElementById("yt-add").disabled);
+});
+
 /* ---------- report ---------- */
 await browser.close();
 server.close();

@@ -532,6 +532,158 @@ try {
   globalThis.fetch = realFetch;
 }
 
+/* ======================================================================
+   media + media-public  (the owner library, YouTube links in particular)
+   ====================================================================== */
+group("media  (owner library: YouTube links)  +  media-public");
+
+// Netlify Blobs stood in by a Map, planted in the require cache the way
+// stripe was. The functions require it lazily inside getStoreFor, so the
+// stub is in place before any call.
+function fakeBlobStore() {
+  const m = new Map();
+  return {
+    raw: m,
+    async get(key, opts) {
+      const v = m.get(key);
+      if (v === undefined) return null;
+      const t = opts && opts.type;
+      if (t === "json") return JSON.parse(v.toString());
+      if (t === "arrayBuffer") return v.buffer.slice(v.byteOffset, v.byteOffset + v.byteLength);
+      return v.toString();
+    },
+    async set(key, val) { m.set(key, Buffer.isBuffer(val) ? val : Buffer.from(String(val))); },
+    async setJSON(key, obj) { m.set(key, Buffer.from(JSON.stringify(obj))); },
+    async delete(key) { m.delete(key); }
+  };
+}
+let blobStore = fakeBlobStore();
+let blobsDown = false;
+const blobsPath = require.resolve("@netlify/blobs");
+require.cache[blobsPath] = {
+  id: blobsPath, filename: blobsPath, loaded: true,
+  exports: { connectLambda() {}, getStore() { if (blobsDown) throw new Error("no site context"); return blobStore; } }
+};
+const media = fn("media");
+const mediaPublic = fn("media-public");
+const MPASS = "owner-passphrase-for-media-tests";
+const owned = (body, extra = {}) => withEnv({ OWNER_PASSCODE: MPASS }, () =>
+  media(event({ body, headers: { "x-owner-token": session.issueToken(MPASS) }, ...extra })));
+const YT = "dQw4w9WgXcQ";
+
+await test("no passcode configured: 503; no or bad token: 401; a good token lists an empty library", async () => {
+  blobStore = fakeBlobStore();
+  assert.equal(parse(await media(event({ method: "GET" }))).status, 503);
+  await withEnv({ OWNER_PASSCODE: MPASS }, async () => {
+    assert.equal(parse(await media(event({ method: "GET" }))).status, 401);
+    assert.equal(parse(await media(event({ method: "GET", headers: { "x-owner-token": "abc.def" } }))).status, 401);
+  });
+  const r = parse(await owned(undefined, { method: "GET" }));
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body, { items: [] });
+});
+
+await test("a YouTube video link is stored as a validated id, never as the pasted text", async () => {
+  blobStore = fakeBlobStore();
+  const r = parse(await owned({ action: "link", url: `https://youtu.be/${YT}?si=share-junk`, label: '  My <b>song</b> "live"  ' }));
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const it = r.body.item;
+  assert.equal(it.kind, "youtube");
+  assert.equal(it.ytKind, "video");
+  assert.equal(it.ytId, YT);
+  assert.equal(it.visible, true);
+  assert.equal(it.label, "My bsongb live", "label is cleaned of markup and quotes");
+  assert.match(it.id, /^[0-9a-f]{32}$/);
+  const stored = blobStore.raw.get("index.json").toString();
+  assert.ok(!stored.includes("youtu.be") && !stored.includes("si=share-junk"), "the raw link must not be stored");
+  assert.ok(!("url" in it), "no url field on the record");
+});
+
+await test("a playlist link is stored as a playlist; a watch link with &list= is the video", async () => {
+  blobStore = fakeBlobStore();
+  let r = parse(await owned({ action: "link", url: "https://www.youtube.com/playlist?list=PLabc123def456" }));
+  assert.equal(r.status, 200);
+  assert.equal(r.body.item.ytKind, "playlist");
+  assert.equal(r.body.item.ytId, "PLabc123def456");
+  assert.equal(r.body.item.label, "Music video playlist");
+  r = parse(await owned({ action: "link", url: `https://www.youtube.com/watch?v=${YT}&list=PLabc123def456` }));
+  assert.equal(r.body.item.ytKind, "video");
+  assert.equal(r.body.item.ytId, YT);
+  assert.equal(r.body.item.label, "Music video");
+});
+
+await test("hostile or unreadable links are refused with a message that says what to paste", async () => {
+  blobStore = fakeBlobStore();
+  for (const bad of [
+    "", "not a link", "javascript:alert(1)", `http://youtu.be/${YT}`,
+    `https://youtu.be.evil.tld/${YT}`, `https://www.youtube.com.evil.tld/watch?v=${YT}`,
+    `https://youtu.be/${YT.slice(0, 10)}`, `https://youtu.be/${YT}" onload="alert(1)`,
+    `https://www.youtube.com/watch?v=${YT}%22%3E%3Cscript%3E`, "https://vimeo.com/123456",
+    { url: `https://youtu.be/${YT}` }, 42
+  ]) {
+    const r = parse(await owned({ action: "link", url: bad }));
+    assert.equal(r.status, 400, `accepted ${JSON.stringify(bad)}`);
+    assert.equal(r.body.error, "bad_link");
+    assert.match(r.body.message, /Share button/);
+  }
+  assert.equal(blobStore.raw.has("index.json"), false, "nothing written");
+});
+
+await test("the same video twice is refused, naming the existing title", async () => {
+  blobStore = fakeBlobStore();
+  await owned({ action: "link", url: `https://youtu.be/${YT}`, label: "First" });
+  const r = parse(await owned({ action: "link", url: `https://www.youtube.com/watch?v=${YT}`, label: "Second" }));
+  assert.equal(r.status, 409);
+  assert.match(r.body.message, /"First"/);
+});
+
+await test("rename, hide and delete work on a YouTube item", async () => {
+  blobStore = fakeBlobStore();
+  const { id } = parse(await owned({ action: "link", url: `https://youtu.be/${YT}` })).body.item;
+  let r = parse(await owned({ action: "rename", id, label: "Renamed", visible: false }));
+  assert.equal(r.status, 200);
+  assert.equal(r.body.items[0].label, "Renamed");
+  assert.equal(r.body.items[0].visible, false);
+  r = parse(await owned({ action: "delete", id }));
+  assert.deepEqual(r.body.items, []);
+  assert.equal(parse(await owned({ action: "delete", id: "not-hex" })).status, 400);
+});
+
+await test("media-public shows a YouTube item field by field, hides hidden ones and drops tampered ids", async () => {
+  blobStore = fakeBlobStore();
+  const a = parse(await owned({ action: "link", url: `https://youtu.be/${YT}`, label: "Shown" })).body.item;
+  const b = parse(await owned({ action: "link", url: "https://www.youtube.com/playlist?list=PLabc123def456", label: "Hidden" })).body.item;
+  await owned({ action: "rename", id: b.id, visible: false });
+  // A record edited behind the function's back: must not reach a visitor.
+  const index = JSON.parse(blobStore.raw.get("index.json").toString());
+  index.push({ id: "c".repeat(32), kind: "youtube", ytKind: "video", ytId: "javascript:x", label: "Tampered", visible: true });
+  index.push({ id: "d".repeat(32), kind: "audio", contentType: "audio/mpeg", label: "Track", visible: true, bytes: 10 });
+  await blobStore.setJSON("index.json", index);
+
+  const r = parse(await mediaPublic(event({ method: "GET" })));
+  assert.equal(r.status, 200);
+  assert.equal(r.body.available, true);
+  assert.match(r.headers["Cache-Control"], /max-age=60/);
+  const kinds = r.body.items.map((i) => i.kind + ":" + i.label);
+  assert.deepEqual(kinds, ["youtube:Shown", "audio:Track"]);
+  assert.deepEqual(Object.keys(r.body.items[0]).sort(), ["id", "kind", "label", "ytId", "ytKind"]);
+  assert.equal(r.body.items[0].ytId, YT);
+  assert.ok(r.body.items[1].src.startsWith("/.netlify/functions/media-file?id="));
+  assert.equal(parse(await mediaPublic(event({ method: "POST", body: {} }))).status, 405);
+});
+
+await test("media-public with no store reachable says so, quietly, with an empty list", async () => {
+  blobsDown = true;
+  try {
+    const r = parse(await mediaPublic(event({ method: "GET" })));
+    assert.equal(r.status, 200);
+    assert.deepEqual(r.body, { items: [], available: false });
+    const o = parse(await owned({ action: "link", url: `https://youtu.be/${YT}` }));
+    assert.equal(o.status, 503);
+    assert.equal(o.body.error, "storage_unavailable");
+  } finally { blobsDown = false; }
+});
+
 /* ---------- report ---------- */
 console.log(`\n${passes} passed, ${failures} failed\n`);
 process.exit(failures ? 1 : 0);

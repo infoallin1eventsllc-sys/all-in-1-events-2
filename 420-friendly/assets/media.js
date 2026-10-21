@@ -2,8 +2,10 @@
  *
  * Two halves that never both run on one page:
  *
- *   initMediaManager()  — the owner's upload screen (media.html)
+ *   initMediaManager()   — the owner's screen (media.html): uploads, and a
+ *                          slot for YouTube music videos by link
  *   renderLandingMedia() — the player visitors see (index.html)
+ *   renderMusicVideos()  — the YouTube videos the owner added (playlist.html)
  *
  * WHY UPLOADS ARE SPLIT UP
  *
@@ -111,7 +113,10 @@ function initMediaManager(mountId) {
     "Music up to 20 MB · Video up to 60 MB" +
     "</p></div>" +
     '<div id="media-queue" class="mt-6 flex flex-col gap-3"></div>' +
+    youtubeSlotHTML() +
     '<div id="media-list" class="mt-10"></div>';
+
+  wireYoutubeSlot(refreshList);
 
   const input = document.getElementById("media-input");
   const drop = document.getElementById("media-drop");
@@ -212,6 +217,85 @@ function initMediaManager(mountId) {
   }
 }
 
+/* The YouTube slot: paste the link from YouTube's Share button, give it a
+ * title if you like, press ADD. The link is read here first so a typo is
+ * explained before anything is sent, and read again by the function, which
+ * is the check that counts. */
+function youtubeSlotHTML() {
+  return (
+    '<form id="yt-form" class="mt-8 panel" novalidate>' +
+    '<div class="flex items-center gap-3 mb-2">' +
+    '<span class="material-symbols-outlined text-tertiary">smart_display</span>' +
+    '<p class="font-headline-md text-headline-md text-on-surface uppercase tracking-tighter">Add a YouTube music video</p>' +
+    "</div>" +
+    '<p class="font-body-md text-body-md text-on-surface-variant max-w-xl">' +
+    "Open the video on YouTube, press Share, copy the link and paste it here. A playlist link works too. " +
+    "It plays on The Sound page and on the front page; YouTube loads only when a customer presses play." +
+    "</p>" +
+    '<div class="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 mt-5">' +
+    '<div><label for="yt-url" class="sr-only">YouTube link</label>' +
+    '<input id="yt-url" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://youtu.be/…" ' +
+    'class="w-full rounded-full bg-surface-container border border-outline-variant focus:border-secondary focus:ring-0 ' +
+    'px-5 py-3 font-body-md text-body-md text-on-surface placeholder:text-outline"/></div>' +
+    '<div><label for="yt-title" class="sr-only">Title shown on the site</label>' +
+    '<input id="yt-title" type="text" maxlength="120" autocomplete="off" placeholder="Title shown on the site (optional)" ' +
+    'class="w-full rounded-full bg-surface-container border border-outline-variant focus:border-secondary focus:ring-0 ' +
+    'px-5 py-3 font-body-md text-body-md text-on-surface placeholder:text-outline"/></div>' +
+    '<button id="yt-add" type="submit" class="rounded-full bg-primary text-on-primary py-3 px-8 font-label-caps text-label-caps ' +
+    'hover:bg-inverse-surface transition-all duration-300 flex items-center justify-center gap-2">' +
+    '<span class="material-symbols-outlined text-[18px]">add</span>ADD</button>' +
+    "</div>" +
+    '<p id="yt-status" class="font-label-caps text-label-caps mt-3 hidden" role="status"></p>' +
+    "</form>"
+  );
+}
+
+function wireYoutubeSlot(onAdded) {
+  const form = document.getElementById("yt-form");
+  const url = document.getElementById("yt-url");
+  const title = document.getElementById("yt-title");
+  const btn = document.getElementById("yt-add");
+  const status = document.getElementById("yt-status");
+
+  const say = (text, bad) => {
+    status.textContent = text;
+    status.className = "font-label-caps text-label-caps mt-3 " + (bad ? "text-error" : "text-tertiary");
+  };
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const value = url.value.trim();
+    if (!value) {
+      say("PASTE A YOUTUBE LINK FIRST", true);
+      url.focus();
+      return;
+    }
+    const parsed = parseYouTubeAny(value);
+    if (!parsed) {
+      say("THAT DOES NOT LOOK LIKE A YOUTUBE LINK. USE THE ONE FROM YOUTUBE'S SHARE BUTTON — https://youtu.be/… OR A PLAYLIST LINK.", true);
+      url.focus();
+      return;
+    }
+
+    btn.disabled = true;
+    const label = btn.innerHTML;
+    btn.textContent = "ADDING…";
+    try {
+      const data = await mediaPost({ action: "link", url: value, label: title.value.trim() });
+      say('ADDED — "' + (data.item && data.item.label) + '" IS ON THE SITE', false);
+      url.value = "";
+      title.value = "";
+      toast("ADDED TO THE SITE");
+      await onAdded();
+    } catch (err) {
+      say(String(err.message || "That did not go through.").toUpperCase(), true);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = label;
+    }
+  });
+}
+
 function itemRow(item, onChanged) {
   const row = document.createElement("div");
   row.className =
@@ -219,7 +303,7 @@ function itemRow(item, onChanged) {
 
   const icon = document.createElement("span");
   icon.className = "material-symbols-outlined text-tertiary";
-  icon.textContent = item.kind === "audio" ? "music_note" : "movie";
+  icon.textContent = item.kind === "audio" ? "music_note" : item.kind === "youtube" ? "smart_display" : "movie";
 
   const main = document.createElement("div");
   main.className = "flex-1 min-w-[200px]";
@@ -247,11 +331,27 @@ function itemRow(item, onChanged) {
   const meta = document.createElement("p");
   meta.className = "font-label-caps text-label-caps text-on-surface-variant mt-1";
   meta.textContent =
-    (item.kind === "audio" ? "MUSIC" : "VIDEO") +
+    (item.kind === "audio" ? "MUSIC" : item.kind === "youtube"
+      ? "YOUTUBE · " + (item.ytKind === "playlist" ? "PLAYLIST" : "MUSIC VIDEO") : "VIDEO") +
     (item.bytes ? " · " + prettyBytes(item.bytes) : "") +
     (item.visible === false ? " · HIDDEN" : "");
 
   main.append(label, meta);
+
+  // A way to check it is the right video, without loading YouTube into the
+  // portal. The URL is rebuilt from the stored id, never taken from the record.
+  const yt = item.kind === "youtube" ? parseYouTubeAny(item.ytId) : null;
+  if (yt) {
+    const open = document.createElement("a");
+    open.href = yt.page;
+    open.target = "_blank";
+    open.rel = "noopener noreferrer";
+    open.className =
+      "rounded-full border border-outline-variant text-on-surface py-2 px-5 font-label-caps " +
+      "text-label-caps hover:border-secondary hover:text-secondary transition-colors";
+    open.textContent = "OPEN";
+    row.__open = open; // placed between the title and the buttons below
+  }
 
   const hide = document.createElement("button");
   hide.type = "button";
@@ -286,37 +386,111 @@ function itemRow(item, onChanged) {
     }
   });
 
-  row.append(icon, main, hide, del);
+  row.append(icon, main);
+  if (row.__open) row.appendChild(row.__open);
+  row.append(hide, del);
   return row;
 }
 
 /* ===== What visitors see ===== */
 
-async function renderLandingMedia(mountId) {
-  const mount = document.getElementById(mountId);
-  if (!mount) return;
+/* A YouTube music video, drawn as our own card. The iframe — and with it the
+ * first request to YouTube — is created on the click, from a URL rebuilt out
+ * of the stored id. No thumbnail is fetched for the art: that request would
+ * be YouTube tracking a visitor who never pressed play, wearing a disguise. */
+function youtubeFacade(item, index) {
+  const yt = parseYouTubeAny(item.ytId);
+  if (!yt) return null;
 
-  let items = [];
+  const stage = document.createElement("div");
+  stage.className = "relative aspect-video overflow-hidden rounded-xl bg-surface-container-low";
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className =
+    "player-facade player-facade--dark group absolute inset-0 w-full h-full rounded-xl " +
+    "flex flex-col items-center justify-center gap-3 text-center px-6 " +
+    "hover:border-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-tertiary " +
+    "transition-colors cursor-pointer";
+  btn.style.background = index % 2 === 0
+    ? "linear-gradient(160deg,#0f2e1e,#003005)"
+    : "linear-gradient(160deg,#1d2320,#33453a)";
+  btn.setAttribute("aria-label", "Play " + (item.label || "music video") + " from YouTube");
+  btn.innerHTML =
+    '<span class="text-tertiary inline-block group-hover:scale-110 transition-transform">' + playGlyph(52) + "</span>" +
+    '<span class="font-label-caps text-label-caps">' + esc(item.label || "Music video") + "</span>" +
+    '<span class="font-body-md text-[13px] opacity-80">YouTube loads when you press play</span>';
+  btn.addEventListener("click", () => {
+    const frame = document.createElement("iframe");
+    // Autoplay only here, from the visitor's own click.
+    frame.src = yt.embed + (yt.embed.includes("?") ? "&" : "?") + "autoplay=1";
+    frame.title = item.label || "Music video";
+    frame.setAttribute("allow", "accelerometer; autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture");
+    frame.setAttribute("allowfullscreen", "");
+    frame.style.border = "0";
+    frame.className = "absolute inset-0 w-full h-full rounded-xl";
+    btn.replaceWith(frame);
+    // One thing playing at a time: pause our own players.
+    document.querySelectorAll("audio, video").forEach((el) => { try { el.pause(); } catch { /* fine */ } });
+  });
+  stage.appendChild(btn);
+
+  const card = document.createElement("div");
+  card.className = "flex flex-col";
+  card.appendChild(stage);
+  const h = document.createElement("h3");
+  h.className = "font-body-lg text-body-lg text-on-surface mt-4";
+  h.textContent = item.label || "Music video";
+  card.appendChild(h);
+  return card;
+}
+
+async function publicMediaItems() {
   try {
     const res = await fetch(MEDIA_PUBLIC_ENDPOINT);
     const data = await res.json();
-    items = data.items || [];
+    return Array.isArray(data.items) ? data.items : [];
   } catch {
     // Offline, or no functions (a plain static server). Say nothing — an
     // empty media section should simply not appear rather than show an error
     // to a customer who cannot do anything about it.
-    return;
+    return [];
   }
+}
 
+/* The Sound: every music video the owner added, newest first. The section is
+ * shown only when there is at least one, so the page never carries an empty
+ * heading. */
+async function renderMusicVideos(mountId, sectionId) {
+  const mount = document.getElementById(mountId);
+  if (!mount) return;
+  const videos = (await publicMediaItems()).filter((i) => i.kind === "youtube");
+  const cards = videos.map(youtubeFacade).filter(Boolean);
+  if (!cards.length) return;
+  mount.className = "grid grid-cols-1 md:grid-cols-2 gap-gutter";
+  cards.forEach((c) => mount.appendChild(c));
+  const section = sectionId && document.getElementById(sectionId);
+  if (section) section.classList.remove("hidden");
+}
+
+async function renderLandingMedia(mountId) {
+  const mount = document.getElementById(mountId);
+  if (!mount) return;
+
+  const items = await publicMediaItems();
   if (!items.length) return;
 
   const video = items.find((i) => i.kind === "video");
   const tracks = items.filter((i) => i.kind === "audio");
-  if (!video && !tracks.length) return;
+  // The two newest music videos; the full set is on The Sound.
+  const musicVideos = items.filter((i) => i.kind === "youtube").slice(0, 2)
+    .map(youtubeFacade).filter(Boolean);
+  if (!video && !tracks.length && !musicVideos.length) return;
 
   mount.classList.remove("hidden");
   const grid = document.createElement("div");
   grid.className = "grid grid-cols-1 md:grid-cols-2 gap-gutter items-start";
+  musicVideos.forEach((c) => grid.appendChild(c));
 
   if (video) {
     const stage = document.createElement("div");

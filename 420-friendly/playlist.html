@@ -44,6 +44,16 @@
     <div id="player-panels"></div>
   </section>
 
+  <!-- Music videos the owner added in the portal (media.html). Hidden until
+       there are some; YouTube loads only on the click. -->
+  <section id="music-videos-section" class="reveal mt-16 md:mt-20 hidden">
+    <div class="flex justify-between items-end mb-8">
+      <h2 class="h-section text-on-surface">Music Videos</h2>
+      <p class="font-body-md text-body-md text-on-surface-variant">Press play. YouTube loads then, not before.</p>
+    </div>
+    <div id="music-videos"></div>
+  </section>
+
   <!-- Video reel -->
   <section class="reveal mt-16 md:mt-20">
     <div class="flex justify-between items-end mb-8">
@@ -71,9 +81,11 @@
 <script src="assets/soundtrack.js"></script>
 <script src="assets/media-links.js"></script>
 <script src="assets/playlist.js"></script>
+<script src="assets/media.js"></script>
 <script>
   renderChrome("PLAYLIST");
   renderMusic("player-panels", "player-tabs");
+  renderMusicVideos("music-videos", "music-videos-section");
   renderReel("video-reel");
 </script>
 </body>

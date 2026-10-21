@@ -39,6 +39,14 @@ customer paths in Chromium, 30 checks). `check-refs` now fails when the
 checkout function and `products.js` disagree on anything. Still unproven,
 because it needs Otis's account: a real Stripe test payment.
 
+## Music videos — 21 Oct
+
+The owner portal (Music & Video) has a slot for YouTube music videos: paste
+the Share link, optional title, ADD. The function validates it with the same
+parsers the pages use and stores only the id; The Sound and the front page
+draw click-to-load cards and YouTube loads on the click, not before. Hide,
+rename, delete work on them like uploads. Covered in all three suites.
+
 ## The one thing blocking everything
 
 **PR #3 has never been merged.** `main` has none of it — not the storefront,
@@ -156,8 +164,8 @@ is not visibly broken. It does not mean a checkout succeeds.
 - No linter. The fake `lint` script was removed rather than replaced.
 - Stock tracking; retail order storage. (Chat is throttled at 20/min per
   address; the hard ceiling is Netlify's firewall, which is Otis's.)
-- Direct tests for `chat`, the three `media*` functions and `owner-orders`;
-  the other four functions and the throttle are covered by `functions.mjs`.
+- Direct tests for `chat`, `media-file`, the upload path of `media`, and
+  `owner-orders`; everything else in `netlify/` is covered by `functions.mjs`.
 - Port `photos.html`; recover `owner` / `analyze` / `cardspike`.
 - Clear 15 junk drafts.
 - Split the repo per-business **after** the merge. Run `npm test` before and

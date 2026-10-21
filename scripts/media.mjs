@@ -97,6 +97,52 @@ check("youtube embed uses the nocookie host",
 check("youtube tab link uses the real host",
   !!yt && yt.page === "https://www.youtube.com/playlist?list=PLabc123def456", yt && yt.page);
 
+// A single YouTube video, every shape the Share menu produces, and the one
+// parser the owner portal uses for whichever shape was pasted.
+const V = "dQw4w9WgXcQ";
+for (const [label, input] of [
+  ["short link", `https://youtu.be/${V}`],
+  ["short link with ?si=", `https://youtu.be/${V}?si=abc`],
+  ["watch link", `https://www.youtube.com/watch?v=${V}`],
+  ["watch link with a playlist", `https://www.youtube.com/watch?v=${V}&list=PLabc123def456`],
+  ["mobile link", `https://m.youtube.com/watch?v=${V}`],
+  ["shorts link", `https://www.youtube.com/shorts/${V}`],
+  ["embed link", `https://www.youtube-nocookie.com/embed/${V}`],
+  ["bare id", V],
+]) {
+  const out = m.parseYouTubeVideo(input);
+  check(`youtube video accepts a ${label}`, !!out, `rejected: ${input}`);
+  if (out) {
+    check(`youtube video ${label} → nocookie embed`,
+      out.embed === `https://www.youtube-nocookie.com/embed/${V}?rel=0`, out.embed);
+    check(`youtube video ${label} → watch page`,
+      out.page === `https://www.youtube.com/watch?v=${V}`, out.page);
+  }
+  const any = m.parseYouTubeAny(input);
+  check(`parseYouTubeAny reads a ${label} as a video`, !!any && any.kind === "video" && any.id === V,
+    JSON.stringify(any));
+}
+for (const bad of [
+  `https://youtu.be.evil.tld/${V}`,
+  `https://www.youtube.com.evil.tld/watch?v=${V}`,
+  `https://evil.tld/?u=https://youtu.be/${V}`,
+  `http://youtu.be/${V}`,
+  `https://youtu.be/${V.slice(0, 10)}`,
+  `https://youtu.be/${V}" onload="alert(1)`,
+  `https://www.youtube.com/watch?v=${V}%22%3E`,
+  "javascript:alert(1)",
+  "https://vimeo.com/123456",
+  "",
+]) {
+  check("youtube video rejects a hostile value", m.parseYouTubeVideo(bad) === null,
+    `accepted: ${JSON.stringify(bad)}`);
+  check("parseYouTubeAny rejects a hostile value", m.parseYouTubeAny(bad) === null,
+    `accepted: ${JSON.stringify(bad)}`);
+}
+const anyList = m.parseYouTubeAny("https://www.youtube.com/playlist?list=PLabc123def456");
+check("parseYouTubeAny reads a playlist link as a playlist",
+  !!anyList && anyList.kind === "playlist" && anyList.id === "PLabc123def456", JSON.stringify(anyList));
+
 // Local paths: relative only, no traversal, no scheme.
 for (const bad of ["/etc/passwd", "../../secret.mp4", "https://evil.tld/a.mp4", "javascript:x"]) {
   check("local path rejects an escape", m.parseLocalPath(bad) === null, `accepted: ${bad}`);
@@ -173,6 +219,18 @@ try {
 }
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
 
+// What the owner added in the portal, as the public feed would serve it. Two
+// items so the home page and The Sound both have something to draw — and so
+// the "no player until asked" checks below run with YouTube videos present,
+// which is exactly when a facade is tempting to skip.
+const OWNER_VIDEOS = [
+  { id: "a".repeat(32), kind: "youtube", ytKind: "video", ytId: V, label: "Test <b>Video</b>" },
+  { id: "b".repeat(32), kind: "youtube", ytKind: "playlist", ytId: "PLabc123def456", label: "A Playlist" },
+];
+await ctx.route("**/.netlify/functions/media-public", (route) => route.fulfill({
+  status: 200, contentType: "application/json", body: JSON.stringify({ items: OWNER_VIDEOS, available: true }),
+}));
+
 const ROUTES = [
   ["/420-friendly/index.html", "the homepage"],
   ["/420-friendly/playlist.html", "the playlist page"],
@@ -246,12 +304,55 @@ for (const [route, label] of ROUTES) {
     JSON.stringify(barText));
 }
 
+// The owner's YouTube videos: drawn as our own cards, YouTube untouched until
+// the click, and then exactly the nocookie embed built from the stored id.
+{
+  const page = await ctx.newPage();
+  const yt = [];
+  page.on("request", (r) => { if (/youtube|ytimg|googlevideo/i.test(r.url())) yt.push(r.url()); });
+  await page.goto(`${origin}/420-friendly/playlist.html`, { waitUntil: "networkidle" });
+
+  const facades = page.locator("#music-videos button.player-facade");
+  check("The Sound shows one card per owner-added video", await facades.count() === 2);
+  check("the Music Videos section is shown when there are videos",
+    !(await page.locator("#music-videos-section").getAttribute("class")).includes("hidden"));
+  check("a title with markup in it is shown as text",
+    (await facades.first().textContent()).includes("Test <b>Video</b>"));
+  check("no request reaches YouTube before the click", yt.length === 0, yt[0]);
+
+  await facades.first().click();
+  const frame = page.locator("#music-videos iframe").first();
+  await frame.waitFor({ timeout: 5000 }).catch(() => {});
+  const src = await frame.getAttribute("src").catch(() => null);
+  check("the click creates exactly the nocookie embed, from the stored id",
+    src === `https://www.youtube-nocookie.com/embed/${V}?rel=0&autoplay=1`, String(src));
+  const allow = await frame.getAttribute("allow").catch(() => "");
+  check("the embed may autoplay from the click", /\bautoplay\b/.test(allow || ""), String(allow));
+  await page.waitForTimeout(400);
+  check("YouTube is only contacted after the click", yt.length > 0);
+  check("the second card is still a facade", await facades.count() === 1);
+
+  // The playlist card builds the videoseries embed.
+  await facades.first().click();
+  const src2 = await page.locator("#music-videos iframe").nth(1).getAttribute("src").catch(() => null);
+  check("a playlist card embeds the playlist",
+    src2 === "https://www.youtube-nocookie.com/embed/videoseries?list=PLabc123def456&autoplay=1", String(src2));
+
+  // The front page gets the newest two, in the owner media block.
+  const home = await ctx.newPage();
+  await home.goto(`${origin}/420-friendly/index.html`, { waitUntil: "networkidle" });
+  check("the front page shows the owner's videos",
+    await home.locator("#landing-media button.player-facade").count() === 2);
+  check("the front page media block is revealed",
+    !(await home.locator("#landing-media").getAttribute("class")).includes("hidden"));
+}
+
 await browser.close();
 server.close();
 
 /* ---------- report ---------- */
 if (!failures.length) {
-  console.log("\n  players stay unloaded, parsers hold, the film is local\n");
+  console.log("\n  players stay unloaded, parsers hold, the film is local, the owner's videos wait for the click\n");
   process.exit(0);
 }
 console.log(`\n  ${failures.length} problem${failures.length === 1 ? "" : "s"}\n`);

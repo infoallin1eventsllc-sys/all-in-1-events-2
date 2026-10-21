@@ -29,14 +29,33 @@ exports.handler = async (event) => {
   }
 
   const visible = items
-    .filter((i) => i && i.visible !== false && i.id && (i.kind === "audio" || i.kind === "video"))
-    .map((i) => ({
-      id: i.id,
-      kind: i.kind,
-      label: i.label || (i.kind === "audio" ? "Track" : "Clip"),
-      contentType: i.contentType,
-      src: "/.netlify/functions/media-file?id=" + encodeURIComponent(i.id)
-    }));
+    .filter((i) => i && i.visible !== false && i.id)
+    .map((i) => {
+      if (i.kind === "youtube") {
+        // Only an id of the shape the parser issues goes out; the page
+        // rebuilds the embed URL from it. A tampered index entry is dropped,
+        // not forwarded.
+        const playlist = i.ytKind === "playlist";
+        const ok = playlist ? /^[A-Za-z0-9_-]{12,64}$/.test(i.ytId) : /^[A-Za-z0-9_-]{11}$/.test(i.ytId);
+        if (!ok) return null;
+        return {
+          id: i.id,
+          kind: "youtube",
+          ytKind: playlist ? "playlist" : "video",
+          ytId: i.ytId,
+          label: i.label || (playlist ? "Music video playlist" : "Music video")
+        };
+      }
+      if (i.kind !== "audio" && i.kind !== "video") return null;
+      return {
+        id: i.id,
+        kind: i.kind,
+        label: i.label || (i.kind === "audio" ? "Track" : "Clip"),
+        contentType: i.contentType,
+        src: "/.netlify/functions/media-file?id=" + encodeURIComponent(i.id)
+      };
+    })
+    .filter(Boolean);
 
   return json(200, { items: visible, available: true }, 60);
 };

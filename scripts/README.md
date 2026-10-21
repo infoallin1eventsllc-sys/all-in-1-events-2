@@ -52,6 +52,10 @@ specific ways this repo has actually broken — not to chase coverage.
   out) as the 502 the page knows how to show. `fetch` is stubbed.
 - `throttle`: limit, per-address and per-function isolation, window expiry,
   header fallbacks. `health`: booleans only.
+- `media` + `media-public`: the owner's YouTube slot. A pasted link is stored
+  as a validated id, never as text; hostile shapes are refused; duplicates
+  named; hide/rename/delete; the public feed exposes five fields and drops a
+  tampered record. Netlify Blobs is a Map in the require cache.
 
 **`flows.mjs`** — what a customer does, in Chromium, with the functions
 stubbed at the network edge.
@@ -72,6 +76,9 @@ stubbed at the network edge.
   click updating grid, heading and URL), both forms (delivered / undeployed /
   rejected, with what was sent), the drops page's undated state, the 404
   search box, and a sweep for retired-collection copy on every customer page.
+- Owner portal: the passcode gate refusing and admitting, then the YouTube
+  slot — paste, ADD, the row with its OPEN link, hide, delete, and a bad link
+  explained before anything is sent.
 
 **`media.mjs`** — the playlist and film wiring, which fails invisibly.
 
@@ -87,6 +94,10 @@ stubbed at the network edge.
   `src`, so they are a security boundary.
 - The YouTube embed uses `youtube-nocookie.com` while the new-tab link uses
   the real host — each is wrong in the other's place.
+- The owner's YouTube music videos (from the portal) are drawn as our own
+  cards on The Sound and the front page; no request reaches YouTube until a
+  card is clicked, and then the iframe is exactly the nocookie embed rebuilt
+  from the stored id.
 - The listen link carries `rel=noopener`; without it the new tab can navigate
   this one.
 - With nothing configured the shop renders nothing, rather than an empty box.
@@ -136,9 +147,9 @@ Say this out loud before trusting it:
   PAYMENTS-SETUP.md is still the only proof of a real payment.
 - PayPal is exercised only as far as the page rendering; its SDK loads only
   with a client id, which is blank.
-- `chat`, `media`, `media-file`, `media-public` and `owner-orders` have no
-  direct tests. The media functions sit on Netlify Blobs; the smoke run
-  confirms the pages that call them degrade.
+- `chat`, `media-file` (range serving), the upload path of `media`, and
+  `owner-orders` have no direct tests. Blobs is a Map here; the smoke run
+  confirms the pages that call the real thing degrade when it is absent.
 - Meridian's 6 Supabase Edge Functions, 5 migrations and the CLI are untested.
 - There is no linter.
 
