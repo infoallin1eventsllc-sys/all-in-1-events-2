@@ -87,8 +87,6 @@ never reaches the browser. Everything under P0 follows from it.
 - `'unsafe-inline'` in `script-src` and `style-src` is required by the inline
   `tailwind.config` block. It is an accepted risk.
 - `cdn.tailwindcss.com` is loaded without a version.
-- The intake edge function enforces its webhook secret only when
-  `WEBHOOK_SECRET` is set.
 - The missing `css/` and `js/` files referenced by `index.html`.
 
 ### Out of scope
