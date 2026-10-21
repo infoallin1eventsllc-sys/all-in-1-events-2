@@ -90,8 +90,6 @@ never reaches the browser. Everything under P0 follows from it.
 - The intake edge function enforces its webhook secret only when
   `WEBHOOK_SECRET` is set.
 - The missing `css/` and `js/` files referenced by `index.html`.
-- The `fetch-media` workflow interpolates its inputs into `run:`. It can only
-  be started by someone with write access, and it is tracked separately.
 
 ### Out of scope
 
