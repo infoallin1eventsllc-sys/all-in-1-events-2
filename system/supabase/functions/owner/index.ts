@@ -168,6 +168,19 @@ async function handleLogin(sb: SupabaseClient, req: Request, passcode: unknown, 
   }
 
   const hash = await clientHash(req);
+
+  // Take a slot before anything is compared. The counts below are read, then
+  // the attempt is written, so a burst of parallel guesses could all read
+  // "7 failures so far" and all be tried (22 Oct review). rate_allow
+  // increments in place, so no burst gets past these, whatever its timing.
+  // Successful sign-ins use a slot too; the owner signs in a few times a day.
+  if (!(await allow(sb, `login-try:${hash}`, MAX_FAILURES, `${THROTTLE_WINDOW_MINUTES} minutes`))) {
+    return json({ ok: false, error: "too_many_attempts", retryAfterMinutes: THROTTLE_WINDOW_MINUTES }, 429);
+  }
+  if (!(await allow(sb, "login-try:all", GLOBAL_MAX_FAILURES_PER_HOUR * 2, "1 hour"))) {
+    return json({ ok: false, error: "locked", retryAfterMinutes: 60 }, 429);
+  }
+
   const since = new Date(Date.now() - THROTTLE_WINDOW_MINUTES * 60_000).toISOString();
   const hourAgo = new Date(Date.now() - 60 * 60_000).toISOString();
   const [mine, everyone] = await Promise.all([
@@ -701,8 +714,13 @@ Deno.serve(async (req) => {
          SendGrid has delivered it. */
       const meta = (msg.meta ?? {}) as Record<string, unknown>;
       const TRANSACTIONAL = ["booking_confirmation", "invoice", "payment_receipt"];
-      const isMarketing = msg.channel === "email" &&
-        !TRANSACTIONAL.includes(String(meta.reason ?? ""));
+      // A reply to the person's own enquiry. They asked, so it may go without
+      // a marketing opt-in, but it still carries the footer and still stops
+      // for anyone who unsubscribed (0045 enforces the same in the database).
+      const REPLY_TO_ENQUIRY = ["lead_follow_up", "saved_list_reply"];
+      const reason = String(meta.reason ?? "");
+      const isTransactional = TRANSACTIONAL.includes(reason);
+      const isMarketing = msg.channel === "email" && !isTransactional;
 
       let bodyToSend = String(msg.body ?? "");
 
@@ -722,12 +740,21 @@ Deno.serve(async (req) => {
 
         if (msg.contact_id) {
           const { data: contact } = await sb.from("contacts")
-            .select("consent_email").eq("id", msg.contact_id).maybeSingle();
-          if (contact && contact.consent_email === false) {
+            .select("consent_email, email_opted_out_at").eq("id", msg.contact_id).maybeSingle();
+          if (contact?.email_opted_out_at) {
             return json({
               ok: false,
               error: "unsubscribed",
               message: "This contact has opted out of marketing email. Transactional messages are still allowed.",
+            }, 409);
+          }
+          // Since 0045 a booking no longer signs anyone up, so anything that
+          // is not a reply to their own enquiry needs a recorded opt-in.
+          if (contact && !REPLY_TO_ENQUIRY.includes(reason) && contact.consent_email !== true) {
+            return json({
+              ok: false,
+              error: "no_consent",
+              message: "This contact never opted in to marketing email. Replies to their own enquiry are fine; this message is not one.",
             }, 409);
           }
         }
@@ -757,7 +784,12 @@ Deno.serve(async (req) => {
           ...meta,
           approved_by: "owner",
           approved_at: new Date().toISOString(),
-          ...(isMarketing ? { compliance_footer: true } : { transactional: true }),
+          // Only a message whose reason really is transactional is stamped so.
+          // This used to stamp everything that was not marketing EMAIL, which
+          // marked every approved text "transactional" and walked it straight
+          // past the SMS consent rule in 0044 (22 Oct review).
+          ...(isMarketing ? { compliance_footer: true } : {}),
+          ...(isTransactional ? { transactional: true } : {}),
         },
       }).eq("id", id);
       if (queueErr) return json({ ok: false, error: "not_queued", message: queueErr.message }, 409);

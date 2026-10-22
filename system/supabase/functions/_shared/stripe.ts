@@ -73,6 +73,9 @@ async function stripePost<T>(
       ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
     },
     body: formEncode(params).join("&"),
+    // Bounded, so a slow Stripe cannot hold the request past the platform's
+    // own limit and leave the caller unsure whether a checkout was opened.
+    signal: AbortSignal.timeout(15_000),
   });
 
   const body = await res.json().catch(() => ({}));
@@ -83,13 +86,46 @@ async function stripePost<T>(
   return body as T;
 }
 
-export type CheckoutSession = { id: string; url: string; expires_at?: number };
+async function stripeGet<T>(path: string): Promise<T> {
+  const key = stripeKey();
+  if (!key) throw new Error("STRIPE_SECRET_KEY is not configured");
+  const res = await fetch(`${API}${path}`, {
+    headers: { Authorization: `Bearer ${key}` },
+    signal: AbortSignal.timeout(15_000),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body?.error?.message ?? `Stripe responded ${res.status}`);
+  return body as T;
+}
+
+export type CheckoutSession = { id: string; url: string; expires_at?: number; status?: string };
+
+/**
+ * Close a checkout so it can no longer be paid. Used before a replacement
+ * link is opened: without it the old link stayed payable until Stripe's own
+ * expiry, and a client holding both could pay the same invoice twice.
+ * Returns the session's final status: "expired" when it is closed (now or
+ * already), "complete" when it was paid first, which the caller must not
+ * paper over.
+ */
+export async function closeCheckoutSession(sessionId: string): Promise<"expired" | "complete"> {
+  if (!/^cs_[A-Za-z0-9_]+$/.test(sessionId)) throw new Error("not a checkout session id");
+  const now = await stripeGet<CheckoutSession>(`/checkout/sessions/${sessionId}`);
+  if (now.status === "complete") return "complete";
+  if (now.status === "expired") return "expired";
+  const after = await stripePost<CheckoutSession>(`/checkout/sessions/${sessionId}/expire`, {});
+  if (after.status === "complete") return "complete";
+  return "expired";
+}
 
 export async function createCheckoutSession(args: {
   amountCents: number;
   currency: string;
   description: string;
   invoiceId: string;
+  /** Our payments row. Lets the webhook find it even if the session id was
+      never written back to the row. */
+  paymentId: string;
   clientEmail?: string | null;
   successUrl: string;
   cancelUrl: string;
@@ -117,8 +153,8 @@ export async function createCheckoutSession(args: {
     client_reference_id: args.invoiceId,
     // Carried through every event Stripe sends back, so the webhook can find
     // the invoice without trusting anything in the redirect.
-    metadata: { invoice_id: args.invoiceId },
-    payment_intent_data: { metadata: { invoice_id: args.invoiceId } },
+    metadata: { invoice_id: args.invoiceId, payment_id: args.paymentId },
+    payment_intent_data: { metadata: { invoice_id: args.invoiceId, payment_id: args.paymentId } },
     success_url: args.successUrl,
     cancel_url: args.cancelUrl,
   }, args.idempotencyKey);

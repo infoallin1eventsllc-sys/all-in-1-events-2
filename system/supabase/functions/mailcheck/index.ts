@@ -33,25 +33,14 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 // the flattened layout a dashboard upload uses, so a CLI deploy of it failed.
 import { serviceClient } from "../_shared/supabase.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
+import { authorizedRun } from "../_shared/runauth.ts";
 
 const SG = "https://api.sendgrid.com/v3";
 const TIMEOUT = 10_000;
 
-/** Same gate as keycheck: the run secret, or a service-role caller. */
-async function authorized(req: Request): Promise<boolean> {
-  const sb = serviceClient();
-  const { data, error } = await sb.from("settings").select("value").eq("key", "run_secret").maybeSingle();
-  if (error) return false; // a failed read refuses the run; it must never open the gate (see _shared/runauth.ts)
-  const expected = String((data?.value as { value?: string } | null)?.value ?? "");
-  if (!expected) return true;
-  if (req.headers.get("x-run-secret") === expected) return true;
-  const token = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
-  try {
-    return JSON.parse(atob(token.split(".")[1]))?.role === "service_role";
-  } catch {
-    return false;
-  }
-}
+/** The shared run gate. This file used to carry its own copy, and the copy
+ *  drifted (22 Oct): one gate, one place to fix it. */
+const authorized = (req: Request) => authorizedRun(req, serviceClient());
 
 async function sg(path: string, key: string): Promise<{ status: number; body: unknown }> {
   try {

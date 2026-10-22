@@ -14,7 +14,7 @@ import { serviceClient, getSetting } from "../_shared/supabase.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
 import { ownerTokenValid, tokenFrom } from "../_shared/ownertoken.ts";
 import { allow, callerKey } from "../_shared/ratelimit.ts";
-import { createCheckoutSession, stripeKey, stripeMode } from "../_shared/stripe.ts";
+import { closeCheckoutSession, createCheckoutSession, stripeKey, stripeMode } from "../_shared/stripe.ts";
 
 /** Calls allowed per caller per hour. The portal makes a handful per session;
  *  this is a ceiling on an unauthenticated caller probing `status` in a loop,
@@ -43,19 +43,26 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ ok: false, error: "POST only" }, 405);
 
-  let body: Record<string, unknown>;
-  try {
-    body = await req.json();
-  } catch {
-    return json({ ok: false, error: "invalid JSON" }, 400);
-  }
-
   const sb = serviceClient();
 
-  // Before the action is even read. `status` is reachable without a token, so
-  // the throttle has to sit in front of it rather than behind the auth check.
+  // Before the body is even read (22 Oct: it used to be parsed first, so an
+  // over-limit caller still had a body of its choosing read). `status` is
+  // reachable without a token, so the throttle sits in front of everything.
   if (!(await allow(sb, await callerKey(req, "pay"), MAX_CALLS_PER_HOUR))) {
     return json({ ok: false, error: "too_many_requests" }, 429);
+  }
+
+  if (Number(req.headers.get("content-length") ?? "0") > 16 * 1024) {
+    return json({ ok: false, error: "request too large" }, 413);
+  }
+  let body: Record<string, unknown>;
+  try {
+    const text = await req.text();
+    if (text.length > 16 * 1024) return json({ ok: false, error: "request too large" }, 413);
+    body = JSON.parse(text);
+    if (!body || typeof body !== "object" || Array.isArray(body)) throw new Error("not an object");
+  } catch {
+    return json({ ok: false, error: "invalid JSON" }, 400);
   }
 
   const action = String(body.action ?? "");
@@ -151,11 +158,32 @@ Deno.serve(async (req) => {
       }
 
       // Anything left open but unusable is retired, or the one-open-per-invoice
-      // index will reject the new row.
+      // index will reject the new row. It is closed at Stripe first (22 Oct):
+      // marking it expired here alone left the old link payable, so a client
+      // holding the old and the new link could pay twice.
       if (open) {
-        await sb.from("payments")
+        if (open.provider_session_id) {
+          try {
+            const final = await closeCheckoutSession(open.provider_session_id);
+            if (final === "complete") {
+              return json({
+                ok: false,
+                error: "already_paid_at_stripe",
+                message: "The existing link for this invoice has been paid at Stripe, or a bank transfer through it is under way. Wait for it to be recorded before sending anything new.",
+              }, 409);
+            }
+          } catch (err) {
+            return json({
+              ok: false,
+              error: "could_not_close_old_link",
+              message: `The existing link could not be closed at Stripe (${err instanceof Error ? err.message : String(err)}). Nothing new was created, so the client cannot be charged twice. Try again in a minute.`,
+            }, 502);
+          }
+        }
+        const { error: retireErr } = await sb.from("payments")
           .update({ status: "expired", updated_at: new Date().toISOString() })
           .eq("id", open.id);
+        if (retireErr) return json({ ok: false, error: `could not retire the old link: ${retireErr.message}` }, 500);
       }
 
       const settings = await paymentSettings(sb);
@@ -187,6 +215,7 @@ Deno.serve(async (req) => {
           currency: "usd",
           description,
           invoiceId,
+          paymentId: row.id,
           clientEmail: invoice.client_email,
           successUrl: `${settings.site_url}/?paid=${encodeURIComponent(invoiceId)}`,
           cancelUrl: `${settings.site_url}/?payment_cancelled=${encodeURIComponent(invoiceId)}`,
@@ -196,7 +225,7 @@ Deno.serve(async (req) => {
           idempotencyKey: `pay_${row.id}`,
         });
 
-        await sb.from("payments")
+        const { error: linkErr } = await sb.from("payments")
           .update({
             provider_session_id: session.id,
             checkout_url: session.url,
@@ -206,6 +235,9 @@ Deno.serve(async (req) => {
             updated_at: new Date().toISOString(),
           })
           .eq("id", row.id);
+        // Not fatal: the session carries metadata.payment_id, so the webhook
+        // still finds this row. Logged so the gap is visible.
+        if (linkErr) console.error("session id not saved on payment", row.id, linkErr.message);
 
         return json({
           ok: true,

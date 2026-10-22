@@ -13,10 +13,43 @@
 // one.
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 
+/**
+ * The caller's address, as the platform sees it.
+ *
+ * Measured on 22 Oct with a header echo: Supabase's edge sets
+ * cf-connecting-ip to the real caller and Cloudflare refuses requests that
+ * try to supply it, and it rewrites X-Forwarded-For so the first entry is the
+ * real caller (a forged value is discarded). True-Client-IP, by contrast,
+ * passes through whatever the caller sends, so it is never read here.
+ *
+ * IPv6 is keyed by its /64. One subscriber is routinely handed a whole /64,
+ * so keying on the full address would give a single person 2^64 fresh rate
+ * limit buckets.
+ */
+export function clientIp(req: Request): string {
+  const raw = (req.headers.get("cf-connecting-ip") ??
+    (req.headers.get("x-forwarded-for") ?? "").split(",")[0]).trim();
+  if (!raw) return "unknown";
+  if (!raw.includes(":")) return raw;
+  // Expand "::" just enough to take the first four groups.
+  const [head, tail = ""] = raw.toLowerCase().split("::");
+  const h = head ? head.split(":") : [];
+  const t = tail ? tail.split(":") : [];
+  const groups = raw.includes("::") ? [...h, ...Array(Math.max(0, 8 - h.length - t.length)).fill("0"), ...t] : h;
+  return `${groups.slice(0, 4).map((g) => g || "0").join(":")}::/64`;
+}
+
+/** Salt for hashing addresses: a server secret, never a public constant. */
+export function addressSalt(): string {
+  const s = Deno.env.get("RUN_SECRET") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!s) throw new Error("no server secret available to salt caller addresses");
+  return s;
+}
+
 /** Salted, truncated hash of the caller's address. Never reversible to an IP. */
 export async function callerKey(req: Request, scope: string): Promise<string> {
-  const ip = (req.headers.get("x-forwarded-for") ?? "unknown").split(",")[0].trim();
-  const salt = Deno.env.get("RUN_SECRET") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "rate";
+  const ip = clientIp(req);
+  const salt = addressSalt();
   const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${scope}|${salt}|${ip}`));
   const hex = [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join("");
   return `${scope}:${hex.slice(0, 32)}`;
