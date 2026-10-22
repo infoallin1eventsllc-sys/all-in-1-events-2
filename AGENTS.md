@@ -82,8 +82,6 @@ never reaches the browser. Everything under P0 follows from it.
 
 ### Known and accepted. Do not re-flag unless the PR changes them
 
-- `connect-src https://api.anthropic.com` in both host configs has no caller.
-  It is a recorded dead grant awaiting the owner's decision.
 - `'unsafe-inline'` in `script-src` and `style-src` is required by the inline
   `tailwind.config` block. It is an accepted risk.
 - `cdn.tailwindcss.com` is loaded without a version.

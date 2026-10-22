@@ -30,8 +30,9 @@
     # - img-src: allow images from Google's CDN and data URIs
     # - style-src: allow inline styles (Tailwind), Google Fonts
     # - script-src: allow inline + Tailwind CDN
-    # - connect-src: allow Anthropic API
-    Content-Security-Policy = "default-src 'self'; img-src 'self' https://lh3.googleusercontent.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; connect-src 'self' https://api.anthropic.com"
+    # - connect-src: same origin only. No page calls a third-party API from the
+    #   browser; any AI call belongs in a serverless function, never here.
+    Content-Security-Policy = "default-src 'self'; img-src 'self' https://lh3.googleusercontent.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; connect-src 'self'"
     
     # Permissions policy (formerly Feature Policy)
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
