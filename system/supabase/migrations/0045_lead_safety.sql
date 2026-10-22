@@ -155,8 +155,7 @@ end $function$;
 
 revoke all on function public.cap_lead_followups() from public, anon, authenticated;
 
-drop trigger if exists tasks_cap_lead_followups on public.tasks;
-create trigger tasks_cap_lead_followups
+create or replace trigger tasks_cap_lead_followups
   before insert on public.tasks
   for each row when (new.type = 'follow_up_lead')
   execute function public.cap_lead_followups();

@@ -73,8 +73,7 @@ begin
   return new;
 end $$;
 
-drop trigger if exists messages_sms_consent on public.messages;
-create trigger messages_sms_consent
+create or replace trigger messages_sms_consent
   before insert or update of status on public.messages
   for each row execute function public.require_sms_consent();
 
@@ -107,7 +106,6 @@ end $$;
 
 revoke all on function public.apply_sms_keywords() from public, anon, authenticated;
 
-drop trigger if exists messages_sms_keywords on public.messages;
-create trigger messages_sms_keywords
+create or replace trigger messages_sms_keywords
   after insert on public.messages
   for each row execute function public.apply_sms_keywords();
