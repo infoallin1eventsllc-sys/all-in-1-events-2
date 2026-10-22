@@ -30,11 +30,11 @@ grep -rn "<that-origin>" --include="*.html" --include="*.js" --include="*.ts" . 
 
 **The dead-grant trap, found in Otis's own production config.** Both host
 configs granted `connect-src https://api.anthropic.com`, and nothing in the
-codebase called it. A dead grant is worse than clutter: it is exactly the CSP
-shape you would need if the browser *were* holding an API key, so it removes
-the backstop that would otherwise block an exfiltration attempt or a future
-mistake. **Every origin in a CSP must have a caller in the code. If it has no
-caller, delete it.**
+codebase called it (removed with his approval, 22 Oct 2026). A dead grant is
+worse than clutter: it is exactly the CSP shape you would need if the browser
+*were* holding an API key, so it removes the backstop that would otherwise
+block an exfiltration attempt or a future mistake. **Every origin in a CSP
+must have a caller in the code. If it has no caller, delete it.**
 
 `'unsafe-inline'` in `script-src` defeats most of the XSS protection a CSP
 gives. Sometimes it is genuinely required — an inline `tailwind.config` forces

@@ -88,7 +88,7 @@ Use this checklist before launching to a director, client, or production.
 - [ ] CSP whitelist includes only needed domains:
   - [ ] `https://cdn.tailwindcss.com` (if using CDN)
   - [ ] `https://fonts.googleapis.com` and `https://fonts.gstatic.com`
-  - [ ] `https://api.anthropic.com` (for API calls)
+  - [ ] NOT `https://api.anthropic.com`: the browser must never call it; only server code does
   - [ ] `https://lh3.googleusercontent.com` (for images)
 
 ### Environment Variables
