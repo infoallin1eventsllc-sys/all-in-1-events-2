@@ -9,6 +9,7 @@
 // salted hash of the address for that allowance.
 import { callClaude, extractJson, keyAvailable } from "../_shared/claude.ts";
 import { serviceClient } from "../_shared/supabase.ts";
+import { addressSalt, clientIp } from "../_shared/ratelimit.ts";
 
 const MODEL = "claude-sonnet-5"; // the workhorse tier: plenty for a proposal, priced for a public tool
 const FIELD_MAX = 600;
@@ -153,9 +154,11 @@ const jsonFor = (origin: string) => (body: unknown, status = 200) =>
   });
 
 async function ipHash(req: Request): Promise<string> {
-  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() ||
-    req.headers.get("cf-connecting-ip") || "unknown";
-  const salt = Deno.env.get("RUN_SECRET") ?? "planner";
+  // The shared, measured address source, and a server secret as the salt. The
+  // old fallback salt was the word "planner", which made the stored hash of an
+  // IPv4 address trivially reversible, contrary to the privacy policy.
+  const ip = clientIp(req);
+  const salt = addressSalt();
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${salt}:${ip}`));
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
@@ -343,7 +346,8 @@ async function sendPlan(
         name: name || null, email: email || null, phone: phone || null, company: company || null,
         message,
         source: "meridian-website:stack-planner",
-        consent_email: !!email,
+        // No consent_email: leaving an address on the planner is a request
+        // for this plan, not a marketing sign-up (22 Oct review).
       }),
     });
     const out = await res.json().catch(() => ({}));

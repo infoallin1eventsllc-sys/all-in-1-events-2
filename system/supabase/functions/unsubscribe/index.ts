@@ -82,16 +82,28 @@ Deno.serve(async (req) => {
 
   const sb = sbGate;
   const { data: contact } = await sb
-    .from("contacts").select("id, email, consent_email").eq("id", contactId).maybeSingle();
+    .from("contacts").select("id, email, consent_email, email_opted_out_at").eq("id", contactId).maybeSingle();
 
   if (!contact) {
     return json({ ok: true, unsubscribed: true, note: "contact no longer exists" });
   }
 
-  if (contact.consent_email) {
-    await sb.from("contacts")
-      .update({ consent_email: false })
+  // The opt-out is its own record, not just consent_email = false. Since 0045
+  // a booking no longer signs anyone up, so false is everyone's starting
+  // point, and replies to a person's own enquiry still go to them. Keyed on
+  // consent_email, a lead who unsubscribed from such a reply would have been
+  // told "already done" and kept getting them (22 Oct review).
+  const already = !!contact.email_opted_out_at;
+  if (!already) {
+    const { error: optOutErr } = await sb.from("contacts")
+      .update({ consent_email: false, email_opted_out_at: new Date().toISOString() })
       .eq("id", contactId);
+    // The one write here that must not fail quietly: report it, so the person
+    // is not told it worked when it did not.
+    if (optOutErr) {
+      console.error("unsubscribe write failed:", optOutErr.message);
+      return json({ ok: false, error: "try_again", message: "That did not save. Please try the link again in a minute, or reply to the email and ask to be removed." }, 503);
+    }
 
     // Logged so the reason a contact stopped receiving mail is visible in the
     // CRM rather than being an unexplained flag.
@@ -108,7 +120,7 @@ Deno.serve(async (req) => {
   return json({
     ok: true,
     unsubscribed: true,
-    already: !contact.consent_email,
+    already,
     message:
       "Done. You will not receive marketing email from Meridian Interface. Messages about work in progress, such as a booking confirmation or an invoice, are not affected.",
   });

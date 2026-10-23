@@ -44,6 +44,13 @@ async function ownerEmail(sb: SupabaseClient): Promise<string> {
   return (s.email ?? "").trim() || DEFAULT_OWNER_EMAIL;
 }
 
+/** A booking name fit for a subject line: letters, spaces, apostrophes,
+ *  hyphens and dots, at most 60 characters; anything else reads "a client". */
+function subjectName(name: unknown): string {
+  const n = String(name ?? "").replace(/\s+/g, " ").trim();
+  return /^[\p{L}][\p{L} .'\u2019-]{0,59}$/u.test(n) && !/https?|www\.|\.[a-z]{2,}\b/i.test(n) ? n : "a client";
+}
+
 // deno-lint-ignore no-explicit-any
 function alertBody(contact: any, activity: any): string {
   const payload = contact?.meta?.raw?.payload ?? {};
@@ -122,7 +129,11 @@ Deno.serve(async (req) => {
   for (const activity of pending) {
     const contact = byId.get(String(activity.contact_id));
     const body = alertBody(contact, activity);
-    const subject = `New booking — ${contact?.full_name ?? "a client"} sent their saved list`;
+    // The name is whatever the booking form was given, so it is not allowed to
+    // carry a link or anything else into the subject line of an email that
+    // arrives looking like the studio's own (22 Oct test: a name of
+    // "Visit http://evil.example now" went straight into it).
+    const subject = `New booking — ${subjectName(contact?.full_name)} sent their saved list`;
 
     const res = await sendEmail({ to, subject, body });
 

@@ -8,6 +8,7 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { getSetting } from "./supabase.ts";
 import { sendEmail } from "./email.ts";
+import { clientIp } from "./ratelimit.ts";
 
 const DEFAULT_OWNER_EMAIL = "otis@meridianinterface.com";
 
@@ -21,8 +22,14 @@ const KNOWN_DEVICE_DAYS = 30;
  * owner_login_attempts, so old rows and new ones describe the same devices.
  */
 export async function clientHash(req: Request): Promise<string> {
-  const ip = (req.headers.get("x-forwarded-for") ?? "unknown").split(",")[0].trim();
-  const salt = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "salt";
+  // Same address source as the rate limiter (see clientIp: measured, cannot be
+  // forged). For IPv4 this is the same value as before, so existing device
+  // hashes still match; an IPv6 device is now its /64, so it is seen as new
+  // once. The salt is required: a public constant would make the hash
+  // reversible for every IPv4 address.
+  const ip = clientIp(req);
+  const salt = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!salt) throw new Error("SUPABASE_SERVICE_ROLE_KEY missing: cannot salt device hashes");
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${salt}|${ip}`));
   return btoa(String.fromCharCode(...new Uint8Array(digest)))
     .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "").slice(0, 32);

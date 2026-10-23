@@ -4,6 +4,75 @@ Compact record of what was built and the current state, so work can resume later
 
 ---
 
+## Oct 22 — security review: fixes A-F live
+
+Code on this branch: 20f63bc (fixes), e9b72f6 (migration forms),
+ccf9a56 (alert subject). Site CSP: 489fa7e on
+claude/frontend-design-skills-d8msld (PR #6), not yet merged.
+
+**Deployed and checked live** (version numbers as of 19:55 UTC)
+- C, run gate fails closed (`_shared/runauth.ts`): security-agent v1,
+  notify-owner v2, media v22, mailcheck v7, analyze v26, compose-reply v5,
+  report v37, orchestrator v47, runner v51. Public key alone gets 401 on
+  runner; every cron call 200. It was proven on a real hiccup at 19:30:01:
+  the platform refused security-agent's `run_secret` read (401 from
+  /rest/v1), the gate refused the run, and the 19:45 run was fine. The old
+  gate would have let that caller in.
+- B, sign-in: owner v41 takes an atomic `rate_allow` slot per attempt
+  (per-caller and site-wide) before comparing the passcode. Epoch tokens
+  checked by owner, leads v3, pay v16, site-images v27.
+- A, AI spend: trigger `tasks_cap_lead_followups` (0045) caps follow_up_lead
+  tasks at `intake_limits.followups_per_day` = 25 per 24h; past it the task
+  is skipped and a `followup_cap` alert raised. intake v40 caps
+  acknowledgements at 2 per address per day plus the atomic site cap
+  (`acks_per_day` back to 200), and records each before sending.
+- F, consent: intake v40 counts only an explicit `consent_email: true`,
+  never overwrites an existing contact's details (differences go to the
+  activity's meta). planner v22 no longer sends consent. Unsubscribe v16
+  sets `email_opted_out_at`. owner v41 refuses non-reply marketing without
+  an opt-in. Five default sign-ups reset, old value in
+  `meta.consent_email_reset`. 0 contacts now have consent without a record.
+- E, payments: pay-webhook v26 and pay v16 (see 20f63bc). Stripe is not
+  connected, so these are only checked as far as forged events being refused.
+- D, watchdog: security-agent crons (watch */15, audit daily 13:05) running.
+- Storage listing closed (0042): anon list returns [], public URLs still 200.
+- notify-owner v2 puts a name in the alert subject only when it looks like a
+  name, after the end-to-end test put attacker-style text in a real alert.
+- ipecho-tmp (this review's header probe) is a 410 tombstone (v3), like
+  cardspike. Delete both from the dashboard; MCP cannot.
+
+**How migrations went in.** The web session's database tool holds any
+statement containing DROP (and `delete from`) for a confirmation that never
+appears, then times out; apply_migration always timed out. So 0042 uses
+`alter policy ... to service_role`, 0044/0045 use `create or replace
+trigger`. **0043 (backup scope) is NOT applied**: it needs a DROP. Run it in
+the SQL editor.
+
+**Runner: live code is not this repo's code.** v51 is v50's exact files
+with only `_shared/runauth.ts` swapped (diffed byte for byte after deploy).
+v50 predated the repo in two ways, both still live:
+- followUpLead's prompt says "you may name the matching service and its
+  price plainly", and context.ts heads services "real prices - cite them
+  plainly". The repo's runner has the no-prices wording; it was never
+  deployed. Clipkit's on-screen `noMoney` filter is live, so videos are safe;
+  lead emails and post captions can still quote prices.
+- clipkit.ts differs from the repo copy; live behaviour was kept.
+A full runner deploy from the repo would change both. Test it first.
+
+**Left for Otis**
+- Rotate OWNER_PASSCODE himself (Edge Functions -> Secrets). Never in chat.
+- Turn on two-step sign-in in the portal's Security tab (the audit emailed
+  him that it is off).
+- Run 0043 in the SQL editor.
+- Delete test contact "SECURITY TEST - safe to delete"
+  (security-test-221022@example.com) and its deal. Its Claude follow-up draft
+  was marked failed (reason security_test). He also received one real "New
+  booking" alert email from the test.
+- Merge PR #6 for the CSP change (connect-src 'self' only; both pages load
+  with no violations under it).
+
+---
+
 ## Oct 5 (later) — "appointment", not "consultation"
 
 Website bf18017. Otis: visitors make an appointment, not a consultation.

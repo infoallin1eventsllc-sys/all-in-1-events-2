@@ -86,6 +86,41 @@ const cap = (v: unknown, n: number): string =>
 /** Shape check only — deliverability is SendGrid's problem, not ours. */
 const looksLikeEmail = (v: string) => /^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(v);
 
+/** Largest request body accepted. A real booking is about 2 KB. */
+const MAX_BODY_BYTES = 32 * 1024;
+
+/** Acknowledgements one address can receive in a day, whoever asks for them. */
+const ACKS_PER_ADDRESS_PER_DAY = 2;
+
+/* ------------------------------------------------- what reaches the email --
+   The acknowledgement goes to whatever address the caller typed, from
+   Meridian's own domain. Until 22 Oct its subject and body carried the
+   caller's preferredDate and preferredTimeSlot verbatim, so anyone could
+   write their own sentence into mail sent as Meridian, to anyone. Now the only
+   caller-supplied pieces that reach it are these three, each checked against
+   the exact shape the booking form produces; anything else is left out of the
+   email (it is still kept on the booking for the owner to read). */
+
+/** A real calendar date in the form's YYYY-MM-DD, or null. */
+function bookingDate(v: unknown): string | null {
+  const s = String(v ?? "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const d = new Date(`${s}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s ? s : null;
+}
+
+/** "10:00 AM - 11:00 AM EST" or "To be arranged", as the form sends; else null. */
+function bookingSlot(v: unknown): string | null {
+  const s = String(v ?? "").trim();
+  return s === "To be arranged" || /^\d{2}:\d{2} (AM|PM) - \d{2}:\d{2} (AM|PM) [A-Z]{2,4}$/.test(s) ? s : null;
+}
+
+/** First name for the greeting: one word of letters, apostrophes, hyphens. */
+function greetingName(fullName: string | null): string {
+  const w = String(fullName ?? "").trim().split(/\s+/)[0] ?? "";
+  return /^\p{L}[\p{L}'\u2019-]{0,39}$/u.test(w) ? w : "there";
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ ok: false, error: "POST only" }, 405);
@@ -113,16 +148,29 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Bounded before it is read. A caller otherwise chooses how much memory one
+  // request takes, before any of the field caps below get a say.
+  if (Number(req.headers.get("content-length") ?? "0") > MAX_BODY_BYTES) {
+    return json({ ok: false, error: "request too large" }, 413);
+  }
   let raw: Record<string, unknown>;
   try {
-    raw = await req.json();
+    const text = await req.text();
+    if (text.length > MAX_BODY_BYTES) return json({ ok: false, error: "request too large" }, 413);
+    raw = JSON.parse(text);
   } catch {
     return json({ ok: false, error: "invalid JSON" }, 400);
+  }
+  // `null`, a number or an array is valid JSON and used to crash the lines
+  // below with a 500.
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return json({ ok: false, error: "expected a JSON object" }, 400);
   }
 
   // Unwrap the { type, payload } envelope the site uses; else treat as flat.
   const isEnvelope = !!raw && typeof raw === "object" && "payload" in raw && typeof raw.payload === "object";
   const p = (isEnvelope ? raw.payload : raw) as Record<string, unknown>;
+  if (!p || Array.isArray(p)) return json({ ok: false, error: "expected a JSON object" }, 400);
   const kind = String((raw.type ?? "") as string);
   const isAppointment = kind === "appointment";
 
@@ -139,12 +187,14 @@ Deno.serve(async (req) => {
   const source = cap(p.source ?? (isAppointment ? "meridian-website:booking" : "meridian-website"), 120);
 
   // Build a readable message. For bookings, summarise the request.
+  const preferredDate = bookingDate(p.preferredDate);
+  const preferredSlot = bookingSlot(p.preferredTimeSlot);
   let message = cap(p.message ?? p.details ?? p.notes ?? "", CAP.message) || null;
   if (isAppointment) {
     const parts = [
       cap(p.serviceTitle ?? p.serviceType ?? "", 120),
-      p.preferredDate ? `on ${cap(p.preferredDate, 40)}` : null,
-      cap(p.preferredTimeSlot ?? "", 60),
+      preferredDate ? `on ${preferredDate}` : null,
+      preferredSlot,
       // "Not discussed" is the honest default now that no budget is asked for
       // at booking; printing it back adds a line that says nothing.
       p.budgetRange && !/^not discussed$/i.test(String(p.budgetRange).trim())
@@ -173,32 +223,78 @@ Deno.serve(async (req) => {
     }
   })();
 
-  // Upsert on email when present; otherwise insert a fresh contact.
+  // Match on email when present; otherwise insert a fresh contact.
   let contactId: string | undefined;
+  let existing: {
+    id: string; full_name: string | null; phone: string | null; company: string | null;
+    meta: Record<string, unknown> | null;
+  } | null = null;
   if (email) {
-    const { data: existing } = await sb.from("contacts").select("id").eq("email", email).maybeSingle();
-    contactId = existing?.id;
+    const { data } = await sb.from("contacts").select("id, full_name, phone, company, meta")
+      .eq("email", email).maybeSingle();
+    existing = data;
+    contactId = data?.id;
   }
+
+  // What this submission says that differs from the record, kept on the
+  // activity so the owner can see it. Nothing on the record is replaced.
+  const differs: Record<string, string> = {};
+
   if (!contactId) {
+    // Marketing email and texts are opt-in: only an explicit `true` from the
+    // form counts. A booking used to sign everyone with an email address up
+    // (`consent_email ?? !!email`), which is not consent (22 Oct review). A
+    // reply to the person's own enquiry does not need it; 0045 allows that.
+    const optInEmail = p.consent_email === true;
+    const optInSms = p.consent_sms === true;
     const { data, error } = await sb.from("contacts").insert({
       full_name: fullName, email, phone, company, source,
       lifecycle_stage: "lead",
-      consent_email: Boolean(p.consent_email ?? !!email),
-      consent_sms: Boolean(p.consent_sms ?? false),
-      meta: { message, raw: rawKept },
+      consent_email: optInEmail,
+      consent_sms: optInSms,
+      meta: {
+        message, raw: rawKept,
+        ...(optInEmail || optInSms
+          ? { consent_recorded: { email: optInEmail, sms: optInSms, at: new Date().toISOString(), via: source } }
+          : {}),
+      },
     }).select("id").single();
-    if (error) return json({ ok: false, error: error.message }, 500);
+    if (error) {
+      console.error("contact insert failed:", error.message);
+      return json({ ok: false, error: "We could not save that just now. Please try again, or email otis@meridianinterface.com." }, 500);
+    }
     contactId = data.id;
-  } else {
-    await sb.from("contacts").update({
-      full_name: fullName ?? undefined, phone: phone ?? undefined, company: company ?? undefined,
-      meta: { message, raw: rawKept },
+  } else if (existing) {
+    // A public form keyed on an email address cannot prove who is typing.
+    // Until 22 Oct anyone who knew a client's address could replace that
+    // client's name, phone and company, and wipe everything else in meta
+    // (including an SMS opt-out). Now: blanks are filled, nothing is
+    // overwritten, consent is left alone, and meta is merged, not replaced.
+    // The latest submission is still kept as meta.message / meta.raw, which
+    // the booking alert and the saved-list reply read.
+    const fill: Record<string, unknown> = {};
+    const compare = { full_name: fullName, phone, company } as const;
+    for (const [k, v] of Object.entries(compare)) {
+      const onFile = existing[k as keyof typeof compare];
+      if (!v) continue;
+      if (!onFile) fill[k] = v;
+      else if (onFile !== v) differs[k] = v;
+    }
+    const { error: updErr } = await sb.from("contacts").update({
+      ...fill,
+      meta: { ...(existing.meta ?? {}), message, raw: rawKept },
     }).eq("id", contactId);
+    if (updErr) console.error("contact update failed:", updErr.message);
   }
 
   await sb.from("activities").insert({
     contact_id: contactId, type: isAppointment ? "booking" : "note", direction: "inbound",
-    subject: isAppointment ? "New booking request" : "New inquiry", body: message, meta: { source },
+    subject: isAppointment ? "New booking request" : "New inquiry", body: message,
+    meta: {
+      source,
+      ...(existing ? { returning_contact: true } : {}),
+      ...(Object.keys(differs).length ? { submitted_details_differ: differs } : {}),
+    },
   });
 
   // For a booking, also open a deal in the pipeline.
@@ -211,18 +307,20 @@ Deno.serve(async (req) => {
     // silence. The client got a confirmation, the contact and activity were
     // written, and the studio simply never got the pipeline entry. Blank
     // means null.
-    const eventDate = cap(p.preferredDate ?? "", 40) || null;
+    // Anything that is not a real date is null too (22 Oct), and every text
+    // field is capped like the contact fields above.
+    const eventDate = preferredDate;
     const { data: deal, error: dealErr } = await sb.from("deals").insert({
       contact_id: contactId,
-      title: String(p.serviceTitle ?? p.serviceType ?? "Design project"),
+      title: cap(p.serviceTitle ?? p.serviceType ?? "", 120) || "Design project",
       stage: "quoted",
       amount,
       event_date: eventDate,
       details: {
-        service_type: p.serviceType ?? null,
-        time_slot: p.preferredTimeSlot ?? null,
-        budget_range: p.budgetRange ?? null,
-        appointment_id: p.id ?? null,
+        service_type: cap(p.serviceType ?? "", 120) || null,
+        time_slot: preferredSlot,
+        budget_range: cap(p.budgetRange ?? "", 60) || null,
+        appointment_id: cap(p.id ?? "", 80) || null,
       },
     }).select("id").single();
     // Never silent again. The booking itself is already saved, so this must
@@ -247,33 +345,41 @@ Deno.serve(async (req) => {
   if (email) {
     try {
       const recent = new Date(Date.now() - 10 * 60_000).toISOString();
-      const { count: alreadySent } = await sb
-        .from("messages")
-        .select("id", { count: "exact", head: true })
-        .eq("contact_id", contactId)
-        .eq("meta->>reason", "booking_confirmation")
-        .gte("created_at", recent);
-
-      // A ceiling the whole site shares, not just this caller. The per-address
-      // limit above stops one machine; this stops a thousand of them, and it is
-      // the difference between a bad afternoon and a burned sending domain.
       const dayAgo = new Date(Date.now() - 24 * 60 * 60_000).toISOString();
-      const { count: sentToday } = await sb
-        .from("messages")
-        .select("id", { count: "exact", head: true })
-        .eq("meta->>reason", "booking_confirmation")
-        .gte("created_at", dayAgo);
-      const underDailyCap = (sentToday ?? 0) < limits.acksPerDay;
+      const [toThisAddress, toThisAddressToday, toEveryoneToday] = await Promise.all([
+        sb.from("messages").select("id", { count: "exact", head: true })
+          .eq("contact_id", contactId).eq("meta->>reason", "booking_confirmation").gte("created_at", recent),
+        // Per address, not per contact: a fake booking chooses the recipient,
+        // so one inbox must not be able to collect a stream of these.
+        sb.from("messages").select("id", { count: "exact", head: true })
+          .eq("to_addr", email).eq("meta->>reason", "booking_confirmation").gte("created_at", dayAgo),
+        // A ceiling the whole site shares, not just this caller. The
+        // per-address limit above stops one machine; this stops a thousand of
+        // them, and it is the difference between a bad afternoon and a
+        // burned sending domain.
+        sb.from("messages").select("id", { count: "exact", head: true })
+          .eq("meta->>reason", "booking_confirmation").gte("created_at", dayAgo),
+      ]);
+      const underDailyCap = (toEveryoneToday.count ?? 0) < limits.acksPerDay;
 
-      // A double-submitted form should not send two confirmations.
-      if (!alreadySent && underDailyCap) {
+      // A double-submitted form should not send two confirmations. Every count
+      // must have been read: a failed count is not a zero.
+      const countsRead = !toThisAddress.error && !toThisAddressToday.error && !toEveryoneToday.error;
+      const due = countsRead && !toThisAddress.count &&
+        (toThisAddressToday.count ?? 0) < ACKS_PER_ADDRESS_PER_DAY && underDailyCap &&
+        // The counts above are read and then written, so a parallel burst
+        // could all read "room left". This slot is taken atomically, which
+        // makes the daily cap hold whatever the timing.
+        await allow(sb, "intake-acks", limits.acksPerDay, "1 day");
+
+      if (due) {
         const profile = await sb.from("settings").select("value").eq("key", "business_profile").maybeSingle();
         const studio = String((profile.data?.value as { name?: string } | null)?.name ?? "Meridian Interface");
         const website = String((profile.data?.value as { website?: string } | null)?.website ?? "");
 
-        const first = String(fullName ?? "").trim().split(/\s+/)[0] || "there";
-        const when = isAppointment && p.preferredDate
-          ? `${p.preferredDate}${p.preferredTimeSlot ? ` at ${p.preferredTimeSlot}` : ""}`
+        const first = greetingName(fullName);
+        const when = isAppointment && preferredDate
+          ? `${preferredDate}${preferredSlot && preferredSlot !== "To be arranged" ? ` at ${preferredSlot}` : ""}`
           : "";
 
         const subject = isAppointment
@@ -301,29 +407,46 @@ Deno.serve(async (req) => {
         // save his contact. The card is the first thing a new client gets.
         const body = withSignature(bodyText);
 
-        const res = await sendEmail({ to: email, subject, body });
-
-        // Recorded either way, and honestly: `sent` only when a provider took
-        // it. With no provider configured this is a draft that says why.
-        await sb.from("messages").insert({
+        // Recorded BEFORE it is sent (22 Oct). It used to be sent and then
+        // recorded, with the insert's result unchecked: a refused insert meant
+        // an email nobody could see, and the caps above, which count these
+        // rows, never counted it. No row, no send.
+        const { data: ack, error: ackErr } = await sb.from("messages").insert({
           contact_id: contactId,
           channel: "email",
           direction: "outbound",
           to_addr: email,
           subject,
           body,
-          status: res.ok && !res.mocked ? "sent" : "draft",
-          sent_at: res.ok && !res.mocked ? new Date().toISOString() : null,
-          meta: {
-            reason: "booking_confirmation",
-            mocked: res.mocked,
-            automatic: true,
-            ...(res.mocked
-              ? { not_connected: "no email provider connected — set SENDGRID_API_KEY and SENDGRID_FROM_EMAIL" }
-              : {}),
-            ...(res.error ? { error: res.error } : {}),
-          },
-        });
+          status: "draft",
+          meta: { reason: "booking_confirmation", automatic: true, sending: true },
+        }).select("id").single();
+
+        if (ackErr || !ack) {
+          console.error("booking confirmation not recorded, so not sent:", ackErr?.message ?? "no row");
+        } else {
+          const res = await sendEmail({ to: email, subject, body });
+          const sent = res.ok && !res.mocked;
+          // Honest either way: `sent` only when a provider took it, `failed`
+          // when one refused it, and a draft that says why when none is set.
+          const { error: updErr } = await sb.from("messages").update({
+            status: sent ? "sent" : res.mocked ? "draft" : "failed",
+            sent_at: sent ? new Date().toISOString() : null,
+            provider: res.provider ?? null,
+            provider_id: res.providerId ?? null,
+            error: sent || res.mocked ? null : (res.error ?? "send failed"),
+            meta: {
+              reason: "booking_confirmation",
+              mocked: res.mocked,
+              automatic: true,
+              ...(res.mocked
+                ? { not_connected: "no email provider connected — set SENDGRID_API_KEY and SENDGRID_FROM_EMAIL" }
+                : {}),
+              ...(res.error ? { error: res.error } : {}),
+            },
+          }).eq("id", ack.id);
+          if (updErr) console.error("booking confirmation status not saved:", updErr.message);
+        }
       }
     } catch (err) {
       // Logged, never raised: the booking is already safe.
@@ -331,7 +454,9 @@ Deno.serve(async (req) => {
     }
   }
 
-  // Queue a follow-up (deduped so repeat submissions don't stack).
+  // Queue a follow-up (deduped so repeat submissions don't stack). Each one
+  // is a Claude call, so 0045 also caps how many a day can be queued, in the
+  // database, where the orchestrator's follow-ups meet the same cap.
   await sb.from("tasks").upsert(
     { type: "follow_up_lead", payload: { contact_id: contactId }, priority: 50, dedupe_key: `follow_up_lead:${contactId}` },
     { onConflict: "dedupe_key", ignoreDuplicates: true },

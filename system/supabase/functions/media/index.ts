@@ -22,7 +22,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { serviceClient } from "../_shared/supabase.ts";
 import { json, corsHeaders } from "../_shared/cors.ts";
-import { authorizedRun } from "../_shared/runauth.ts";
+import { authorizedRun, isServiceRoleCaller } from "../_shared/runauth.ts";
 
 const BUCKET = "social-videos";
 const MAX_BYTES = 200 * 1024 * 1024;
@@ -49,8 +49,10 @@ async function sha256(bytes: Uint8Array): Promise<string> {
   return Array.from(new Uint8Array(d)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function fetchInto(sb: ReturnType<typeof serviceClient>, url: string, path: string, declared?: string) {
-  const r = await fetch(url);
+async function fetchInto(
+  sb: ReturnType<typeof serviceClient>, url: string, path: string, declared?: string, replace = false,
+) {
+  const r = await fetch(url, { signal: AbortSignal.timeout(120_000) });
   if (!r.ok) throw new Error(`${r.status} fetching ${url.slice(0, 80)}`);
   const type = (declared ?? r.headers.get("content-type") ?? "application/octet-stream").split(";")[0].trim();
   const ext = EXT[type];
@@ -59,8 +61,15 @@ async function fetchInto(sb: ReturnType<typeof serviceClient>, url: string, path
   if (bytes.length === 0) throw new Error("fetched an empty file");
   if (bytes.length > MAX_BYTES) throw new Error(`file is ${bytes.length} bytes; limit is ${MAX_BYTES}`);
   const full = `${path}.${ext}`;
-  const up = await sb.storage.from(BUCKET).upload(full, bytes, { contentType: type, upsert: true, cacheControl: "31536000" });
-  if (up.error) throw new Error(`upload: ${up.error.message}`);
+  // Never overwrites unless asked to by the operator (22 Oct). The bucket is
+  // public and its files are what the site and the posts show, so an
+  // unchecked upsert let any run-secret caller swap a published file in place.
+  const up = await sb.storage.from(BUCKET).upload(full, bytes, { contentType: type, upsert: replace, cacheControl: "31536000" });
+  if (up.error) {
+    throw new Error(replace || !/exists|duplicate/i.test(up.error.message)
+      ? `upload: ${up.error.message}`
+      : `upload: ${full} already exists. Use a new slug, or have the operator re-ingest with "replace": true`);
+  }
   return {
     url: sb.storage.from(BUCKET).getPublicUrl(full).data.publicUrl,
     bytes: bytes.length,
@@ -140,7 +149,9 @@ Deno.serve(async (req) => {
       ok: true,
       configured: true,
       key_length: key.length,
-      key_prefix: key.slice(0, 8),
+      // No prefix: eight characters of a secret in a response is eight
+      // characters fewer to guess, and the length plus the verdict below are
+      // enough to diagnose a pasting mistake (22 Oct).
       had_whitespace: raw !== key || /\s/.test(key),
       clipkit_status: res.status,
       verdict: res.status === 404 ? "key accepted" : res.status === 401 ? "key rejected" : `unexpected ${res.status}`,
@@ -157,18 +168,23 @@ Deno.serve(async (req) => {
   const description = String(body.description ?? "").slice(0, 2000);
   const tags = Array.isArray(body.tags) ? body.tags.map(String).slice(0, 30) : [];
   const meta = (body.meta && typeof body.meta === "object") ? body.meta as Record<string, unknown> : {};
-  const approvedBy = body.approved_by === "owner" ? "owner" : null;
+  // Owner approval and in-place replacement are the operator's to give, never
+  // the scheduler's: the run secret is what the agent-driven cron path holds,
+  // and an agent must not be able to approve its own media (22 Oct).
+  const operator = isServiceRoleCaller(req);
+  const approvedBy = body.approved_by === "owner" && operator ? "owner" : null;
+  const replace = body.replace === true && operator;
   if (!/^https:\/\//.test(url)) return json({ ok: false, error: "url must be https" }, 400);
   if (!slug) return json({ ok: false, error: "slug required" }, 400);
 
   try {
-    const file = await fetchInto(sb, url, `library/${slug}`, body.content_type ? String(body.content_type) : undefined);
+    const file = await fetchInto(sb, url, `library/${slug}`, body.content_type ? String(body.content_type) : undefined, replace);
 
     let posterUrl: string | null = null;
     const posterSrc = String(body.poster_url ?? "").trim();
     if (/^https:\/\//.test(posterSrc)) {
       try {
-        posterUrl = (await fetchInto(sb, posterSrc, `library/${slug}-poster`)).url;
+        posterUrl = (await fetchInto(sb, posterSrc, `library/${slug}-poster`, undefined, replace)).url;
       } catch (err) {
         // A missing poster is cosmetic. Record why so it is not a mystery.
         meta.poster_error = err instanceof Error ? err.message : String(err);
