@@ -1,6 +1,6 @@
 ---
 name: dashboard-design
-description: "How Otis's dashboards are built, on every project — load it whenever a dashboard, admin panel, analytics or reporting view, KPI screen, ops console or portal overview is being built, redesigned or reviewed. It holds: the default 'command center' look (near-black navy, off-white labels, one cyan accent, glow only on active state) with contrast-checked tokens, and how to carry it onto a brand that already has tokens; the anatomy every dashboard ships with; the behaviour that separates a working dashboard from a mockup (one filter state moving every number, CSV of exactly what is filtered, four states per panel, no dead controls, sample data labelled); the motion and optional-3D limits; the phone layout; and the done-check. Charts inside it go through the dataviz skill. Skip it for marketing pages and heroes (cinematic-web) and for a lone chart with no screen around it (dataviz alone)."
+description: "How Otis's dashboards are built, on every project — load it whenever a dashboard, admin panel, analytics or reporting view, KPI screen, ops console or portal overview is being built, redesigned or reviewed. It holds: the default 'command center' look (near-black navy, off-white labels, one cyan accent, glow only on active state) with contrast-checked tokens, and how to carry it onto a brand that already has tokens; the anatomy every dashboard ships with; the behaviour that separates a working dashboard from a mockup (one filter state moving every number, CSV of exactly what is filtered, four states per panel, no dead controls, sample data labelled); the opt-in clickable 3D world view of a business and its rules; motion limits; the phone layout; and the done-check. Charts inside it go through the dataviz skill. Skip it for marketing pages and heroes (cinematic-web) and for a lone chart with no screen around it (dataviz alone)."
 ---
 
 # Dashboard design
@@ -48,11 +48,11 @@ Starting tokens, each checked for WCAG AA against all three surfaces:
   reflex.
 - **Geometry:** cards 8–12px radius, chips and filters as pills, 8-point
   spacing at dense settings. Hover lifts 2–3px; selection is border plus ring.
-- **A 3D element is optional and decorative.** An orbital or globe scene can
-  be the one memorable move, but no number may live only inside it. Lazy-load
-  it, cap the pixel ratio, pause it when the tab is hidden, show a static image
-  instead under reduced motion, and keep the dashboard fully usable with WebGL
-  off. Default is no 3D until someone asks for it.
+- **3D is opt-in.** Default is none. A small decorative scene (an orbit, a
+  globe) can be the one memorable move; a clickable 3D world of the business
+  is its own view with the rules below. Either way, no number lives only in
+  the canvas: lazy-load it, cap the pixel ratio, pause it when the tab is
+  hidden, and keep the dashboard fully usable with WebGL off.
 
 ## Anatomy
 
@@ -91,6 +91,40 @@ A checklist, not a mandate: drop any part the data cannot fill.
    form (12.4K) on cards with the exact value in the tooltip and table.
 7. **Data comes from the back end.** No API key in the browser; reads go
    through an edge function or RLS-scoped queries (`meridian-auth`).
+
+## 3D world view (only when asked)
+
+A clickable scene where the business is the picture: shelves for a store,
+delivery vans for a delivery brand, the counter for a coffee shop, stages,
+bars and lounges for an event. Click an object, see its numbers. It is a
+showpiece for a pitch, a client overview or a reel. A plain chart is faster
+for daily decisions, so this view sits on top of the plain dashboard, never
+in place of it.
+
+- **Build it with Three.js**, pinned to a version, through an import map on a
+  no-build project. For a quick look in chat, the Three.js 3D Viewer
+  connector; for a scene from a photo or floor plan, `img2threejs`.
+- **Choose the metaphor first.** The scene should look like what the
+  business does; generic floating boxes waste the idea. Keep it low-poly.
+- **Same data, same state.** The scene reads the same filtered data as the
+  plain view, and clicking an object opens the same detail drawer a table
+  row opens. Every clickable object is also in an HTML list beside the
+  canvas, so keyboard and screen-reader users get the same numbers. Labels
+  are HTML overlays, not text drawn into the scene.
+- **Motion carries data or stops.** A van that moves because a delivery is
+  in transit earns it; idle spinning does not. Reduced motion gets a still
+  scene; a hidden tab pauses the render loop.
+- **One object, one real number, end to end, first.** Put today's revenue on
+  the storefront and check it against the source before wiring anything
+  else. Wiring the whole business at once is where these builds stall.
+- **A connector is not a live feed.** Connecting Shopify or Square to Claude
+  lets Claude read the data while building. The published page needs its own
+  read path: a server function holding a read-only key (`meridian-auth`),
+  never a key in the browser. Without one the numbers are a snapshot: label
+  them "Snapshot · <date>", not "Live".
+- **Real revenue sits behind a login.** Never a public link.
+- **Scope it as a build, not a prompt.** A data connection plus a custom
+  scene is real work, and the plain dashboard underneath is part of the job.
 
 ## Motion
 
@@ -133,7 +167,7 @@ Run the page and confirm every line before calling it finished:
 - [ ] Click every control: none is decorative.
 - [ ] 360px wide: no sideways page scroll, drawer works, table scrolls in place.
 - [ ] Keyboard only: reach and sort the table, open and close the drawer.
-- [ ] Reduced motion on: nothing animates. WebGL off (if there is 3D): nothing is lost.
+- [ ] Reduced motion on: nothing animates. WebGL off (if there is 3D): nothing is lost, and every 3D object's numbers are reachable from the HTML list.
 - [ ] Console clean; "Sample data" visible if the data is not real.
 - [ ] Squint, grayscale, phone, stranger (`awesome-design`).
 
@@ -146,3 +180,9 @@ behaviour and the accessibility floor. Dropped: pasting into ChatGPT and
 publishing to tiiny.host. Changed: translucent panels became chrome-only
 (`apple-interface`), and the palette was contrast-checked, which lifted the
 faint label grey to `#8590A4`.
+
+The 3D world view comes from @valeridoesai's TikTok on 3D business
+dashboards and her linked guide (noocap on Notion), read 25 Oct 2026. Kept
+its own caveats: showpiece rather than daily driver, one metric first, a
+scene that matches the business. Tightened its key advice to Otis's rule:
+keys stay on the server, never in the browser.
