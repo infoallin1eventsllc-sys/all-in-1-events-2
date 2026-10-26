@@ -1,0 +1,67 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:HK;src:url(fonts/hk.woff2) format('woff2');font-weight:100 900}
+@font-face{font-family:In;src:url(fonts/inter.woff2) format('woff2');font-weight:100 900}
+html,body{margin:0;background:transparent;width:1080px;height:1920px;overflow:hidden;font-family:In}
+.el{position:absolute;opacity:0}
+.card{background:#fff;border-radius:22px;box-shadow:0 30px 70px rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;overflow:hidden}
+#slide1{left:30px;top:280px;width:920px;height:485px}#slide1 img{height:400px}
+#slide2{left:15px;top:450px;width:457px;height:480px}#slide2 img{width:400px}
+#search{left:15px;top:450px;width:457px;height:480px;background:#0b1220;border-radius:22px;padding:24px;box-sizing:border-box;box-shadow:0 30px 70px rgba(0,0,0,.55)}
+.sbar{background:#fff;border-radius:999px;height:58px;display:flex;align-items:center;padding:0 20px;gap:14px;font:600 23px In;color:#0f172a}
+.sbar .ic{width:24px;height:24px;border:3px solid #64748b;border-radius:50%;box-sizing:border-box;flex:none}
+.row{margin-top:16px;background:#111c33;border-radius:16px;padding:16px 18px;color:#cbd5e1;font:700 21px/1.25 In}
+.row small{display:block;font:500 17px In;color:#64748b;margin-top:5px}
+.row.hot{background:#2563eb;color:#fff;position:relative;padding-right:60px}.row.hot small{color:#dbeafe}
+.row.hot:after{content:"";position:absolute;right:20px;top:50%;width:0;height:0;border-left:20px solid #fff;border-top:11px solid transparent;border-bottom:11px solid transparent;transform:translateY(-50%)}
+.row.dim{color:#64748b}.row.dim small{color:#475569}
+.tile{position:absolute;border-radius:22px;overflow:hidden;background:#0b1220;box-shadow:0 30px 70px rgba(0,0,0,.55)}
+.tile img{position:absolute;left:0;top:0;width:100%;object-fit:cover;object-position:top center}
+.tile .lab{position:absolute;left:0;right:0;bottom:0;height:84px;background:#0b1220;display:flex;align-items:center;justify-content:center}
+.tile .lab span{font:900 32px/1 In;letter-spacing:.06em;text-transform:uppercase;color:#fff;background:#2563eb;padding:14px 22px;border-radius:12px}
+#tA{left:40px;top:170px;width:480px;height:590px}#tB{left:560px;top:170px;width:480px;height:590px}
+#tA img,#tB img{height:506px}
+#t4,#t4b{left:15px;top:450px;width:457px;height:480px}#t4 img,#t4b img{height:396px}
+#t4b img{object-position:left top}
+.phone{position:absolute;border-radius:34px;box-shadow:0 0 0 10px #0b1220,0 0 0 12px #334155,0 30px 70px rgba(0,0,0,.6)}
+#p5{left:100px;top:280px;width:273px;height:485px}
+#p6{left:90px;top:150px;width:433px;height:770px;border-radius:48px;box-shadow:0 0 0 14px #0b1220,0 0 0 16px #334155,0 30px 70px rgba(0,0,0,.6)}
+.lab5{position:absolute;display:flex;flex-direction:column;justify-content:center;gap:16px}
+#l5{left:430px;top:280px;width:520px;height:485px}#l6{left:580px;top:150px;width:460px;height:770px}
+.lab5 .k{font:800 20px In;letter-spacing:.3em;color:#93c5fd;text-transform:uppercase}
+.lab5 .h{font:900 74px/.95 In;letter-spacing:-.01em;color:#fff;text-transform:uppercase;text-shadow:0 4px 30px rgba(0,0,0,.7)}
+#l6 .h{font-size:88px}
+.lab5 .s{font:600 25px/1.4 In;color:#dbeafe;text-shadow:0 2px 12px rgba(0,0,0,.7)}
+.lab5 img{width:190px;border-radius:14px;margin-top:6px}
+#s7{left:0;top:0;width:1080px;height:170px;background:linear-gradient(rgba(0,0,0,.75),rgba(0,0,0,0));display:flex;align-items:flex-start;justify-content:center;padding-top:44px;box-sizing:border-box}
+#s7 span{font:800 25px In;letter-spacing:.26em;color:#fff;text-transform:uppercase;background:#2563eb;padding:16px 26px;border-radius:999px}
+#cap{position:absolute;top:1400px;left:60px;right:60px;min-height:170px;display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:10px 18px}
+#cap span{font:900 76px/1 In;letter-spacing:-.01em;text-transform:uppercase;color:#fff;padding:10px 14px;border-radius:14px;text-shadow:0 3px 0 #000,0 0 18px rgba(0,0,0,.9);-webkit-text-stroke:2px rgba(0,0,0,.35)}
+#cap span.on{background:#2563eb;text-shadow:none;-webkit-text-stroke:0;transform:scale(1.06)}
+#end{position:absolute;inset:0;background:radial-gradient(70% 45% at 50% 42%,#1e3a8a55,transparent 70%),#0f172a;opacity:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0}
+#end img{width:200px;height:195px}
+#end .m{margin-top:56px;font:800 86px/1 HK;letter-spacing:.2em;color:#fff;padding-left:.2em}
+#end .i{margin-top:22px;font:700 36px/1 In;letter-spacing:.28em;color:#cbd5e1;padding-left:.28em}
+#endcap{margin-top:70px;min-height:200px;display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:10px 18px;padding:0 60px}
+#endcap span{font:900 64px/1 In;text-transform:uppercase;color:#fff;padding:8px 12px;border-radius:12px}#endcap span.on{background:#2563eb}
+#endcap span.url{font-size:52px;text-transform:none}
+#end .cta{margin-top:40px;background:#2563eb;color:#fff;font:700 30px/1 In;letter-spacing:.08em;text-transform:uppercase;padding:30px 48px;border-radius:999px}
+#end .c{margin-top:40px;font:600 28px/1.6 In;letter-spacing:.08em;color:#cbd5e1;text-align:center}#end .c b{color:#fff}
+</style></head><body>
+<div id="slide1" class="el card"><img src="img/lockup.png"></div>
+<div id="search" class="el"><div class="sbar"><span class="ic"></span>near me</div>
+<div class="row hot">The business down the street<small>4.9 ★ · Website · Online booking · Open now</small></div>
+<div class="row">Another competitor<small>4.6 ★ · Website</small></div>
+<div class="row dim">Your business<small>No website found</small></div></div>
+<div id="slide2" class="el card"><img src="img/lockup.png"></div>
+<div id="tA" class="el tile"><img src="img/home.png"><div class="lab"><span>Website</span></div></div>
+<div id="tB" class="el tile"><img src="img/store.png"><div class="lab"><span>Online store</span></div></div>
+<div id="t4" class="el tile"><img src="img/booking.png"><div class="lab"><span>Booking system</span></div></div>
+<div id="t4b" class="el tile"><img src="img/crm.png"><div class="lab"><span>CRM</span></div></div>
+<div id="p5" class="el phone"></div>
+<div id="l5" class="el lab5"><div class="k">Product 5 of 5</div><div class="h">Video<br>ads</div><div class="s">Made for your business.<br>Posted where your customers scroll.</div><img src="img/lockup.png"></div>
+<div id="p6" class="el phone"></div>
+<div id="l6" class="el lab5"><div class="k">A Meridian Interface product</div><div class="h">Video<br>ads</div><div class="s">Your business, your offer,<br>in front of the right people.</div><img src="img/lockup.png"></div>
+<div id="s7" class="el"><span>Video ads · a Meridian Interface product</span></div>
+<div id="cap"></div>
+<div id="end"><img src="img/mark.png"><div class="m">MERIDIAN</div><div class="i">INTERFACE</div><div id="endcap"></div><div class="cta">Book a design appointment</div><div class="c"><b>meridianinterface.com</b><br>281-882-9198 · Houston, TX</div></div>
+</body></html>
