@@ -17,6 +17,7 @@ plugin so they load in **every** project instead of only in this repo.
 | `cinematic-web` | What makes a landing page look expensive: hero media ranked, weight budget, the cheap techniques |
 | `apple-interface` | The four states, navigation models, glass rules, spring motion — app-like surfaces |
 | `dashboard-design` | Every dashboard: the default command-center look, anatomy, filters that move every number, honest sample data, an opt-in clickable 3D world view, the done-check |
+| `reverse-engineer-video` | A creator video into kept knowledge: the read scripts, how to trace each feature to its mechanism with a source, the library of every video read, where findings land |
 
 ## Install
 
