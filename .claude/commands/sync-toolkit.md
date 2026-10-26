@@ -11,7 +11,8 @@ Rules:
   `meridian-stack`, `meridian-engineering`, `meridian-auth`, `taste`,
   `awesome-design`, `img2threejs`, `client-site-scaffold`, `council`,
   `restraint`, `cinematic-web`, `apple-interface`, `ui-ux-pro-max`,
-  `remotion-video`, `client-security-gate`, `scroll-reveal`.
+  `remotion-video`, `client-security-gate`, `scroll-reveal`,
+  `dashboard-design`, `reverse-engineer-video`.
 - `meridian-marketing` and `meridian-deploy` are THIS repo's operations and
   stay out of the plugin on purpose. Do not copy them.
 - Copy is one-way: repo → plugin. Never write back into `.claude/skills/`.

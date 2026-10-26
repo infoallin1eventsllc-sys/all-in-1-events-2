@@ -73,6 +73,31 @@ Reject on sight, including in generated drafts of your own:
 - Fake device chrome: painted iOS status bars, fake keyboards.
 - A palette invented from scratch when a governing system exists.
 
+## The vibecoded tells
+
+From @rishitships' "30 reasons your site looks vibecoded" (TikTok, read
+26 Oct 2026), sorted against the calls above. Already banned there:
+purple-to-blue gradients, emoji as icons, the colored left stripe, uniform
+radius plus shadow, fake testimonials (call #7).
+
+**Added to the slop list.** Harsh or rainbow gradients. Radial orbs and glow
+blobs. Dot-grid backgrounds. Sparkle icons and "AI" sparkles on buttons.
+Animated arrows. Liquid glass on content (chrome only, per
+`apple-interface`). "It's not X, it's Y" copy. A terminal window on a page
+with no command line. Checkmark bullet lists. Neon or pastel palettes picked
+for no brand. Purple-and-black as a default. Em dashes in page copy: write
+two sentences.
+
+**Fine only when earned.** Three feature cards in a row, three pricing
+tiers, a bento grid, hover motion, soft radius, a pure white page. Each is
+the default the model reaches for; use it when the content has exactly that
+shape, never to fill a layout. Lucide stays (call #6 asks for stroke icons);
+the tell is an icon that says nothing.
+
+**Absences that read as unfinished.** No skeleton loaders (call #5). No
+real product demo: a screenshot captioned "see it in action" is not one.
+No terms of service or privacy policy link in the footer.
+
 ## When no brand governs
 
 Client work with no design system yet: commit to one deliberate direction

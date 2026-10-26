@@ -1,0 +1,16 @@
+# Video library
+
+Every creator video read for Otis, newest first. One row per video, even
+when nothing was kept, so no session reads the same clip twice or redoes a
+decision. Add a row at the end of every read.
+
+Columns: when read · creator and video id · what it claimed · how it was
+read · what was kept and where it landed · what was dropped, and anything
+still pending.
+
+| Read | Video | Claim | Read via | Kept → where | Dropped / pending |
+|---|---|---|---|---|---|
+| 26 Oct 2026 | @rishitships `7700229418765126926` | "30 reasons your site looks vibecoded": a list of tells | Composio: caption, auto-captions, 20 comments, frames + OCR | The 30 tells → `taste`, "The vibecoded tells", sorted into instant rejections, fine-when-earned, and absences | Commenters' pushback kept (three tiers, bento grids and Lucide predate AI): those are "fine when earned", not bans. Lucide stays: it is the stroke icon set `taste` #6 already asks for |
+| 25 Oct 2026 | @jesseeisenbart `7700264781458017542` | 18 video effects for Remotion as a free Claude skill, "open source"; link read off the last frame by OCR: `jesseeisenbart.com/video-effects` | Composio: caption, auto-captions, comments, frames + OCR; the page itself | Nothing yet | **Pending.** The download is email-gated and no public repo was found. Otis enters his own email, then pastes the link or uploads the file here. Then: read every file, check the licence, catalogue the effects into `remotion-video` (what each is for, when to use it, the component). The 18 names: Orbit, Chat Takeover, Frame Escape, Snap Zoom, Checklist Pop, Headline Storm, Zoom Portal, Growth Curve, B-roll Overlay, Paper Cutout, Magazine Cover, Liquid Glass, Zoom Through Cut, Green Screen, Frame Break, Digital Zoom, Phone Mockup, Checklist Tally. Not reconstructed from the names |
+| 25 Oct 2026 | @valeridoesai `7700368226408008982` | A clickable 3D world of a business in Three.js, numbers from Shopify or Square; guide at `tinyurl.com/tc7j8frn` → noocap on Notion | Composio: caption, auto-captions, comments; Firecrawl: the Notion guide | The 3D world view section → `dashboard-design` (opt-in, on top of the plain dashboard, same data and filters, HTML list beside the canvas, one real number first, keys on the server, "Snapshot" unless there is a real read path) | Her "DM DASHBOARD" funnel. Her guide's own caveats were kept: a build not a prompt, showpiece not daily driver |
+| 25 Oct 2026 | @liam.vibecodes `7700450534402166037` | "10 insane Claude web designs": ten site types, prompts in a PDF at `website-prompts.tiiny.co` → `10-cinematic-website-prompts.pdf` (12 pages, built for ChatGPT + tiiny.host) | Composio: caption, auto-captions, comment link, PDF text via pypdf | Prompt 03 "Futuristic Dashboard" → `dashboard-design` (look, anatomy, behaviour, accessibility floor, done-check), rewritten into Otis's rules | The other nine prompts were not filed: 3D e-commerce, immersive real estate, 3D car configurator, experimental agency, interactive product customizer, gamified portfolio, cinematic scrollytelling (`scroll-reveal` already covers it), WebGL portfolio, 3D product studio. Re-fetch the PDF if one is wanted. The ChatGPT and tiiny.host publishing steps were dropped |

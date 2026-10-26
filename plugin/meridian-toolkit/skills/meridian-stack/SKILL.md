@@ -24,7 +24,9 @@ Match the job, not the brand name. Everything below is on this account.
 | Multi-artboard mockups Otis will hand-edit | The bundled `design` skill (Claude Design canvas) |
 | Critique, design system, a11y audit, dev handoff, UX copy | `design:*` plugin skills |
 | Polish or audit a real product surface | The `impeccable` skill — Otis's own design vocabulary |
-| Charts, dashboards, stat tiles | The bundled `dataviz` skill |
+| Build or review a dashboard, admin panel, KPI screen, ops console | the `dashboard-design` skill — default look with checked tokens, anatomy, filter/export/state behaviour, opt-in clickable 3D world view, done-check |
+| A TikTok, Reel or Short Otis wants read, traced and kept | the `reverse-engineer-video` skill — the read scripts, the tool that reaches TikTok, one card per feature with a source, the video library, where each finding lands |
+| Charts and stat tiles, inside a dashboard or alone | The bundled `dataviz` skill |
 | Find or preview a typeface | **Adobe** — `font_search`, `font_recommend`, `font_preview` |
 | Photo/video edit, background removal, vectorize | **Adobe for creativity** |
 | Client-facing marketing collateral, bulk variants | **Canva** — `generate-design`, `create-design-from-brand-template` |
