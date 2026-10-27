@@ -42,7 +42,7 @@ h1{margin:0;font:800 32px/1.1 var(--display);letter-spacing:-.01em}
 .qr img{width:92px;height:92px;display:block}.qr p{margin:0;font-size:13px;color:#475569}.qr b{display:block;color:#0f172a;font:800 15px var(--display);margin-bottom:2px}
 '''
 A_body = f'''<main class="card"><header class="top"><img src="/brand/meridian-lockup.png" alt="Meridian Interface" width="885" height="550">
-<div class="rule"></div><h1>Otis Williams</h1><div class="role">Web Designer &amp; Developer</div><div class="what"><span>Websites</span> · <span>Online stores</span> · <span>Booking</span> · <span>CRM</span> · <span>Video ads</span></div></header>
+<div class="rule"></div><h1>Otis Williams</h1><div class="role">AI Architect</div><div class="what"><span>Websites</span> · <span>Online stores</span> · <span>Booking</span> · <span>CRM</span> · <span>Video ads</span></div></header>
 <div class="body"><nav class="quick" aria-label="Contact Otis Williams">{quick("q")}</nav>
 <a class="btn primary" href="{BOOK}">{ic("cal")}Book your 1-on-1 appointment</a><a class="btn ghost" href="{VCF}" download="Otis Williams.vcf">{ic("add")}Save to contacts</a>
 <div class="rows"><div class="row">{ic("phone")}<div><small>Phone</small>281-882-9198</div></div><div class="row">{ic("mail")}<div><small>Email</small>otis@meridianinterface.com</div></div><div class="row">{ic("web")}<div><small>Website</small>meridianinterface.com</div></div><div class="row">{ic("pin")}<div><small>Based in</small>Houston, Texas</div></div></div>
@@ -80,7 +80,7 @@ h1{margin:34px 0 0;font:800 42px/1 var(--display);letter-spacing:-.015em}
 tiles = ''.join(f'<a class="t" href="{h}">{ic(i)}<div>{t}<small>{s}</small></div></a>' for h,i,t,s in [(TEL,'phone','Call','281-882-9198'),(SMS,'text','Text','281-882-9198'),(MAIL,'mail','Email','otis@meridianinterface.com'),('/','web','Website','meridianinterface.com')])
 B_body = f'''<div class="wrap"><header class="hero"><img class="mark" src="/brand/meridian-mark.png" alt="" width="342" height="333">
 <div class="wm" aria-label="Meridian Interface"><b>MERIDIAN</b><span>INTERFACE</span></div>
-<h1>Otis Williams</h1><div class="role">Web Designer &amp; Developer</div></header>
+<h1>Otis Williams</h1><div class="role">AI Architect</div></header>
 <div class="body"><nav class="grid" aria-label="Contact Otis Williams">{tiles}</nav>
 <a class="btn primary" href="{BOOK}">{ic("cal")}Book your 1-on-1 appointment</a><a class="btn ghost" href="{VCF}" download="Otis Williams.vcf">{ic("add")}Save to contacts</a>
 <div class="svc"><span>Websites</span><span>Online stores</span><span>Booking systems</span><span>CRM</span><span>Video ads</span></div>
@@ -116,7 +116,7 @@ html{background:#dfe5ee}body{background:linear-gradient(#e8edf4,#d6dde8);color:#
 '''
 C_body = f'''<main class="col"><section class="pass" aria-label="Business card"><div class="strip"><img src="/brand/meridian-mark.png" alt="" width="342" height="333"><div class="wm" aria-label="Meridian Interface"><b>MERIDIAN</b><span>INTERFACE</span></div><div class="tag">Business<br>card</div></div>
 <div class="main"><div class="lbl">Name</div><div class="name">Otis Williams</div></div>
-<div class="fields"><div class="wide"><div class="lbl">Role</div><div class="v">Web Designer &amp; Developer</div></div>
+<div class="fields"><div class="wide"><div class="lbl">Role</div><div class="v">AI Architect</div></div>
 <div><div class="lbl">Phone</div><div class="v">281-882-9198</div></div><div><div class="lbl">Based in</div><div class="v">Houston, TX</div></div>
 <div class="wide"><div class="lbl">Website</div><div class="v">meridianinterface.com</div></div>
 <div class="wide"><div class="lbl">Email</div><div class="v">otis@meridianinterface.com</div></div></div>
@@ -155,7 +155,7 @@ h2{margin:30px 0 12px;font:700 11px var(--body);letter-spacing:.22em;text-transf
 work = ''.join(f'<a href="{h}"><img src="/images/portfolio/{img}" alt="" loading="lazy"><div><b>{t}</b><small>{d}</small></div>{ic("arrow")}</a>' for h,img,t,d in [('/demos/big-boy-subs/','big-boy-subs.jpg','Ordering app','Big Boy Subs'),('/demos/frame-shop/','frame-shop.jpg','Booking website','Frame shop'),('/demos/meridian-crm/','meridian-crm.jpg','Business CRM','Meridian CRM')])
 D_body = f'''<main class="wrap"><div class="top"><img src="/brand/meridian-mark.png" alt="" width="342" height="333"><div aria-label="Meridian Interface"><b>MERIDIAN</b><span>INTERFACE</span></div><a href="/">meridianinterface.com</a></div>
 <p class="state">Websites and systems that <em>bring customers in.</em></p>
-<div class="who"><div class="av"><img src="/brand/meridian-mark.png" alt="" width="342" height="333"></div><div><h1>Otis Williams</h1><p>Web Designer &amp; Developer · Houston, TX</p></div></div>
+<div class="who"><div class="av"><img src="/brand/meridian-mark.png" alt="" width="342" height="333"></div><div><h1>Otis Williams</h1><p>AI Architect · Houston, TX</p></div></div>
 <a class="btn primary" href="{BOOK}">{ic("cal")}Book your 1-on-1 appointment</a>
 <div class="row2"><a href="{TEL}">{ic("phone")}Call</a><a href="{SMS}">{ic("text")}Text</a><a href="{MAIL}">{ic("mail")}Email</a><a href="{VCF}" download="Otis Williams.vcf">{ic("add")}Save contact</a></div>
 <h2>What I build</h2><div class="svc"><div>Websites<small>Built to get found</small></div><div>Online stores<small>Sell around the clock</small></div><div>Booking systems<small>Fill your calendar</small></div><div>CRM<small>Every lead in one place</small></div><div>Video ads<small>Reach the right people</small></div></div>
