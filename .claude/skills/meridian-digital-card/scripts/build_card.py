@@ -31,6 +31,7 @@ ICON = {
     'web': '<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/>',
     'cal': '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
     'add': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>',
+    'image': '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
 }
 def ic(n): return f'<svg viewBox="0 0 24 24" aria-hidden="true">{ICON[n]}</svg>'
 E = lambda s: html.escape(str(s), quote=True)
@@ -57,6 +58,10 @@ a:focus-visible{outline:3px solid #fff;outline-offset:2px}
 .logo .wm{text-align:left}.logo b{display:block;font:800 21px/1 var(--display);letter-spacing:.2em}
 .logo span{display:block;margin-top:6px;font:700 11.5px/1 var(--body);letter-spacing:.28em;color:#cbd5e1}
 .logo b,.logo span,h1{text-shadow:0 2px 14px rgba(0,0,0,.55)}
+.wp{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;text-decoration:none;font:600 13.5px var(--body);color:#fff;
+ background:rgba(0,0,0,.3);box-shadow:inset 0 0 0 1px rgba(255,255,255,.32);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.wp svg{width:17px;height:17px;stroke:#fff}
+.wpwrap{display:flex;justify-content:center;margin-top:14px}
 '''
 LAYOUT_CSS = {
 1: '''
@@ -132,7 +137,12 @@ def logo_html(c):
     return (f'<div class="logo"><img src="{E(lg["mark"])}" alt="" width="342" height="333">'
             f'<div class="wm" aria-label="{E(c.get("company",""))}"><b>{E(lg.get("line1",""))}</b><span>{E(lg.get("line2",""))}</span></div></div>')
 
+def wp_link(c):
+    if not c.get('wallpapers_url'): return ''
+    return f'<div class="wpwrap"><a class="wp" href="{E(c["wallpapers_url"])}">{ic("image")}Get my wallpapers</a></div>'
+
 def build(c, layout):
+    WP = wp_link(c)
     n = E(c['name']); role = E(c['role']); tag = E(c.get('tagline', ''))
     tel = 'tel:' + E(c['phone']); sms = 'sms:' + E(c['phone']); mail = 'mailto:' + E(c['email'])
     web = E(c['website']); book = E(c['booking_url']); vcf = E(c['vcard_url'])
@@ -142,19 +152,19 @@ def build(c, layout):
         return f'''<header class="content">{LOGO}<h1>{n}</h1><div class="role">{role}</div>
 <div class="tag">{tag}</div>
 <nav class="pills" aria-label="Contact {n}"><a class="pill" href="{tel}">{ic("phone")}Call</a><a class="pill" href="{mail}">{ic("mail")}Email</a><a class="pill book" href="{book}">{ic("cal")}{E(c.get("booking_label","Book a 1-on-1 appointment"))}</a></nav></header>
-<div class="art"><div class="dots"><a class="dot" href="{sms}" aria-label="Text {first}">{ic("text")}</a><a class="dot" href="{web}" aria-label="Website">{ic("web")}</a><a class="dot" href="{vcf}" {dl} aria-label="Save to contacts">{ic("add")}</a></div></div>'''
+<div class="art"><div class="dots"><a class="dot" href="{sms}" aria-label="Text {first}">{ic("text")}</a><a class="dot" href="{web}" aria-label="Website">{ic("web")}</a><a class="dot" href="{vcf}" {dl} aria-label="Save to contacts">{ic("add")}</a></div>{WP.replace('class="wpwrap"','class="wpwrap" style="position:absolute;left:0;right:0;top:calc(12% + 58px)"')}</div>'''
     if layout == 2:
         first_last = n.replace(' ', '<br>', 1)
         return f'''<header class="content">{LOGO}<h1>{first_last}</h1><div class="role">{role}</div>
 <div class="tag">{E(c.get("tagline_long", c.get("tagline","")))}</div>
 <nav class="btns" aria-label="Contact {n}"><a class="b main" href="{book}">{ic("cal")}{E(c.get("booking_label_long","Book your 1-on-1 appointment"))}</a>
 <div class="row"><a class="b g" href="{tel}">{ic("phone")}Call</a><a class="b g" href="{sms}">{ic("text")}Text</a><a class="b g" href="{mail}">{ic("mail")}Email</a></div></nav></header>
-<div class="art"><div class="save"><a href="{vcf}" {dl}>{ic("add")}Save to contacts</a></div></div>'''
+<div class="art"><div class="save" style="flex-direction:column;align-items:center;gap:0"><a href="{vcf}" {dl}>{ic("add")}Save to contacts</a>{WP}</div></div>'''
     if layout == 3:
         return f'''<header class="content">{LOGO}<h1>{n}</h1><div class="role">{role}</div>
 <div class="qr"><img src="{E(c["qr"])}" alt="QR code that opens this card" width="196" height="196"><p>Scan with your phone camera</p></div>
 <div class="two"><a class="w" href="{vcf}" {dl}>{ic("add")}Save contact</a><a class="o" href="{book}">{ic("cal")}Book a call</a></div>
-<div class="line"><a href="{tel}">{E(c["phone_display"])}</a> · <a href="{web}">{E(c["website_display"])}</a></div></header>
+<div class="line"><a href="{tel}">{E(c["phone_display"])}</a> · <a href="{web}">{E(c["website_display"])}</a></div>{WP}</header>
 <div class="art"></div>'''
     rows = ''.join(f'<a href="{h}">{ic(i)}<span>{E(t)}</span><small>{s}</small></a>' for h, i, t, s in [
         (tel, 'phone', c['phone_display'], 'Call'), (sms, 'text', c['phone_display'], 'Text'),
@@ -163,7 +173,7 @@ def build(c, layout):
     return f'''<header class="content">{LOGO}</header><div class="stack">
 <section class="panel"><h1>{n}</h1><div class="role">{role}{loc}</div>
 <div class="tag">{E(c.get("services_line", ""))}</div><nav class="list" aria-label="Contact {n}">{rows}</nav>
-<div class="cta"><a class="w" href="{book}">{ic("cal")}{E(c.get("booking_label_long","Book your 1-on-1 appointment"))}</a><a class="o" href="{vcf}" {dl}>{ic("add")}Save to contacts</a></div></section><div class="spacer"></div></div>'''
+<div class="cta"><a class="w" href="{book}">{ic("cal")}{E(c.get("booking_label_long","Book your 1-on-1 appointment"))}</a><a class="o" href="{vcf}" {dl}>{ic("add")}Save to contacts</a></div>{WP}</section><div class="spacer"></div></div>'''
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument('config'); ap.add_argument('out')

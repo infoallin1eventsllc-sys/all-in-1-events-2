@@ -14,7 +14,11 @@
   "booking_url": "/?book=web_design",
   "vcard_url": "/card/otis-williams.vcf",
   "qr": "/card/qr.svg",
-  "logo": { "mark": "/brand/meridian-mark.png", "line1": "MERIDIAN", "line2": "INTERFACE" },
+  "logo": {
+    "mark": "/brand/meridian-mark.png",
+    "line1": "MERIDIAN",
+    "line2": "INTERFACE"
+  },
   "fonts_url": "/fonts",
   "favicon": "/brand/meridian-mark.png",
   "canonical": "https://meridianinterface.com/card/",
@@ -22,5 +26,8 @@
   "description": "Otis Williams, Web Designer & Developer at Meridian Interface. Call 281-882-9198, email otis@meridianinterface.com, or book a 1-on-1 appointment.",
   "layout": 1,
   "background": "ribbon",
-  "palette": "blue"
+  "palette": "blue",
+  "wallpapers_url": "/card/wallpapers/",
+  "logo_mark_file": "meridian-mark.png",
+  "qr_file": "otis-williams-qr.svg"
 }
