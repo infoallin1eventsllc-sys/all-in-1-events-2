@@ -3,7 +3,7 @@
   "company": "Meridian Interface",
   "role": "AI Architect",
   "location": "Houston, TX",
-  "tagline": "Websites, online stores and booking systems that bring customers in.",
+  "tagline": "Commercial ads and websites for your business",
   "tagline_long": "I build the website, the online store, the booking system and the CRM. Houston, TX.",
   "services_line": "Websites, online stores, booking systems, CRM and video ads.",
   "phone": "+12818829198",
@@ -27,7 +27,12 @@
   "layout": 1,
   "background": "ribbon",
   "palette": "blue",
-  "wallpapers_url": "/card/wallpapers/",
   "logo_mark_file": "meridian-mark.png",
-  "qr_file": "otis-williams-qr.svg"
+  "qr_file": "otis-williams-qr.svg",
+  "bg_url": "/card/bg/ribbon.jpg",
+  "card_js_url": "/card/card.js",
+  "background_key": "card.background",
+  "background_endpoint": "https://glzodwhyavexpuusbqjy.supabase.co/functions/v1/site-images",
+  "background_public_base": "https://meridianinterface.com/card/bg/",
+  "background_local_base": "/card/bg/"
 }

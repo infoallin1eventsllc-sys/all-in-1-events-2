@@ -8,9 +8,10 @@ description: >-
   client. Carries the four approved layouts, six owned backgrounds in six
   colors, a build script, a recolor script and a phone screenshot check, plus
   the rules learned building Otis's own card (third-party template art, logo
-  contrast, QR wording, no prices). Also makes the matching wallpapers (phone
-  lock screen with the card's QR, clean phone, laptop, desktop) and the
-  "Get my wallpapers" download page the card links to.
+  contrast, QR wording, no prices). "Wallpaper" in Otis's words means the
+  card's own background, which the card owner chooses privately (like a phone
+  wallpaper) and every visitor sees; the kit wires that up. It can also make
+  optional downloadable phone and computer wallpapers.
 ---
 
 # Meridian digital business card
@@ -97,9 +98,39 @@ Background rules for any new art:
   subject sits below the buttons. Check the round buttons of layout 1 do not
   land on a busy spot (they sit on the tallest towers of the skyline).
 
-## Wallpapers (phone, laptop, desktop) and the "Get my wallpapers" page
+## The card's wallpaper: a background the owner chooses
 
-Every card can offer matching wallpapers. For each background, six files:
+This is what Otis means by "wallpaper": the background of the card itself. The
+owner changes it the way they change a phone's wallpaper, and every visitor
+sees the choice. Visitors cannot change it and there is nothing for them to
+download. (A public "Get my wallpapers" page was built on 27 Oct by mistake,
+went live on 28 Oct, and was taken down the same day at Otis's request.)
+
+How it works on Otis's card (config fields in `examples/otis-williams.json`):
+
+- `background_key` (`card.background`): the slot in the site's image-override
+  store, the same store the portal's Photo Control publishes to. Reads are
+  public; writes need the owner session. No server change was needed.
+- `build_card.py` copies every built-in background to `<out>/bg/` (plus
+  240px `bg/thumbs/` for the picker) and writes `card.js` from
+  `assets/card-background.js`. The script sits in the head, not deferred, so
+  the default never flashes before the owner's choice; it reads the saved
+  choice, caches it, falls back to the default after 2.5 s, maps a built-in
+  choice to its colours (the Book button turns gold with gold, and so on), and
+  accepts an uploaded photo only from Supabase public storage.
+- The picker: website `src/components/OwnerCardWallpaper.tsx` (with
+  `src/data/cardBackgrounds.ts`), shown at the top of Photo Control in the
+  Studio portal (footer, "Studio login"). Tap a background, upload a photo,
+  or reset to Blue Ribbon.
+
+For a client card: give it its own key (for example `card.<client>.background`)
+and its own `background_public_base`. Until clients have their own login, Otis
+sets their choice from his portal; a client self-serve picker needs a client
+sign-in first.
+
+## Optional: downloadable wallpapers (phone, laptop, desktop)
+
+Not used on Otis's card (see above). A card can still offer downloadable wallpapers if a client wants them. For each background, six files:
 
 | File | Size | What it is |
 |---|---|---|

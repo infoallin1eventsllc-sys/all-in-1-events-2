@@ -188,7 +188,8 @@ def main():
     if not src.exists(): sys.exit(f'no background {src.name}; recolor it first with scripts/recolor.py')
     tops = json.loads((KIT / 'assets' / 'backgrounds' / 'tops.json').read_text())
     out = pathlib.Path(a.out); out.mkdir(parents=True, exist_ok=True)
-    shutil.copy(src, out / 'bg.jpg')
+    if not c.get('background_key'):  # with the picker, backgrounds live in bg/ instead
+        shutil.copy(src, out / 'bg.jpg')
     fonts = c.get('fonts_url')
     if not fonts:
         (out / 'fonts').mkdir(exist_ok=True)
@@ -206,8 +207,39 @@ def main():
 <meta name="theme-color" content="{tops[stem]}">{f'<link rel="icon" href="{E(c["favicon"])}">' if c.get("favicon") else ''}
 <style>{css}</style></head><body><div class="page">{build(c, layout)}</div></body></html>
 '''
+    if c.get('background_key'):
+        page = write_background_picker(c, out, stem, tops, page)
     (out / 'index.html').write_text(page)
     print(f'built {out}/index.html  layout {layout}, background {stem}, palette {pal}')
+
+def theme_for(stem, tops):
+    pal = next((p for p in PALETTES if p != 'blue' and stem.endswith('-' + p)), 'blue')
+    p = PALETTES[pal]
+    return {'top': tops[stem], 'acc': p['acc'], 'accText': p['acc_text'], 'ink': p['ink']}
+
+def write_background_picker(c, out, default_stem, tops, page):
+    """Owner-chosen background: every built-in background into bg/ (plus bg/thumbs/ for the
+    owner's picker), card.js filled in from assets/card-background.js, and the page wired to it."""
+    import subprocess
+    bgdir = out / 'bg'; (bgdir / 'thumbs').mkdir(parents=True, exist_ok=True)
+    stems = sorted(tops)
+    for st in stems:
+        shutil.copy(KIT / 'assets' / 'backgrounds' / f'{st}.jpg', bgdir / f'{st}.jpg')
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', str(bgdir / f'{st}.jpg'), '-vf', 'scale=240:-2', '-q:v', '5',
+                        str(bgdir / 'thumbs' / f'{st}.jpg')], check=True)
+    themes = {st: theme_for(st, tops) for st in stems}
+    themes['__upload__'] = {'top': '#0b1220', 'acc': PALETTES['blue']['acc'], 'accText': '#fff', 'ink': PALETTES['blue']['ink']}
+    js = (KIT / 'assets' / 'card-background.js').read_text()
+    for k, v in {'__KEY__': c['background_key'], '__ENDPOINT__': c['background_endpoint'],
+                 '__PUBLIC_BASE__': c['background_public_base'], '__LOCAL_BASE__': c['background_local_base'],
+                 '__DEFAULT__': default_stem, '__THEMES__': json.dumps(themes)}.items():
+        js = js.replace(k, v)
+    (out / 'card.js').write_text(js)
+    # In the head and not deferred: it marks the page before the first paint, so the
+    # default background never flashes before the owner's choice.
+    tag = f'<script src="{E(c.get("card_js_url", "card.js"))}"></script>'
+    css = 'html.bgjs:not(.bgset) body{background-image:none}'
+    return page.replace('</style></head>', css + '</style>' + tag + '</head>', 1)
 
 if __name__ == '__main__':
     main()
