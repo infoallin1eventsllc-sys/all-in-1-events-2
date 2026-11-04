@@ -24,7 +24,9 @@ Match the job, not the brand name. Everything below is on this account.
 | Multi-artboard mockups Otis will hand-edit | The bundled `design` skill (Claude Design canvas) |
 | Critique, design system, a11y audit, dev handoff, UX copy | `design:*` plugin skills |
 | Polish or audit a real product surface | The `impeccable` skill — Otis's own design vocabulary |
-| Charts, dashboards, stat tiles | The bundled `dataviz` skill |
+| Build or review a dashboard, admin panel, KPI screen, ops console | the `dashboard-design` skill — default look with checked tokens, anatomy, filter/export/state behaviour, opt-in clickable 3D world view, done-check |
+| A TikTok, Reel or Short Otis wants read, traced and kept | the `reverse-engineer-video` skill — the read scripts, the tool that reaches TikTok, one card per feature with a source, the video library, where each finding lands |
+| Charts and stat tiles, inside a dashboard or alone | The bundled `dataviz` skill |
 | Find or preview a typeface | **Adobe** — `font_search`, `font_recommend`, `font_preview` |
 | Photo/video edit, background removal, vectorize | **Adobe for creativity** |
 | Client-facing marketing collateral, bulk variants | **Canva** — `generate-design`, `create-design-from-brand-template` |
@@ -243,6 +245,27 @@ Position given to Otis: none replaces Claude Code for client production work.
 Lovable is the only one worth trying — for throwaway prototypes to show a
 client fast, then rebuild the keeper in his own stack. Base44's hosted backend
 is lock-in; Manus overlaps with Claude itself.
+
+
+## ChatifyIT — a creator's lead-magnet page, not a Claude connector
+
+Checked 4 Nov 2026 on chatifyit.com after a TikTok (@dr.erinjacques, "the 5
+most powerful Claude connectors") listed it fifth with "Claude writes the post
+and the email when you ship, you approve, it goes to LinkedIn and your list".
+The creator fronts the product: her page is the homepage illustration.
+
+What it is: a link-in-bio page with an AI "guide" that chats with visitors and
+collects their email, Instagram comment-to-DM, posting to a personal LinkedIn
+(company page on Growth), and emailing the list from inside it (Growth).
+$9 / $29 / $49 a month, Systeme.io is the only email integration. Nothing on
+the site mentions Claude, MCP or an API. Not in his connectors, not found in
+the directory.
+
+Position: **no.** It is the marketing system in `system/` as a subscription
+(draft → approval queue → SendGrid, with the LinkedIn adapter), minus his
+data staying his. The other four in that video he already has: Supabase,
+PostHog and Firecrawl are connected; Playwright is the local MCP or a script
+in a cloud session (see above).
 
 ## Framer Motion is a library, not a plugin
 
