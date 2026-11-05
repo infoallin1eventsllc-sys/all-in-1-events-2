@@ -44,3 +44,6 @@ Clips (minimax_h3, 9:16, 5 s, original prompts): c1 `32175b7b-5618-4cfb-b47c-f8a
 c2 `b5f0d300-4d6c-468d-9e3f-ca040e49ba89`, c3 `72fae113-6b50-4f23-9e1b-33434c7bfc62`.
 Rebuilt with the steps above unchanged (fresh screen captures of the live site);
 -16.4 LUFS. Cost: 33 credits (2 previews, 1 close-up, 3 clips at 10).
+End card without "Houston, TX" (5 Nov): Higgsfield media
+`1291358f-810d-436e-a5d5-eb961a586fc1`; `panel.html` now ends the contact line
+at the phone number. Re-render only (`render.mjs` + `final.sh`), no credits.
