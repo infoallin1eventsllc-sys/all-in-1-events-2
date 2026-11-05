@@ -31,3 +31,16 @@ narration `2c2f4b62-b7ee-4e90-85e5-de17fb3425d0`. Full ids in
 
 Traps: the xfade chain needs each input padded (`tpad`), or the video stops
 early; `alimiter level=true` pushed peaks over 0 dBFS once, keep `level=false`.
+
+## Presenter 1 version (5 Nov 2026)
+
+Same ad with a fictional presenter in place of Otis's likeness (late 40s,
+salt-and-pepper beard, glasses, navy suit). Finished file: Higgsfield media
+`024c2497-ffe2-4267-bc76-d094af1f8e87`. The original stays at `ad2a5319-...`.
+
+Stills (gpt_image_2_6, medium 2K, edits of the originals): wide
+`8bab3950-a79f-43f7-8832-abdb6bcef92f`, close `661214ae-ef7e-4ddc-a5b5-9f8d3c755a5f`.
+Clips (minimax_h3, 9:16, 5 s, original prompts): c1 `32175b7b-5618-4cfb-b47c-f8a86d089c3e`,
+c2 `b5f0d300-4d6c-468d-9e3f-ca040e49ba89`, c3 `72fae113-6b50-4f23-9e1b-33434c7bfc62`.
+Rebuilt with the steps above unchanged (fresh screen captures of the live site);
+-16.4 LUFS. Cost: 33 credits (2 previews, 1 close-up, 3 clips at 10).
