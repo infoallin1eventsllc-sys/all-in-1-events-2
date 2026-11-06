@@ -47,3 +47,13 @@ Rebuilt with the steps above unchanged (fresh screen captures of the live site);
 End card without "Houston, TX" (5 Nov): Higgsfield media
 `1291358f-810d-436e-a5d5-eb961a586fc1`; `panel.html` now ends the contact line
 at the phone number. Re-render only (`render.mjs` + `final.sh`), no credits.
+
+## Social formats (6 Nov 2026)
+
+`formats.sh` builds four shapes from one render (skill: meridian-social-video).
+Presenter 1 version, no Houston, TX, captions off over the full-frame reel:
+- 9:16 Reels/TikTok/Shorts `d44f54b8-47dc-45b2-a06d-c29254f8b869`
+- 4:5 Instagram/Facebook feed `a49b62bd-89e6-49ec-9690-55b8fc84e89a`
+- 1:1 square `273b8f55-9a97-4b4d-9d53-e08d2abee6a7`
+- 16:9 YouTube/LinkedIn/X/web `1fb69f82-b0b3-474c-9991-effd2ee78718`
+(`e8091a44-...` is an empty upload slot from a failed PUT; ignore it.)

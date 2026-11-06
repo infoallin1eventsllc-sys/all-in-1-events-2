@@ -2,7 +2,8 @@ import fs from 'fs';
 import { createRequire } from 'module';
 const req = createRequire(import.meta.url);
 let chromium; try { chromium = req('playwright').chromium; } catch { chromium = req(process.env.PW_PATH || '/usr/local/lib/node_modules/playwright').chromium; }
-const D = process.argv[2]; const FPS = 30, DUR = 37.0, END = 31.6, SHIFT = 3.2, SPLIT = 28.4;
+const D = process.argv[2]; const FMT = process.env.FMT || ''; const MODE = process.env.MODE || 'all'; const OUT = process.env.OUT || 'frames';
+const SIZE = { '9x16': [1080, 1920], '4x5': [1080, 1350], '1x1': [1080, 1080], '16x9': [1920, 1080] }[FMT] || [1080, 1920]; const FPS = 30, DUR = 37.0, END = 31.6, SHIFT = 3.2, SPLIT = 28.4;
 const W0 = JSON.parse(fs.readFileSync(D + '/words.json'));
 const W = W0.map(w => ({ w: w.w, s: w.s >= SPLIT ? w.s + SHIFT : w.s, e: w.e >= SPLIT ? w.e + SHIFT : w.e }));
 W[28].w = 'Interface'; W[72].s = 32.3; // 'Book' was timed to start in the pause
@@ -16,15 +17,16 @@ const EL = [
   ['p5', 22.25, 26.3, 0.3, 0.0], ['l5', 22.25, 26.3, 0.3, 0.0], ['p6', 26.3, 28.6, 0.0, 0.4], ['l6', 26.3, 28.6, 0.0, 0.4],
   ['s7', 29.0, 31.6, 0.3, 0.4]];
 const al = (t, s, e, fi, fo) => t < s ? 0 : t < s + fi ? (t - s) / fi : t < e ? 1 : t < e + fo ? 1 - (t - e) / fo : 0;
-const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1080, height: 1920 } });
-await p.goto('file://' + D + '/panel.html'); await p.evaluate(() => document.fonts.ready);
+const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: SIZE[0], height: SIZE[1] } });
+await p.goto('file://' + D + '/panel.html#fmt=' + FMT + '&mode=' + MODE); await p.evaluate(() => document.fonts.ready);
 await p.waitForTimeout(300);
-fs.mkdirSync(D + '/frames', { recursive: true });
+fs.mkdirSync(D + '/' + OUT, { recursive: true });
 let last = null, shots = 0;
 for (let f = 0; f < Math.round(FPS * DUR); f++) {
   const t = f / FPS;
   const eA = Math.min(1, Math.max(0, (t - END) / 0.6)); const onEnd = eA > 0;
-  const ch = CH.find(c => t >= c[0].s - 0.05 && t < c[c.length - 1].e + 0.25);
+  // no captions over the full-frame reel (it carries its own)
+  const ch = t >= 28.6 && t < END ? null : CH.find(c => t >= c[0].s - 0.05 && t < c[c.length - 1].e + 0.25);
   const html = ch ? ch.map(w => `<span class="${(t >= w.s - 0.03 && t < w.e ? 'on ' : '') + (w.url ? 'url' : '')}">${w.w}</span>`).join('') : '';
   const op = {}; for (const [id, s, e, fi, fo] of EL) op[id] = +al(t, s, e, fi, fo).toFixed(2);
   const sc = {}; for (const id of ['tA', 'tB', 't4', 't4b']) { const e = EL.find(x => x[0] === id); sc[id] = 0.92 + 0.08 * Math.min(1, Math.max(0, (t - e[1]) / e[3])); }
@@ -36,7 +38,7 @@ for (let f = 0; f < Math.round(FPS * DUR); f++) {
       for (const id in sc) document.getElementById(id).style.transform = `scale(${sc[id]})`;
       document.getElementById('end').style.opacity = eA;
     }, [html, op, sc, eA, onEnd]);
-    await p.screenshot({ path: `${D}/frames/${String(f).padStart(4, '0')}.png`, omitBackground: true }); last = key; shots++;
-  } else fs.copyFileSync(`${D}/frames/${String(f - 1).padStart(4, '0')}.png`, `${D}/frames/${String(f).padStart(4, '0')}.png`);
+    await p.screenshot({ path: `${D}/${OUT}/${String(f).padStart(4, '0')}.png`, omitBackground: true }); last = key; shots++;
+  } else fs.copyFileSync(`${D}/${OUT}/${String(f - 1).padStart(4, '0')}.png`, `${D}/${OUT}/${String(f).padStart(4, '0')}.png`);
 }
 await b.close(); console.log('frames', Math.round(FPS * DUR), 'screenshots', shots);

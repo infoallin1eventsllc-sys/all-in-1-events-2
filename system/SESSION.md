@@ -3471,3 +3471,12 @@ Open for Otis: deposit % per package; refundable or not; balance at launch?; mon
 2. Agents ad: brief in system/promo-ad/agents-ad/BRIEF.md. Quote with get_cost and wait for "go" before any credits (~2-4 credits screens-only, ~25-35 with new stage clips).
 3. Client cards: kit supports a per-client background key; a client self-serve picker needs a client sign-in (not built).
 4. Not in git and lost when this container goes: samples/ (Mendocino masters and previews, Gateway reel, Katy prospects, card previews and wallpaper files). Otis was told to download what he wants to keep.
+
+## 6 Nov 2026: seminar ad for every platform
+- Otis: the 9:16 ad "looks really weird" on Instagram. Rule from now on: every
+  video/ad ships in 9:16 (text clear of app buttons), 4:5, 1:1 and 16:9. New
+  skill `.claude/skills/meridian-social-video/`.
+- Presenter 1 seminar ad delivered in all four (ids in
+  system/promo-ad/seminar-ad/README.md). No credits used for the re-shaping.
+- Offered: same treatment for the original ad with Otis, which still shows
+  Houston, TX at the end.

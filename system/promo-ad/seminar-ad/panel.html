@@ -38,6 +38,7 @@ html,body{margin:0;background:transparent;width:1080px;height:1920px;overflow:hi
 #cap span{font:900 76px/1 In;letter-spacing:-.01em;text-transform:uppercase;color:#fff;padding:10px 14px;border-radius:14px;text-shadow:0 3px 0 #000,0 0 18px rgba(0,0,0,.9);-webkit-text-stroke:2px rgba(0,0,0,.35)}
 #cap span.on{background:#2563eb;text-shadow:none;-webkit-text-stroke:0;transform:scale(1.06)}
 #end{position:absolute;inset:0;background:radial-gradient(70% 45% at 50% 42%,#1e3a8a55,transparent 70%),#0f172a;opacity:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0}
+#end .inner{display:flex;flex-direction:column;align-items:center;transform-origin:50% 50%}
 #end img{width:200px;height:195px}
 #end .m{margin-top:56px;font:800 86px/1 HK;letter-spacing:.2em;color:#fff;padding-left:.2em}
 #end .i{margin-top:22px;font:700 36px/1 In;letter-spacing:.28em;color:#cbd5e1;padding-left:.28em}
@@ -46,6 +47,18 @@ html,body{margin:0;background:transparent;width:1080px;height:1920px;overflow:hi
 #endcap span.url{font-size:52px;text-transform:none}
 #end .cta{margin-top:40px;background:#2563eb;color:#fff;font:700 30px/1 In;letter-spacing:.08em;text-transform:uppercase;padding:30px 48px;border-radius:999px}
 #end .c{margin-top:40px;font:600 28px/1.6 In;letter-spacing:.08em;color:#cbd5e1;text-align:center}#end .c b{color:#fff}
+/* Layers and formats: panel.html#fmt=9x16|4x5|1x1|16x9&mode=scene|text|all
+   scene = everything that sits on the stage screen (rendered once at 1080x1920 and cropped);
+   text  = captions, top banner and end card, laid out for each format's safe area. */
+html.f4x5,html.f4x5 body{height:1350px}html.f1x1,html.f1x1 body{height:1080px}
+html.f16x9,html.f16x9 body{width:1920px;height:1080px}
+html.scene #cap,html.scene #end,html.scene #s7{display:none}
+html.text #slide1,html.text #search,html.text #slide2,html.text #tA,html.text #tB,html.text #t4,html.text #t4b,html.text #p5,html.text #l5,html.text #p6,html.text #l6{display:none}
+/* 9:16 safe: keep text out of the top ~270px and bottom ~670px that TikTok/Reels/Shorts cover */
+html.f9x16 #cap{top:1030px}html.f9x16 #s7{height:420px;padding-top:280px}html.f9x16 #end .inner{transform:translateY(-200px)}
+html.f4x5 #cap{top:1080px;left:50px;right:50px}
+html.f1x1 #cap{top:850px}html.f1x1 #cap span{font-size:64px}html.f1x1 #end .inner{transform:scale(.82)}
+html.f16x9 #s7{width:1920px}html.f16x9 #cap{top:870px;left:180px;right:180px}html.f16x9 #cap span{font-size:64px}html.f16x9 #end .inner{transform:scale(.82)}
 </style></head><body>
 <div id="slide1" class="el card"><img src="img/lockup.png"></div>
 <div id="search" class="el"><div class="sbar"><span class="ic"></span>near me</div>
@@ -63,5 +76,6 @@ html,body{margin:0;background:transparent;width:1080px;height:1920px;overflow:hi
 <div id="l6" class="el lab5"><div class="k">A Meridian Interface product</div><div class="h">Video<br>ads</div><div class="s">Your business, your offer,<br>in front of the right people.</div><img src="img/lockup.png"></div>
 <div id="s7" class="el"><span>Video ads · a Meridian Interface product</span></div>
 <div id="cap"></div>
-<div id="end"><img src="img/mark.png"><div class="m">MERIDIAN</div><div class="i">INTERFACE</div><div id="endcap"></div><div class="cta">Book a design appointment</div><div class="c"><b>meridianinterface.com</b><br>281-882-9198</div></div>
+<div id="end"><div class="inner"><img src="img/mark.png"><div class="m">MERIDIAN</div><div class="i">INTERFACE</div><div id="endcap"></div><div class="cta">Book a design appointment</div><div class="c"><b>meridianinterface.com</b><br>281-882-9198</div></div></div>
+<script>{const q=new URLSearchParams(location.hash.slice(1));const f=q.get("fmt");const m=q.get("mode");if(f)document.documentElement.classList.add("f"+f);if(m&&m!=="all")document.documentElement.classList.add(m)}</script>
 </body></html>
