@@ -126,7 +126,8 @@ if (ONLY !== 'demos') {
     else {
       await dlg.locator('button[type=submit]').first().click(); await p.waitForTimeout(300);
       if (posted) FAIL(`${here}: an EMPTY booking was sent`);
-      for (const inp of await dlg.locator('input:not([type=date])').all()) { const t = await inp.getAttribute('type'); await inp.fill(t === 'email' ? 'qa@example.com' : t === 'tel' ? '2815550100' : 'QA Visitor'); }
+      // skip the hidden spam trap (tabindex -1, off-screen): a filled trap is treated as a bot and not sent
+      for (const inp of await dlg.locator('input:not([type=date]):not([tabindex="-1"])').all()) { const t = await inp.getAttribute('type'); await inp.fill(t === 'email' ? 'qa@example.com' : t === 'tel' ? '2815550100' : 'QA Visitor'); }
       await dlg.locator('button[type=submit]').first().click(); await p.waitForTimeout(1500);
       if (!posted) FAIL(`${here}: a filled booking was not sent to the server`);
       await p.keyboard.press('Escape'); await p.waitForTimeout(300);
