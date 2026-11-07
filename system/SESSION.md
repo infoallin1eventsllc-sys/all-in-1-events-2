@@ -3480,3 +3480,16 @@ Open for Otis: deposit % per package; refundable or not; balance at launch?; mon
   system/promo-ad/seminar-ad/README.md). No credits used for the re-shaping.
 - Offered: same treatment for the original ad with Otis, which still shows
   Houston, TX at the end.
+
+## 7 Nov 2026: LinkedIn
+- Otis's real profile: linkedin.com/in/1otiswilliams (signs in with his Gmail).
+- Connecting LinkedIn through Composio four times only ever reached a blank
+  account, linkedin.com/in/otis-williams-2a509844a (otis@meridianinterface.com,
+  created by "Continue with Google" with the Meridian Google account, probably
+  from Chrome's "Work" profile). All connections removed; nothing was posted.
+- Otis will post manually for now. If reconnecting later: open the link in the
+  window signed in to 1otiswilliams, type the Gmail + password (not Continue
+  with Google), and check LINKEDIN_GET_MY_INFO vanityName is 1otiswilliams
+  before any post.
+- The connection can only post. It cannot apply to jobs, read the profile or
+  close accounts.
