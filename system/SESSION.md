@@ -3493,3 +3493,17 @@ Open for Otis: deposit % per package; refundable or not; balance at launch?; mon
   before any post.
 - The connection can only post. It cannot apply to jobs, read the profile or
   close accounts.
+
+## 7 Nov 2026: Facebook
+- Meridian Interface Facebook Page: id 1483203828202922, on Otis's NEW Facebook
+  account (user 122115556401506900). Composio session "silk", account alias
+  meridian-new. The 2008 account's connection was removed; never reconnect it.
+- Live on the Page: website link post (old share image) and the seminar ad
+  (4:5) as a Reel, facebook.com/reel/1124915680134639.
+- RULE (Otis, 7 Nov): post NOTHING to the Meridian Facebook Page (and do not
+  delete or replace posts) until Otis has seen the exact post and approved it.
+- Share image: og-card-2026-11.jpg replaces og-card.jpg (new name so Facebook and
+  LinkedIn drop their cached picture). Otis approved the image.
+- Otis wants "The custom studio you're looking for." image fitted as the Page
+  cover (overrides the earlier "retired" note for this use). Waiting for him to
+  resend the file.
