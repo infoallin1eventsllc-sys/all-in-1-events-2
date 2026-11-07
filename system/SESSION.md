@@ -3507,3 +3507,8 @@ Open for Otis: deposit % per package; refundable or not; balance at launch?; mon
 - Otis wants "The custom studio you're looking for." image fitted as the Page
   cover (overrides the earlier "retired" note for this use). Waiting for him to
   resend the file.
+- 7 Nov: website 50554e1 live (checked on meridianinterface.com: og:image is
+  og-card-2026-11.jpg, image returns 200). static: 0 FAIL / browser: 0 FAIL
+  (1 WARN: Drone Command menu click, slow 3D in the sandbox). The 4 booking-flow
+  FAILs in the first run were the QA test filling the spam trap (fixed, 4095b0a).
+  Vercel MCP returned 403 for the team scope this time; live check was by fetch.
