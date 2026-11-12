@@ -34,3 +34,23 @@ them is cleaned. **Use this file, not the raw cut, for every ending.** Put the t
 from 2.0 s. Score the ending in the video's own music: a soft hit as the logo arrives, a held
 chord, a long fade. Also: ffmpeg's `alimiter` threw a full-scale spike on a kick; use a fixed
 gain to -14 LUFS and check the encoded peak instead.
+
+### The music has to glide out, not stop (second pass, same day)
+
+After the first fix Otis still heard "a cut... it stops like a chop... let it flow, let it
+glide through the end". The picture was fine; the score was the problem: a full drum groove
+running right up to the end card and then nothing but a pad. What works
+(`../how-agents-work-v2/music.py`):
+
+- **Wind down over the last two bars of the film**: full kit, then lighter, then kick on 1 and
+  3 only, no claps, bass in quarter notes getting softer.
+- **Land the harmony** (F, G, then A minor) on the bar line where the film wipes to the end card.
+- **Start the landing chord before the cut** (a 1.6 s swell from 1.2 s earlier) and overlap the
+  pads, so the harmony cross-fades instead of restarting.
+- **Keep the melody moving under the logo**: eighths for one more bar, getting quieter, then
+  quarter notes walking down to the home note.
+- **A soft room reverb** that opens through the wind-down, so each hit rings into the next.
+- **One long raised-cosine fade**, silent 0.25 s before the last frame. Hold the pads to the end
+  and let that one fade shape the exit (two stacked fades went quiet too early).
+- Check it by numbers when you cannot listen: RMS per half second should step down smoothly
+  (here -12, -14, -17, -19, -20, -23, -27, -36, -47 dBFS), never drop 10 dB at once.

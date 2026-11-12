@@ -8,7 +8,7 @@ set -e
 cd "$(dirname "$0")"
 W=$1; PY=${2:-python3}; LOOKS=${3:-day}; FMTS=${4:-9x16}; N=meridian-how-agents-work
 LOGO=../end-card/meridian-logo-ending-clean-9x16.mp4
-MAIN=23.4; END=5.4; XF=0.4
+MAIN=23.4; END=6.0; XF=0.4
 mkdir -p "$W" out
 [ -f "$W/music.wav" ] || $PY music.py "$W/music.wav"
 [ -d "$W/f-end" ] || node render.mjs end "$W/f-end"

@@ -4,7 +4,7 @@ Otis asked to move the videos off the dark navy and try something new (Impeccabl
 connectors). This is the agents film rebuilt in the direction from `../looks/`: tall condensed
 headlines (League Gothic) over Montserrat, one idea per frame, the app card as a large tilted
 prop, a colour wipe on every cut. Same script and timings as `../how-agents-work/` (23.4 s of
-film, 28.4 s with the ending). **No credits, no licensed music.** Not posted.
+film, 29.0 s with the ending). **No credits, no licensed music.** Not posted.
 
 Four colourways, one file: `scenes.html#look=day|signal|emerald|stage&fmt=9x16|4x5|1x1|16x9`.
 `out/` holds the 9:16 preview of each look, sent to Otis to choose from.
