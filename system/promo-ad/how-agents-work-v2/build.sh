@@ -38,7 +38,7 @@ ffmpeg -v error -y -i "$W/music.wav" -i $LOGO -filter_complex \
 for l in $LOOKS; do for f in $FMTS; do
   o="out/$N-$l-${NAME[$f]}.mp4"
   ffmpeg -v error -y -framerate 30 -i "$W/f-$l-$f/%04d.jpg" -i "$W/end.mp4" -i "$W/audio.m4a" -filter_complex \
-    "[0:v]format=yuv420p,setsar=1[v0];[1:v]fps=30,${ENDF[$f]},format=yuv420p,setsar=1[v1];[v0][v1]xfade=transition=fade:duration=$XF:offset=$OFF[v]" \
+    "[0:v]format=yuv420p,setsar=1[v0];[1:v]fps=30,${ENDF[$f]},format=yuv420p,setsar=1[v1];[v0][v1]xfade=transition=wiperight:duration=$XF:offset=$OFF[v]" \
     -map "[v]" -map 2:a $ENC -c:a copy -shortest "$o"
   echo "$l $f $(ffprobe -v error -show_entries stream=width,height -of csv=p=0 -select_streams v $o) $(ffprobe -v error -show_entries format=duration -of csv=p=0 $o)"
 done; done
