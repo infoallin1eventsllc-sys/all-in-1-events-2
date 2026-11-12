@@ -1,0 +1,81 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<!-- Look study, 12 Nov 2026: Otis wants to move the videos off the dark navy.
+     Two beats of the agents film (hook, "You approve") in one of four looks, at 1080x1920.
+     #look=day|signal|emerald|stage  #beat=hook|approve
+     Type follows an Adobe type-palette suggestion (condensed gothic display over a geometric
+     sans): League Gothic + Montserrat, both SIL OFL. Layout follows the craft rules read from
+     Raylight: one idea per frame, UI as a large tilted prop, no kicker/headline/subline stack. -->
+<style>
+@font-face{font-family:"League Gothic";src:url(fonts/league-gothic-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Montserrat";src:url(fonts/montserrat-latin-wght-normal.woff2) format("woff2");font-weight:100 900}
+@font-face{font-family:"Inter";src:url(fonts/inter-var-latin.woff2) format("woff2");font-weight:100 900}
+@font-face{font-family:"JetBrains Mono";src:url(fonts/jetbrains-mono-latin-wght-normal.woff2) format("woff2");font-weight:100 800}
+:root{ /* day: the website's own off-white, ink type, blue only where you act */
+  --bg:#f4f6fa;--fg:#0f172a;--soft:#475569;--hl-bg:#2563eb;--hl-fg:#fff;--num:rgba(15,23,42,.07);
+  --card:#fff;--card-fg:#0f172a;--card-soft:#64748b;--card-edge:1.5px solid #dfe5ee;--card-shadow:0 50px 90px rgba(15,23,42,.18);
+  --btn:#2563eb;--btn-fg:#fff;--btn2:#eef2f7;--btn2-fg:#334155;--label:"Montserrat";--label-sp:.2em;--plate:transparent;--rule:#0f172a}
+html.signal{--bg:#ffd21f;--fg:#141414;--soft:#3d3300;--hl-bg:#141414;--hl-fg:#ffd21f;--num:rgba(20,20,20,.09);
+  --card:#fff;--card-fg:#141414;--card-soft:#5b5b5b;--card-edge:4px solid #141414;--card-shadow:18px 18px 0 #141414;
+  --btn:#141414;--btn-fg:#fff;--btn2:#fff;--btn2-fg:#141414;--plate:transparent;--rule:#141414}
+html.emerald{--bg:#0d3b2e;--fg:#f4efe1;--soft:#b9cdbf;--hl-bg:#f6c744;--hl-fg:#0d3b2e;--num:rgba(244,239,225,.07);
+  --card:#fffdf6;--card-fg:#0d3b2e;--card-soft:#5d7468;--card-edge:0 solid transparent;--card-shadow:0 50px 90px rgba(0,0,0,.42);
+  --btn:#0d3b2e;--btn-fg:#f4efe1;--btn2:#ece7d6;--btn2-fg:#0d3b2e;--plate:transparent;--rule:#f6c744}
+html.stage{--bg:#000;--fg:#fff;--soft:#a3a3a3;--hl-bg:#fff;--hl-fg:#000;--num:rgba(255,255,255,.08);
+  --card:#fff;--card-fg:#0a0a0a;--card-soft:#666;--card-edge:0 solid transparent;--card-shadow:0 0 120px rgba(255,255,255,.16);
+  --btn:#0a0a0a;--btn-fg:#fff;--btn2:#ededed;--btn2-fg:#0a0a0a;--label:"JetBrains Mono";--label-sp:.12em;--plate:transparent;--rule:#fff}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:var(--bg);color:var(--fg);font-family:Montserrat,sans-serif}
+html.stage body{background:#000 radial-gradient(rgba(255,255,255,.13) 1.5px,transparent 1.6px) 0 0/54px 54px}
+html.emerald body{background:radial-gradient(ellipse at 30% 30%,#14503e,#0d3b2e 60%,#09291f)}
+.beat{position:absolute;inset:0;display:none}
+html.b-hook #hook,html.b-approve #approve{display:block}
+/* brand: his mark beside live text, inside the Reels safe box (y 270-1248) */
+.brand{position:absolute;left:84px;top:292px;display:flex;align-items:center;gap:16px}
+.brand img{height:52px;display:block}
+.brand b{font:800 24px/1 Montserrat;letter-spacing:.22em}
+.brand i{font:600 14px/1 var(--label);letter-spacing:.3em;font-style:normal;color:var(--soft);display:block;margin-top:7px}
+.kick{position:absolute;right:84px;top:312px;font:700 17px/1 var(--label);letter-spacing:var(--label-sp);color:var(--soft);text-transform:uppercase}
+h1{font:400 236px/.86 "League Gothic";text-transform:uppercase;letter-spacing:.005em}
+h1 mark{display:inline-block;background:var(--hl-bg);color:var(--hl-fg);line-height:.8;padding:.05em .08em .01em;margin:0 -.03em}
+#hook h1{position:absolute;left:84px;right:60px;top:440px;font-size:204px}
+#hook .rule{position:absolute;left:84px;top:1158px;width:150px;height:10px;background:var(--rule)}
+#hook p{position:absolute;left:84px;right:84px;top:1192px;font:600 38px/1.2 Montserrat;color:var(--soft)}
+#approve .num{position:absolute;right:26px;top:230px;font:400 760px/.8 "League Gothic";color:var(--num)}
+#approve h1{position:absolute;left:84px;top:404px;font-size:214px}
+#approve .card{position:absolute;left:104px;width:850px;top:650px;background:var(--card);color:var(--card-fg);border:var(--card-edge);border-radius:30px;box-shadow:var(--card-shadow);padding:40px 44px 44px;transform:rotate(-3.2deg);font-family:Inter,sans-serif}
+html.signal #approve .card{border-radius:10px}
+.card .to{font:600 22px/1 var(--label);letter-spacing:.06em;color:var(--card-soft);text-transform:uppercase}
+.card .ex{position:absolute;right:36px;top:40px;font:700 15px/1 var(--label);letter-spacing:.16em;color:var(--card-soft);opacity:.7}
+.card .body{font:500 37px/1.34 Inter;margin-top:20px}
+.card .btns{display:flex;gap:18px;margin-top:34px}
+.btn{border-radius:18px;padding:26px 46px;font:700 36px/1 Inter;background:var(--btn);color:var(--btn-fg)}
+.btn.alt{background:var(--btn2);color:var(--btn2-fg)}
+html.signal .btn{border-radius:8px}html.signal .btn.alt{border:4px solid #141414;padding:22px 42px}
+.tap{position:absolute;left:300px;top:1004px;width:104px;height:104px;border-radius:50%;border:6px solid var(--fg);background:rgba(127,127,127,.18)}
+#approve p{position:absolute;left:84px;right:84px;top:1150px;font:700 46px/1.18 Montserrat}
+</style></head>
+<body>
+<section class="beat" id="hook">
+  <div class="brand"><img src="img/mark.png" alt=""><div><b>MERIDIAN</b><i>INTERFACE</i></div></div>
+  <h1>What does<br>an <mark>AI agent</mark><br>do in your<br>business?</h1>
+  <div class="rule"></div>
+  <p>Three steps. Watch one work a lead.</p>
+</section>
+<section class="beat" id="approve">
+  <div class="num">3</div>
+  <div class="brand"><img src="img/mark.png" alt=""><div><b>MERIDIAN</b><i>INTERFACE</i></div></div>
+  <div class="kick">Step 3 of 3</div>
+  <h1>You <mark>approve.</mark></h1>
+  <div class="card"><div class="to">Follow-up draft, waiting for you</div><span class="ex">EXAMPLE</span>
+    <div class="body">Hi Dr. Lee, thanks for reaching out. I can walk you through a quote on Thursday at 2:00. Does that work?</div>
+    <div class="btns"><div class="btn">Approve</div><div class="btn alt">Edit</div></div></div>
+  <div class="tap"></div>
+  <p>Nothing goes out until you say yes.</p>
+</section>
+<script>
+const h = location.hash, look = (/look=(\w+)/.exec(h) || [])[1] || 'day', beat = (/beat=(\w+)/.exec(h) || [])[1] || 'hook';
+document.documentElement.classList.add(look, 'b-' + beat);
+window.readyForFrames = document.fonts.ready;
+</script>
+</body></html>
