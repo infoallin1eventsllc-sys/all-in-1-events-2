@@ -90,3 +90,7 @@ clip), the crop and blur steps alone still apply, but add captions per format.
 - LinkedIn and X: **4:5** or **1:1** in the feed, **16:9** for a normal video.
 - YouTube: **9:16** as a Short, **16:9** as a normal video.
 - Website: **16:9** (or 9:16 inside a phone frame).
+
+## The ending
+
+Every Meridian video ends with Otis's logo light-up: `system/promo-ad/end-card/meridian-logo-lightup-9x16.mp4` (navy, the M lights up in blue, "MERIDIAN INTERFACE"), then that video's own product line and the blue meridianinterface.com pill, laid out like `reference-agent-crm-ending-9x16.mp4`. Never redraw the mark. See the README in that folder.
