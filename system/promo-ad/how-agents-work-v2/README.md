@@ -4,7 +4,7 @@ Otis asked to move the videos off the dark navy and try something new (Impeccabl
 connectors). This is the agents film rebuilt in the direction from `../looks/`: tall condensed
 headlines (League Gothic) over Montserrat, one idea per frame, the app card as a large tilted
 prop, a colour wipe on every cut. Same script and timings as `../how-agents-work/` (23.4 s of
-film, 27.4 s with the ending). **No credits, no licensed music.** Not posted.
+film, 28.4 s with the ending). **No credits, no licensed music.** Not posted.
 
 Four colourways, one file: `scenes.html#look=day|signal|emerald|stage&fmt=9x16|4x5|1x1|16x9`.
 `out/` holds the 9:16 preview of each look, sent to Otis to choose from.
@@ -12,6 +12,8 @@ Four colourways, one file: `scenes.html#look=day|signal|emerald|stage&fmt=9x16|4
 The ending is his logo light-up on navy, **unchanged at his request** ("leave the logo the way
 it is and see what happens at the end; if I like it we keep it, if not we change it"). The film
 wipes into it (xfade wiperight, 0.4 s): a dissolve from yellow or green to navy went muddy.
+After Otis heard a glitch there, the ending now uses the cleaned logo file and its own closing
+music (see `../end-card/README.md`).
 
 Build: `./build.sh <work_dir> <python with numpy+scipy> "<looks>" "<shapes>"`.
 Once he picks a look: `./build.sh <work> <py> "<look>" "9x16 4x5 1x1 16x9"`.

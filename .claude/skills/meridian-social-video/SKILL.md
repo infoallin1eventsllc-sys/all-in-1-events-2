@@ -93,7 +93,7 @@ clip), the crop and blur steps alone still apply, but add captions per format.
 
 ## The ending
 
-Every Meridian video ends with Otis's logo light-up: `system/promo-ad/end-card/meridian-logo-lightup-9x16.mp4` (navy, the M lights up in blue, "MERIDIAN INTERFACE"), then that video's own product line and the blue meridianinterface.com pill, laid out like `reference-agent-crm-ending-9x16.mp4`. Never redraw the mark. See the README in that folder.
+Every Meridian video ends with Otis's logo light-up. Use the cleaned, silent file `system/promo-ad/end-card/meridian-logo-ending-clean-9x16.mp4` (never the raw cut `meridian-logo-lightup-9x16.mp4`, whose sound and first frames belong to another ad and read as a glitch; see that folder's README) (navy, the M lights up in blue, "MERIDIAN INTERFACE"), then that video's own product line and the blue meridianinterface.com pill, laid out like `reference-agent-crm-ending-9x16.mp4`. Never redraw the mark. See the README in that folder.
 
 ## 16:9 from a vertical video: no blurred sides
 

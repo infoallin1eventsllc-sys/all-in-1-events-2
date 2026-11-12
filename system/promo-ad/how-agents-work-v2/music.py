@@ -1,7 +1,7 @@
-"""Original score for "How AI agents work" (27.4 s), synthesised from scratch (no licensed music).
+"""Original score for "How AI agents work" (28.4 s), synthesised from scratch (no licensed music).
 
 Same instruments as ../music.py, re-timed: step 1 at 3.1 s, claps from "You approve" at 12.2 s,
-lift into marketing at 16.3 s, end card at 23.2 s. 120 BPM in A minor: Am - F - C - G.
+lift into marketing at 16.3 s, end card at 23.6 s. 120 BPM in A minor: Am - F - C - G.
 """
 import sys
 import wave
@@ -10,11 +10,11 @@ import numpy as np
 from scipy.signal import lfilter
 
 SR = 44100
-DUR = 27.4
+DUR = 28.4
 N = int(SR * DUR)
 BPM = 120
 BEAT = 60 / BPM
-P0, M0, R0, E0 = 3.1, 16.3, 12.2, 23.2
+P0, M0, R0, E0 = 3.1, 16.3, 12.2, 23.6
 
 t_all = np.arange(N) / SR
 mix_l = np.zeros(N)
@@ -159,18 +159,27 @@ while t < E0 - 0.01:
     t += BAR
     bar += 1
 
-# montage lift and the end card
+# lift into marketing
 add(riser(0.9), M0 - 0.9, 0.2)
-add(riser(1.1), E0 - 1.1, 0.3)
-add(impact(), E0, 0.85)
-end_len = DUR - E0
-add(pad([57, 60, 64, 69], end_len, 2200), E0, 0.32)
-add(bass(45, end_len - 0.3), E0, 0.35)
-for k in range(int(end_len / (BEAT / 2))):
-    add(pluck([69, 72, 76, 79][k % 4] + (12 if k % 8 >= 4 else 0)), E0 + 0.4 + k * BEAT / 2, 0.1 * (1 - k / 16), -0.4 + 0.8 * (k % 2))
 
-# master: fade out the last 1.2 s, soft-clip, normalise to -1 dBFS
-fade = np.clip((DUR - t_all) / 1.2, 0, 1)
+# the end card. E0 sits on the beat grid (P0 + n * BEAT), so the hit lands in time instead of
+# flamming against the last kick. Soft landing: a gentle swell, a low hit, two bell tones as
+# the logo lights, one held chord, and a long fade. Nothing busy under the logo.
+def bell(midi, length=3.0):
+    n = int(length * SR); t = np.arange(n) / SR; f = note_hz(midi)
+    return (np.sin(2 * np.pi * f * t) + 0.35 * np.sin(2 * np.pi * 2.01 * f * t) * np.exp(-t * 3)) * np.exp(-t * 1.5) * np.clip(t / 0.01, 0, 1)
+
+add(riser(1.0), E0 - 1.0, 0.2)
+add(impact(), E0, 0.45)
+end_len = DUR - E0
+add(pad([45, 57, 60, 64, 71], end_len, 1700), E0, 0.34)
+b_end = bass(45, 3.4); add(b_end * np.linspace(1, 0, len(b_end)) ** 1.6, E0, 0.26)   # tails off, no cut
+add(bell(81), E0 + 0.13, 0.11, -0.25)
+add(bell(88), E0 + 0.38, 0.07, 0.25)
+add(bell(84), E0 + 1.9, 0.05, 0.0)
+
+# master: fade out the last 2.2 s, soft-clip, normalise to -1 dBFS
+fade = np.clip((DUR - t_all) / 2.2, 0, 1) ** 1.5
 L = np.tanh(mix_l * fade * 0.9)
 R = np.tanh(mix_r * fade * 0.9)
 peak = max(np.abs(L).max(), np.abs(R).max())
