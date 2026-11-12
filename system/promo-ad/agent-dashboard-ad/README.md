@@ -23,7 +23,13 @@ Finished files (Higgsfield library, media ids):
 | 9:16 Reels / TikTok / Shorts | e658e097-520b-4c6c-b420-2ee15626239e |
 | 4:5 Instagram / Facebook feed (crop y=150) | 4b0281b2-8a7a-4af6-b20d-5d8120767f7f |
 | 1:1 square (crop y=220) | 1db0b638-95d1-4825-a780-38e6b5fca0dc |
-| 16:9 YouTube / LinkedIn / X / web (blur fill) | 6659a2a6-cbb0-4f64-a2ea-188f84d9c9f0 |
+| 16:9 YouTube / LinkedIn / X / web (v2, no blur) | 12d355c0-e421-4b24-8fbd-cc9c6beab1ee |
+
+16:9 v2 (Otis found the blurred sides odd): the 1:1 crop (y=220) centred on black,
+which blends with the ad's own black stage; the ending is a 1080x1080 crop of the end
+card (y=360, so the whole M and the light streak are in frame) with the navy carried
+to both edges by stretching the outer 4 px columns. The first 16:9 (6659a2a6, blurred
+sides) is superseded. No credits used.
 
 Not posted. Lesson for the next preset run: AI-written labels can be misspelled;
 check every label frame before assembling.

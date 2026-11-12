@@ -94,3 +94,7 @@ clip), the crop and blur steps alone still apply, but add captions per format.
 ## The ending
 
 Every Meridian video ends with Otis's logo light-up: `system/promo-ad/end-card/meridian-logo-lightup-9x16.mp4` (navy, the M lights up in blue, "MERIDIAN INTERFACE"), then that video's own product line and the blue meridianinterface.com pill, laid out like `reference-agent-crm-ending-9x16.mp4`. Never redraw the mark. See the README in that folder.
+
+## 16:9 from a vertical video: no blurred sides
+
+Otis does not like blurred side fill on 16:9 (12 Nov 2026). When the video sits on a plain ground, centre the 1:1 crop on that same colour (black for a black stage) instead. For the navy end card, crop 1080x1080 at y=360 so the whole M and its light streak are in frame, and carry the navy to both edges by stretching the outer 4 px columns. Use blur fill only when the footage has no plain ground, and tell Otis first.
