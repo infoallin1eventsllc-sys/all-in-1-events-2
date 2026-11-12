@@ -1,0 +1,219 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<!-- "How AI agents work": 23.4 s of motion graphics, rendered frame by frame by render.mjs.
+     Everything lives on a 1080x1080 stage; #fmt=9x16|4x5|1x1|16x9 sets the canvas and
+     where the stage sits, so each shape is rendered natively (no crops, no blur).
+     In 9:16 the stage sits at y=240 and all content stays inside y 270-1248 (Reels safe box).
+     No CSS transitions or animations: window.render(t) sets every style from the time. -->
+<style>
+@font-face{font-family:"Hanken Grotesk";src:url(fonts/hanken-grotesk-var-latin.woff2) format("woff2");font-weight:100 900}
+@font-face{font-family:"Inter";src:url(fonts/inter-var-latin.woff2) format("woff2");font-weight:100 900}
+:root{--navy:#0b1430;--ink:#0f172a;--white:#fff;--muted:#cbd5e1;--dim:#8ea0c0;--accent:#2563eb;--sky:#7fb0ff;--ok:#16a34a;--hot:#ea580c;--line:rgba(160,190,255,.22)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--navy);font-family:Inter,system-ui,sans-serif;color:var(--white)}
+#bg{position:absolute;inset:0;background:linear-gradient(180deg,#0a1230 0%,#11204a 52%,#27395f 100%)}
+#bg::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(170,200,255,.10) 1.6px,transparent 1.7px);background-size:54px 54px;-webkit-mask-image:radial-gradient(ellipse at 50% 45%,#000 30%,transparent 92%)}
+#glow{position:absolute;width:1300px;height:1300px;border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,.34),rgba(37,99,235,0) 62%);left:50%;top:50%;margin:-650px 0 0 -650px}
+#stage{position:absolute;width:1080px;height:1080px;left:0;top:0}
+html.f9x16 #stage{top:240px} html.f4x5 #stage{top:135px} html.f16x9 #stage{left:420px}
+
+/* brand row and eyebrow */
+#brand{position:absolute;left:72px;top:44px;display:flex;align-items:center;gap:16px}
+#brand img{height:46px;display:block}
+#brand b{font:800 23px/1 "Hanken Grotesk";letter-spacing:.2em}
+#brand span{display:block;font:700 14px/1 Inter;letter-spacing:.28em;color:var(--muted);margin-top:6px}
+#eyebrow{position:absolute;right:72px;top:58px;font:700 17px/1 Inter;letter-spacing:.22em;color:var(--sky)}
+
+.scene{position:absolute;inset:0}
+.step{position:absolute;left:72px;top:150px;display:flex;align-items:center;gap:14px;font:700 22px/1 Inter;letter-spacing:.16em;color:var(--sky);text-transform:uppercase}
+.step i{font-style:normal;width:46px;height:46px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font:800 24px/1 "Hanken Grotesk";letter-spacing:0}
+h1{position:absolute;left:72px;right:72px;top:218px;font:800 66px/1.08 "Hanken Grotesk";letter-spacing:-.01em;text-wrap:balance}
+h1 em{font-style:normal;color:var(--sky)}
+
+.card{position:absolute;background:#fff;color:var(--ink);border-radius:24px;box-shadow:0 26px 60px rgba(2,8,30,.45)}
+.tag{position:absolute;right:22px;top:18px;font:700 14px/1 Inter;letter-spacing:.14em;color:#94a3b8;text-transform:uppercase}
+.chip{position:absolute;left:72px;width:330px;height:92px;border-radius:20px;background:rgba(255,255,255,.07);border:1.5px solid var(--line);display:flex;align-items:center;gap:18px;padding:0 24px;font:600 29px/1 Inter}
+.chip svg{width:38px;height:38px;flex:none}
+.ico{stroke:var(--sky);stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.node{position:absolute;width:176px;height:176px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#3b82f6,#1d4ed8 70%);box-shadow:0 0 0 10px rgba(59,130,246,.18),0 0 70px rgba(59,130,246,.55);display:grid;place-items:center}
+.node svg{width:84px;height:84px}
+.node.sm{width:84px;height:84px;box-shadow:0 0 0 6px rgba(59,130,246,.18),0 0 34px rgba(59,130,246,.5)}
+.node.sm svg{width:42px;height:42px}
+.nlabel{position:absolute;font:700 30px/1 "Hanken Grotesk";text-align:center}
+.who{position:absolute;left:176px;font:700 32px/1.15 "Hanken Grotesk"}
+.who small{display:block;font:500 23px/1.2 Inter;color:var(--muted);margin-top:6px}
+
+.row{position:absolute;left:72px;right:72px;height:80px;border-radius:18px;background:rgba(255,255,255,.07);border:1.5px solid var(--line);display:flex;align-items:center;gap:18px;padding:0 22px;font:600 30px/1 Inter}
+.tick{width:40px;height:40px;border-radius:50%;background:var(--ok);display:grid;place-items:center;flex:none}
+.tick svg{width:24px;height:24px;stroke:#fff;stroke-width:3.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.pill{margin-left:auto;border-radius:999px;padding:11px 20px;font:700 22px/1 Inter;white-space:nowrap}
+.pill.hot{background:var(--hot);color:#fff}.pill.done{background:rgba(22,163,74,.2);color:#86efac}.pill.wait{background:rgba(250,204,21,.16);color:#fde68a}.pill.ok{background:var(--ok);color:#fff}
+.stack{position:relative;margin-left:auto;display:grid}.stack>*{grid-area:1/1;margin-left:0;justify-self:end}
+
+.mail{padding:26px 30px}
+.mail .to{font:600 21px/1 Inter;color:#64748b;letter-spacing:.02em}
+.mail .body{font:500 31px/1.34 Inter;color:var(--ink);margin-top:14px}
+.caret{display:inline-block;width:3px;height:1em;background:var(--accent);vertical-align:-.12em;margin-left:2px}
+.btns{display:flex;gap:16px;margin-top:24px}
+.btn{position:relative;border-radius:16px;padding:20px 36px;font:700 30px/1 Inter}
+.btn.go{background:var(--accent);color:#fff}.btn.alt{background:#eef2f7;color:#334155}.btn.yes{background:var(--ok);color:#fff;position:absolute;left:0;top:0;white-space:nowrap}
+.tap{position:absolute;width:86px;height:86px;border-radius:50%;border:5px solid #fff;background:rgba(255,255,255,.28);box-shadow:0 0 0 2px rgba(15,23,42,.25);margin:-43px 0 0 -43px}
+.say{position:absolute;left:72px;right:72px;font:800 52px/1.14 "Hanken Grotesk";text-wrap:balance}
+.say.sm{font:600 34px/1.3 Inter;color:var(--muted)}
+
+.item{position:absolute;left:72px;right:72px;height:150px;border-radius:24px;background:#fff;color:var(--ink);box-shadow:0 22px 50px rgba(2,8,30,.4);display:flex;align-items:center;gap:24px;padding:0 28px}
+.thumb{width:98px;height:98px;border-radius:18px;background:linear-gradient(135deg,#1d4ed8,#60a5fa);display:grid;place-items:center;flex:none}
+.thumb svg{width:50px;height:50px;stroke:#fff;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.item b{font:700 31px/1.15 "Hanken Grotesk";display:block}.item small{font:500 23px/1.2 Inter;color:#64748b;display:block;margin-top:8px}
+.item .pill.wait{background:#fef3c7;color:#92400e}
+
+.loopn{position:absolute;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.08);border:2px solid var(--line);display:grid;place-items:center;margin:-75px 0 0 -75px}
+.loopn svg{width:66px;height:66px}
+.loopn.you{background:var(--ok);border-color:transparent}.loopn.you svg{stroke:#fff}
+.loopl{position:absolute;width:300px;margin-left:-150px;text-align:center;font:700 32px/1.1 "Hanken Grotesk"}
+
+#rail{position:absolute;left:72px;right:72px;top:944px;display:flex;gap:14px}
+#rail div{flex:1;font:700 21px/1 Inter;letter-spacing:.04em;color:var(--dim);padding-top:18px;border-top:5px solid rgba(160,190,255,.2)}
+#rail div.on{color:#fff;border-top-color:var(--sky)}#rail div.was{color:var(--muted);border-top-color:rgba(127,176,255,.5)}
+svg.over{position:absolute;inset:0;width:1080px;height:1080px;overflow:visible}
+</style></head>
+<body>
+<div id="bg"></div><div id="glow"></div>
+<div id="stage">
+  <div id="brand" data-in="0.15" data-fx="fade"><img src="img/mark.png" alt=""><div><b>MERIDIAN</b><span>INTERFACE</span></div></div>
+  <div id="eyebrow" data-in="0.3" data-fx="fade">HOW AI AGENTS WORK</div>
+
+  <!-- 1. hook -->
+  <section class="scene" data-s="0" data-e="3.1">
+    <h1 style="top:330px;font-size:86px" data-in="0.35" data-fx="up">What does an <em>AI agent</em> do in your business?</h1>
+    <div class="say sm" style="top:690px" data-in="1.25" data-fx="up">Three steps. Here is one working a sales lead.</div>
+  </section>
+
+  <!-- 2. it watches -->
+  <section class="scene" data-s="3.1" data-e="7.3">
+    <div class="step" data-in="3.2" data-fx="left"><i>1</i>It watches</div>
+    <h1 data-in="3.3" data-fx="up">It watches for new work.</h1>
+    <svg class="over"><g fill="none" stroke="rgba(127,176,255,.55)" stroke-width="3" stroke-linecap="round">
+      <path class="wire" data-draw="3.9" d="M402 446 C560 446 560 560 690 560"/>
+      <path class="wire" data-draw="4.05" d="M402 560 L690 560"/>
+      <path class="wire" data-draw="4.2" d="M402 674 C560 674 560 560 690 560"/></g>
+      <circle class="pulse" data-wire="0" data-at="4.7" r="9" fill="#fff"/><circle class="pulse" data-wire="1" data-at="5.5" r="9" fill="#fff"/><circle class="pulse" data-wire="2" data-at="6.2" r="9" fill="#fff"/>
+    </svg>
+    <div class="chip" style="top:400px" data-in="3.6" data-fx="left"><svg viewBox="0 0 24 24" class="ico"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9h18M7 13h6M7 16h9"/></svg>Website form</div>
+    <div class="chip" style="top:514px" data-in="3.75" data-fx="left"><svg viewBox="0 0 24 24" class="ico"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 7.5 12 13l8.5-5.5"/></svg>Inbox</div>
+    <div class="chip" style="top:628px" data-in="3.9" data-fx="left"><svg viewBox="0 0 24 24" class="ico"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendar</div>
+    <div class="node" style="left:690px;top:472px" data-in="4.0" data-fx="pop" data-beat="4.7,5.5,6.2"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z"/><path d="M18.5 14.5l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9z" opacity=".85"/></svg></div>
+    <div class="nlabel" style="left:628px;width:300px;top:672px" data-in="4.2" data-fx="fade">Sales agent</div>
+    <div class="card" style="left:72px;right:72px;top:760px;height:150px;display:flex;align-items:center;gap:22px;padding:0 28px" data-in="4.9" data-fx="pop">
+      <div class="thumb" style="width:92px;height:92px"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.500 2 8 6"/></svg></div>
+      <div><b style="font:700 32px/1.1 'Hanken Grotesk';display:block">New lead</b><span style="font:500 26px/1.25 Inter;color:#475569;display:block;margin-top:8px">Harbor Dental Group asked for a quote</span></div>
+      <span class="tag">Example</span>
+    </div>
+  </section>
+
+  <!-- 3. it does the busywork -->
+  <section class="scene" data-s="7.3" data-e="12.2">
+    <div class="step" data-in="7.4" data-fx="left"><i>2</i>It does the busywork</div>
+    <h1 data-in="7.5" data-fx="up">It does the busywork.</h1>
+    <div class="row" style="top:372px" data-in="8.0" data-fx="left"><span class="tick" data-in="8.5" data-fx="pop"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.500 4.500L19 7.500"/></svg></span>Scores the lead<span class="pill hot" data-in="8.5" data-fx="pop">Hot</span></div>
+    <div class="row" style="top:466px" data-in="8.5" data-fx="left"><span class="tick" data-in="9.1" data-fx="pop"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.500 4.500L19 7.500"/></svg></span>Looks up the account<span class="pill done" data-in="9.1" data-fx="pop">Done</span></div>
+    <div class="row" style="top:560px" data-in="9.0" data-fx="left"><span class="tick" data-in="11.5" data-fx="pop"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.500 4.500L19 7.500"/></svg></span>Drafts the follow-up<span class="pill done" data-in="11.5" data-fx="pop">Draft ready</span></div>
+    <div class="card mail" style="left:72px;right:72px;top:668px;height:212px" data-in="9.3" data-fx="up">
+      <div class="to">To: Harbor Dental Group</div><span class="tag">Example</span>
+      <div class="body"><span data-type="9.6" data-cps="62">Hi Dr. Lee, thanks for reaching out. I can walk you through a quote on Thursday at 2:00. Does that work?</span><span class="caret" data-blink="9.3,11.6"></span></div>
+    </div>
+  </section>
+
+  <!-- 4. you approve -->
+  <section class="scene" data-s="12.2" data-e="16.3">
+    <div class="step" data-in="12.3" data-fx="left"><i>3</i>You approve</div>
+    <h1 data-in="12.4" data-fx="up">You approve it.</h1>
+    <div class="card mail" style="left:72px;right:72px;top:366px;height:270px" data-in="12.6" data-fx="up">
+      <div class="to">Follow-up draft, waiting for you</div><span class="tag">Example</span>
+      <div class="body">Hi Dr. Lee, thanks for reaching out. I can walk you through a quote on Thursday at 2:00. Does that work?</div>
+      <div class="btns"><div style="position:relative"><div class="btn go" data-out="14.15">Approve</div><div class="btn yes" data-in="14.15" data-fx="pop">Approved ✓</div></div><div class="btn alt" data-out="14.15">Edit</div></div>
+    </div>
+    <div class="tap" data-tap="13.2,14.0,14.6" data-from="700,820" data-to="214,584"></div>
+    <div class="say" style="top:716px;font-size:60px" data-in="14.4" data-fx="up">Nothing goes out until you say yes.</div>
+  </section>
+
+  <!-- 5. marketing works the same way -->
+  <section class="scene" data-s="16.3" data-e="20.2">
+    <div class="node sm" style="left:72px;top:150px" data-in="16.4" data-fx="pop"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z"/></svg></div>
+    <div class="who" style="top:160px" data-in="16.5" data-fx="left">Marketing agent<small>Same three steps</small></div>
+    <h1 style="top:262px;font-size:58px" data-in="16.6" data-fx="up">Marketing works the same way.</h1>
+    <div class="item" style="top:420px" data-in="17.0" data-fx="up"><div class="thumb"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M4 18l5-4.500 3.500 3 3.500-4 4.500 5.500"/></svg></div><div><b>This week's social post</b><small>Drafted in your voice</small></div><div class="stack"><span class="pill wait" data-out="18.2">Waiting for your OK</span><span class="pill ok" data-in="18.2" data-fx="pop">Approved ✓</span></div></div>
+    <div class="item" style="top:596px" data-in="17.3" data-fx="up"><div class="thumb"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.500 7.500 12 13l8.500-5.500"/></svg></div><div><b>Email to past clients</b><small>Drafted and ready to review</small></div><div class="stack"><span class="pill wait" data-out="18.7">Waiting for your OK</span><span class="pill ok" data-in="18.7" data-fx="pop">Approved ✓</span></div></div>
+    <div class="say sm" style="top:790px" data-in="17.7" data-fx="up">Posts and emails are drafted for you, then wait for your OK.</div>
+  </section>
+
+  <!-- 6. the loop -->
+  <section class="scene" data-s="20.2" data-e="23.4">
+    <h1 style="top:176px;font-size:64px" data-in="20.3" data-fx="up">Agents do the busywork. <em>You stay in charge.</em></h1>
+    <svg class="over"><g fill="none" stroke="rgba(127,176,255,.7)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+      <path data-draw="20.65" d="M306 600 H444"/><path data-draw="20.65" d="M428 584l18 16-18 16"/>
+      <path data-draw="20.85" d="M636 600 H774"/><path data-draw="20.85" d="M758 584l18 16-18 16"/>
+      <path data-draw="21.05" d="M860 690 C860 800 220 800 220 698"/><path data-draw="21.05" d="M204 714l16-18 16 18"/></g></svg>
+    <div class="loopn" style="left:220px;top:600px" data-in="20.4" data-fx="pop"><svg viewBox="0 0 24 24" class="ico"><path d="M2.500 12s3.500-6.500 9.500-6.500S21.500 12 21.500 12s-3.500 6.500-9.500 6.500S2.500 12 2.500 12z"/><circle cx="12" cy="12" r="3"/></svg></div>
+    <div class="loopn" style="left:540px;top:600px" data-in="20.55" data-fx="pop"><svg viewBox="0 0 24 24" class="ico"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.500 6.500l4 4"/></svg></div>
+    <div class="loopn you" style="left:860px;top:600px" data-in="20.7" data-fx="pop"><svg viewBox="0 0 24 24" class="ico" stroke-width="2.800"><path d="M5 12.500l4.500 4.500L19 7.500"/></svg></div>
+    <div class="loopl" style="left:220px;top:440px" data-in="20.4" data-fx="fade">Watches</div>
+    <div class="loopl" style="left:540px;top:440px" data-in="20.55" data-fx="fade">Drafts</div>
+    <div class="loopl" style="left:860px;top:440px" data-in="20.7" data-fx="fade">You approve</div>
+    <div class="say sm" style="top:850px;text-align:center" data-in="21.1" data-fx="fade">Then it goes back to watching.</div>
+  </section>
+
+  <div id="rail"><div data-a="3.1" data-b="7.3">1 Watches</div><div data-a="7.3" data-b="12.2">2 Does the busywork</div><div data-a="12.2" data-b="16.3">3 You approve</div></div>
+</div>
+<script>
+window.DURATION = 23.4;
+const cl = (x) => Math.max(0, Math.min(1, x));
+const out3 = (p) => 1 - Math.pow(1 - p, 3);
+const back = (p) => { const c = 1.70158; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
+const m = /fmt=(\w+)/.exec(location.hash); document.documentElement.classList.add('f' + (m ? m[1] : '9x16'));
+const scenes = [...document.querySelectorAll('.scene')];
+const anim = [...document.querySelectorAll('[data-in],[data-out]')];
+const wires = [...document.querySelectorAll('.wire')];
+const draws = [...document.querySelectorAll('[data-draw]')].map((p) => ({ p, len: p.getTotalLength(), at: +p.dataset.draw }));
+draws.forEach((d) => { d.p.style.strokeDasharray = d.len; });
+const types = [...document.querySelectorAll('[data-type]')].map((e) => ({ e, full: e.textContent, at: +e.dataset.type, cps: +e.dataset.cps }));
+const rail = document.getElementById('rail'), glow = document.getElementById('glow');
+window.render = (t) => {
+  for (const s of scenes) {
+    const a = +s.dataset.s, b = +s.dataset.e, on = t >= a - 0.001 && t < b;
+    s.style.display = on ? '' : 'none';
+    if (on) s.style.opacity = Math.min(a === 0 ? 1 : cl((t - a) / 0.3), b >= window.DURATION ? 1 : cl((b - t) / 0.28));
+  }
+  for (const e of anim) {
+    const i = e.dataset.in, o = e.dataset.out, fx = e.dataset.fx || 'fade';
+    let p = i === undefined ? 1 : cl((t - +i) / 0.45), tr = '';
+    if (fx === 'up') tr = `translateY(${(1 - out3(p)) * 44}px)`;
+    if (fx === 'left') tr = `translateX(${(1 - out3(p)) * -44}px)`;
+    if (fx === 'pop') tr = `scale(${p <= 0 ? 0.6 : 0.6 + 0.4 * back(cl((t - +i) / 0.38))})`;
+    if (e.dataset.beat) { let k = 1; for (const bt of e.dataset.beat.split(',')) { const d = t - (+bt + 0.55); if (d > 0 && d < 0.5) k = 1 + 0.09 * Math.sin(d / 0.5 * Math.PI); } tr += ` scale(${k})`; }
+    e.style.opacity = (fx === 'pop' ? cl((t - +i) / 0.18) : out3(p)) * (o === undefined ? 1 : (t >= +o ? 0 : 1));
+    if (i === undefined) e.style.opacity = t >= +o ? 0 : 1;
+    e.style.transform = tr;
+  }
+  for (const d of draws) d.p.style.strokeDashoffset = d.len * (1 - out3(cl((t - d.at) / 0.5)));
+  for (const c of document.querySelectorAll('.pulse')) {
+    const w = wires[+c.dataset.wire], p = (t - +c.dataset.at) / 0.6;
+    if (p < 0 || p > 1) { c.style.opacity = 0; continue; }
+    const pt = w.getPointAtLength(w.getTotalLength() * out3(p)); c.setAttribute('cx', pt.x); c.setAttribute('cy', pt.y); c.style.opacity = 1;
+  }
+  for (const y of types) y.e.textContent = y.full.slice(0, Math.max(0, Math.floor((t - y.at) * y.cps)));
+  for (const c of document.querySelectorAll('[data-blink]')) { const [a, b] = c.dataset.blink.split(',').map(Number); c.style.opacity = t < a || t > b ? 0 : (Math.floor(t * 2.5) % 2 ? 0.25 : 1); }
+  for (const e of document.querySelectorAll('[data-tap]')) {
+    const [a, hit, z] = e.dataset.tap.split(',').map(Number), f = e.dataset.from.split(',').map(Number), g = e.dataset.to.split(',').map(Number);
+    const p = out3(cl((t - a) / (hit - a))), press = t >= hit && t < hit + 0.22 ? 0.8 : 1;
+    e.style.left = f[0] + (g[0] - f[0]) * p + 'px'; e.style.top = f[1] + (g[1] - f[1]) * p + 'px';
+    e.style.opacity = cl((t - a) / 0.25) * cl((z - t) / 0.25); e.style.transform = `scale(${press})`;
+  }
+  let any = false;
+  for (const d of rail.children) { const a = +d.dataset.a, b = +d.dataset.b; d.className = t >= a && t < b ? 'on' : (t >= b ? 'was' : ''); if (t >= a && t < b) any = true; }
+  rail.style.opacity = Math.min(cl((t - 3.1) / 0.3), cl((20.2 - t) / 0.3));
+  glow.style.transform = `translate(${Math.sin(t * 0.5) * 120}px,${Math.cos(t * 0.4) * 90}px)`;
+};
+window.readyForFrames = document.fonts.ready.then(() => window.render(+((/t=([\d.]+)/.exec(location.hash) || [])[1] || 0)));
+</script>
+</body></html>
