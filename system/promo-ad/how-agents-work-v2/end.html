@@ -1,0 +1,19 @@
+<!doctype html><html><head><meta charset="utf-8">
+<!-- Text layer for the end card: sits under Otis's logo light-up (system/promo-ad/end-card).
+     Positions follow reference-agent-crm-ending-9x16.mp4: name 975-1054, lines 1093-1191, pill ~1270-1368. -->
+<style>
+@font-face{font-family:"Hanken Grotesk";src:url(fonts/hanken-grotesk-var-latin.woff2) format("woff2");font-weight:100 900}
+@font-face{font-family:"Inter";src:url(fonts/inter-var-latin.woff2) format("woff2");font-weight:100 900}
+html,body{margin:0;width:1080px;height:1920px;background:transparent;overflow:hidden}
+#t{position:absolute;left:0;right:0;top:954px;text-align:center;color:#fff}
+h1{margin:0;font:800 98px/1.05 "Hanken Grotesk",Inter,sans-serif;letter-spacing:-.01em}
+p{margin:20px 0 0;font:500 44px/1.42 Inter,sans-serif;color:#cbd5e1}
+span{display:inline-block;margin-top:58px;background:#2443d8;border-radius:999px;padding:30px 54px;font:700 43px/1 Inter,sans-serif}
+</style></head><body>
+<div id="t"><h1>AI Agents</h1><p>For your marketing and sales.<br>You approve. Nothing sends without you.</p><span>meridianinterface.com</span></div>
+<script>
+window.DURATION = 4.4;
+const t0 = 0.9, el = document.getElementById('t');
+window.render = (t) => { const p = Math.max(0, Math.min(1, (t - t0) / 0.45)), e = 1 - Math.pow(1 - p, 3); el.style.opacity = e; el.style.transform = `translateY(${(1 - e) * 18}px)`; };
+window.readyForFrames = document.fonts.ready.then(() => window.render(9));
+</script></body></html>

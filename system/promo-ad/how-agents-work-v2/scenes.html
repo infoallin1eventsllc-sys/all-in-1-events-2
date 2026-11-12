@@ -1,0 +1,201 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<!-- "How AI agents work", second cut (12 Nov 2026): the look study's new direction, off the navy.
+     #look=day|signal|emerald|stage   #fmt=9x16|4x5|1x1|16x9
+     Tall condensed headlines, one idea per frame, the app card as a large tilted prop, a colour
+     wipe on every cut. Everything sits on a 1080x1080 stage; in 9:16 the stage is at y=240 and
+     all content stays inside the Reels safe box (stage y 30-1008). window.render(t) sets every
+     style from the time: no CSS animation, so frames are repeatable. -->
+<style>
+@font-face{font-family:"League Gothic";src:url(fonts/league-gothic-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Montserrat";src:url(fonts/montserrat-latin-wght-normal.woff2) format("woff2");font-weight:100 900}
+@font-face{font-family:"Inter";src:url(fonts/inter-var-latin.woff2) format("woff2");font-weight:100 900}
+@font-face{font-family:"JetBrains Mono";src:url(fonts/jetbrains-mono-latin-wght-normal.woff2) format("woff2");font-weight:100 800}
+:root{--bg:#f4f6fa;--fg:#0f172a;--soft:#475569;--hl-bg:#2563eb;--hl-fg:#fff;--num:rgba(15,23,42,.07);
+  --card:#fff;--card-fg:#0f172a;--card-soft:#64748b;--card-line:#e6ebf2;--card-edge:1.5px solid #dfe5ee;--card-shadow:0 50px 90px rgba(15,23,42,.18);--radius:30px;
+  --btn:#2563eb;--btn-fg:#fff;--btn2:#eef2f7;--btn2-fg:#334155;--label:"Montserrat";--label-sp:.2em;--rule:#0f172a;--ok:#16a34a}
+html.signal{--bg:#ffd21f;--fg:#141414;--soft:#3d3300;--hl-bg:#141414;--hl-fg:#ffd21f;--num:rgba(20,20,20,.09);
+  --card:#fff;--card-fg:#141414;--card-soft:#5b5b5b;--card-line:#141414;--card-edge:4px solid #141414;--card-shadow:18px 18px 0 #141414;--radius:10px;
+  --btn:#141414;--btn-fg:#fff;--btn2:#fff;--btn2-fg:#141414;--rule:#141414}
+html.emerald{--bg:#0d3b2e;--fg:#f4efe1;--soft:#b9cdbf;--hl-bg:#f6c744;--hl-fg:#0d3b2e;--num:rgba(244,239,225,.07);
+  --card:#fffdf6;--card-fg:#0d3b2e;--card-soft:#5d7468;--card-line:#e8e2d0;--card-edge:0 solid transparent;--card-shadow:0 50px 90px rgba(0,0,0,.42);
+  --btn:#0d3b2e;--btn-fg:#f4efe1;--btn2:#ece7d6;--btn2-fg:#0d3b2e;--rule:#f6c744}
+html.stage{--bg:#000;--fg:#fff;--soft:#a3a3a3;--hl-bg:#fff;--hl-fg:#000;--num:rgba(255,255,255,.08);
+  --card:#fff;--card-fg:#0a0a0a;--card-soft:#666;--card-line:#e5e5e5;--card-edge:0 solid transparent;--card-shadow:0 0 120px rgba(255,255,255,.16);
+  --btn:#0a0a0a;--btn-fg:#fff;--btn2:#ededed;--btn2-fg:#0a0a0a;--label:"JetBrains Mono";--label-sp:.12em;--rule:#fff}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);font-family:Montserrat,sans-serif}
+html.stage body{background:#000 radial-gradient(rgba(255,255,255,.13) 1.5px,transparent 1.6px) 0 0/54px 54px}
+html.emerald body{background:radial-gradient(ellipse at 30% 30%,#14503e,#0d3b2e 60%,#09291f)}
+#stage{position:absolute;width:1080px;height:1080px;left:0;top:0}
+html.f9x16 #stage{top:240px} html.f4x5 #stage{top:135px} html.f16x9 #stage{left:420px}
+#wipe{position:absolute;inset:0;background:var(--hl-bg);transform:translateX(-101%)}
+
+.brand{position:absolute;left:84px;top:52px;display:flex;align-items:center;gap:16px}
+.brand img{height:52px;display:block}
+.brand b{font:800 24px/1 Montserrat;letter-spacing:.22em}
+.brand i{font:600 14px/1 var(--label);letter-spacing:.3em;font-style:normal;color:var(--soft);display:block;margin-top:7px}
+.scene{position:absolute;inset:0}
+.kick{position:absolute;right:84px;top:72px;font:700 17px/1 var(--label);letter-spacing:var(--label-sp);color:var(--soft);text-transform:uppercase}
+.num{position:absolute;right:26px;top:-10px;font:400 760px/.8 "League Gothic";color:var(--num)}
+h1{position:absolute;left:84px;right:40px;top:164px;font:400 214px/.9 "League Gothic";text-transform:uppercase;letter-spacing:.005em}
+h1 .ln{display:block;overflow:hidden;padding-top:.06em;margin-top:-.06em}
+h1 .ln>span{display:inline-block;white-space:nowrap}
+h1 mark{position:relative;display:inline-block;background:none;color:var(--hl-fg);line-height:.8;padding:.05em .08em .01em;margin:0 -.03em}
+h1 mark u{position:absolute;inset:0;background:var(--hl-bg);transform-origin:0 50%}
+h1 mark em{position:relative;font-style:normal}
+.cap{position:absolute;left:84px;right:84px;top:908px;font:700 46px/1.16 Montserrat}
+.cap.soft{font:600 38px/1.2 Montserrat;color:var(--soft)}
+.rule{position:absolute;left:84px;width:150px;height:10px;background:var(--rule);transform-origin:0 50%}
+
+.card{position:absolute;background:var(--card);color:var(--card-fg);border:var(--card-edge);border-radius:var(--radius);box-shadow:var(--card-shadow);font-family:Inter,sans-serif}
+.lab{font:600 21px/1 var(--label);letter-spacing:.06em;color:var(--card-soft);text-transform:uppercase}
+.ex{position:absolute;right:34px;top:36px;font:700 15px/1 var(--label);letter-spacing:.16em;color:var(--card-soft);opacity:.7}
+.ic{width:44px;height:44px;flex:none;stroke:var(--card-fg);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.src{display:flex;align-items:center;gap:20px;font:600 34px/1 Inter;padding:22px 0;border-top:2px solid var(--card-line)}
+.src:first-of-type{border-top:0}
+.live{margin-left:auto;width:16px;height:16px;border-radius:50%;background:var(--ok)}
+.thumb{width:104px;height:104px;border-radius:calc(var(--radius) * .6);background:var(--btn);display:grid;place-items:center;flex:none}
+.thumb svg{width:54px;height:54px;stroke:var(--btn-fg);stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.ttl{font:700 38px/1.1 Inter;display:block}.sub{font:500 29px/1.25 Inter;color:var(--card-soft);display:block;margin-top:8px}
+.task{display:flex;align-items:center;gap:20px;font:600 35px/1 Inter;padding:21px 0;border-top:2px solid var(--card-line)}
+.task:first-of-type{border-top:0}
+.box{position:relative;width:46px;height:46px;border-radius:50%;border:3px solid var(--card-line);flex:none}
+.box b{position:absolute;inset:-3px;border-radius:50%;background:var(--ok);display:grid;place-items:center}
+.box svg{width:26px;height:26px;stroke:#fff;stroke-width:3.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.pill{margin-left:auto;border-radius:999px;padding:12px 22px;font:700 23px/1 Inter;white-space:nowrap}
+.pill.hot{background:#ea580c;color:#fff}.pill.done{background:#dcfce7;color:#166534}.pill.wait{background:#fef3c7;color:#92400e}.pill.ok{background:var(--ok);color:#fff}
+.stack{margin-left:auto;display:grid}.stack>*{grid-area:1/1;margin-left:0;justify-self:end}
+.body{font:500 37px/1.34 Inter;margin-top:20px}
+.caret{display:inline-block;width:3px;height:1em;background:var(--btn);vertical-align:-.12em;margin-left:2px}
+.btns{display:flex;gap:18px;margin-top:34px}
+.btn{border-radius:calc(var(--radius) * .6);padding:26px 46px;font:700 36px/1 Inter;background:var(--btn);color:var(--btn-fg)}
+.btn.alt{background:var(--btn2);color:var(--btn2-fg)}
+html.signal .btn.alt{border:4px solid #141414;padding:22px 42px}
+.btn.yes{background:var(--ok);color:#fff;position:absolute;left:0;top:0;white-space:nowrap}
+.tap{position:absolute;width:104px;height:104px;border-radius:50%;border:6px solid var(--fg);background:rgba(127,127,127,.2);margin:-52px 0 0 -52px}
+.ping{position:absolute;width:150px;height:150px;border-radius:50%;border:8px solid var(--hl-bg);margin:-75px 0 0 -75px}
+</style></head>
+<body>
+<div id="stage">
+  <div class="brand" data-in="0.1" data-fx="fade"><img src="img/mark.png" alt=""><div><b>MERIDIAN</b><i>INTERFACE</i></div></div>
+
+  <!-- hook -->
+  <section class="scene" data-s="0" data-e="3.2">
+    <h1 style="top:176px;font-size:204px">
+      <span class="ln"><span data-in="0.25" data-fx="rise">What does</span></span>
+      <span class="ln"><span data-in="0.4" data-fx="rise">an <mark><u data-in="0.5" data-fx="wipe"></u><em>AI agent</em></mark></span></span>
+      <span class="ln"><span data-in="0.55" data-fx="rise">do in your</span></span>
+      <span class="ln"><span data-in="0.7" data-fx="rise">business?</span></span></h1>
+    <div class="rule" style="top:926px" data-in="1.3" data-fx="wipe"></div>
+    <div class="cap soft" style="top:954px" data-in="1.45" data-fx="up">Three steps. Watch one work a lead.</div>
+  </section>
+
+  <!-- 1 it watches -->
+  <section class="scene" data-s="3.2" data-e="7.4">
+    <div class="num" data-in="3.3" data-fx="fade">1</div><div class="kick" data-in="3.3" data-fx="fade">Step 1 of 3</div>
+    <h1><span class="ln"><span data-in="3.3" data-fx="rise">It <mark><u data-in="3.42" data-fx="wipe"></u><em>watches.</em></mark></span></span></h1>
+    <div class="card" style="left:96px;top:384px;width:600px;padding:18px 40px" data-in="3.7" data-fx="drop" data-rot="2.4">
+      <div class="src"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 9h18M7 13h6M7 16h9"/></svg>Website form<span class="live" data-blinkdot="0"></span></div>
+      <div class="src"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 7.5 12 13l8.5-5.5"/></svg>Inbox<span class="live" data-blinkdot="0.33"></span></div>
+      <div class="src"><svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Calendar<span class="live" data-blinkdot="0.66"></span></div>
+    </div>
+    <div class="ping" style="left:930px;top:680px" data-ping="5.0"></div>
+    <div class="card" style="left:250px;top:670px;width:740px;padding:34px 36px;display:flex;align-items:center;gap:28px" data-in="5.0" data-fx="drop" data-rot="-3">
+      <div class="thumb"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></div>
+      <div><span class="ttl">New lead</span><span class="sub">Harbor Dental Group<br>asked for a quote</span></div><span class="ex" style="top:26px;right:28px">EXAMPLE</span>
+    </div>
+    <div class="cap" data-in="5.5" data-fx="up">Your website, inbox and calendar.</div>
+  </section>
+
+  <!-- 2 it does the busywork -->
+  <section class="scene" data-s="7.4" data-e="12.2">
+    <div class="num" data-in="7.5" data-fx="fade">2</div><div class="kick" data-in="7.5" data-fx="fade">Step 2 of 3</div>
+    <h1 style="font-size:184px;top:150px"><span class="ln"><span data-in="7.5" data-fx="rise">It does the</span></span>
+      <span class="ln"><span data-in="7.65" data-fx="rise"><mark><u data-in="7.77" data-fx="wipe"></u><em>busywork.</em></mark></span></span></h1>
+    <div class="card" style="left:104px;top:512px;width:860px;padding:34px 42px 38px" data-in="8.1" data-fx="drop" data-rot="-2.4">
+      <div class="lab" style="margin-bottom:10px">Sales agent, working</div><span class="ex">EXAMPLE</span>
+      <div class="task"><span class="box"><b data-in="8.9" data-fx="pop"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></b></span>Scores the lead<span class="pill hot" data-in="8.9" data-fx="pop">Hot</span></div>
+      <div class="task"><span class="box"><b data-in="9.6" data-fx="pop"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></b></span>Looks up the account<span class="pill done" data-in="9.6" data-fx="pop">Done</span></div>
+      <div class="task"><span class="box"><b data-in="11.3" data-fx="pop"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></b></span>Writes the follow-up<span class="pill done" data-in="11.3" data-fx="pop">Draft ready</span></div>
+      <div class="sub" style="font-size:30px;margin-top:8px;min-height:38px"><span data-type="9.9" data-cps="30">Hi Dr. Lee, thanks for reaching out…</span><span class="caret" data-blink="9.8,11.3"></span></div>
+    </div>
+  </section>
+
+  <!-- 3 you approve -->
+  <section class="scene" data-s="12.2" data-e="16.4">
+    <div class="num" data-in="12.3" data-fx="fade">3</div><div class="kick" data-in="12.3" data-fx="fade">Step 3 of 3</div>
+    <h1><span class="ln"><span data-in="12.3" data-fx="rise">You <mark><u data-in="12.42" data-fx="wipe"></u><em>approve.</em></mark></span></span></h1>
+    <div class="card" id="mail" style="left:104px;top:410px;width:850px;padding:40px 44px 44px" data-in="12.7" data-fx="drop" data-rot="-3.2">
+      <div class="lab">Follow-up draft, waiting for you</div><span class="ex" style="top:40px;right:36px">EXAMPLE</span>
+      <div class="body">Hi Dr. Lee, thanks for reaching out. I can walk you through a quote on Thursday at 2:00. Does that work?</div>
+      <div class="btns"><div style="position:relative"><div class="btn" data-out="14.3">Approve</div><div class="btn yes" data-in="14.3" data-fx="pop">Approved ✓</div></div><div class="btn alt" data-out="14.3">Edit</div></div>
+    </div>
+    <div class="tap" data-tap="13.3,14.15,14.75" data-from="820,930" data-to="300,800"></div>
+    <div class="cap" data-in="14.5" data-fx="up">Nothing goes out until you say yes.</div>
+  </section>
+
+  <!-- marketing: same thing -->
+  <section class="scene" data-s="16.4" data-e="20.2">
+    <h1 style="font-size:190px;top:150px"><span class="ln"><span data-in="16.5" data-fx="rise">Marketing?</span></span>
+      <span class="ln"><span data-in="16.65" data-fx="rise"><mark><u data-in="16.77" data-fx="wipe"></u><em>Same thing.</em></mark></span></span></h1>
+    <div class="card" style="left:96px;top:520px;width:860px;padding:30px 34px;display:flex;align-items:center;gap:26px" data-in="17.1" data-fx="drop" data-rot="1.8">
+      <div class="thumb"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M4 18l5-4.5 3.5 3 3.5-4 4.5 5.5"/></svg></div>
+      <div><span class="ttl">This week's post</span><span class="sub">Social, in your voice</span></div>
+      <div class="stack"><span class="pill wait" data-out="18.4">Needs your OK</span><span class="pill ok" data-in="18.4" data-fx="pop">Approved ✓</span></div></div>
+    <div class="card" style="left:124px;top:706px;width:860px;padding:30px 34px;display:flex;align-items:center;gap:26px" data-in="17.4" data-fx="drop" data-rot="-1.8">
+      <div class="thumb"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 7.5 12 13l8.5-5.5"/></svg></div>
+      <div><span class="ttl">Email to past clients</span><span class="sub">Ready to review</span></div>
+      <div class="stack"><span class="pill wait" data-out="18.9">Needs your OK</span><span class="pill ok" data-in="18.9" data-fx="pop">Approved ✓</span></div></div>
+    <div class="cap" style="top:926px" data-in="17.8" data-fx="up">Posts and emails wait for your OK.</div>
+  </section>
+
+  <!-- close -->
+  <section class="scene" data-s="20.2" data-e="23.4">
+    <h1 style="font-size:178px;top:230px"><span class="ln"><span data-in="20.3" data-fx="rise">Agents do</span></span>
+      <span class="ln"><span data-in="20.42" data-fx="rise">the busywork.</span></span>
+      <span class="ln"><span data-in="20.75" data-fx="rise"><mark><u data-in="20.87" data-fx="wipe"></u><em>You stay</em></mark></span></span>
+      <span class="ln"><span data-in="20.87" data-fx="rise"><mark><u data-in="20.99" data-fx="wipe"></u><em>in charge.</em></mark></span></span></h1>
+  </section>
+</div>
+<div id="wipe"></div>
+<script>
+window.DURATION = 23.4;
+const cl = (x) => Math.max(0, Math.min(1, x));
+const out3 = (p) => 1 - Math.pow(1 - p, 3), out5 = (p) => 1 - Math.pow(1 - p, 5), io = (p) => p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const back = (p) => { const c = 1.70158; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
+const h = location.hash; document.documentElement.classList.add((/look=(\w+)/.exec(h) || [])[1] || 'day', 'f' + ((/fmt=(\w+)/.exec(h) || [])[1] || '9x16'));
+const scenes = [...document.querySelectorAll('.scene')], cuts = scenes.map((s) => +s.dataset.s).filter((x) => x > 0);
+const anim = [...document.querySelectorAll('[data-in],[data-out]')];
+const types = [...document.querySelectorAll('[data-type]')].map((e) => ({ e, full: e.textContent, at: +e.dataset.type, cps: +e.dataset.cps }));
+const wipe = document.getElementById('wipe');
+window.render = (t) => {
+  for (const s of scenes) s.style.display = t >= +s.dataset.s - 0.0005 && t < +s.dataset.e ? '' : 'none';
+  let wx = -101; for (const c of cuts) { const p = (t - (c - 0.2)) / 0.4; if (p > 0 && p < 1) wx = -101 + 202 * io(p); }
+  wipe.style.transform = `translateX(${wx}%)`;
+  for (const e of anim) {
+    const i = e.dataset.in, o = e.dataset.out, fx = e.dataset.fx || 'fade', rot = e.dataset.rot ? ` rotate(${e.dataset.rot}deg)` : '';
+    const d = i === undefined ? 9 : t - +i; let op = 1, tr = '';
+    if (fx === 'fade') op = out3(cl(d / 0.4));
+    if (fx === 'up') { const p = out3(cl(d / 0.45)); op = p; tr = `translateY(${(1 - p) * 40}px)`; }
+    if (fx === 'rise') { op = d >= 0 ? 1 : 0; tr = `translateY(${(1 - out5(cl(d / 0.55))) * 108}%)`; }
+    if (fx === 'wipe') { op = d >= 0 ? 1 : 0; tr = `scaleX(${out5(cl(d / 0.42))})`; }
+    if (fx === 'pop') { op = cl(d / 0.14); tr = `scale(${d <= 0 ? 0.5 : 0.5 + 0.5 * back(cl(d / 0.34))})`; }
+    if (fx === 'drop') { const p = out5(cl(d / 0.6)); op = cl(d / 0.16); tr = `translateY(${(1 - p) * 150}px)` + rot.replace(/rotate\(([-\d.]+)deg\)/, (m, r) => `rotate(${+r + (1 - p) * (+r > 0 ? 5 : -5)}deg)`); }
+    if (o !== undefined && t >= +o) op = 0;
+    e.style.opacity = op; e.style.transform = tr || 'none';
+  }
+  for (const y of types) y.e.textContent = y.full.slice(0, Math.max(0, Math.floor((t - y.at) * y.cps)));
+  for (const c of document.querySelectorAll('[data-blink]')) { const [a, b] = c.dataset.blink.split(',').map(Number); c.style.opacity = t < a || t > b ? 0 : (Math.floor(t * 2.5) % 2 ? 0.25 : 1); }
+  for (const c of document.querySelectorAll('[data-blinkdot]')) c.style.opacity = 0.35 + 0.65 * Math.pow(Math.max(0, Math.sin((t * 0.9 - +c.dataset.blinkdot) * Math.PI * 2)), 2);
+  for (const c of document.querySelectorAll('[data-ping]')) { const p = (t - +c.dataset.ping) / 0.7; c.style.opacity = p > 0 && p < 1 ? 1 - p : 0; c.style.transform = `scale(${0.3 + out3(cl(p)) * 1.5})`; }
+  for (const e of document.querySelectorAll('[data-tap]')) {
+    const [a, hit, z] = e.dataset.tap.split(',').map(Number), f = e.dataset.from.split(',').map(Number), g = e.dataset.to.split(',').map(Number);
+    const p = out3(cl((t - a) / (hit - a))), press = t >= hit && t < hit + 0.2 ? 0.78 : 1;
+    e.style.left = f[0] + (g[0] - f[0]) * p + 'px'; e.style.top = f[1] + (g[1] - f[1]) * p + 'px';
+    e.style.opacity = cl((t - a) / 0.22) * cl((z - t) / 0.22); e.style.transform = `scale(${press})`;
+  }
+};
+window.readyForFrames = document.fonts.ready.then(() => window.render(+((/t=([\d.]+)/.exec(h) || [])[1] || 0)));
+</script>
+</body></html>
