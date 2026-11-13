@@ -12,6 +12,64 @@ index 61fad15..b527cc4 100644
      <meta name="description" content="Meridian Interface is a digital design & development studio specializing in custom web applications, mobile interfaces, enterprise analytics dashboards, and brand identity systems." />
      <meta name="keywords" content="Meridian Interface, Web Design, Mobile App Development, UI UX Design, Analytics Dashboards, Brand Identity" />
      <meta name="author" content="Meridian Interface" />
+diff --git a/public/images/CREDITS.md b/public/images/CREDITS.md
+index 5fd25d2..0484cf3 100644
+--- a/public/images/CREDITS.md
++++ b/public/images/CREDITS.md
+@@ -3,14 +3,23 @@
+ Provenance for every image shipped in this repository. Keep this current — a
+ studio site is the last place to be unsure whether an asset is cleared.
+ 
+-## Hero: the showcase (7 Oct 2026)
++## Hero: the laptop film (13 Nov 2026)
+ 
+ | | |
+ |---|---|
+-| Files | `images/hero/showcase-poster.webp`, `video/hero-showcase.webm`, `video/hero-showcase.mp4` |
+-| Source | A Higgsfield clip generated on Otis's own account (job 3cdc7ab7, 7 Oct 2026), with screen captures of meridianinterface.com and its hosted demos composited into its three glass faces. Everything outside the glass is the clip as generated |
+-| Licence | Otis's Higgsfield output, under his plan's commercial terms; the screens are the studio's own work |
+-| Re-render | Backend repo, `system/media/showcase/README.md`. Do it whenever the homepage or a demo changes, since the panes show them |
++| Files | `images/hero/laptop-poster.webp`, `images/hero/laptop-poster-sm.webp`, `video/hero-laptop.webm`, `video/hero-laptop.mp4`, `video/hero-laptop-sm.webm`, `video/hero-laptop-sm.mp4` |
++| Source | Otis's Higgsfield "Monospace Callouts" ad for the Agent Dashboard, generated on his own account (job 168e6e1c, 12 Nov 2026) from a picture of the studio's own Agent Dashboard on a laptop. Reworked for the hero with ffmpeg only: slowed, looped without a cut, its black stage keyed onto this site's navy. No new generation |
++| Sound | Written for the film in code (numpy/scipy), not sampled from anything: nothing to license |
++| Licence | Otis's Higgsfield output, under his plan's commercial terms; the screen shown is the studio's own work |
++| Re-render | Backend repo, `system/media/hero-laptop/README.md` |
++
++## Hero (removed 13 Nov 2026): the showcase
++
++The glass-pane showcase film (`images/hero/showcase-poster.webp`, `video/hero-showcase.*`,
++a Higgsfield clip from Otis's account, job 3cdc7ab7, 7 Oct 2026) was the hero from
++7 Oct to 13 Nov 2026. Its files were removed when the laptop film replaced it; they
++are in git history, and its recipe is still in the backend repo at
++`system/media/showcase/README.md`.
+ 
+ ## Hero (retired): Earth from orbit
+ 
+@@ -37,19 +46,12 @@ The previous `hero-earth.jpg` was a CG render that arrived with the Google AI
+ Studio export. Its provenance was never established, which is why it was
+ replaced rather than kept as a fallback.
+ 
+-## Hero — the studio's own work
++## Hero (removed 13 Nov 2026): the three demo captures
+ 
+-| | |
+-|---|---|
+-| Files | `images/hero/hero-dashboard.webp`, `images/hero/hero-website.webp`, `images/hero/hero-mobile.webp` |
+-| Source | Screenshots of this site's own demos: `demos/healthcare/` (CarePulse; was `demos/analytics-hub/` until it was taken off the site, 13 Oct 2026), `demos/frame-shop/` (recaptured 13 Oct 2026 from the version with the video hero), `demos/big-boy-subs/` |
+-| Captured | 2026-09-25, headless Chromium. Desktop at 1280x800 (1.5x), phone at 390x844 (2x). The "Built by Meridian Interface" banner is trimmed off because the hero draws its own browser and phone frames. |
+-
+-These carry whatever the demos carry: any photograph visible in a capture
+-(the Big Boy Subs sandwich, the Frame Shop workshop) is the same file the demo
+-already ships, so the hero adds no new licensing exposure. If a demo changes
+-enough that the hero misrepresents it, re-capture at the sizes above and export
+-to WebP at quality 80 (1200px wide for the browsers, 480px for the phone).
++`images/hero/hero-dashboard.webp`, `hero-website.webp` and `hero-mobile.webp` were
++screenshots of this site's own demos, shown as three framed cards in the hero on
++phones and tablets until the laptop film took that place. Removed with the component
++that drew them (`HeroShowcase.tsx`); both are in git history.
+ 
+ ## Everything else
+ 
 diff --git a/src/components/HeroBackdrop.tsx b/src/components/HeroBackdrop.tsx
 index 38110a9..510e54e 100644
 --- a/src/components/HeroBackdrop.tsx
@@ -143,10 +201,10 @@ index 38110a9..510e54e 100644
      </div>
 diff --git a/src/components/HeroLaptopFilm.tsx b/src/components/HeroLaptopFilm.tsx
 new file mode 100644
-index 0000000..0afcd94
+index 0000000..db7e038
 --- /dev/null
 +++ b/src/components/HeroLaptopFilm.tsx
-@@ -0,0 +1,127 @@
+@@ -0,0 +1,128 @@
 +import React, { useEffect, useRef, useState } from 'react';
 +import { shouldStayStill } from '../lib/stillness';
 +import { heroSound } from '../lib/heroSound';
@@ -187,9 +245,10 @@ index 0000000..0afcd94
 +
 +export const HERO_GROUND = '#060d1d';
 +
++// Every path is written out in full so the pre-launch check can confirm the file exists.
 +const FILM = {
-+  wide: { poster: '/images/hero/laptop-poster.webp', src: '/video/hero-laptop', w: 880, h: 1080 },
-+  small: { poster: '/images/hero/laptop-poster-sm.webp', src: '/video/hero-laptop-sm', w: 660, h: 810 },
++  wide: { poster: '/images/hero/laptop-poster.webp', webm: '/video/hero-laptop.webm', mp4: '/video/hero-laptop.mp4', w: 880, h: 1080 },
++  small: { poster: '/images/hero/laptop-poster-sm.webp', webm: '/video/hero-laptop-sm.webm', mp4: '/video/hero-laptop-sm.mp4', w: 660, h: 810 },
 +} as const;
 +
 +export const HeroLaptopFilm: React.FC<{ size: keyof typeof FILM; className?: string; style?: React.CSSProperties }> = ({ size, className = '', style }) => {
@@ -267,13 +326,136 @@ index 0000000..0afcd94
 +          disablePictureInPicture
 +          onPlaying={() => setShowing(true)}
 +        >
-+          <source src={`${film.src}.webm`} type="video/webm" />
-+          <source src={`${film.src}.mp4`} type="video/mp4" />
++          <source src={film.webm} type="video/webm" />
++          <source src={film.mp4} type="video/mp4" />
 +        </video>
 +      )}
 +    </div>
 +  );
 +};
+diff --git a/src/components/HeroShowcase.tsx b/src/components/HeroShowcase.tsx
+deleted file mode 100644
+index a1c6cdf..0000000
+--- a/src/components/HeroShowcase.tsx
++++ /dev/null
+@@ -1,117 +0,0 @@
+-import React from 'react';
+-import { PORTFOLIO } from '../data/mockData';
+-
+-type Piece = typeof PORTFOLIO[number];
+-
+-/**
+- * The picture on the right of the homepage hero: three of the studio's own
+- * working demos, one of each kind of thing it builds — a dashboard, a website
+- * and a phone app — layered in front of the globe.
+- *
+- * The hero used to be words on one side and an empty stretch of globe on the
+- * other. The work is the most persuasive thing the studio has, so the front
+- * door now shows it, and every frame opens that piece's concept panel.
+- *
+- * The images are fresh captures of the demos in `public/demos/`, taken at
+- * desktop and phone sizes with the "Built by Meridian Interface" banner
+- * trimmed off, because the frames here draw their own chrome. They are
+- * deliberately not the portfolio covers: those can be replaced from Photo
+- * Control, and a hero that silently changed when a tile did would be a
+- * surprise. If a demo changes a lot, re-capture it (see CREDITS.md).
+- */
+-
+-const HERO = {
+-  dashboard: { id: 'p1', src: '/images/hero/hero-dashboard.webp', w: 1200, h: 750, path: 'demos/healthcare' },
+-  website: { id: 'p2', src: '/images/hero/hero-website.webp', w: 1200, h: 750, path: 'demos/frame-shop' },
+-  mobile: { id: 'p4', src: '/images/hero/hero-mobile.webp', w: 480, h: 1039 },
+-} as const;
+-
+-const find = (id: string) => PORTFOLIO.find((p) => p.id === id);
+-
+-/** A browser window drawn in CSS: quiet chrome, the real address, the capture. */
+-const BrowserFrame: React.FC<{ src: string; w: number; h: number; path: string; alt: string }> = ({ src, w, h, path, alt }) => (
+-  <div className="overflow-hidden rounded-xl bg-[#0b1220] ring-1 ring-white/10">
+-    {/* The chrome is fixed-size while the frame scales, so on a phone it is
+-        cut down: smaller dots, and the path alone without the domain. */}
+-    <div className="flex items-center gap-2 sm:gap-3 px-2 sm:px-3 h-5 sm:h-8 border-b border-white/5">
+-      <span className="flex gap-1 sm:gap-1.5" aria-hidden="true">
+-        <span className="h-1 w-1 sm:h-2 sm:w-2 rounded-full bg-slate-600" />
+-        <span className="h-1 w-1 sm:h-2 sm:w-2 rounded-full bg-slate-600" />
+-        <span className="h-1 w-1 sm:h-2 sm:w-2 rounded-full bg-slate-600" />
+-      </span>
+-      <span className="flex-1 min-w-0 truncate rounded bg-white/5 px-1.5 sm:px-2.5 sm:py-0.5 text-[8px] sm:text-[11px] leading-[1.6] font-body text-slate-400">
+-        <span className="hidden sm:inline">meridianinterface.com/</span><span className="text-slate-300">{path}</span>
+-      </span>
+-    </div>
+-    {/* fetchPriority: on a phone the dashboard capture is the largest thing on
+-        the first screen, and without the hint it queued behind every other
+-        request (Lighthouse, 15 Oct: about 1.5 s of the 8.4 s first paint). */}
+-    <img src={src} width={w} height={h} alt={alt} decoding="async" fetchPriority="high" className="block w-full h-auto" />
+-  </div>
+-);
+-
+-export const HeroShowcase: React.FC<{ onOpen: (item: Piece) => void }> = ({ onOpen }) => {
+-  const dashboard = find(HERO.dashboard.id);
+-  const website = find(HERO.website.id);
+-  const mobile = find(HERO.mobile.id);
+-
+-  // Each frame is a button onto the concept panel. If a piece is ever removed
+-  // from the portfolio, its frame still shows but stops pretending to open.
+-  const frame = (item: Piece | undefined, label: string, className: string, child: React.ReactNode) =>
+-    item ? (
+-      <button
+-        type="button"
+-        onClick={() => onOpen(item)}
+-        aria-label={`Open the ${label} concept`}
+-        className={`hero-frame group absolute text-left rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-4 focus-visible:ring-offset-[#0f172a] ${className}`}
+-      >
+-        {child}
+-      </button>
+-    ) : (
+-      <div className={`hero-frame absolute ${className}`}>{child}</div>
+-    );
+-
+-  return (
+-    <figure className="relative w-full max-w-[640px] mx-auto lg:max-w-none">
+-      <div className="relative aspect-[10/8.2]">
+-        {frame(
+-          dashboard,
+-          'CarePulse healthcare dashboard',
+-          'hero-frame-1 top-0 right-0 w-[80%] z-10',
+-          <BrowserFrame {...HERO.dashboard} alt="CarePulse, a doctor-patient healthcare dashboard built by Meridian Interface" />,
+-        )}
+-        {frame(
+-          website,
+-          'Frame Shop website',
+-          'hero-frame-2 bottom-[6%] left-0 w-[74%] z-20',
+-          <BrowserFrame {...HERO.website} alt="The Frame Shop, a motorcycle alignment website built by Meridian Interface" />,
+-        )}
+-        {frame(
+-          mobile,
+-          'Big Boy Subs ordering app',
+-          'hero-frame-3 bottom-0 right-[3%] w-[25%] z-30',
+-          <div className="rounded-[1.4rem] sm:rounded-[1.75rem] bg-[#0b1220] p-[5%] ring-1 ring-white/15">
+-            <div className="overflow-hidden rounded-[1.05rem] sm:rounded-[1.35rem] bg-white">
+-              {/* Status bar with the camera cut-out, so it sits above the app rather than over it. */}
+-              <div aria-hidden="true" className="flex items-center justify-center aspect-[480/40]">
+-                <span className="h-[48%] w-[32%] rounded-full bg-[#0b1220]" />
+-              </div>
+-              <img
+-                src={HERO.mobile.src}
+-                width={HERO.mobile.w}
+-                height={HERO.mobile.h}
+-                alt="Big Boy Subs, a restaurant ordering app built by Meridian Interface, on a phone"
+-                decoding="async"
+-                className="block w-full h-auto"
+-              />
+-            </div>
+-          </div>,
+-        )}
+-      </div>
+-      <figcaption className="mt-5 text-center lg:text-right font-body text-[11px] sm:text-xs text-slate-400 leading-relaxed">
+-        A dashboard, a website and an ordering app, all live demos.{' '}
+-        <span className="text-slate-300">Open any one to look inside.</span>
+-      </figcaption>
+-    </figure>
+-  );
+-};
 diff --git a/src/components/HeroSoundButton.tsx b/src/components/HeroSoundButton.tsx
 new file mode 100644
 index 0000000..321a896
@@ -324,7 +506,7 @@ index 0000000..321a896
 +  );
 +};
 diff --git a/src/components/HomeView.tsx b/src/components/HomeView.tsx
-index 1316db4..3d771c1 100644
+index 1316db4..82305ac 100644
 --- a/src/components/HomeView.tsx
 +++ b/src/components/HomeView.tsx
 @@ -3,7 +3,8 @@ import { TabType, ServiceCategory } from '../types';
@@ -337,6 +519,15 @@ index 1316db4..3d771c1 100644
  import { ImageWithFallback } from './ImageWithFallback';
  import { StackPlannerFeature } from './StackPlannerFeature';
  import { Lightbox, type LightboxItem } from './Lightbox';
+@@ -27,7 +28,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
+   const [concept, setConcept] = useState<typeof PORTFOLIO[number] | null>(null);
+   const [autoPlay, setAutoPlay] = useState(false);
+   const openConcept = (item: typeof PORTFOLIO[number], play = false) => { setAutoPlay(play); setConcept(item); };
+-  // lg and up: the hero video carries the product imagery, so the cards step aside.
++  // lg and up: the laptop film stands on the backdrop; below lg it sits in the page.
+   const [wideHero, setWideHero] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches);
+   useEffect(() => {
+     const mq = window.matchMedia('(min-width: 1024px)');
 @@ -80,11 +81,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
      <main className="pt-16 pb-24 md:pb-16 animate-fadeIn bg-slate-50">
        {/* Hero Section */}
@@ -351,7 +542,19 @@ index 1316db4..3d771c1 100644
            <div className="hero-stagger space-y-7">
              {/* Eyebrow — thin rule + label. The header already carries the name,
                  so the hero does not say "Meridian Interface" a second time. */}
-@@ -128,11 +128,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
+@@ -96,9 +96,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
+             </div>
+ 
+             {/* The same two lines the studio reel closes on, so the film and the
+-                front door say one thing. On wide screens the copy carries a soft dark
+-                halo: for a few seconds of each loop the tablet pane passes edge-on
+-                behind the line ends, and the halo keeps every letter clear of it. */}
++                front door say one thing. The soft dark halo on wide screens keeps
++                every letter clear if the laptop film ever reaches the line ends. */}
+             <h1 className="font-display font-black leading-[1.04] tracking-tight text-white text-[2.5rem] sm:text-5xl lg:text-[3.4rem] xl:text-[4rem] lg:[text-shadow:0_2px_18px_rgba(4,7,14,0.85)]">
+               Websites, apps, and AI&nbsp;systems.
+               <span className="block mt-1 text-blue-500">We put the future in your&nbsp;hands.</span>
+@@ -128,11 +127,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
              </div>
            </div>
  
@@ -371,11 +574,58 @@ index 1316db4..3d771c1 100644
        </section>
  
        {/* Portfolio Showcase Grid (Selected Works) */}
+diff --git a/src/components/ImageWithFallback.tsx b/src/components/ImageWithFallback.tsx
+index 3422f6f..981a01f 100644
+--- a/src/components/ImageWithFallback.tsx
++++ b/src/components/ImageWithFallback.tsx
+@@ -21,7 +21,7 @@ import React, { useCallback, useRef, useState } from 'react';
+  * Every picture here loads lazily. They are all cards and tiles below the first
+  * screen, and loading them up front made a phone fetch about 1.5 MB of photos
+  * before the visitor scrolled (Lighthouse, 15 Oct). The first screen's pictures
+- * are in HeroShowcase and HeroBackdrop, which load eagerly with high priority.
++ * are the hero film's still frames (HeroLaptopFilm), which load eagerly with high priority.
+  */
+ 
+ interface ImageWithFallbackProps {
 diff --git a/src/index.css b/src/index.css
-index 6c53bba..06b79c3 100644
+index 6c53bba..950919d 100644
 --- a/src/index.css
 +++ b/src/index.css
-@@ -229,3 +229,13 @@ button.hero-frame { cursor: pointer; }
+@@ -151,33 +151,6 @@
+   .hero-stagger > * { animation: none; }
+ }
+ 
+-/* The work frames in the hero. They arrive after the headline, back to front,
+-   and lift slightly when pointed at because each one opens something. The
+-   shadow is tinted navy and only appears where frames overlap the globe, so
+-   the elevation reads as depth rather than a card effect. */
+-.hero-frame {
+-  animation: hero-frame-in 0.9s cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
+-  transition: transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1), filter 0.35s ease;
+-  filter: drop-shadow(0 24px 40px rgba(2, 6, 23, 0.55)) drop-shadow(0 2px 6px rgba(2, 6, 23, 0.35));
+-}
+-.hero-frame-1 { animation-delay: 0.35s; }
+-.hero-frame-2 { animation-delay: 0.5s; }
+-.hero-frame-3 { animation-delay: 0.65s; }
+-button.hero-frame { cursor: pointer; }
+-@media (hover: hover) {
+-  button.hero-frame:hover { transform: translateY(-6px); }
+-}
+-
+-@keyframes hero-frame-in {
+-  from { opacity: 0; transform: translateY(22px) scale(0.985); }
+-  to   { opacity: 1; transform: translateY(0) scale(1); }
+-}
+-
+-@media (prefers-reduced-motion: reduce) {
+-  .hero-frame { animation: none; transition: none; }
+-  button.hero-frame:hover { transform: none; }
+-}
+-
+ .font-display {
+   font-family: 'Hanken Grotesk', 'Inter', system-ui, sans-serif;
+ }
+@@ -229,3 +202,13 @@ button.hero-frame { cursor: pointer; }
    background: #e0e2e6;
    border-radius: 10px;
  }

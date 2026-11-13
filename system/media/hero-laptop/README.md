@@ -57,11 +57,11 @@ On the site the film still starts silent. Browsers refuse to start sound a visit
 did not ask for, so `HeroSoundButton` ("Play sound", lower right of the hero) turns
 it on through `src/lib/heroSound.ts`. The patch carries all of this.
 
-**Not done yet:** the soundtrack is not muxed into the six website files. The
-Higgsfield sandbox holding the video stopped responding on 13 Nov before the mux.
-To finish: in `build.sh` step 5, add `-i score.wav -af volume=1.5dB` and
-`-c:a aac -b:a 128k` (mp4) / `-c:a libopus -b:a 96k` (webm) in place of `-an`, with
-`-shortest`.
+The soundtrack is in all four video files (AAC 128k in the mp4s, Opus 96k in the
+webms; -16.0 LUFS, peak -4.5 dBFS after encoding). `build.sh` steps 5 and 6 do it.
+On 13 Nov the audio was added to the already-rendered videos with `-c:v copy`
+rather than by re-running step 6, so the pictures are byte-for-byte the renders
+Otis approved by eye.
 
 ## Lessons (each cost a render)
 
@@ -82,27 +82,19 @@ To finish: in `build.sh` step 5, add `-i score.wav -af volume=1.5dB` and
 - Phone recording: media `998d6b74-fba1-48fc-9f42-59c1fa22989a`
 - First rough preview (superseded): media `1790d9d4-63de-4d95-9e01-86940d53d43f`
 
-## Still to do if Otis says yes
+## Where it stands (13 Nov, evening)
 
-1. Bring the six files into the website repo. They are zipped in Otis's Higgsfield
-   library as a general file, media `6868011b-4425-4d7e-b30e-583c60b6a0f9`
-   (`.../6868011b-4425-4d7e-b30e-583c60b6a0f9.zip` on `d2ol7oe51mr4n9.cloudfront.net`).
-   Otis approved that host for the Default environment on 13 Nov, but the download
-   command was then refused twice by the session's permission check, so it was not
-   retried. Needs Otis to say in chat that the download is fine, or to upload the zip
-   into the chat. Checksums (sha256) to verify what arrives:
-   - `cd49a280...2197` hero-laptop.webm
-   - `3d1fed05...d279` hero-laptop.mp4
-   - `0af56f1a...c77d` hero-laptop-sm.webm
-   - `4e72217f...dae5` hero-laptop-sm.mp4
-   - `ecfd9c2c...edb9` laptop-poster.webp
-   - `7c783b00...845d` laptop-poster-sm.webp
-2. Apply `website-hero.patch`, then delete `HeroShowcase.tsx`, the three
-   `public/images/hero/hero-*.webp` captures, `showcase-poster.webp` and
-   `public/video/hero-showcase.*` if nothing else uses them, and update
-   `public/images/CREDITS.md`.
-3. Run meridian-prelaunch-qa (both scripts), look at the screenshots, push to main,
-   confirm live.
-4. Things to tell Otis: the labels describe the Agent Dashboard, not the whole studio;
-   on phones the three tappable demo cards leave the hero (the Working demos section
-   is directly below); phones now load a 1.8 MB clip after the page has loaded.
+- Otis: "I like the way it looks." Then asked for sound; the soundtrack and the
+  previews with sound were sent. **Waiting for his yes on the sound and on going live.**
+- He approved the Higgsfield upload host for the Default environment and then chose
+  "Download files here", so the six files are in the website working copy, branch
+  `hero-laptop` (local, not pushed), with the old hero (showcase film, three demo
+  captures, `HeroShowcase.tsx`) removed and `CREDITS.md` updated.
+- Pre-launch QA on that tree: see `system/SESSION.md`.
+- To go live: merge `hero-laptop` into `main` (fast-forward), push, confirm on the
+  live site from the Higgsfield sandbox.
+
+Things Otis has been told: the labels describe the Agent Dashboard, not the whole
+studio; on phones the three tappable demo cards leave the hero; sound needs one tap
+because browsers do not allow a page to start audio; Safari and a real iPhone were
+not tested.
