@@ -4,7 +4,7 @@ Otis asked to see the Agent Dashboard laptop ad (Higgsfield "Monospace Callouts"
 see `system/promo-ad/agent-dashboard-ad/`) as the homepage hero picture, then asked
 for it to be made "perfect": smooth, with rhythm, one consistent feel with the site.
 
-**Status: preview only. Not on the live site.** Waiting for Otis's yes.
+**Status: live since 13 Nov 2026** (website main `934f94d`). Otis approved the look, chose the sound, and said "Let's update the website."
 
 ## What it is
 
@@ -91,8 +91,8 @@ on through `src/lib/heroSound.ts`. Volume is ramped, never switched (700 ms in,
 300 ms out, 250 ms before pausing when the hero scrolls away), because a deep wave
 cut mid-swing is itself a pop. iPhones ignore page-set volume, so there it is abrupt.
 
-**Waiting for Otis to hear the cleaned version and say "put it live".** The website
-working copy (branch `hero-laptop`, local) has the cleaned sound in all four videos.
+Otis heard the cleaned version on desktop and phone: "I like both of them. Let's update
+the website." Shipped.
 
 ## Lessons (each cost a render)
 
@@ -113,19 +113,9 @@ working copy (branch `hero-laptop`, local) has the cleaned sound in all four vid
 - Phone recording: media `998d6b74-fba1-48fc-9f42-59c1fa22989a`
 - First rough preview (superseded): media `1790d9d4-63de-4d95-9e01-86940d53d43f`
 
-## Where it stands (13 Nov, evening)
+## Where it stands
 
-- Otis: "I like the way it looks." Then asked for sound; the soundtrack and the
-  previews with sound were sent. **Waiting for his yes on the sound and on going live.**
-- He approved the Higgsfield upload host for the Default environment and then chose
-  "Download files here", so the six files are in the website working copy, branch
-  `hero-laptop` (local, not pushed), with the old hero (showcase film, three demo
-  captures, `HeroShowcase.tsx`) removed and `CREDITS.md` updated.
-- Pre-launch QA on that tree: see `system/SESSION.md`.
-- To go live: merge `hero-laptop` into `main` (fast-forward), push, confirm on the
-  live site from the Higgsfield sandbox.
-
-Things Otis has been told: the labels describe the Agent Dashboard, not the whole
-studio; on phones the three tappable demo cards leave the hero; sound needs one tap
-because browsers do not allow a page to start audio; Safari and a real iPhone were
-not tested.
+Live. See `system/SESSION.md`, 13 Nov 2026, for the QA result and the live check.
+To change the film or its sound, re-run `build.sh`, copy the six files into the website
+repo, run meridian-prelaunch-qa, and push. To go back to the old hero, revert website
+commit `934f94d`.

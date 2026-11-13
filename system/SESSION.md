@@ -3593,3 +3593,34 @@ missing, three demo-honesty reminders: none from this change); browser 0 FAIL, 0
   nosniff unchanged; `/.git/config`, `/.env`, `/vercel.json` still 404.
 - Not tested in a browser: the invoice Undo bar itself (it sits behind the owner passcode).
   Type-checked and read through only. Otis should delete a test invoice once and tap Undo.
+
+## 13 Nov 2026: homepage hero replaced with the Agent Dashboard laptop film (live)
+
+Otis asked to preview the Higgsfield laptop ad as the homepage picture, then to make it
+"perfect": smooth, with rhythm, one feel with the site, and with sound. Full story, recipe
+and lessons: `system/media/hero-laptop/README.md`.
+
+- What shipped: website main `934f94d` (from `c314a31`). A 15.6 s looping portrait clip, slowed
+  to three-quarter speed, keyed onto the hero's flat navy `#060d1d`, sized from the hero's
+  height so nothing crops it; phones and tablets show it under the buttons. The glass-pane
+  showcase film, the three phone demo captures and `HeroShowcase.tsx` are removed.
+- Sound: Otis rejected a soundtrack composed for it ("I do not like that sound") and asked
+  for the ad's own Higgsfield audio. He chose it stretched to the slow film (option A) over
+  the full-speed film with untouched audio (B), then asked for the pops and clacks to go.
+  They were in Higgsfield's original; `sound.py` removes them. The film starts silent and a
+  "Play sound" button turns it on (browsers do not allow autoplay with sound). Volume fades.
+- No credits spent. Higgsfield upload host `d2ol7oe51mr4n9.cloudfront.net` added to the
+  Default environment with Otis's approval, and he chose "Download files here" for the clips.
+- Pre-launch QA on the shipped tree: static 0 FAIL, 6 WARN (the usual six, none from this
+  change); browser 0 FAIL, 0 WARN. The first static run FAILED on "missing file
+  public/video/hero-laptop": the paths were built from a stem plus an extension, which the
+  check cannot follow. They are now written out in full.
+- Live check, from the Higgsfield sandbox with a real browser (this sandbox cannot load the
+  site): the page preloads the new still frames; all four videos and both stills return 200,
+  the old `hero-showcase.mp4` returns 404; on desktop and phone sizes the film plays muted,
+  the button unmutes to 0.85 and mutes again, no console errors.
+- Not tested: Safari and a real iPhone (none here). iPhones ignore page-set volume, so the
+  fades are instant there. Otis was told and asked to look on his phone.
+- Otis was also told: the film's labels describe the Agent Dashboard, not the whole studio;
+  the three tappable demo cards no longer sit in the phone hero; the sound is very
+  bass-heavy and will sound lighter on phone and laptop speakers.
