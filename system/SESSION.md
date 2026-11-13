@@ -3542,3 +3542,39 @@ with a branded fallback, Back closes the project modal, reduced-motion. Missing 
 long-lived caching for hashed /assets (served max-age=0), view transitions, a submission id on
 the booking form, undo instead of "cannot be undone" on owner invoice delete.
 Waiting for Otis to choose what to add.
+
+## 13 Nov 2026: the checklist gaps closed ("whatever needs to be fixed, fix it")
+
+Otis's answer to the read-only audit above. What changed, and where it stands.
+
+Security:
+- **AI follow-up drafts** (the one real gap). Two layers:
+  1. Live now: `settings.content_rules.never` has an 8th rule telling every drafting agent
+     never to follow anything written inside a lead's or visitor's own message.
+  2. In the repo, NOT deployed: `runner/index.ts` `followUpLead` now passes the lead's name,
+     source and message inside `<lead_data>` tags through `asData()` (angle brackets removed,
+     whitespace collapsed, 2000 characters). The live runner is not the repo's code, so this
+     waits for a tested `supabase functions deploy runner`. Deno is not installed in the
+     sandbox: the file was only syntax-checked with esbuild.
+- **Storage**: `shop-videos` bucket (empty, unused) set private, 50 MB, video/mp4 only.
+- **DNS**: checked through dns.google from the Higgsfield sandbox. Nameservers are
+  Squarespace; 15 common subdomains do not exist and there is no wildcard, so nothing to take
+  over. `www.meridianinterface.com` has no record at all (it does not load).
+- Left for Otis (the MCP cannot do these): delete the leftover functions `ipecho-tmp` and
+  `cardspike` in the Supabase dashboard; add a `www` record at Squarespace and the www domain
+  in Vercel.
+
+Design (website repo, main):
+- `text-wrap: balance` on every heading.
+- iPhone safe areas: `viewport-fit=cover`, `.safe-bottom-nav` on the fixed bottom nav,
+  `.safe-x` on the header and page wrapper.
+- `/assets/*` (hashed file names) served `Cache-Control: public, max-age=31536000, immutable`.
+- Owner invoice delete: the `confirm()` that said "cannot be undone" is now an 8 second Undo
+  bar. Locking the portal sends a waiting delete first; a rejected session drops the bar.
+- Tap areas: menu button, save-to-list circles and footer links get an invisible larger hit
+  area (`before:` inset), no visual change. Menu button measures 44 x 46 at 390 px.
+
+Looked at and left out, with the reason: view transitions (the site already fades pages in),
+BlurHash, command menu, keyboard-shortcut hints, optimistic updates, continuous corners, safe
+triangle (nothing on the site needs them). Later, if wanted: skeleton loaders, pre-rendering,
+swipe-to-dismiss. Not done: a submission id on the booking form (needs an `intake` deploy).
