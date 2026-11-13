@@ -3512,3 +3512,33 @@ Open for Otis: deposit % per package; refundable or not; balance at launch?; mon
   (1 WARN: Drone Command menu click, slow 3D in the sandbox). The 4 booking-flow
   FAILs in the first run were the QA test filling the spam trap (fixed, 4095b0a).
   Vercel MCP returned 403 for the team scope this time; live check was by fetch.
+
+## 13 Nov 2026: two TikTok checklists checked against the website (read-only, nothing changed)
+
+Otis sent three videos: two "20 ways someone hacks your vibe-coded app" lists (same 20 items)
+and "20 UI tips to send to Claude". He asked to go down the list before changing anything.
+Checked the live site (from the Higgsfield sandbox, this sandbox cannot reach it), the website
+repo at ec94c34, the edge-function sources and the Supabase project.
+
+Security, what the checks showed:
+- Live: /.git, /.env, /package.json, /vercel.json all 404; no source map served; CSP, HSTS,
+  X-Frame-Options DENY, frame-ancestors none, nosniff present.
+- Database: 24 public tables, RLS on all, no anon grants, no anon policies.
+- Storage: 4 public buckets, writes by service role only. `shop-videos` has no size or type limit.
+- pay: amount read from the invoice row, never from the caller; pay-webhook verifies the Stripe
+  signature and de-duplicates on event id.
+- intake / planner / lattice-analyst: per-caller and daily limits, size caps, origin lists.
+- SMS is only sent by the runner (after approval); no public action triggers one.
+- Not a Next.js site; no public accounts, password resets, coupons or redirect parameters.
+- **Gap:** runner `followUpLead` puts the visitor's message into the prompt unfenced
+  ("Message they left: ..."). No tools and owner approval limit the damage; fence it as data.
+- Tidy: `ipecho-tmp` (410 tombstone) and `cardspike` are still deployed.
+- Not verified: DNS records / stale subdomains (Vercel MCP 403). `www.meridianinterface.com`
+  did not resolve from the sandbox.
+
+Design, what the code shows: already there: one-time-code autofill, tabular-nums, lazy images
+with a branded fallback, Back closes the project modal, reduced-motion. Missing and cheap:
+`text-wrap: balance` (0 uses), safe-area padding on the fixed bottom nav (no viewport-fit),
+long-lived caching for hashed /assets (served max-age=0), view transitions, a submission id on
+the booking form, undo instead of "cannot be undone" on owner invoice delete.
+Waiting for Otis to choose what to add.
