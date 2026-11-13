@@ -57,9 +57,19 @@ phone 1.8 / 1.6 MB, posters 20 KB and 12 KB.
 
 ## Still to do if Otis says yes
 
-1. Bring the six files into the website repo. This sandbox cannot reach Higgsfield's
-   upload host (`d2ol7oe51mr4n9.cloudfront.net`); it needs adding to the environment's
-   allowed hosts, or Otis can upload the files into the chat.
+1. Bring the six files into the website repo. They are zipped in Otis's Higgsfield
+   library as a general file, media `6868011b-4425-4d7e-b30e-583c60b6a0f9`
+   (`.../6868011b-4425-4d7e-b30e-583c60b6a0f9.zip` on `d2ol7oe51mr4n9.cloudfront.net`).
+   Otis approved that host for the Default environment on 13 Nov, but the download
+   command was then refused twice by the session's permission check, so it was not
+   retried. Needs Otis to say in chat that the download is fine, or to upload the zip
+   into the chat. Checksums (sha256) to verify what arrives:
+   - `cd49a280...2197` hero-laptop.webm
+   - `3d1fed05...d279` hero-laptop.mp4
+   - `0af56f1a...c77d` hero-laptop-sm.webm
+   - `4e72217f...dae5` hero-laptop-sm.mp4
+   - `ecfd9c2c...edb9` laptop-poster.webp
+   - `7c783b00...845d` laptop-poster-sm.webp
 2. Apply `website-hero.patch`, then delete `HeroShowcase.tsx`, the three
    `public/images/hero/hero-*.webp` captures, `showcase-poster.webp` and
    `public/video/hero-showcase.*` if nothing else uses them, and update
