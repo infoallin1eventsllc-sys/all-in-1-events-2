@@ -27,7 +27,6 @@ four labels, it closes, and eases back to exactly where it started.
 | `build.sh <ad.mp4>` | The whole build, from the ad to the six website files |
 | `loop_tail.py` | The 48 frames that close the loop |
 | `ground.py` | The navy ground with the pool of light, and the two edge fades |
-| `score.py` | The soundtrack: one four-bar phrase in A minor, the film's exact length, silent at both ends |
 | `website-hero.patch` | The website change (branch `hero-laptop`, not pushed): new `HeroLaptopFilm.tsx`, `HeroSoundButton.tsx` and `lib/heroSound.ts`, a ground-only `HeroBackdrop.tsx`, `HomeView.tsx`, `index.html` preloads, the `.hero-film` mask in `index.css` |
 
 The rendered files are not in git here. They live in the Higgsfield sandbox
@@ -37,31 +36,37 @@ The rendered files are not in git here. They live in the Higgsfield sandbox
 Sizes: wide 3.2 MB webm / 3.0 MB mp4 (the old hero was 6.5 / 7.0 MB),
 phone 1.8 / 1.6 MB, posters 20 KB and 12 KB.
 
-## Sound (added 13 Nov, after Otis asked "Where's the sound?")
+## Sound (13 Nov)
 
-The ad's own audio is one flat, loud bass drone (about -11 dB RMS from 0.75 s to 9 s,
-energy at 39 / 73 / 116 Hz), with no pulse to follow, so it was not reused. `score.py`
-writes a soundtrack for this film instead, in numpy and scipy, no credits:
+Otis asked "Where's the sound?" and wants the film heard with sound.
 
-- Am(add9) | Fmaj7 | C G | Esus4 -> Am, 16 beats of 0.973 s (61.7 BPM).
-- Breath in at rest, a rising figure and air sweep as the laptop opens, a soft
-  heartbeat and plucked pattern through the close-ups, a bell near each label,
-  a falling sweep as it closes, and the resolution on beat 14 (12.65 s) as it shuts.
-- It starts and ends in silence. A looping `<video>` is not gapless, so the seam
-  has to be quiet; the last 2.5 s fall evenly in decibels so the end glides out.
-- Measured: -17.5 LUFS at -6 dBFS peak before gain; the build adds +1.5 dB for
-  -16 LUFS. Band energy: 17% under 120 Hz, 56% 120-500 Hz, 27% 500 Hz-2 kHz.
-  Nobody has listened to it in the build sandbox (it has no ears): Otis judges it.
+**First attempt, rejected.** A soundtrack written in code for the film (a four-bar
+phrase in A minor, `score.py`, now deleted; it is in git history at 5de17a8).
+Otis: "I do not like that sound... the original sound that Higgsfield produced for
+the video, I want to use that one." Do not offer a composed score again unless he asks.
+
+**What he wants: the ad's own Higgsfield audio** (from `raw.mp4`: AAC 32 kHz stereo,
+10.14 s, -12.2 LUFS, peak -0.4 dBFS; quiet for the first 0.75 s, then a steady
+bass-heavy cinematic bed, fading from 9.0 s). It is 10 s long and the hero film is
+slowed to 15.6 s, so two versions were sent for him to choose between:
+
+- **A. Slow film (the look he approved), sound stretched to fit.** `atempo=0.719424`,
+  pitch kept. Envelope stays within 0.4 dB of the original and the stereo image is
+  kept (L-R correlation 0.94). Do not use `rubberband` with its default independent
+  channels here: it flipped the stereo phase (correlation -0.24) and the low end
+  cancelled in mono.
+- **B. Film at the ad's own speed, sound untouched.** 10.03 s of film plus the 1.6 s
+  settle = 11.63 s loop. The film would need re-rendering without step 2 of `build.sh`.
+
+Both at -16 LUFS by one fixed gain (A -3.4 dB, B -3.8 dB), with a short fade on the
+last 0.2 s so the file never ends on a step. The loop seam falls in silence either way.
 
 On the site the film still starts silent. Browsers refuse to start sound a visitor
 did not ask for, so `HeroSoundButton` ("Play sound", lower right of the hero) turns
-it on through `src/lib/heroSound.ts`. The patch carries all of this.
+it on through `src/lib/heroSound.ts`. The patch carries this.
 
-The soundtrack is in all four video files (AAC 128k in the mp4s, Opus 96k in the
-webms; -16.0 LUFS, peak -4.5 dBFS after encoding). `build.sh` steps 5 and 6 do it.
-On 13 Nov the audio was added to the already-rendered videos with `-c:v copy`
-rather than by re-running step 6, so the pictures are byte-for-byte the renders
-Otis approved by eye.
+**Waiting for Otis to pick A or B.** The website working copy still has the rejected
+score in its four video files; replace the audio before anything ships.
 
 ## Lessons (each cost a render)
 
