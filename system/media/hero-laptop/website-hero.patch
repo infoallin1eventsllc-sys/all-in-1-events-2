@@ -143,12 +143,13 @@ index 38110a9..510e54e 100644
      </div>
 diff --git a/src/components/HeroLaptopFilm.tsx b/src/components/HeroLaptopFilm.tsx
 new file mode 100644
-index 0000000..8b81886
+index 0000000..0afcd94
 --- /dev/null
 +++ b/src/components/HeroLaptopFilm.tsx
-@@ -0,0 +1,100 @@
+@@ -0,0 +1,127 @@
 +import React, { useEffect, useRef, useState } from 'react';
 +import { shouldStayStill } from '../lib/stillness';
++import { heroSound } from '../lib/heroSound';
 +
 +/**
 + * The homepage hero's picture: the Agent Dashboard laptop film. A laptop rests,
@@ -177,6 +178,11 @@ index 0000000..8b81886
 + *   - Reduced motion, Save-Data and 2G get the still frame and no video
 + *     (shouldStayStill, shared with the studio reel).
 + *   - It pauses while scrolled out of view or while the tab is hidden.
++ *
++ * Sound: the film carries a soundtrack written for it (one four-bar phrase in
++ * A minor that starts and ends in silence, so the loop seam is a breath and
++ * not a cut). It always starts muted. HeroSoundButton turns it on through
++ * lib/heroSound; scrolling the hero away pauses the film and its sound with it.
 + */
 +
 +export const HERO_GROUND = '#060d1d';
@@ -217,6 +223,27 @@ index 0000000..8b81886
 +    return () => { io.disconnect(); document.removeEventListener('visibilitychange', sync); };
 +  }, [ready]);
 +
++  // Tell the button a film is playing, and follow it: muted until asked.
++  useEffect(() => {
++    if (!showing) return;
++    heroSound.setAvailable(true);
++    return () => heroSound.setAvailable(false);
++  }, [showing]);
++
++  useEffect(() => {
++    const apply = () => {
++      const video = videoRef.current;
++      if (!video) return;
++      const wanted = heroSound.isOn();
++      video.volume = 0.85;
++      video.muted = !wanted;
++      // A browser that still refuses sound pauses the film: put it back as it was.
++      if (wanted) video.play().catch(() => { video.muted = true; heroSound.set(false); video.play().catch(() => {}); });
++    };
++    apply();
++    return heroSound.subscribe(apply);
++  }, [ready]);
++
 +  return (
 +    <div ref={wrapRef} aria-hidden="true" className={`hero-film pointer-events-none aspect-[22/27] ${className}`} style={style}>
 +      <img
@@ -247,20 +274,70 @@ index 0000000..8b81886
 +    </div>
 +  );
 +};
+diff --git a/src/components/HeroSoundButton.tsx b/src/components/HeroSoundButton.tsx
+new file mode 100644
+index 0000000..321a896
+--- /dev/null
++++ b/src/components/HeroSoundButton.tsx
+@@ -0,0 +1,43 @@
++import React, { useSyncExternalStore } from 'react';
++import { heroSound } from '../lib/heroSound';
++
++/**
++ * The hero film's sound switch. The film has a soundtrack but plays silently
++ * until this is tapped (see lib/heroSound). It only appears once a film is
++ * really playing, so visitors on the still frame are not offered sound that
++ * does not exist.
++ *
++ * The icons are drawn here rather than taken from the icon font, which is a
++ * subset and does not carry speaker glyphs.
++ */
++export const HeroSoundButton: React.FC<{ className?: string }> = ({ className = '' }) => {
++  const on = useSyncExternalStore(heroSound.subscribe, heroSound.isOn, () => false);
++  const available = useSyncExternalStore(heroSound.subscribe, heroSound.isAvailable, () => false);
++  if (!available) return null;
++
++  return (
++    <button
++      type="button"
++      aria-pressed={on}
++      onClick={() => heroSound.set(!on)}
++      className={`inline-flex items-center gap-2 min-h-11 pl-3.5 pr-4 rounded-full border font-body font-bold text-[11px] uppercase tracking-widest transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#060d1d] ${
++        on
++          ? 'bg-white text-slate-900 border-white hover:bg-slate-100'
++          : 'bg-white/5 text-slate-200 border-white/20 hover:bg-white/10 hover:border-white/40'
++      } ${className}`}
++    >
++      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
++        <path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5H4z" fill="currentColor" stroke="none" />
++        {on ? (
++          <>
++            <path d="M15.5 9a4.2 4.2 0 0 1 0 6" />
++            <path d="M18.2 6.5a7.8 7.8 0 0 1 0 11" />
++          </>
++        ) : (
++          <path d="M16 9.5l5 5m0-5l-5 5" />
++        )}
++      </svg>
++      {on ? 'Sound on' : 'Play sound'}
++    </button>
++  );
++};
 diff --git a/src/components/HomeView.tsx b/src/components/HomeView.tsx
-index 1316db4..67caa6c 100644
+index 1316db4..3d771c1 100644
 --- a/src/components/HomeView.tsx
 +++ b/src/components/HomeView.tsx
-@@ -3,7 +3,7 @@ import { TabType, ServiceCategory } from '../types';
+@@ -3,7 +3,8 @@ import { TabType, ServiceCategory } from '../types';
  import { SERVICES, PORTFOLIO } from '../data/mockData';
  import { useImageOverrides, resolveImage } from '../lib/imageStore';
  import { HeroBackdrop } from './HeroBackdrop';
 -import { HeroShowcase } from './HeroShowcase';
 +import { HeroLaptopFilm } from './HeroLaptopFilm';
++import { HeroSoundButton } from './HeroSoundButton';
  import { ImageWithFallback } from './ImageWithFallback';
  import { StackPlannerFeature } from './StackPlannerFeature';
  import { Lightbox, type LightboxItem } from './Lightbox';
-@@ -80,11 +80,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
+@@ -80,11 +81,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
      <main className="pt-16 pb-24 md:pb-16 animate-fadeIn bg-slate-50">
        {/* Hero Section */}
        <section className="relative min-h-[80vh] flex flex-col justify-center px-4 md:px-12 py-16 lg:py-20 overflow-hidden bg-[#0f172a] border-b border-slate-800">
@@ -274,7 +351,7 @@ index 1316db4..67caa6c 100644
            <div className="hero-stagger space-y-7">
              {/* Eyebrow — thin rule + label. The header already carries the name,
                  so the hero does not say "Meridian Interface" a second time. */}
-@@ -128,10 +127,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
+@@ -128,11 +128,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
              </div>
            </div>
  
@@ -288,8 +365,12 @@ index 1316db4..67caa6c 100644
 +              and below the laptop, so it sits close under the buttons. */}
 +          {!wideHero && <HeroLaptopFilm size="small" className="relative mx-auto w-full max-w-[26rem] sm:max-w-[30rem] -mt-14 -mb-10" />}
          </div>
++
++        {/* The film's sound switch, in the hero's lower right corner. */}
++        <HeroSoundButton className="absolute z-20 right-4 bottom-4 md:right-12 lg:bottom-6" />
        </section>
  
+       {/* Portfolio Showcase Grid (Selected Works) */}
 diff --git a/src/index.css b/src/index.css
 index 6c53bba..06b79c3 100644
 --- a/src/index.css
@@ -308,3 +389,39 @@ index 6c53bba..06b79c3 100644
 +  mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent), linear-gradient(to bottom, transparent, #000 5%, #000 95%, transparent);
 +  mask-composite: intersect;
 +}
+diff --git a/src/lib/heroSound.ts b/src/lib/heroSound.ts
+new file mode 100644
+index 0000000..ede9e17
+--- /dev/null
++++ b/src/lib/heroSound.ts
+@@ -0,0 +1,30 @@
++/**
++ * Whether the homepage hero film's sound is on, shared between the film
++ * (HeroLaptopFilm, which sits in a layer that takes no clicks) and its button
++ * (HeroSoundButton, which sits above it).
++ *
++ * Sound always starts off. Browsers refuse to start audio a visitor did not
++ * ask for, and a homepage that talks first is rude anyway, so the film plays
++ * silently until someone taps the button. Nothing is remembered between
++ * visits: every page load would need a fresh tap regardless.
++ */
++
++type Listener = () => void;
++
++let on = false;       // the visitor has asked for sound
++let available = false; // a film is actually playing (not the still frame)
++const listeners = new Set<Listener>();
++const tell = () => listeners.forEach((l) => l());
++
++export const heroSound = {
++  isOn: () => on,
++  isAvailable: () => available,
++  set(next: boolean) { if (next !== on) { on = next; tell(); } },
++  setAvailable(next: boolean) {
++    if (next === available) return;
++    available = next;
++    if (!next) on = false;
++    tell();
++  },
++  subscribe(l: Listener) { listeners.add(l); return () => { listeners.delete(l); }; },
++};

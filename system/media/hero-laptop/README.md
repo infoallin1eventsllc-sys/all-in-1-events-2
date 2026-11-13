@@ -27,7 +27,8 @@ four labels, it closes, and eases back to exactly where it started.
 | `build.sh <ad.mp4>` | The whole build, from the ad to the six website files |
 | `loop_tail.py` | The 48 frames that close the loop |
 | `ground.py` | The navy ground with the pool of light, and the two edge fades |
-| `website-hero.patch` | The website change (branch `hero-laptop`, not pushed): new `HeroLaptopFilm.tsx`, a ground-only `HeroBackdrop.tsx`, `HomeView.tsx`, `index.html` preloads, the `.hero-film` mask in `index.css` |
+| `score.py` | The soundtrack: one four-bar phrase in A minor, the film's exact length, silent at both ends |
+| `website-hero.patch` | The website change (branch `hero-laptop`, not pushed): new `HeroLaptopFilm.tsx`, `HeroSoundButton.tsx` and `lib/heroSound.ts`, a ground-only `HeroBackdrop.tsx`, `HomeView.tsx`, `index.html` preloads, the `.hero-film` mask in `index.css` |
 
 The rendered files are not in git here. They live in the Higgsfield sandbox
 (`/home/user/hero/`, kept 24 h after last use) and go into the website repo at
@@ -35,6 +36,32 @@ The rendered files are not in git here. They live in the Higgsfield sandbox
 `public/images/hero/laptop-poster{,-sm}.webp` when Otis approves.
 Sizes: wide 3.2 MB webm / 3.0 MB mp4 (the old hero was 6.5 / 7.0 MB),
 phone 1.8 / 1.6 MB, posters 20 KB and 12 KB.
+
+## Sound (added 13 Nov, after Otis asked "Where's the sound?")
+
+The ad's own audio is one flat, loud bass drone (about -11 dB RMS from 0.75 s to 9 s,
+energy at 39 / 73 / 116 Hz), with no pulse to follow, so it was not reused. `score.py`
+writes a soundtrack for this film instead, in numpy and scipy, no credits:
+
+- Am(add9) | Fmaj7 | C G | Esus4 -> Am, 16 beats of 0.973 s (61.7 BPM).
+- Breath in at rest, a rising figure and air sweep as the laptop opens, a soft
+  heartbeat and plucked pattern through the close-ups, a bell near each label,
+  a falling sweep as it closes, and the resolution on beat 14 (12.65 s) as it shuts.
+- It starts and ends in silence. A looping `<video>` is not gapless, so the seam
+  has to be quiet; the last 2.5 s fall evenly in decibels so the end glides out.
+- Measured: -17.5 LUFS at -6 dBFS peak before gain; the build adds +1.5 dB for
+  -16 LUFS. Band energy: 17% under 120 Hz, 56% 120-500 Hz, 27% 500 Hz-2 kHz.
+  Nobody has listened to it in the build sandbox (it has no ears): Otis judges it.
+
+On the site the film still starts silent. Browsers refuse to start sound a visitor
+did not ask for, so `HeroSoundButton` ("Play sound", lower right of the hero) turns
+it on through `src/lib/heroSound.ts`. The patch carries all of this.
+
+**Not done yet:** the soundtrack is not muxed into the six website files. The
+Higgsfield sandbox holding the video stopped responding on 13 Nov before the mux.
+To finish: in `build.sh` step 5, add `-i score.wav -af volume=1.5dB` and
+`-c:a aac -b:a 128k` (mp4) / `-c:a libopus -b:a 96k` (webm) in place of `-an`, with
+`-shortest`.
 
 ## Lessons (each cost a render)
 
