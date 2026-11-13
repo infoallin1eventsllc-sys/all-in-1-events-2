@@ -13,7 +13,7 @@ index 61fad15..b527cc4 100644
      <meta name="keywords" content="Meridian Interface, Web Design, Mobile App Development, UI UX Design, Analytics Dashboards, Brand Identity" />
      <meta name="author" content="Meridian Interface" />
 diff --git a/public/images/CREDITS.md b/public/images/CREDITS.md
-index 5fd25d2..0484cf3 100644
+index 5fd25d2..54f5887 100644
 --- a/public/images/CREDITS.md
 +++ b/public/images/CREDITS.md
 @@ -3,14 +3,23 @@
@@ -31,7 +31,7 @@ index 5fd25d2..0484cf3 100644
 -| Re-render | Backend repo, `system/media/showcase/README.md`. Do it whenever the homepage or a demo changes, since the panes show them |
 +| Files | `images/hero/laptop-poster.webp`, `images/hero/laptop-poster-sm.webp`, `video/hero-laptop.webm`, `video/hero-laptop.mp4`, `video/hero-laptop-sm.webm`, `video/hero-laptop-sm.mp4` |
 +| Source | Otis's Higgsfield "Monospace Callouts" ad for the Agent Dashboard, generated on his own account (job 168e6e1c, 12 Nov 2026) from a picture of the studio's own Agent Dashboard on a laptop. Reworked for the hero with ffmpeg only: slowed, looped without a cut, its black stage keyed onto this site's navy. No new generation |
-+| Sound | Written for the film in code (numpy/scipy), not sampled from anything: nothing to license |
++| Sound | The ad's own audio from the same Higgsfield job, slowed to the film's speed and cleaned (pops and clacks removed, a soft lead-in and ring-out added from the sound itself). Nothing else is mixed in |
 +| Licence | Otis's Higgsfield output, under his plan's commercial terms; the screen shown is the studio's own work |
 +| Re-render | Backend repo, `system/media/hero-laptop/README.md` |
 +
@@ -201,10 +201,10 @@ index 38110a9..510e54e 100644
      </div>
 diff --git a/src/components/HeroLaptopFilm.tsx b/src/components/HeroLaptopFilm.tsx
 new file mode 100644
-index 0000000..db7e038
+index 0000000..9a8fbf8
 --- /dev/null
 +++ b/src/components/HeroLaptopFilm.tsx
-@@ -0,0 +1,128 @@
+@@ -0,0 +1,161 @@
 +import React, { useEffect, useRef, useState } from 'react';
 +import { shouldStayStill } from '../lib/stillness';
 +import { heroSound } from '../lib/heroSound';
@@ -237,13 +237,16 @@ index 0000000..db7e038
 + *     (shouldStayStill, shared with the studio reel).
 + *   - It pauses while scrolled out of view or while the tab is hidden.
 + *
-+ * Sound: the film carries a soundtrack written for it (one four-bar phrase in
-+ * A minor that starts and ends in silence, so the loop seam is a breath and
++ * Sound: the film carries the ad's own Higgsfield audio, slowed to the film's
++ * speed and cleaned (its pops and clacks removed, a soft way in and a long
++ * ring-out, so each loop starts and ends in silence and the seam is a breath,
 + * not a cut). It always starts muted. HeroSoundButton turns it on through
-+ * lib/heroSound; scrolling the hero away pauses the film and its sound with it.
++ * lib/heroSound; scrolling the hero away fades the sound and pauses the film.
 + */
 +
 +export const HERO_GROUND = '#060d1d';
++
++const SOUND_LEVEL = 0.85;
 +
 +// Every path is written out in full so the pre-launch check can confirm the file exists.
 +const FILM = {
@@ -267,14 +270,41 @@ index 0000000..db7e038
 +    return () => window.removeEventListener('load', done);
 +  }, [still, ready]);
 +
-+  // Play only while the film is on screen and the tab is visible.
++  // Volume is always ramped, never switched. The sound is bass-heavy, and a
++  // deep wave cut off or started mid-swing is heard as a pop. (iPhones ignore
++  // page-set volume, so there the change is immediate, as on any site.)
++  const rampRef = useRef<number | null>(null);
++  const rampVolume = (video: HTMLVideoElement, to: number, ms: number, then?: () => void) => {
++    if (rampRef.current !== null) cancelAnimationFrame(rampRef.current);
++    const from = video.volume, t0 = performance.now();
++    const step = (now: number) => {
++      const k = Math.min(1, (now - t0) / ms);
++      video.volume = Math.min(1, Math.max(0, from + (to - from) * k * k * (3 - 2 * k)));
++      if (k < 1) rampRef.current = requestAnimationFrame(step);
++      else { rampRef.current = null; then?.(); }
++    };
++    rampRef.current = requestAnimationFrame(step);
++  };
++  useEffect(() => () => { if (rampRef.current !== null) cancelAnimationFrame(rampRef.current); }, []);
++
++  // Play only while the film is on screen and the tab is visible. With sound
++  // on, it fades out before pausing and fades back in on return.
 +  useEffect(() => {
 +    const video = videoRef.current, wrap = wrapRef.current;
 +    if (!ready || !video || !wrap) return;
 +    let onScreen = true;
 +    const sync = () => {
-+      if (onScreen && document.visibilityState === 'visible') video.play().catch(() => {});
-+      else video.pause();
++      const show = onScreen && document.visibilityState === 'visible';
++      const audible = heroSound.isOn() && !video.muted;
++      if (show) {
++        if (audible && video.paused) video.volume = 0;
++        video.play().catch(() => {});
++        if (audible) rampVolume(video, SOUND_LEVEL, 500);
++      } else if (audible && document.visibilityState === 'visible') {
++        rampVolume(video, 0, 250, () => video.pause());
++      } else {
++        video.pause();
++      }
 +    };
 +    const io = new IntersectionObserver(([entry]) => { onScreen = entry.isIntersecting; sync(); }, { threshold: 0.05 });
 +    io.observe(wrap);
@@ -293,11 +323,14 @@ index 0000000..db7e038
 +    const apply = () => {
 +      const video = videoRef.current;
 +      if (!video) return;
-+      const wanted = heroSound.isOn();
-+      video.volume = 0.85;
-+      video.muted = !wanted;
-+      // A browser that still refuses sound pauses the film: put it back as it was.
-+      if (wanted) video.play().catch(() => { video.muted = true; heroSound.set(false); video.play().catch(() => {}); });
++      if (heroSound.isOn()) {
++        if (video.muted) { video.volume = 0; video.muted = false; }
++        rampVolume(video, SOUND_LEVEL, 700);   // also turns a fade-out around if tapped twice quickly
++        // A browser that still refuses sound pauses the film: put it back as it was.
++        video.play().catch(() => { video.muted = true; heroSound.set(false); video.play().catch(() => {}); });
++      } else if (!video.muted) {
++        rampVolume(video, 0, 300, () => { video.muted = true; });
++      }
 +    };
 +    apply();
 +    return heroSound.subscribe(apply);

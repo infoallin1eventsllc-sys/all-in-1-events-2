@@ -27,6 +27,7 @@ four labels, it closes, and eases back to exactly where it started.
 | `build.sh <ad.mp4>` | The whole build, from the ad to the six website files |
 | `loop_tail.py` | The 48 frames that close the loop |
 | `ground.py` | The navy ground with the pool of light, and the two edge fades |
+| `sound.py` | Cleans and fits the ad's own audio: clacks out, a soft way in, a long ring-out |
 | `website-hero.patch` | The website change (branch `hero-laptop`, not pushed): new `HeroLaptopFilm.tsx`, `HeroSoundButton.tsx` and `lib/heroSound.ts`, a ground-only `HeroBackdrop.tsx`, `HomeView.tsx`, `index.html` preloads, the `.hero-film` mask in `index.css` |
 
 The rendered files are not in git here. They live in the Higgsfield sandbox
@@ -65,8 +66,33 @@ On the site the film still starts silent. Browsers refuse to start sound a visit
 did not ask for, so `HeroSoundButton` ("Play sound", lower right of the hero) turns
 it on through `src/lib/heroSound.ts`. The patch carries this.
 
-**Waiting for Otis to pick A or B.** The website working copy still has the rejected
-score in its four video files; replace the audio before anything ships.
+**Otis picked A** ("I like A"), then asked for it "really clear and crisp", with
+"anything that's popping and clacking" cleared up, flowing as "one continuous motion".
+
+What measurement found in the version he heard (and in Higgsfield's original): a hard
+pop where the bed slams in (two sample-level spikes at 0.78 s of the original), a
+cluster of sharp 4-12 ms clacks at 7.0-7.4 s with smaller ones near 4.5 s, and 2.5 s
+of dead air around the loop seam. `sound.py` fixes exactly those and nothing else
+(see its header). The stretch is now rubberband with `channels=together`,
+`transients=smooth`, `window=long`, `smoothing=on`, which is smoother on this
+sustained bed than `atempo`.
+
+Result, measured: sharp bursts 16 -> 0, sample spikes 3 -> 0, in the WAV and again
+after AAC and Opus encoding. Tone within about 1-3 dB of the original per octave
+(a touch brighter, a touch less sub). The end falls about 4-5 dB every quarter
+second from 12.5 s to silence at 15.3 s. Level -17.5 LUFS, peak -2.8 dBFS: lower than
+-16 on purpose, because this bed is bass-heavy and peaks high for its loudness.
+Two thirds of its energy is under 60 Hz, which phone and laptop speakers cannot play:
+on those it will sound much lighter than on headphones.
+
+On the site the film still starts silent (browsers refuse to start sound a visitor
+did not ask for). `HeroSoundButton` ("Play sound", lower right of the hero) turns it
+on through `src/lib/heroSound.ts`. Volume is ramped, never switched (700 ms in,
+300 ms out, 250 ms before pausing when the hero scrolls away), because a deep wave
+cut mid-swing is itself a pop. iPhones ignore page-set volume, so there it is abrupt.
+
+**Waiting for Otis to hear the cleaned version and say "put it live".** The website
+working copy (branch `hero-laptop`, local) has the cleaned sound in all four videos.
 
 ## Lessons (each cost a render)
 
