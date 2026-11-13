@@ -3578,3 +3578,18 @@ Looked at and left out, with the reason: view transitions (the site already fade
 BlurHash, command menu, keyboard-shortcut hints, optimistic updates, continuous corners, safe
 triangle (nothing on the site needs them). Later, if wanted: skeleton loaders, pre-rendering,
 swipe-to-dismiss. Not done: a submission id on the booking form (needs an `intake` deploy).
+
+Shipped: website main `c314a31` (from `ec94c34`). Pre-launch QA on that tree: static 0 FAIL,
+6 WARN (xlsx audit in two demos, the unlinked orchestra demo and its four pictures, fontTools
+missing, three demo-honesty reminders: none from this change); browser 0 FAIL, 0 WARN.
+- The first browser run FAILED, and it was this change: "10 card pictures sit 37px below the
+  top of their card". Adding `relative` to the compact SaveToListButton (to anchor its larger
+  tap area) overrode the caller's `absolute` and dropped the button into the card's flow.
+  Fixed by removing `relative` (an absolutely placed button already anchors its own
+  `before:`); a comment in the component says not to add it back. Second run clean.
+- Live check, from the Higgsfield sandbox (this sandbox cannot load the site): the page
+  carries `viewport-fit=cover`; `/assets/index-*.js` returns
+  `Cache-Control: public, max-age=31536000, immutable`; CSP, HSTS, X-Frame-Options DENY and
+  nosniff unchanged; `/.git/config`, `/.env`, `/vercel.json` still 404.
+- Not tested in a browser: the invoice Undo bar itself (it sits behind the owner passcode).
+  Type-checked and read through only. Otis should delete a test invoice once and tap Undo.
