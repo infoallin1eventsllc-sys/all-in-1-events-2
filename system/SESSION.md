@@ -3624,3 +3624,31 @@ and lessons: `system/media/hero-laptop/README.md`.
 - Otis was also told: the film's labels describe the Agent Dashboard, not the whole studio;
   the three tappable demo cards no longer sit in the phone hero; the sound is very
   bass-heavy and will sound lighter on phone and laptop speakers.
+
+## 14 Nov 2026: full system diagnostic ("leave no stone unturned")
+
+Full write-up of what was tested is in the website repo, `SECURITY.md` section 7.
+
+Fixed and live (website main `d0a8837`, QA static 0 FAIL / browser 0 FAIL 0 WARN):
+- Three working notes were being served publicly: `images/CREDITS.md`, `demos/README.txt`,
+  a drone footage README (stock ids, a Higgsfield job id, backend paths; no secrets).
+  Moved to `docs/`; confirmed 404 live. `meridian-prelaunch-qa` static.sh now FAILS if any
+  note, source map or env file is in `dist`. Skill docs updated to the new paths.
+- `/.well-known/security.txt` added (otis@meridianinterface.com, expires 2027-11-14).
+Fixed in the database (applied live, recorded as migration 0046, not re-run):
+- `require_sms_consent()` revoked from PUBLIC/anon/authenticated (was the only one).
+- `v_channel_performance` set `security_invoker = true`.
+
+Checked and clean: HTTPS/TLS (1.0/1.1 refused), all security headers on every route type,
+19 sensitive paths 404, live JS has no secret or source map, all 22 edge functions refuse
+unauthenticated/forged callers, intake validation and rate limit, planner/analyst origin
+checks, REST/storage/auth/GraphQL refuse no-key calls, RLS on all 25 tables with no anon
+grants, cron 13/13 healthy for 7 days, nightly snapshot ran, 24 h of logs with no 5xx,
+npm audit clean at the root, git history of both public repos free of secrets, the CRM
+demo's Firebase refuses unauthenticated reads and its rules allow one named account.
+The scan tripped Vercel's firewall for the scanner only; an independent fetch was fine.
+
+Open, Otis only (told 14 Nov): two-step sign-in on the portal (not written in the public
+repo's SECURITY.md); DMARC p=none; no www record; four tombstone functions to delete
+(keycheck, cardspike, ipecho-tmp, dashboard); runner prompt fence not deployed;
+lattice-analyst source not in the repo; xlsx advisory in two demos; optional CAA record.

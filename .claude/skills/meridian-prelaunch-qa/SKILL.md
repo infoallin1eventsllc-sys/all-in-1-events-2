@@ -121,7 +121,7 @@ itself, so say that the live check was via Vercel, not a browser).
 - A demo with no source in either repo (Analytics Hub, FinSight, CRM,
   ORCHESTRA) can only be fixed by a careful literal edit of its built bundle:
   replace one exact, unique string, then `node --check` a `.mjs` copy of the
-  file. Note the edit in `public/demos/README.txt`.
+  file. Note the edit in `docs/DEMOS-BUILD-NOTES.txt`.
 
 ## Its first run (5 Oct 2026), for calibration
 

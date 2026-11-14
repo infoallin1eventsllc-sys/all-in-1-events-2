@@ -38,6 +38,14 @@ for t in $(grep -rEoh "eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_
   echo "$t" | cut -d. -f2 | base64 -d 2>/dev/null | grep -q '"service_role"' && fail "a Supabase SERVICE ROLE key is in dist"
 done
 
+# ---- working notes must not ship --------------------------------------------
+# Everything under public/ is served to the world. On 14 Nov 2026 three internal
+# notes were found online that way (image credits with stock ids and backend
+# paths, the demos build notes, a footage README). Notes live in docs/.
+# Licence texts, robots.txt and security.txt are meant to be public.
+notes=$(find dist -type f \( -iname '*.md' -o -iname 'readme*' -o -iname '*.map' -o -iname '*.log' -o -iname '*.bak' -o -iname '*.orig' -o -iname '.DS_Store' -o -iname '*.sql' -o -iname '.env*' \) 2>/dev/null | grep -viE 'licen[sc]e|OFL\.txt' | head -8 | tr '\n' ' ')
+[ -n "$notes" ] && fail "internal files would be served publicly: $notes(move notes to docs/)" || ok "no notes, source maps or env files in dist"
+
 # 4. Every picture and demo the site links to exists; flag files nothing uses.
 node - <<'NODE' || fails=$((fails+1))
 const fs=require('fs'),path=require('path');

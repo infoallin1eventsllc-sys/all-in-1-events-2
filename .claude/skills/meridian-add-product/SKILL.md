@@ -113,7 +113,7 @@ node ../tools/brand-demos.mjs        # add the slug to LABEL first
   paths in data files against `import.meta.env.BASE_URL`.
 - **Commit the source.** Only built output was tracked for six demos and
   none could be rebuilt. Add the folder to the root `tsconfig.json`
-  `exclude`, and list it in `public/demos/README.txt`.
+  `exclude`, and list it in `docs/DEMOS-BUILD-NOTES.txt`.
 - The Meridian bar (`tools/brand-demos.mjs`) is why demos keep their own
   names. It is re-stampable and refuses to write if stripping the old bar
   would remove `<div id="root">` — that guard exists because a looser regex
