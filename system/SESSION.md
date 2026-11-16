@@ -3668,3 +3668,4 @@ Otis asked whether his three portfolio repos are visibly tested on GitHub.
   section and CI badge. No site code changed.
   Known gap recorded in the README: WCAG 2.1 "label in name" flags 11 buttons; the axe scan
   runs WCAG 2.0 A/AA (passes) until those labels are reworded.
+  Pre-launch QA before the push: static 0 FAIL / 6 WARN (known), browser 0 FAIL / 0 WARN.
