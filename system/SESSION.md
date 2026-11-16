@@ -3652,3 +3652,19 @@ Open, Otis only (told 14 Nov): two-step sign-in on the portal (not written in th
 repo's SECURITY.md); DMARC p=none; no www record; four tombstone functions to delete
 (keycheck, cardspike, ipecho-tmp, dashboard); runner prompt fence not deployed;
 lattice-analyst source not in the repo; xlsx advisory in two demos; optional CAA record.
+
+## 16 Nov 2026: GitHub testing audit (recruiter-ready repos)
+
+Otis asked whether his three portfolio repos are visibly tested on GitHub.
+- meridian-hiring-api (public): 94 Vitest tests against real Postgres, CI green on main
+  `fd036b2` (run 53); re-run here, 94/94 pass. Uptime check green. Nothing to change.
+- meridian-agent-dashboard: 22 Playwright tests (198 checks, 21 axe scans), CI green, but the
+  repo is PRIVATE, so recruiters cannot see it. Full history (10 commits) scanned: no keys,
+  no personal email, no phone numbers. Making it public is Otis's call (repo Settings).
+- meridian-interface-website: had NO tests and NO CI. Added `.github/workflows/ci.yml`
+  (audit, typecheck, unit, build, browser), 47 Vitest unit tests (`tests/unit/`) and
+  41 Playwright browser tests at desktop and phone size (`tests/e2e/`) that serve the build
+  with vercel.json's real headers and stub the backend (no live leads). README "Tests"
+  section and CI badge. No site code changed.
+  Known gap recorded in the README: WCAG 2.1 "label in name" flags 11 buttons; the axe scan
+  runs WCAG 2.0 A/AA (passes) until those labels are reworded.
