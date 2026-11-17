@@ -267,6 +267,28 @@ data staying his. The other four in that video he already has: Supabase,
 PostHog and Firecrawl are connected; Playwright is the local MCP or a script
 in a cloud session (see above).
 
+
+## The 21 "viral Claude plugins" — gap check, 17 Nov 2026
+
+From a @bengusberg TikTok Otis uploaded. Each name was checked at its
+source before the verdict. None is an MCP connector (ScrapeGraphAI has one,
+needs a paid key); they are skill files and plugins. Installing a GitHub
+plugin needs a terminal; from a browser the route is: read the file, vendor
+it into `.claude/skills/`, zip it for the account.
+
+| Name | Verdict |
+|---|---|
+| Impeccable, UI UX Pro Max, anthropics/skills | **Has them** (account skills; `ui-ux-pro-max` vendored) |
+| Taste skill (Leonxlnx), Awesome DESIGN.md | **Has his own**: `taste` is built from his decisions, `awesome-design` is the distilled one |
+| Ponytail (DietrichGebert) | **Has his own**: its "cheapest rung first" ladder is `restraint`. Its own issue #121 found more tool calls and cost on reasoning models |
+| OmniRoute | **No** (routes prompts to third-party providers; see above) |
+| caveman | **No**: independent tests show 12–25% off output tokens, and output is under 3% of a session's bill. He also wants plain answers |
+| ScrapeGraphAI, Scrapling | **No**: Firecrawl and browser-use already cover it; Scrapling's point is anti-bot bypass |
+| Superpowers (obra), mattpocock/skills, gstack, Karpathy skills, Everything Claude Code | **Optional, no gap**: workflow packs for bigger codebases; `meridian-engineering`, `restraint`, `/ship`, the two repo hooks and `/council` cover this stack. ECC alone is 135 skills, the plugin-noise problem in one install |
+| last30days, Agent Reach, Understand Anything | **Optional, no gap**: social-trend research needs scraping keys (vidIQ and Firecrawl cover it); the codebase graph pays off past ~500 files, this repo has ~96 |
+| Humanizer (blader) or Stop Slop (hardikpandya) | **The one gap**: a writing anti-slop rule set. `taste` covers design slop; nothing covers prose tells in client emails and posts. One markdown file, no runtime. Pick one, read it, vendor it |
+| No AI Slop | Not found as a project |
+
 ## Framer Motion is a library, not a plugin
 
 It comes up because tutorials say "install the Framer Motion plugin." There is
