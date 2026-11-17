@@ -24,7 +24,10 @@ Match the job, not the brand name. Everything below is on this account.
 | Multi-artboard mockups Otis will hand-edit | The bundled `design` skill (Claude Design canvas) |
 | Critique, design system, a11y audit, dev handoff, UX copy | `design:*` plugin skills |
 | Polish or audit a real product surface | The `impeccable` skill — Otis's own design vocabulary |
-| Charts, dashboards, stat tiles | The bundled `dataviz` skill |
+| Build or review a dashboard, admin panel, KPI screen, ops console | the `dashboard-design` skill — default look with checked tokens, anatomy, filter/export/state behaviour, opt-in clickable 3D world view, done-check |
+| Strip AI-writing tells from a client email, follow-up, proposal, post or caption | the `humanizer` skill (blader/humanizer v4.0.0, vendored): 26 patterns from Wikipedia's "Signs of AI writing"; the house note forbids adding facts |
+| A TikTok, Reel or Short Otis wants read, traced and kept | the `reverse-engineer-video` skill — the read scripts, the tool that reaches TikTok, one card per feature with a source, the video library, where each finding lands |
+| Charts and stat tiles, inside a dashboard or alone | The bundled `dataviz` skill |
 | Find or preview a typeface | **Adobe** — `font_search`, `font_recommend`, `font_preview` |
 | Photo/video edit, background removal, vectorize | **Adobe for creativity** |
 | Client-facing marketing collateral, bulk variants | **Canva** — `generate-design`, `create-design-from-brand-template` |
@@ -243,6 +246,49 @@ Position given to Otis: none replaces Claude Code for client production work.
 Lovable is the only one worth trying — for throwaway prototypes to show a
 client fast, then rebuild the keeper in his own stack. Base44's hosted backend
 is lock-in; Manus overlaps with Claude itself.
+
+
+## ChatifyIT — a creator's lead-magnet page, not a Claude connector
+
+Checked 4 Nov 2026 on chatifyit.com after a TikTok (@dr.erinjacques, "the 5
+most powerful Claude connectors") listed it fifth with "Claude writes the post
+and the email when you ship, you approve, it goes to LinkedIn and your list".
+The creator fronts the product: her page is the homepage illustration.
+
+What it is: a link-in-bio page with an AI "guide" that chats with visitors and
+collects their email, Instagram comment-to-DM, posting to a personal LinkedIn
+(company page on Growth), and emailing the list from inside it (Growth).
+$9 / $29 / $49 a month, Systeme.io is the only email integration. Nothing on
+the site mentions Claude, MCP or an API. Not in his connectors, not found in
+the directory.
+
+Position: **no.** It is the marketing system in `system/` as a subscription
+(draft → approval queue → SendGrid, with the LinkedIn adapter), minus his
+data staying his. The other four in that video he already has: Supabase,
+PostHog and Firecrawl are connected; Playwright is the local MCP or a script
+in a cloud session (see above).
+
+
+## The 21 "viral Claude plugins" — gap check, 17 Nov 2026
+
+From a @bengusberg TikTok Otis uploaded. Each name was checked at its
+source before the verdict. None is an MCP connector (ScrapeGraphAI has one,
+needs a paid key); they are skill files and plugins. Installing a GitHub
+plugin needs a terminal; from a browser the route is: read the file, vendor
+it into `.claude/skills/`, zip it for the account.
+
+| Name | Verdict |
+|---|---|
+| Impeccable, UI UX Pro Max, anthropics/skills | **Has them** (account skills; `ui-ux-pro-max` vendored) |
+| Taste skill (Leonxlnx), Awesome DESIGN.md | **Has his own**: `taste` is built from his decisions, `awesome-design` is the distilled one |
+| Ponytail (DietrichGebert) | **Has his own**: its "cheapest rung first" ladder is `restraint`. Its own issue #121 found more tool calls and cost on reasoning models |
+| OmniRoute | **No** (routes prompts to third-party providers; see above) |
+| caveman | **No**: independent tests show 12–25% off output tokens, and output is under 3% of a session's bill. He also wants plain answers |
+| ScrapeGraphAI, Scrapling | **No**: Firecrawl and browser-use already cover it; Scrapling's point is anti-bot bypass |
+| Superpowers (obra), mattpocock/skills, gstack, Karpathy skills, Everything Claude Code | **Optional, no gap**: workflow packs for bigger codebases; `meridian-engineering`, `restraint`, `/ship`, the two repo hooks and `/council` cover this stack. ECC alone is 135 skills, the plugin-noise problem in one install |
+| last30days, Agent Reach, Understand Anything | **Optional, no gap**: social-trend research needs scraping keys (vidIQ and Firecrawl cover it); the codebase graph pays off past ~500 files, this repo has ~96 |
+| Humanizer (blader) or Stop Slop (hardikpandya) | **Was the one gap; closed 17 Nov 2026.** `humanizer` v4.0.0 vendored into `.claude/skills/humanizer/` and the plugin (MIT, read in full). Its `NOTICE.md` carries the one house override: never add a fact |
+| No AI Slop | Not found as a project |
 
 ## Framer Motion is a library, not a plugin
 

@@ -18,3 +18,7 @@ design/lounge-set-04/node_modules/
 # Remotion — deps and render output are rebuildable
 design/remotion/node_modules/
 design/remotion/out/
+
+# Python bytecode caches (ui-ux-pro-max scripts regenerate them)
+__pycache__/
+*.pyc
