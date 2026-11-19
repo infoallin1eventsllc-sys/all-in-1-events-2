@@ -43,3 +43,45 @@ no buzzwords, US spelling, project names without repeated subtitles, no em dashe
 | Booking window | REQUIRED DESIGN SERVICE | WHAT DO YOU NEED |
 | Booking button | CONFIRM APPOINTMENT | REQUEST APPOINTMENT (it is a request until you confirm the time) |
 | Search window | QUICK STUDIO NAVIGATION | JUMP TO |
+
+## Round 2: the whole site (Services, Portfolio, Booking, My Appointments, saved list, search)
+
+Rules now applied everywhere a visitor reads:
+- No period at the end of a heading, tagline, button, tag, card line or any single sentence.
+  Periods stay only between sentences inside a longer paragraph.
+- No extra commas ("Websites, apps and AI systems", no comma before "and").
+- No dashes where they are not needed: "1-on-1" is "one on one", "3–7 pages" is "3 to 7 pages",
+  "100–500 aircraft" is "100 to 500 aircraft", "ready-made" is "ready to go".
+- Time slots read "9 to 10 AM CT", "3:30 to 4:30 PM CT". (The booking system still receives
+  the old format behind the scenes, because the live intake check requires it.)
+- No colons or semicolons in sentences, no buzzwords, US spelling (color, itemize, inquiry).
+
+Examples:
+| Before | After |
+|---|---|
+| Websites, apps, and AI systems. / We put the future in your hands. | Websites, apps and AI systems / We put the future in your hands |
+| MERIDIAN Creative Services / Web Design, App UI/UX, Dashboards & Logo Identity | Meridian services / Websites, apps, dashboards and logos |
+| Key Deliverables & Included Features: | What you get |
+| 100% Custom Responsive Layouts · SEO & Performance Optimization | Custom design that works on every screen · Fast loading and set up for Google |
+| We build bespoke digital web experiences designed to captivate your audience... | We build websites that look great, load fast and turn visitors into customers |
+| Our 4-Step Design & Development Process | Our four step process |
+| We craft high-fidelity Figma designs, logo vector concepts, or app UX flows... | You see the designs first and ask for changes before any code gets written |
+| 1. Choose Service Type / 2. Select Project Scope Size / 3. Custom Add-ons & Integration Modules | Choose a service / Choose the size / Add extras |
+| Priority Rush Delivery (2-Week Turnaround) | Rush delivery in 2 weeks |
+| What happens next. | What happens next |
+| Schedule Your Design Appointment / Book a 1-on-1 appointment for your website, mobile app, dashboard, or logo project. | Book your appointment / Talk one on one about your website, app, dashboard or logo |
+| Confirm & Schedule Appointment | Request appointment |
+| Appointment Successfully Booked! | Request sent |
+| 09:00 AM - 10:00 AM CT | 9 to 10 AM CT |
+| Client Appointment Portal | Your appointments |
+| The desk a small studio runs on: leads, clients, projects... | Everything a small studio runs on in one place. Leads, clients, projects... |
+| A high-contrast streetwear storefront with an editorial feel: curated essentials... | A bold streetwear store with a magazine feel... |
+| Sub customiser and bag · Colour and size variants | Sub builder and bag · Color and size options |
+| Built by Healthcare (my round 1 mistake) | Healthcare |
+
+Left as they are on purpose: the six service names (for example "Data Analyst, CRM & Financial
+Dashboards"), because the CRM, invoices and the Higgsfield ad account match on those exact names;
+the Privacy and Terms pages, which are legal text; phone numbers and email addresses.
+
+Checked: a scan of every visitor page finds 0 trailing periods on single lines, 0 stray dashes,
+0 colons or semicolons in sentences. Type check, 48 unit tests and 41 browser tests pass.
