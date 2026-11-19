@@ -3669,3 +3669,15 @@ Otis asked whether his three portfolio repos are visibly tested on GitHub.
   Known gap recorded in the README: WCAG 2.1 "label in name" flags 11 buttons; the axe scan
   runs WCAG 2.0 A/AA (passes) until those labels are reworded.
   Pre-launch QA before the push: static 0 FAIL / 6 WARN (known), browser 0 FAIL / 0 WARN.
+
+## 19 Nov 2026: plain wording across the website (Otis: "looks AI generated")
+
+Website main `eefb96f`. Every visitor page and window: no trailing periods on single lines,
+no extra commas, no colons/semicolons in sentences, dashes replaced with words, buzzwords out,
+US spelling, portfolio titles without subtitles. Time slots SHOW "9 to 10 AM CT" via
+`slotLabel()`; the VALUE sent to intake is unchanged because live intake's `bookingSlot()`
+only accepts "09:00 AM - 10:00 AM CT" (do not change TIME_SLOTS without deploying intake).
+OwnerInvoiceView matches old long portfolio titles by prefix. Service names left unchanged
+(CRM, invoices, Higgsfield products key on them). Before/after in
+`system/website-copy-cleanup-preview.md`.
+Pre-launch QA: static 0 FAIL / 6 WARN (known), browser 0 FAIL / 0 WARN. 48 unit, 41 browser tests.
