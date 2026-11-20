@@ -3737,3 +3737,10 @@ backgrounds (no new credits) with a per-shape layout; voiceovers made in Higgsfi
 (text2speech_v2, ElevenLabs engine, preset voice Holden, 0.75 credits each, 1.5 total, quoted
 and approved; balance 964.36 to 962.86), sped up 9 to 10 percent to fit 15 s and mixed in locally.
 All 8 files (2 ads x 4 shapes) have voice. Still kept out of git.
+Update: the email draft is in Otis's Gmail (he sends it himself on Monday). Fulshear samples carry
+a SAMPLE / MERIDIAN INTERFACE watermark; the two email copies are in his Drive, shared view-only
+by link. Otis's Leads Reel v4 for the email is in his Higgsfield file storage (free upload, link
+plays in any browser). It is NOT on the website: a copy was added to the website tree by mistake,
+never committed or pushed, and removed when Otis said it does not belong there. Added
+upload.higgsfield.ai to the Default environment's allowed hosts (approved) for that upload.
+Still needed: his mailing address for the email footer.
