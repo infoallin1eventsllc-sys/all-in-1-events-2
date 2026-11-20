@@ -3720,3 +3720,15 @@ Result: 6 priority A (3 with no website, 1 broken, 1 placeholder, 1 not phone-re
 8 B, 26 C; only 6 of 40 had any video. Spreadsheet sent to Otis; NOT committed (prospect
 data stays out of the public repo). Full list (~120 credits for 24 searches) awaits his go.
 Website package for the site: drafted next, no prices, preview before it goes live.
+
+## 20 Nov 2026: first prospect sample package (paused, saved)
+
+Built a sample package for one Katy prospect from the lead list (their business, not
+Meridian's): two 15 s ads in all four shapes, rendered locally (no credits), and their
+digital business card. Otis asked for automotive card backgrounds: 3 made in Higgsfield
+(GPT Image 2.6, medium, 2K, 9:16, 1 credit each, 3 credits total, quoted and approved;
+balance 967.36 to 964.36). Prospect files are NOT in git; they are in Otis's Google Drive
+folder "Meridian Saved Work 2026-11-20" (README-Next-Steps.txt lists what is left).
+Drive uploads from here are capped at about 3 MB per call, so the ad videos and the card
+zip did not upload. Before the email: background pick, quote prices (and his OK to put
+prices in this email), his mailing address. Email goes to his Gmail drafts; he sends it.
