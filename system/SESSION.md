@@ -3744,3 +3744,7 @@ plays in any browser). It is NOT on the website: a copy was added to the website
 never committed or pushed, and removed when Otis said it does not belong there. Added
 upload.higgsfield.ai to the Default environment's allowed hosts (approved) for that upload.
 Still needed: his mailing address for the email footer.
+Saved for Monday: Otis sends the Gmail draft himself Monday morning after adding his mailing
+address. Full prospect package (watermarked and clean ads, card, email assets, voices, source) is
+in his Higgsfield file storage; the link and a send checklist are in "README - Monday Send" in his
+Drive folder "Meridian Saved Work 2026-11-20" (links kept out of this public repo).
