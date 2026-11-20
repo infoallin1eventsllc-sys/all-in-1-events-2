@@ -3707,3 +3707,16 @@ Purpose: real hook rate / CTR / CPC numbers for performance video editor applica
   Are they finding you?" over the logo board for 0 to 3 s. 8 files (A/B x 4x5, 9x16, 1x1,
   16x9), ad text, UTM links and a click-by-click Ads Manager guide in
   system/ads/meta-test-1/README.md. Waiting on Otis to approve the text and videos.
+
+## 20 Nov 2026: local lead list test (Katy)
+
+Otis wants leads around Katy (25 mi, all business types) for a new package: video ads,
+websites, digital business cards. Test run: Firecrawl Alexandria provider bing-com
+businesses/search (5 credits per search, up to 30 results), 4 searches in Katy (restaurants,
+salons/barbers, plumbing/home services, auto repair) = 20 credits (1 refunded via feedback).
+55 businesses, 15 chains dropped, 40 local. Websites checked free from the Higgsfield sandbox
+(status, https, viewport meta, footer year, builder, video, social links).
+Result: 6 priority A (3 with no website, 1 broken, 1 placeholder, 1 not phone-ready),
+8 B, 26 C; only 6 of 40 had any video. Spreadsheet sent to Otis; NOT committed (prospect
+data stays out of the public repo). Full list (~120 credits for 24 searches) awaits his go.
+Website package for the site: drafted next, no prices, preview before it goes live.
