@@ -3702,3 +3702,8 @@ He pays Meta directly in Ads Manager; videos re-cut here at $0 (no Higgsfield cr
 He cannot sign up today. Still to decide: which existing ad to use (offered a read-only look
 at the Meridian Facebook page posts to pick the best performer). Nothing posted, nothing spent.
 Purpose: real hook rate / CTR / CPC numbers for performance video editor applications.
+- 20 Nov (later): test 1 files READY (not live). Ad = the page's top reel (54 views, 7 Nov,
+  presenter, 37 s). Hook A original; Hook B adds "Your customers are searching right now /
+  Are they finding you?" over the logo board for 0 to 3 s. 8 files (A/B x 4x5, 9x16, 1x1,
+  16x9), ad text, UTM links and a click-by-click Ads Manager guide in
+  system/ads/meta-test-1/README.md. Waiting on Otis to approve the text and videos.
