@@ -3681,3 +3681,13 @@ OwnerInvoiceView matches old long portfolio titles by prefix. Service names left
 (CRM, invoices, Higgsfield products key on them). Before/after in
 `system/website-copy-cleanup-preview.md`.
 Pre-launch QA: static 0 FAIL / 6 WARN (known), browser 0 FAIL / 0 WARN. 48 unit, 41 browser tests.
+
+## 20 Nov 2026: www.meridianinterface.com fixed
+
+www had no DNS record (NXDOMAIN), so anyone typing www got an error. Vercel already had
+www on the project with a 308 redirect to the apex. Otis added in Squarespace DNS (Custom
+records): CNAME `www` -> `2c58b851a7e65541.vercel-dns-017.com` (Vercel's recommended value).
+Vercel now reports misconfigured:false; certificate issued for www (cert_HbrKs0a2mHG1MQM559d8ETeM,
+auto-renew). Verified: https://www.meridianinterface.com -> 308 -> https://meridianinterface.com 200.
+DNS is at Squarespace (nameservers nsc1-4.squarespacedns.com); Google Workspace manages email.
+Vercel team access was re-authorised via authorize_team_access. Still open: DMARC p=none.
