@@ -3691,3 +3691,14 @@ Vercel now reports misconfigured:false; certificate issued for www (cert_HbrKs0a
 auto-renew). Verified: https://www.meridianinterface.com -> 308 -> https://meridianinterface.com 200.
 DNS is at Squarespace (nameservers nsc1-4.squarespacedns.com); Google Workspace manages email.
 Vercel team access was re-authorised via authorize_team_access. Still open: DMARC p=none.
+
+## 20 Nov 2026: first paid ad test chosen (not started)
+
+Otis picked the $70 Meta test: one existing Meridian ad, two versions that change only the
+first 3 seconds (Hook A vs Hook B), $5/day each for 7 days, small business owners within
+~25 miles of Houston/Katy, goal = clicks to meridianinterface.com, tagged links per ad so
+leads are attributed in the CRM (utm_source=facebook/instagram, utm_campaign per hook).
+He pays Meta directly in Ads Manager; videos re-cut here at $0 (no Higgsfield credits).
+He cannot sign up today. Still to decide: which existing ad to use (offered a read-only look
+at the Meridian Facebook page posts to pick the best performer). Nothing posted, nothing spent.
+Purpose: real hook rate / CTR / CPC numbers for performance video editor applications.
