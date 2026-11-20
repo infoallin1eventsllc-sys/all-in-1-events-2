@@ -3732,3 +3732,8 @@ folder "Meridian Saved Work 2026-11-20" (README-Next-Steps.txt lists what is lef
 Drive uploads from here are capped at about 3 MB per call, so the ad videos and the card
 zip did not upload. Before the email: background pick, quote prices (and his OK to put
 prices in this email), his mailing address. Email goes to his Gmail drafts; he sends it.
+Update: Otis said the ad pictures were blurry and wanted a voice. Ads rebuilt on the 3 sharp
+backgrounds (no new credits) with a per-shape layout; voiceovers made in Higgsfield
+(text2speech_v2, ElevenLabs engine, preset voice Holden, 0.75 credits each, 1.5 total, quoted
+and approved; balance 964.36 to 962.86), sped up 9 to 10 percent to fit 15 s and mixed in locally.
+All 8 files (2 ads x 4 shapes) have voice. Still kept out of git.
