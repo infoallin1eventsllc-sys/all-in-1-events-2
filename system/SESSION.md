@@ -3765,3 +3765,8 @@ so a music track can be fitted later: before / NOT FOUND (0 to 4.3 s), the line 
 all products (to 7.7 s), five features at 1.29 s each (to 14.1 s), THE FUTURE IN YOUR HANDS
 (to 19.3 s), ALL FROM ONE STUDIO (to 21.9 s), logo light-up and contact (to 25 s). 16:9 only so
 far; the other three shapes come with the final. Waiting on his notes.
+Update: Otis sent his Agent CRM clip (vertical, 13.6 s: laptop explodes into parts, labelled
+close-ups, reassembles, own end card) to add to the film. Rough cut v2 puts the first 2.6 s (the
+explode, no labels) in the CRM feature slot, doubled to 6 beats, blended over the film's
+background; the tagline scene was shortened by 3 beats so the film stays 25 s. The clip's own end
+card and sound are not used. Still 0 credits. v1 kept. Waiting on his notes.
