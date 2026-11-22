@@ -3788,3 +3788,10 @@ and one 32 s instrumental (ElevenLabs Music v2.5, 4.66 credits, job
 09476100-7c27-41b6-ba34-6f01dd66b955). Balance 962.86 to 957.00. Voice cut into its 11 lines and
 placed on the matching scenes; music ducked under the voice; mixed locally to about -14 LUFS.
 v5 = v4 picture plus this sound. The music's lift lands at 19.2 s on the laptop explode.
+Update: Otis approved the film as a customer promo and asked for the four shapes, a simpler CRM
+line, "free" on the appointment (he confirmed it is free), and a cover image; no captions, no
+name. New voice take 1.2 credits (job dea8a29b-bf03-475d-9006-c05f7d46a99b; balance 955.80).
+Ending switched from my imitation to his standard logo light-up clip (end-card README). Final:
+four files, 32 s, 30 fps, -16 LUFS, plus four covers, uploaded to his Higgsfield library (media
+ids 7d0cbe34 9x16, 29abbe0c 4x5, d4df42b4 1x1, 797a69a9 16x9). Source in system/promo-ad/launch-film.
+Total Higgsfield credits on this film: 7.06 (music 4.66, two voice takes 2.4).

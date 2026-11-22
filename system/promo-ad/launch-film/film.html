@@ -1,0 +1,179 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:HK;src:url(hk.woff2);font-weight:100 900}
+@font-face{font-family:IN;src:url(in.woff2);font-weight:100 900}
+*{box-sizing:border-box}
+html,body{margin:0;overflow:hidden;background:#04070f;font-family:IN,sans-serif;color:#fff}
+#stage,.full{position:absolute;inset:0;overflow:hidden}
+.bg{position:absolute;inset:0;background:radial-gradient(120% 70% at 58% 46%,#12224f 0%,#0a1330 38%,#050914 72%,#03050b 100%)}
+.floor{position:absolute;left:-10%;right:-10%;top:74%;bottom:-5%;background:linear-gradient(#0b1638 0%,#050914 55%,#02040a 100%);
+ transform-origin:50% 0;transform:perspective(900px) rotateX(58deg);opacity:.9}
+.floor:after{content:"";position:absolute;inset:0;background:
+ repeating-linear-gradient(90deg,rgba(120,160,255,.10) 0 1px,transparent 1px 120px),
+ repeating-linear-gradient(0deg,rgba(120,160,255,.10) 0 1px,transparent 1px 120px);
+ -webkit-mask-image:linear-gradient(#000,transparent 85%)}
+.vig{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 46%,transparent 52%,rgba(0,0,0,.72) 100%);z-index:49;pointer-events:none}
+.line{position:absolute;top:-4%;bottom:-4%;width:4px;background:linear-gradient(#cfe0ff,#fff 40%,#fff 60%,#cfe0ff);
+ box-shadow:0 0 14px 3px #9dbbff,0 0 46px 12px #3b74ff,0 0 160px 46px rgba(37,99,235,.55);border-radius:4px;z-index:40}
+.lineglow{position:absolute;top:0;bottom:0;width:760px;background:linear-gradient(90deg,transparent,rgba(46,104,255,.26) 46%,rgba(170,200,255,.34) 50%,rgba(46,104,255,.26) 54%,transparent);mix-blend-mode:screen;z-index:39}
+.phone{position:absolute;width:380px;height:790px;border-radius:58px;padding:13px;background:linear-gradient(145deg,#2a3352,#0b1024 40%,#05070f);
+ box-shadow:-1px 0 0 #54628e,-2px 0 0 #3b476f,-3px 0 0 #2f3a5e,-4px 0 0 #283252,-5px 0 0 #232c49,-6px 0 0 #1f2742,-7px 0 0 #1b223b,-8px 0 0 #181f35,-9px 0 0 #151b30,-10px 0 0 #12182b,-11px 0 0 #0f1526,-12px 0 0 #0c1120,-13px 0 0 #8aa4e8,
+ -40px 60px 120px rgba(0,0,0,.75),0 0 0 1.5px rgba(160,185,255,.35) inset}
+.phone .scr{position:relative;width:100%;height:100%;border-radius:46px;overflow:hidden;background:#f7f9fd}
+.phone .scr img{width:100%;height:calc(100% - 50px);margin-top:50px;object-fit:cover;object-position:50% 0;display:block}
+.phone .scr:after{content:"";position:absolute;inset:0;background:linear-gradient(112deg,rgba(255,255,255,.22) 0%,rgba(255,255,255,.05) 22%,transparent 36%)}
+.phone .isl{position:absolute;left:50%;top:24px;width:108px;height:30px;margin-left:-54px;border-radius:20px;background:#000;z-index:3}
+.pan{position:absolute;border-radius:20px;overflow:hidden;background:#0c1330;border:1.5px solid rgba(190,210,255,.30);
+ box-shadow:0 50px 110px rgba(0,0,0,.7),0 0 60px rgba(37,99,235,.20)}
+.pan img{width:100%;height:100%;object-fit:cover;object-position:50% 0;display:block}
+.pan:after{content:"";position:absolute;inset:0;background:linear-gradient(118deg,rgba(255,255,255,.20) 0%,rgba(255,255,255,.04) 26%,transparent 42%)}
+.tag{position:absolute;font:700 18px/1 IN;letter-spacing:.3em;color:#dbe6ff;white-space:nowrap;z-index:20}
+.tag i{display:inline-block;width:9px;height:9px;border-radius:50%;background:#7fa6ff;box-shadow:0 0 12px 3px #2563eb;margin-right:12px;vertical-align:1px}
+.hud{position:absolute;font:600 13px/1.5 IN;letter-spacing:.26em;color:rgba(200,215,255,.62);z-index:30;white-space:nowrap}
+.h1{font-family:HK;font-weight:900;letter-spacing:-.035em;line-height:.9;white-space:nowrap}
+.dead{filter:saturate(.3) brightness(.5) contrast(1.08)}
+</style></head><body><div id="stage"></div>
+<script>
+const Q=new URLSearchParams(location.search), FMT=Q.get('fmt')||'16x9';
+const ALL={
+'16x9':{W:1920,H:1080,
+ P:{desk:{cx:544,cy:455,s:.8,ry:34,rx:4,blur:1.2},dash:{cx:1516,cy:392,s:.817,ry:-36,rx:3,blur:1.2},card:{cx:530,cy:682,s:1.04,ry:26},book:{cx:1434,cy:720,s:1.09,ry:-24},ad:{cx:1721,cy:889,s:1.18,ry:-30,blur:1.5},phone:{cx:960,cy:553,s:1.118,ry:-22,rx:5,rz:1.5}},
+ cam:{z0:1.2,z1:1.3,x0:250,x1:268,y0:-14}, search:{l:510,t:96,w:900}, nf:{fs:210,top:452}, tagFs:18,
+ tags:{desk:[262,226],dash:[1480,150],card:[318,912],book:[1262,922],ad:[1560,640]},
+ row:{GX:1250,GY:528,GAP:620,k:1,lx:120,tyTwo:330,tyOne:420,fsTwo:170,fsLong:150,fsShort:200,subFs:24,clipS:1.34},
+ tl:{f1:257,f2:186,left:70,t1:236,t2:506,capTop:746,capFs:19,px:1640,py:545,ps:.96},
+ end:{top:-360,ty:[548,632,782],tf:42,bf:34,cf:32}},
+'9x16':{W:1080,H:1920,
+ P:{desk:{cx:300,cy:540,s:.62,ry:30,rx:4,blur:1.2},dash:{cx:790,cy:480,s:.62,ry:-32,rx:3,blur:1.2},card:{cx:172,cy:1150,s:.92,ry:24},book:{cx:905,cy:1000,s:.9,ry:-22},ad:{cx:872,cy:1420,s:1.08,ry:-26,blur:1.2},phone:{cx:540,cy:930,s:1.05,ry:-18,rx:5,rz:1.5}},
+ cam:{z0:1.1,z1:1.17,x0:36,x1:44,y0:24}, search:{l:110,t:300,w:860}, nf:{fs:150,top:850}, tagFs:20,
+ tags:{desk:[96,372],dash:[560,318],card:[56,930],book:[790,800],ad:[720,1178]},
+ row:{GX:540,GY:1250,GAP:640,k:1.3,lx:70,tyTwo:352,tyOne:352,fsTwo:150,fsLong:158,fsShort:200,subFs:24,clipS:1.45},
+ tl:{f1:180,f2:130,left:70,t1:320,t2:490,capTop:640,capFs:16,px:540,py:1290,ps:1},
+ end:{top:0,ty:[925,1015,1172],tf:44,bf:34,cf:32}},
+'4x5':{W:1080,H:1350,
+ P:{desk:{cx:290,cy:330,s:.6,ry:30,rx:4,blur:1.2},dash:{cx:800,cy:300,s:.6,ry:-32,rx:3,blur:1.2},card:{cx:165,cy:900,s:.9,ry:24},book:{cx:915,cy:830,s:.9,ry:-22},ad:{cx:880,cy:1160,s:.95,ry:-26,blur:1.2},phone:{cx:540,cy:720,s:.95,ry:-18,rx:5,rz:1.5}},
+ cam:{z0:1.1,z1:1.17,x0:36,x1:44,y0:10}, search:{l:110,t:60,w:860}, nf:{fs:150,top:640}, tagFs:19,
+ tags:{desk:[96,176],dash:[590,150],card:[56,1108],book:[800,640],ad:[575,1170]},
+ row:{GX:540,GY:880,GAP:620,k:.98,lx:60,tyTwo:112,tyOne:128,fsTwo:120,fsLong:140,fsShort:170,subFs:22,clipS:1.1},
+ tl:{f1:180,f2:130,left:70,t1:90,t2:260,capTop:410,capFs:16,px:540,py:930,ps:.9},
+ end:{top:-225,ty:[690,776,930],tf:42,bf:34,cf:32}},
+'1x1':{W:1080,H:1080,
+ P:{desk:{cx:270,cy:280,s:.55,ry:30,rx:4,blur:1.2},dash:{cx:810,cy:250,s:.55,ry:-32,rx:3,blur:1.2},card:{cx:170,cy:730,s:.8,ry:24},book:{cx:905,cy:690,s:.8,ry:-22},ad:{cx:880,cy:930,s:.8,ry:-26,blur:1.2},phone:{cx:540,cy:590,s:.82,ry:-18,rx:5,rz:1.5}},
+ cam:{z0:1.1,z1:1.17,x0:36,x1:44,y0:0}, search:{l:110,t:44,w:860}, nf:{fs:150,top:500}, tagFs:18,
+ tags:{desk:[90,148],dash:[590,116],card:[56,912],book:[800,516],ad:[590,985]},
+ row:{GX:800,GY:560,GAP:560,k:.88,lx:56,tyTwo:380,tyOne:440,fsTwo:108,fsLong:104,fsShort:150,subFs:15,clipS:.92},
+ tl:{f1:180,f2:130,left:70,t1:60,t2:225,capTop:372,capFs:16,px:540,py:760,ps:.78},
+ end:{top:-360,ty:[548,632,782],tf:42,bf:34,cf:32}}};
+const C=ALL[FMT], W=C.W, H=C.H, P=C.P;
+for(const e of [document.documentElement,document.body]){e.style.width=W+'px';e.style.height=H+'px';}
+const st=document.getElementById('stage');
+const cl=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const seg=(t,a,b)=>cl((t-a)/(b-a));
+const se=x=>.5-.5*Math.cos(Math.PI*cl(x));
+const lerp=(a,b,p)=>a+(b-a)*p;
+const kf=(t,k)=>{if(t<=k[0][0])return k[0][1];for(let i=1;i<k.length;i++){if(t<=k[i][0])return lerp(k[i-1][1],k[i][1],se((t-k[i-1][0])/(k[i][0]-k[i-1][0])));}return k[k.length-1][1];};
+const fade=(t,a,d=.8)=>se(seg(t,a,a+d));
+const BG=`<div class="bg"></div><div class="floor"></div>`;
+const line=(x,op=1,back=false)=>`<div class="lineglow" style="left:${x-380}px;opacity:${op};${back?'z-index:0':''}"></div><div class="line" style="left:${x-2}px;opacity:${op};${back?'z-index:0':''}"></div>`;
+const clipL=(h,x,cls='')=>`<div class="full ${cls}" style="clip-path:inset(0 ${W-cl(x,0,W)}px 0 0)">${h}</div>`;
+const clipR=(h,x,cls='')=>`<div class="full ${cls}" style="clip-path:inset(0 0 0 ${cl(x,0,W)}px)">${h}</div>`;
+const T=(p)=>`transform:perspective(1600px) rotateY(${p.ry||0}deg) rotateX(${p.rx||0}deg) rotateZ(${p.rz||0}deg) scale(${p.s==null?1:p.s}) scaleX(${p.sx==null?1:p.sx});opacity:${p.op==null?1:cl(p.op)};${p.blur?`filter:blur(${p.blur}px)${p.f?' '+p.f:''};`:(p.f?`filter:${p.f};`:'')}`;
+const panel=(p,w,h,img)=>(p.op!=null&&p.op<=0)?'':`<div class="pan" style="left:${p.cx-w/2}px;top:${p.cy-h/2}px;width:${w}px;height:${h}px;${T(p)}"><img src="tx/${img}"></div>`;
+const phone=(p,img)=>(p.op!=null&&p.op<=0)?'':`<div class="phone" style="left:${p.cx-190}px;top:${p.cy-395}px;${T(p)}"><div class="isl"></div><div class="scr"><img src="tx/${img}"></div></div>`;
+const mix=(a,b,m)=>{const o={};for(const k of ['cx','cy','s','ry','rx','rz','op','blur'])o[k]=lerp(a[k]==null?(k=='s'||k=='op'?1:0):a[k],b[k]==null?(k=='s'||k=='op'?1:0):b[k],m);return o;};
+
+/* ---------- timeline (seconds) ---------- */
+const L1a=4.6,L1b=8.0, TAGa=8.3,TAGb=9.7, Ma=9.5,Mb=11.2, Ga=11.2,Gb=19.6, CLIP=17.9, Xa=20.7,Xb=22.3;
+const L2a=22.2,L2b=25.0, Oa=25.4,Ob=26.2, Ca=25.5,Cb=26.3,F0=26.65, E0=26.55,XF=.45;
+
+/* ---------- shot 1 ---------- */
+const SIZE={desk:[640,400],dash:[620,386],card:[230,410],book:[250,360],ad:[210,372]};
+const IMG={desk:'desk-home.jpg',dash:'dash.jpg',card:'card.jpg',book:'book.jpg',ad:'ad.jpg'};
+const TAGN={desk:'WEBSITES',dash:'CRM AND DASHBOARDS',card:'DIGITAL CARDS',book:'BOOKING',ad:'VIDEO ADS'};
+const zoom=t=>kf(t,[[0,C.cam.z0],[L1a,C.cam.z1],[9.2,1]]);
+const camX=t=>kf(t,[[0,C.cam.x0],[L1a,C.cam.x1],[9.2,0]]);
+const camY=t=>kf(t,[[0,C.cam.y0],[9.2,0]]);
+const lineX1=t=>lerp(W+90,-90,se(seg(t,L1a,L1b)));
+const scrX=(k,t)=>W/2+(P[k].cx-W/2)*zoom(t)+camX(t);
+const APP={};for(const k of ['dash','card','book','ad']){let tt=L1a;while(tt<L1b&&lineX1(tt)>scrX(k,tt)-60)tt+=.02;APP[k]=tt;}
+const fl=(t,i)=>Math.sin(t*.7+i*1.7)*5;
+const cam=(t,h)=>`<div class="full" style="transform:translate(${camX(t)}px,${camY(t)}px) scale(${zoom(t)});transform-origin:50% 50%">${h}</div>`;
+function before(t){const d=mix(P.desk,P.desk,0), ph=mix(P.phone,P.phone,0); d.cy+=fl(t,0); ph.cy+=fl(t,5); d.blur=0;
+ return `${BG}${cam(t,panel(d,640,400,'old-desk.jpg')+phone(ph,'old-phone.jpg'))}`;}
+function beforeOverlay(t){const typed='your business near me'.slice(0,Math.round(21*seg(t,.9,2.7))), s=C.search;
+ return `<div style="position:absolute;left:${s.l}px;top:${s.t-(1-fade(t,.3,.9))*16}px;width:${s.w}px;height:92px;border-radius:46px;background:#fff;opacity:${.94*fade(t,.3,.9)};box-shadow:0 20px 60px rgba(0,0,0,.6);display:flex;align-items:center;padding:0 38px;font:500 38px IN;color:#1b2333"><span style="display:inline-block;width:30px;height:30px;border:5px solid #56607a;border-radius:50%;margin-right:26px"></span>${typed}</div>
+ <div class="h1" style="position:absolute;left:0;right:0;top:${C.nf.top+(1-fade(t,3.0,1.1))*22}px;text-align:center;font-size:${C.nf.fs}px;color:#e6ebf7;opacity:${fade(t,3.0,1.1)};text-shadow:0 10px 60px rgba(0,0,0,.85)">NOT FOUND</div>`;}
+function after(t,m,tagOp){let h='';
+ ['desk','dash','card','book','ad'].forEach((k,i)=>{const p=mix(P[k],P[k],0); p.cy+=fl(t,i);
+  if(APP[k]!=null){const a=fade(t,APP[k],1.0); p.op=a; p.s*=(.9+.1*a); p.cy+=(1-a)*34;}
+  if(m>0){const o=se(seg(m,0,.62)); p.op=(p.op==null?1:p.op)*(1-o); p.s*=(1-.1*o); p.cx+=(p.cx<W/2?-70:70)*o;}
+  h+=panel(p,SIZE[k][0],SIZE[k][1],IMG[k]);});
+ const ph=mix(P.phone,gpose(0,0),m); ph.cy+=fl(t,5)*(1-m);
+ h+=phone(ph,'phone-home.jpg');
+ Object.keys(TAGN).forEach((k,i)=>{const a=tagOp*fade(t,TAGa+i*.2,.7); if(a>0) h+=`<div class="tag" style="font-size:${C.tagFs}px;left:${C.tags[k][0]}px;top:${C.tags[k][1]+(1-a)*10}px;opacity:${a}"><i></i>${TAGN[k]}</div>`;});
+ return `${BG}${cam(t,h)}`;}
+/* ---------- shot 2: the row ---------- */
+const R=C.row;
+const GI=[['WEBSITES','BUILT FROM SCRATCH'],['VIDEO<br>ADS','MADE FOR EVERY FEED'],['DIGITAL<br>CARDS','ONE TAP TO CALL, BOOK AND SAVE'],['BOOKING','APPOINTMENTS BOOKED ONLINE'],['CRM','FOLLOWS UP WHILE YOU WORK']];
+const GB=[.9,1.85,1.7,1.9,1];
+function gpose(i,pos){const d=i-pos, ad=Math.abs(d);
+ return {cx:R.GX+d*R.GAP,cy:R.GY,s:GB[i]*R.k*(1-.2*Math.min(ad,1.5)),ry:cl(-d*24,-38,38),rx:i==0?3:0,rz:0,op:(d<0?1-se(seg(-d,.12,.62)):cl(1-.55*Math.min(ad,1.7))*(1-seg(ad,1.5,1.9))),blur:Math.min(ad,1)*1.4};}
+const soft=x=>{const e=.14;x=cl(x);return x<e?x*x/(2*e)/(1-e):x>1-e?1-(1-x)*(1-x)/(2*e)/(1-e):(x-e/2)/(1-e);};
+function gpos(t){ if(t<=Ga) return 0;
+ if(t<Gb){const u=4*soft((t-Ga)/(Gb-Ga)), i=Math.min(3,Math.floor(u)), f=u-i; return i+lerp(f,se(f),.5);}
+ if(t<Xa) return 4; const x=seg(t,Xa,Xb); return 4+1.5*x*x;}
+function row(t,vis,first){const pos=gpos(t); let h='';
+ const ex=1-se(seg(t,Xa+.1,Xa+1.1));
+ for(let i=first?0:1;i<5;i++){const p=gpose(i,pos); p.op*=vis*ex; if(p.op<=0.01) continue; p.cy+=Math.sin(t*.7+i)*4*(i==0?fade(t,Mb,1.6):1);
+  if(i==0) h+=phone(p,'phone-home.jpg');
+  else if(i==4){const fi=String(cl(Math.round((t-CLIP)*23)+1,1,64)).padStart(3,'0'), cs=R.clipS*(1-.2*Math.min(Math.abs(i-pos),1.5));
+   h+=`<img src="clipf/f${fi}.jpg" style="position:absolute;left:${p.cx-290}px;top:${p.cy-540+20}px;width:580px;height:1080px;mix-blend-mode:screen;opacity:${p.op};transform:scale(${cs});transform-origin:50% 53%;-webkit-mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent)">`;}
+  else h+=panel(p,...[[0,0],[210,372],[230,410],[250,360]][i],['','ad.jpg','card.jpg','book.jpg'][i]);}
+ GI.forEach((g,i)=>{const d=i-pos; let a=se(cl(1.3-Math.abs(d)*2.6))*vis*ex; if(i==0) a*=fade(t,Mb-.5,.9); if(a<=0.005) return;
+  const two=g[0].includes('<br>'), fs=two?R.fsTwo:(g[0].length>6?R.fsLong:R.fsShort), th=two?fs*1.8:fs*.9, ty=two?R.tyTwo:R.tyOne, x=R.lx+d*150;
+  h+=`<div style="position:absolute;left:${x}px;top:0;opacity:${a};z-index:22">
+   <div class="hud" style="left:6px;top:${ty-56}px;font-size:22px;letter-spacing:.3em;color:#7fa6ff">0${i+1} &nbsp;/&nbsp; 05</div>
+   <div class="h1" style="position:absolute;left:0;top:${ty}px;font-size:${fs}px;text-shadow:0 8px 50px rgba(0,0,0,.75)">${g[0]}</div>
+   <div class="hud" style="left:8px;top:${ty+th+30}px;font-size:${R.subFs}px;letter-spacing:.3em;color:#dbe6ff">${g[1]}</div></div>`;});
+ return h;}
+/* ---------- shot 3: tagline ---------- */
+const TL=C.tl;
+function tagline(lit,t){
+ const tin=fade(t,21.5,1.2), out=1-se(seg(t,Oa,Ob));
+ const gc=se(seg(t,Ca,Cb)), col=se(seg(t,Cb,F0)), lo=se(seg(t,Cb-.35,F0));
+ const px=lerp(lerp(W+260,TL.px,se(seg(t,20.9,22.6))),W/2,gc);
+ const ph={cx:px,cy:lerp(TL.py+Math.sin(t*.7)*6,TL.py,gc),s:TL.ps,sx:1-.985*col,ry:lerp(lerp(-30,-20,seg(t,20.9,26)),0,gc),rx:lerp(5,0,gc),rz:lerp(lerp(7,4,seg(t,20.9,26)),0,gc),op:1,f:lit?(col>0?`brightness(${1+3*col})`:''):'saturate(.2) brightness(.3)'};
+ const cline=lo>0?line(W/2,lo,true):'';
+ const stroke='color:transparent;-webkit-text-stroke:2.5px rgba(190,210,255,.55)';
+ const sc=1+.025*seg(t,21,26.5);
+ return `<div class="full" style="opacity:${tin*out};transform:scale(${sc});transform-origin:30% 40%">
+ <div class="h1" style="position:absolute;left:${TL.left}px;top:${TL.t1}px;font-size:${TL.f1}px;line-height:.86;${lit?'color:#fff':stroke}">THE FUTURE</div>
+ <div class="h1" style="position:absolute;left:${TL.left}px;top:${TL.t2}px;font-size:${TL.f2}px;line-height:.86;${lit?'color:#fff':stroke}">IN YOUR <span style="${lit?'color:#5b8dff':''}">HANDS.</span></div>
+ <div class="hud" style="left:${TL.left+6}px;top:${TL.capTop}px;font-size:${TL.capFs}px;letter-spacing:.34em;color:${lit?'#dbe6ff':'rgba(200,215,255,.28)'}">WEBSITES &nbsp;·&nbsp; VIDEO ADS &nbsp;·&nbsp; DIGITAL CARDS &nbsp;·&nbsp; BOOKING &nbsp;·&nbsp; CRM</div></div>${cline}${phone(ph,'phone-home.jpg')}`;}
+/* ---------- shot 4: Otis's own logo light-up clip, then the contact lines ---------- */
+function ending(t){const te=t-E0, a=se(seg(te,0,XF)), E=C.end;
+ const fi=String(cl(Math.round(te*30)+1,1,192)).padStart(3,'0'), src=`endf/e${fi}.jpg`, x0=(W-1080)/2;
+ let fill='';
+ if(x0>0){const k=x0/4+1; fill=`<div style="position:absolute;left:0;top:0;width:${x0+2}px;height:${H}px;overflow:hidden"><img src="${src}" style="position:absolute;left:0;top:${E.top}px;width:1080px;height:1920px;transform-origin:0 0;transform:scaleX(${k})"></div>
+  <div style="position:absolute;left:${x0+1078}px;top:0;width:${x0+2}px;height:${H}px;overflow:hidden"><img src="${src}" style="position:absolute;right:0;top:${E.top}px;width:1080px;height:1920px;transform-origin:100% 0;transform:scaleX(${k})"></div>`;}
+ const it=(s,html,y)=>{const o=fade(te,s,.7);return o<=0?'':`<div style="position:absolute;left:0;right:0;top:${y+(1-o)*14}px;text-align:center;opacity:${o}">${html}</div>`;};
+ return `<div class="full" style="opacity:${a};z-index:45;background:#0d1b3d">${fill}<img src="${src}" style="position:absolute;left:${x0}px;top:${E.top}px;width:1080px;height:1920px">
+ ${it(2.0,`<div style="font:500 ${E.tf}px/1 IN;color:#eef2fb">We put the future in your hands.</div>`,E.ty[0])}
+ ${it(2.4,`<span style="display:inline-block;background:#2563eb;border-radius:60px;padding:22px 50px;font:700 ${E.bf}px/1 IN;box-shadow:0 14px 50px rgba(37,99,235,.5)">Book your free 1-on-1 appointment</span>`,E.ty[1])}
+ ${it(2.8,`<div style="font:600 ${E.cf}px/1 IN;letter-spacing:.04em">meridianinterface.com &nbsp;&nbsp;·&nbsp;&nbsp; 281-882-9198</div>`,E.ty[2])}</div>`;}
+function frame(t){
+ if(t<L1a) return clipL(before(t),W,'dead')+beforeOverlay(t);
+ if(t<L1b){const x=lineX1(t); return clipL(before(t),x,'dead')+clipL(beforeOverlay(t),x)+clipR(after(t,0,0),x)+line(x);}
+ if(t<Ma) return after(t,0,1-se(seg(t,TAGb-.5,TAGb+.2)));
+ if(t<Mb){const m=se(seg(t,Ma,Mb)); return after(t,m,0)+row(t,se(seg(m,.45,1)),false);}
+ let h=BG;
+ if(t<Xb) h+=row(t,1,true);
+ if(t>=20.9&&t<E0+XF){
+  if(t<L2a) h+=tagline(false,t);
+  else if(t<L2b){const x=lerp(W+90,-90,se(seg(t,L2a,L2b))); h+=clipL(tagline(false,t),x)+clipR(tagline(true,t),x)+line(x);}
+  else h+=tagline(true,t);
+ }
+ if(t>=E0) h+=ending(t);
+ return h;}
+window.render=async t=>{st.innerHTML=frame(t)+(t<E0+XF?'<div class="vig"></div>':'');
+ await Promise.all([...document.images].map(i=>i.decode().catch(()=>{})));};
+</script></body></html>
