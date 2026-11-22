@@ -3776,3 +3776,9 @@ on everything; one continuous opening shot (before, slow line pass, pull back to
 the products rearrange into a row and the camera glides along it (Websites, Video Ads, Digital
 Cards, Booking, CRM with his laptop clip); tagline with a slow line pass; soft logo ending.
 "ALL FROM ONE STUDIO" scene removed. v1 and v2 kept. Waiting on his notes.
+Update: Otis may want to use v3, asked for a clean, professional version and the earlier ending
+with the light through the logo. v4 (0 credits): 1920x1080, 30 fps, 32 s, no rough labels, laptop
+clip frames at full sharpness; ending restored (phone glides to centre, folds into the line, flash,
+logo light-up with the line through it, tagline, booking button, contact). Silent. Music quote for
+32 s: 4.66 credits (ElevenLabs Music v2.5 via Higgsfield), not made. 16:9 only; the other three
+shapes still to do if he approves. Kept in the scratchpad only, not yet saved anywhere durable.
