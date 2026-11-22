@@ -3837,3 +3837,7 @@ Update: Otis wanted the whole Wheatpaste Wall clip kept (including its own "meri
 scrawl) plus his ending, smoother, as one piece. Done free: 10.1 s clip, poster pushes in and
 melts into the ending's navy, logo lights up after, 15.3 s at 24 fps, -16.0 LUFS. Method in
 system/promo-ad/join-ending/. Not posted.
+Update: Otis said the film ending's music clashed with the clip's music. Built a new quiet ending
+for free (his logo eases in, then tagline, free 1-on-1 button, site and phone; no music of its own)
+and extended the Wheatpaste Wall music under it by repeating one beat. 15.46 s, -16.1 LUFS. Sent.
+Not posted. Files in system/promo-ad/join-ending/.

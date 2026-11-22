@@ -18,3 +18,18 @@ What it does (9:16, 24 fps, the generated clip's own rate so its motion does not
    Result -16.0 LUFS, peak -3.8 dBFS, 15.3 s.
 
 Rule learned: fade into the ending's empty navy first, never straight onto the logo.
+
+## Quiet ending (replaces the film ending for generated clips)
+
+Otis: the film's ending brings its own music, so two songs clash. He asked for a new ending: his
+logo coming in slowly with the appointment details, no music of its own.
+
+- `quiet-ending.html` + `render-quiet-ending.cjs N OUT`: navy plate (first frame of his logo clip),
+  his real `meridian-mark.png` easing in from 1.15 s to 3.15 s with a soft blue glow, live wordmark
+  MERIDIAN (Hanken Grotesk 800) / INTERFACE (Inter), then "We put the future in your hands.", the
+  free 1-on-1 button and meridianinterface.com · 281-882-9198. All text between y 300 and 1180.
+  Needs hk.woff2, in.woff2, plate.jpg and mark.png next to it.
+- `extend-music.py`: the generated clip's own music carries the ending by repeating one beat in
+  the quiet gaps before hits (no clicks measured at the joins), and ends on the clip's own last hit.
+- `blend.cjs` reads the quiet ending frames from `B3/`. Wheatpaste Wall result: 15.46 s, 24 fps,
+  -16.1 LUFS, peak -3.8 dBFS.

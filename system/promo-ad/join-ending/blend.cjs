@@ -13,6 +13,6 @@ for(let f=P0; f<X0+BS; f++){
   A.src=a;await A.decode();A.style.transform=`scale(${az})`;A.style.filter=`brightness(${ab})`;
   if(bsrc){B.src=bsrc;await B.decode();B.style.display='block';}else B.style.display='none';
   B.style.opacity=bo;B.style.transform=`scale(${bz})`;},
-  {a:'A/'+String(ai).padStart(4,'0')+'.png',bsrc:bi>=0?'B2/'+String(bi).padStart(4,'0')+'.png':null,az:1+0.09*z,ab:1-0.35*e,bo:e,bz:1});
+  {a:'A/'+String(ai).padStart(4,'0')+'.png',bsrc:bi>=0?'B3/'+String(bi).padStart(4,'0')+'.png':null,az:1+0.09*z,ab:1-0.35*e,bo:e,bz:1});
  await p.screenshot({path:`C/${String(f).padStart(4,'0')}.png`});}
 await b.close();console.log('composited',X0+BS-P0);})();
