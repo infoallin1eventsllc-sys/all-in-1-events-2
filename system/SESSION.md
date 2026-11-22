@@ -3844,3 +3844,11 @@ Not posted. Files in system/promo-ad/join-ending/.
 Update: Otis liked the quiet-ending Wheatpaste Wall. Made 4:5 (crop), 1:1 and 16:9 (card on navy,
 no blur), all 15.46 s, -16.1 LUFS. Sent and saved to his Higgsfield library: 9x16 7612e1f0,
 4x5 9e791599, 1x1 ccfa6aa5, 16x9 2339976d. Not posted.
+Update: Otis picked "PC Flat" (Marketing Studio, Motion, SaaS, preset cf3a6f44-3dd7-462a-a218-5dc6375ad85d)
+and asked for no Meridian ending and Higgsfield's own colours (no brand_url, so it would not pull his
+blue). Quotes: 5 s 30.30, default about 8 s 48.12, 10 s 60, 15 s 89.70. He approved 10 s at 60 credits.
+Inputs: his four Agent Dashboard captures (overview, agents, pipeline, Pipeline Analyst card). Job
+0322294a-6506-43e1-b82f-068254fb7dcc. Although 9:16 was asked, it came back 2560x1440 (16:9), 24 fps,
+10.1 s, -12.7 LUFS, peak +0.1 dBFS. Flat cartoon style on dark slate; it drew its own "M" and wrote
+meridianinterface.com correctly; the dashboard screens themselves barely appear. Delivered as is.
+Balance after: about 835.95.
