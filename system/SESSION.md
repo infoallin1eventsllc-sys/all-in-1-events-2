@@ -3782,3 +3782,9 @@ clip frames at full sharpness; ending restored (phone glides to centre, folds in
 logo light-up with the line through it, tagline, booking button, contact). Silent. Music quote for
 32 s: 4.66 credits (ElevenLabs Music v2.5 via Higgsfield), not made. 16:9 only; the other three
 shapes still to do if he approves. Kept in the scratchpad only, not yet saved anywhere durable.
+Update: Otis approved 5.86 credits for a voice and music preview. Made in Higgsfield: voiceover
+(text2speech_v2, ElevenLabs engine, Holden, 1.2 credits, job d23fff87-5449-47bf-a940-5057851c7f08)
+and one 32 s instrumental (ElevenLabs Music v2.5, 4.66 credits, job
+09476100-7c27-41b6-ba34-6f01dd66b955). Balance 962.86 to 957.00. Voice cut into its 11 lines and
+placed on the matching scenes; music ducked under the voice; mixed locally to about -14 LUFS.
+v5 = v4 picture plus this sound. The music's lift lands at 19.2 s on the laptop explode.
