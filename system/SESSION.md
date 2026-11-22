@@ -3833,3 +3833,7 @@ the blue circle and the made-up "meridian.interface" scrawl start at about 8.2 s
 poster 1.1 s, 0.5 s fade into the launch film's ending (27.0 to 32.0 s of the 9:16 film: his logo
 light-up, "We put the future in your hands.", free 1-on-1 button, meridianinterface.com and phone,
 with the film's own voice and music). 13.7 s, 1080x1920, 30 fps, -16.1 LUFS. Not posted.
+Update: Otis wanted the whole Wheatpaste Wall clip kept (including its own "meridian.interface"
+scrawl) plus his ending, smoother, as one piece. Done free: 10.1 s clip, poster pushes in and
+melts into the ending's navy, logo lights up after, 15.3 s at 24 fps, -16.0 LUFS. Method in
+system/promo-ad/join-ending/. Not posted.
