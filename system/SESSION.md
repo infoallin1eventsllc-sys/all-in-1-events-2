@@ -3841,3 +3841,6 @@ Update: Otis said the film ending's music clashed with the clip's music. Built a
 for free (his logo eases in, then tagline, free 1-on-1 button, site and phone; no music of its own)
 and extended the Wheatpaste Wall music under it by repeating one beat. 15.46 s, -16.1 LUFS. Sent.
 Not posted. Files in system/promo-ad/join-ending/.
+Update: Otis liked the quiet-ending Wheatpaste Wall. Made 4:5 (crop), 1:1 and 16:9 (card on navy,
+no blur), all 15.46 s, -16.1 LUFS. Sent and saved to his Higgsfield library: 9x16 7612e1f0,
+4x5 9e791599, 1x1 ccfa6aa5, 16x9 2339976d. Not posted.

@@ -33,3 +33,13 @@ logo coming in slowly with the appointment details, no music of its own.
   the quiet gaps before hits (no clicks measured at the joins), and ends on the clip's own last hit.
 - `blend.cjs` reads the quiet ending frames from `B3/`. Wheatpaste Wall result: 15.46 s, 24 fps,
   -16.1 LUFS, peak -3.8 dBFS.
+
+## Other shapes (4:5, 1:1, 16:9)
+
+`shapes.html` + `render-shapes.cjs "<query>" W H OUT` renders the whole 371-frame video per shape
+(clip, push-in melt, quiet ending laid out for that shape; content centred vertically):
+- 4:5 `mode=crop&cy=250` 1080 1350: straight crop, the poster fits.
+- 1:1 and 16:9 `mode=card&card=960`: the clip is a busy wall with no plain ground and Otis does not
+  want blurred sides, so it sits as a 540 x 960 rounded card on the navy plate; the card melts away
+  and the ending fills the frame.
+Needs `A/` (clip frames at 1080x1920, 24 fps) next to it. Encode at 24 fps with the extended music.
