@@ -3817,3 +3817,8 @@ shows his real dashboard (captured from the working demo in the website repo) in
 with one agent card in front and a slow push-in. Both 16:9 versions re-rendered and sent (v10,
 "-dashboard"). The other three shapes are laid out but not rendered. Still waiting for his pick
 between Sunset Ribbon and Houston Skyline.
+Update: Otis approved the dashboard version ("Everything looks great"). Made the full set for
+both backgrounds, free: 4 shapes x 2 backgrounds, 32 s, -16 LUFS, plus 8 covers, sent to him and
+saved in his Higgsfield library. Sunset Ribbon: 9x16 f0ab9dd8, 4x5 deca9c49, 1x1 4e27f711,
+16x9 f200641b. Houston Skyline: 9x16 990768de, 4x5 f0eebece, 1x1 63592e1c, 16x9 ffeb03a4.
+Nothing posted anywhere; posting waits for his "post it".
