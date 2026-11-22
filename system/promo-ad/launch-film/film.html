@@ -22,6 +22,9 @@ html,body{margin:0;overflow:hidden;background:#04070f;font-family:IN,sans-serif;
 .phone .scr img{width:100%;height:calc(100% - 50px);margin-top:50px;object-fit:cover;object-position:50% 0;display:block}
 .phone .scr:after{content:"";position:absolute;inset:0;background:linear-gradient(112deg,rgba(255,255,255,.22) 0%,rgba(255,255,255,.05) 22%,transparent 36%)}
 .phone .isl{position:absolute;left:50%;top:24px;width:108px;height:30px;margin-left:-54px;border-radius:20px;background:#000;z-index:3}
+.win{position:absolute;inset:0;border-radius:18px;overflow:hidden;background:#f6f7fb;box-shadow:0 0 0 1.5px rgba(205,218,255,.34),0 54px 120px rgba(0,0,0,.62),0 14px 34px rgba(0,0,0,.38)}
+.win img,.acard img{width:100%;height:100%;display:block}
+.acard{position:absolute;border-radius:13px;overflow:hidden;background:#fff;box-shadow:0 0 0 1px rgba(15,23,42,.12),0 36px 76px rgba(0,0,0,.55),0 10px 24px rgba(0,0,0,.28)}
 .pan{position:absolute;border-radius:20px;overflow:hidden;background:#0c1330;border:1.5px solid rgba(190,210,255,.30);
  box-shadow:0 50px 110px rgba(0,0,0,.7),0 0 60px rgba(37,99,235,.20)}
 .pan img{width:100%;height:100%;object-fit:cover;object-position:50% 0;display:block}
@@ -39,28 +42,28 @@ const ALL={
  P:{desk:{cx:544,cy:455,s:.8,ry:34,rx:4},dash:{cx:1516,cy:392,s:.817,ry:-36,rx:3},card:{cx:530,cy:682,s:1.04,ry:26},book:{cx:1434,cy:720,s:1.09,ry:-24},ad:{cx:1721,cy:889,s:1.18,ry:-30},phone:{cx:960,cy:553,s:1.118,ry:-22,rx:5,rz:1.5}},
  cam:{z0:1.2,z1:1.3,x0:250,x1:268,y0:-14}, search:{l:510,t:96,w:900}, nf:{fs:210,top:452}, tagFs:18,
  tags:{desk:[262,226],dash:[1480,150],card:[318,912],book:[1262,922],ad:[1560,640]},
- row:{GX:1250,GY:528,GAP:620,k:1,lx:120,tyTwo:330,tyOne:420,fsTwo:170,fsLong:150,fsShort:200,subFs:24,clipS:1.15},
+ row:{GX:1250,GY:528,GAP:620,k:1,lx:120,tyTwo:330,tyOne:420,fsTwo:170,fsLong:150,fsShort:200,subFs:24,dw:1080,ac:[-96,-150,450]},
  tl:{f1:257,f2:186,left:70,t1:236,t2:506,capTop:746,capFs:19,px:1640,py:545,ps:.96},
  end:{top:-360,ty:[548,632,782],tf:42,bf:34,cf:32}},
 '9x16':{W:1080,H:1920,
  P:{desk:{cx:300,cy:540,s:.62,ry:30,rx:4},dash:{cx:790,cy:480,s:.62,ry:-32,rx:3},card:{cx:172,cy:1150,s:.92,ry:24},book:{cx:905,cy:1000,s:.9,ry:-22},ad:{cx:872,cy:1420,s:1.08,ry:-26},phone:{cx:540,cy:930,s:1.05,ry:-18,rx:5,rz:1.5}},
  cam:{z0:1.1,z1:1.17,x0:36,x1:44,y0:24}, search:{l:110,t:300,w:860}, nf:{fs:150,top:850}, tagFs:20,
  tags:{desk:[96,372],dash:[560,318],card:[56,930],book:[790,800],ad:[720,1178]},
- row:{GX:540,GY:1250,GAP:640,k:1.3,lx:70,tyTwo:352,tyOne:352,fsTwo:150,fsLong:158,fsShort:200,subFs:24,clipS:1.3},
+ row:{GX:540,GY:1250,GAP:640,k:1.3,lx:70,tyTwo:352,tyOne:352,fsTwo:150,fsLong:158,fsShort:200,subFs:24,dw:750,d4y:-150,ac:[16,-96,320]},
  tl:{f1:180,f2:130,left:70,t1:320,t2:490,capTop:640,capFs:16,px:540,py:1290,ps:1},
  end:{top:0,ty:[925,1015,1172],tf:44,bf:34,cf:32}},
 '4x5':{W:1080,H:1350,
  P:{desk:{cx:290,cy:330,s:.6,ry:30,rx:4},dash:{cx:800,cy:300,s:.6,ry:-32,rx:3},card:{cx:165,cy:900,s:.9,ry:24},book:{cx:915,cy:830,s:.9,ry:-22},ad:{cx:880,cy:1160,s:.95,ry:-26},phone:{cx:540,cy:720,s:.95,ry:-18,rx:5,rz:1.5}},
  cam:{z0:1.1,z1:1.17,x0:36,x1:44,y0:10}, search:{l:110,t:60,w:860}, nf:{fs:150,top:640}, tagFs:19,
  tags:{desk:[96,176],dash:[590,150],card:[56,1108],book:[800,640],ad:[575,1170]},
- row:{GX:540,GY:880,GAP:620,k:.98,lx:60,tyTwo:112,tyOne:128,fsTwo:120,fsLong:140,fsShort:170,subFs:22,clipS:1},
+ row:{GX:540,GY:880,GAP:620,k:.98,lx:60,tyTwo:112,tyOne:128,fsTwo:120,fsLong:140,fsShort:170,subFs:22,dw:1000,ac:[24,-112,380]},
  tl:{f1:180,f2:130,left:70,t1:90,t2:260,capTop:410,capFs:16,px:540,py:930,ps:.9},
  end:{top:-225,ty:[690,776,930],tf:42,bf:34,cf:32}},
 '1x1':{W:1080,H:1080,
  P:{desk:{cx:270,cy:280,s:.55,ry:30,rx:4},dash:{cx:810,cy:250,s:.55,ry:-32,rx:3},card:{cx:170,cy:730,s:.8,ry:24},book:{cx:905,cy:690,s:.8,ry:-22},ad:{cx:880,cy:930,s:.8,ry:-26},phone:{cx:540,cy:590,s:.82,ry:-18,rx:5,rz:1.5}},
  cam:{z0:1.1,z1:1.17,x0:36,x1:44,y0:0}, search:{l:110,t:44,w:860}, nf:{fs:150,top:500}, tagFs:18,
  tags:{desk:[90,148],dash:[590,116],card:[56,912],book:[800,516],ad:[590,985]},
- row:{GX:800,GY:560,GAP:560,k:.88,lx:56,tyTwo:380,tyOne:440,fsTwo:108,fsLong:104,fsShort:150,subFs:15,clipS:.78},
+ row:{GX:800,GY:560,GAP:560,k:.88,lx:56,tyTwo:380,tyOne:440,fsTwo:108,fsLong:104,fsShort:150,subFs:15,dw:1090,d4x:-260,d4y:110,ty4:96,ac:[26,-150,390]},
  tl:{f1:180,f2:130,left:70,t1:60,t2:225,capTop:372,capFs:16,px:540,py:760,ps:.78},
  end:{top:-360,ty:[548,632,782],tf:42,bf:34,cf:32}}};
 const C=ALL[FMT], W=C.W, H=C.H, P=C.P;
@@ -88,8 +91,8 @@ const L1a=4.6,L1b=8.0, TAGa=8.3,TAGb=9.7, Ma=9.5,Mb=11.2, Ga=11.2,Gb=19.6, CLIP=
 const L2a=22.2,L2b=25.0, Oa=25.4,Ob=26.2, Ca=25.5,Cb=26.3,F0=26.65, E0=26.55,XF=.45;
 
 /* ---------- shot 1 ---------- */
-const SIZE={desk:[640,400],dash:[620,386],card:[230,410],book:[250,360],ad:[210,372]};
-const IMG={desk:'desk-home.jpg',dash:'dash.jpg',card:'card.jpg',book:'book.jpg',ad:'ad.jpg'};
+const SIZE={desk:[640,400],dash:[620,369],card:[230,410],book:[250,360],ad:[210,372]};
+const IMG={desk:'desk-home.jpg',dash:'dash2.jpg',card:'card.jpg',book:'book.jpg',ad:'ad.jpg'};
 const TAGN={desk:'WEBSITES',dash:'CRM AND DASHBOARDS',card:'DIGITAL CARDS',book:'BOOKING',ad:'VIDEO ADS'};
 const zoom=t=>kf(t,[[0,C.cam.z0],[L1a,C.cam.z1],[9.2,1]]);
 const camX=t=>kf(t,[[0,C.cam.x0],[L1a,C.cam.x1],[9.2,0]]);
@@ -120,19 +123,23 @@ const GB=[.9,1.85,1.7,1.9,1];
 function gpose(i,pos){const d=i-pos, ad=Math.abs(d);
  return {cx:R.GX+d*R.GAP,cy:R.GY,s:GB[i]*R.k*(1-.2*Math.min(ad,1.5)),ry:cl(-d*24,-38,38),rx:i==0?3:0,rz:0,op:(d<0?1-se(seg(-d,.12,.62)):cl(1-.55*Math.min(ad,1.7))*(1-seg(ad,1.5,1.9)))};}
 const soft=x=>{const e=.14;x=cl(x);return x<e?x*x/(2*e)/(1-e):x>1-e?1-(1-x)*(1-x)/(2*e)/(1-e):(x-e/2)/(1-e);};
-function gpos(t){ if(t<=Ga) return 0;
+function gpos(t0){ if(t0<=Ga) return 0; const t=t0+.5*se(seg(t0,16.8,19.1)); // last step lands at 19.1, not 19.6, and Booking keeps its time with the voice
  if(t<Gb){const u=4*soft((t-Ga)/(Gb-Ga)), i=Math.min(3,Math.floor(u)), f=u-i; return i+lerp(f,se(f),.5);}
- if(t<Xa) return 4; const x=seg(t,Xa,Xb); return 4+1.5*x*x;}
+ if(t0<Xa) return 4; const x=seg(t0,Xa,Xb); return 4+1.5*x*x;}
 function row(t,vis,first){const pos=gpos(t); let h='';
  const ex=1-se(seg(t,Xa+.1,Xa+1.1));
  for(let i=first?0:1;i<5;i++){const p=gpose(i,pos); p.op*=vis*ex; if(p.op<=0.01) continue; p.cy+=Math.sin(t*.7+i)*4*(i==0?fade(t,Mb,1.6):1);
   if(i==0) h+=phone(p,'phone-home.jpg');
-  else if(i==4){const fi=String(cl(Math.round((t-CLIP)*30),0,88)).padStart(3,'0'), cs=R.clipS*(1-.2*Math.min(Math.abs(i-pos),1.5)), PW=680, PH=793;
-   // the laptop clip, whole, on its own black ground inside a clean card (no cut-out), one clip frame per film frame
-   h+=`<div style="position:absolute;left:${p.cx-PW/2}px;top:${p.cy-PH/2}px;width:${PW}px;height:${PH}px;opacity:${p.op};transform:scale(${cs});border-radius:36px;overflow:hidden;background:#000;box-shadow:0 0 0 1.5px rgba(255,255,255,.18),0 36px 80px rgba(0,0,0,.55)"><img src="clipd/c${fi}.png" style="width:100%;height:100%;display:block"></div>`;}
+  else if(i==4){const DW=R.dw, DH=Math.round(DW*714/1200), ca=fade(t,18.95,1.1), ex4=1-se(seg(t,Xa+.15,Xa+.8));
+   // the real Meridian Agent Dashboard (captured from the live demo): one window, one agent card, one slow push-in
+   p.s*=1+.035*se(seg(t,18.2,22.6)); p.cx+=R.d4x||0; p.cy+=R.d4y||0;
+   p.op=se(cl((1.15-Math.abs(i-pos))/.5))*vis*ex4; // solid once it is close: a see-through dashboard over a skyline looks dirty
+   h+=`<div style="position:absolute;left:${p.cx-DW/2}px;top:${p.cy-DH/2}px;width:${DW}px;height:${DH}px;${T(p)}">
+    <div class="win"><img src="dash/overview.png"></div>
+    <div class="acard" style="left:${R.ac[0]}px;top:${DH+R.ac[1]}px;width:${R.ac[2]}px;opacity:${ca};transform:translateY(${(1-ca)*44-8*se(seg(t,19.6,22.6))}px) scale(${.965+.035*ca})"><img src="dash/agent.png"></div></div>`;}
   else h+=panel(p,...[[0,0],[210,372],[230,410],[250,360]][i],['','ad.jpg','card.jpg','book.jpg'][i]);}
  GI.forEach((g,i)=>{const d=i-pos; let a=se(cl(1.3-Math.abs(d)*2.6))*vis*ex; if(i==0) a*=fade(t,Mb-.5,.9); if(a<=0.005) return;
-  const two=g[0].includes('<br>'), fs=two?R.fsTwo:(g[0].length>6?R.fsLong:R.fsShort), th=two?fs*1.8:fs*.9, ty=two?R.tyTwo:R.tyOne, x=R.lx+d*150;
+  const two=g[0].includes('<br>'), fs=two?R.fsTwo:(g[0].length>6?R.fsLong:R.fsShort), th=two?fs*1.8:fs*.9, ty=(i==4&&R.ty4!=null)?R.ty4:(two?R.tyTwo:R.tyOne), x=R.lx+d*150;
   h+=`<div style="position:absolute;left:${x}px;top:0;opacity:${a};z-index:22">
    <div class="hud" style="left:6px;top:${ty-56}px;font-size:22px;letter-spacing:.3em;color:#7fa6ff">0${i+1} &nbsp;/&nbsp; 05</div>
    <div class="h1" style="position:absolute;left:0;top:${ty}px;font-size:${fs}px;text-shadow:0 8px 50px rgba(0,0,0,.75)">${g[0]}</div>

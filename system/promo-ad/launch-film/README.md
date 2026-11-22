@@ -80,3 +80,30 @@ To rebuild: `ffmpeg -i clip/agent-crm-source.mp4 -t 3.4 -start_number 0 full/s%0
 the film holds the last frame.
 
 Rule learned: do not key dark footage that has black parts. Keep it on a dark card.
+
+## Laptop removed, real Agent Dashboard in (22 Nov 2026)
+
+Otis: "Let's take the laptop out. I don't like it. And use my Meridian Agent dashboard. Make it
+really smooth and clean and professional, Fortune 500 ready." The laptop clip, `clean.cjs` and
+the `clipd/` frames are no longer used; the two laptop sections above are history.
+
+The CRM scene (item 5 of the row) is now his real Meridian Agent Dashboard, captured from the
+working demo in the website repo, so every pixel is his product and nothing is generated:
+
+- `capture-dashboard.cjs`: serve the website's `public/` folder on port 4823
+  (`python3 -m http.server 4823`), then run it. Viewport 1200 x 760 at 2x. It hides the demo
+  toast, crops the dark demo banner off the top (46 px) and saves the Overview, Agents and
+  Pipeline views and each agent card. Below 1200 px wide the sidebar collapses to icons, so stay
+  at 1200.
+- The film uses two files: `dash/overview.png` (Overview scaled to 1600 wide) and
+  `dash/agent.png` (the Pipeline Analyst card, 640 wide). Shot 1's small dashboard panel uses the
+  same capture (`tx/dash2.jpg`).
+- Motion, on purpose very little: the window glides in with the row and lands at 19.1 s, one
+  agent card rises in front of its lower left corner, and the whole thing pushes in 3.5 percent
+  until it leaves. No flashes, no cuts.
+- The window is fully solid while it moves (a see-through white dashboard over a skyline looks
+  dirty); it only dissolves for 0.65 s on the way out.
+- `gpos` has a small smooth time warp (0.5 s over 16.8 to 19.1 s) so the dashboard holds for
+  1.6 s; Booking keeps its timing with the voice.
+- Per shape: `dw` (window width), `ac` (agent card left, top from the window's bottom, width),
+  and for 1:1 `d4x`, `d4y`, `ty4`, which centre the window under the heading.

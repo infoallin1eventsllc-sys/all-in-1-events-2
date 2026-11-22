@@ -3811,3 +3811,9 @@ whole on its own black card (no cut-out), sharp dashboard from the clip's own cl
 onto every frame (clean.cjs), banded glow removed, one clip frame per film frame. Both 16:9
 versions re-rendered and sent (v8, "-clean"). Still waiting for his pick between Sunset Ribbon
 and Houston Skyline before making the other three shapes.
+Update: Otis did not like the laptop and asked for it to come out, with his Meridian Agent
+Dashboard in its place, smooth, clean and "Fortune 500 ready". Done for free: the CRM scene now
+shows his real dashboard (captured from the working demo in the website repo) in a clean window
+with one agent card in front and a slow push-in. Both 16:9 versions re-rendered and sent (v10,
+"-dashboard"). The other three shapes are laid out but not rendered. Still waiting for his pick
+between Sunset Ribbon and Houston Skyline.
