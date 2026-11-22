@@ -3804,3 +3804,10 @@ Update: Otis said both background versions looked blurry, with a haze around the
 for free: laptop cut out cleanly per frame (matte.cjs), no blend haze or dark patch, all
 soft-focus blur removed, encode quality raised. Both 16:9 versions re-sent. Still waiting for his
 pick between Sunset Ribbon and Houston Skyline before making the other three shapes.
+Update: Otis said the laptop was still breaking up. Cause found frame by frame: the cut-out was
+eating the laptop's black screen frame and dark boards, the crop sliced its sides, the frame rate
+stuttered, and the source clip smears the dashboard text mid-explode. Fixed for free: clip shown
+whole on its own black card (no cut-out), sharp dashboard from the clip's own clean frame warped
+onto every frame (clean.cjs), banded glow removed, one clip frame per film frame. Both 16:9
+versions re-rendered and sent (v8, "-clean"). Still waiting for his pick between Sunset Ribbon
+and Houston Skyline before making the other three shapes.

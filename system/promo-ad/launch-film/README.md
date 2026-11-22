@@ -38,8 +38,7 @@ Otis found the plain dark blue ground boring. `film.html` now takes `&bg=<name>`
 over one of his owned digital-card backgrounds (`bgs/<name>-wide.jpg` and `-tall.jpg`, made from
 the card kit's wallpaper plates): `ribbon`, `houston-skyline`, `light-trails`, `sunset`. The
 picture drifts slowly, a dark gradient sits behind the words, and the "before" part stays grey
-until the line passes. The laptop clip is screen-blended, so on a bright ground it needs the dark
-patch drawn behind it. Free: no new generation. `BGQ=<name>` selects it in `render.cjs`.
+until the line passes. The laptop clip sits in its own black card (see "Laptop clean-up"). Free: no new generation. `BGQ=<name>` selects it in `render.cjs`.
 
 ## Sharpness (22 Nov 2026)
 
@@ -51,3 +50,33 @@ RGBA PNGs to `clipa/`; the film draws those with normal blending, no mask and no
 are taken from the source with a light unsharp filter. All depth-of-field blur on the far panels
 and on the row's neighbours was removed too, and the encode is crf 15.
 What cannot be fixed here: the small text on the laptop's own screen is soft in the source clip.
+
+## Laptop clean-up (22 Nov 2026, replaces the cut-out above)
+
+Otis said the laptop was still "breaking up". Looking at the cut-out frame by frame showed why:
+the laptop's black screen frame and its dark circuit boards are the same black as the clip's
+ground, so any cut-out eats them, and the skyline showed through the holes. Three more faults:
+the frames had been cropped to 908 px wide, which sliced the sides off the laptop while it is
+large; the clip was resampled and played at 23 of its frames per second on a 30 fps film, which
+stutters; and in the source itself the dashboard text smears for about half a second while the
+laptop comes apart.
+
+What the film does now (all free, nothing generated):
+
+1. No cut-out. The clip is shown whole, on its own black ground, inside a rounded black card
+   (680 x 793 at scale `clipS`), like the other product cards. `matte.cjs` is gone.
+2. `clean.cjs` repairs the screen. It finds the screen's four corners in every frame (line fits
+   on the bright edges, smoothed over time), takes the sharp dashboard from frame 16 of the same
+   clip, and warps it onto the screen of all 89 frames. The text is now identical and sharp in
+   every frame, including the ones that smeared.
+3. The faint glow behind the exploded laptop had visible rings (banding). The black point is
+   raised by 7 percent so the ground is pure black:
+   `ffmpeg -start_number 0 -i clipc/c%03d.png -vf colorlevels=rimin=0.07:gimin=0.07:bimin=0.07 -start_number 0 clipd/c%03d.png`
+4. One clip frame per film frame (source frames 0 to 88 at 30 fps), so the motion is smooth.
+
+To rebuild: `ffmpeg -i clip/agent-crm-source.mp4 -t 3.4 -start_number 0 full/s%03d.png`, then
+`node clean.cjs detect`, `node clean.cjs all`, then the colorlevels line. The film reads
+`clipd/c000.png` to `c088.png`. After frame 88 the source zooms into its labelled close-ups, so
+the film holds the last frame.
+
+Rule learned: do not key dark footage that has black parts. Keep it on a dark card.
