@@ -3759,3 +3759,9 @@ business and switches on everything it touches) and 4 styleframes (3D look, typo
 transition) in HTML/CSS with Playwright, using his real screens. Blender could not be installed in
 this workspace, so the frames are code-built, not ray-traced 3D. 0 Higgsfield credits; 2 Firecrawl
 credits for the lookup. Waiting on his verdict before any animation, music or rendering.
+Update: Otis approved the styleframes and asked for the rough version. Rough cut v1 made in code
+(Playwright frames to ffmpeg, 960x540, 25 fps, 25 s, no music, 0 credits), timed to a 140 BPM grid
+so a music track can be fitted later: before / NOT FOUND (0 to 4.3 s), the line passes (to 6 s),
+all products (to 7.7 s), five features at 1.29 s each (to 14.1 s), THE FUTURE IN YOUR HANDS
+(to 19.3 s), ALL FROM ONE STUDIO (to 21.9 s), logo light-up and contact (to 25 s). 16:9 only so
+far; the other three shapes come with the final. Waiting on his notes.
