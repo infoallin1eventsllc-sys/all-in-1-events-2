@@ -1,0 +1,24 @@
+<!doctype html><meta charset="utf-8"><link rel="icon" href="data:,"><style>
+@font-face{font-family:Montserrat;font-weight:500;src:url(/node_modules/@fontsource/montserrat/files/montserrat-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:Montserrat;font-weight:600;src:url(/node_modules/@fontsource/montserrat/files/montserrat-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:Montserrat;font-weight:700;src:url(/node_modules/@fontsource/montserrat/files/montserrat-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:Montserrat;font-weight:800;src:url(/node_modules/@fontsource/montserrat/files/montserrat-latin-800-normal.woff2) format("woff2")}
+@font-face{font-family:Montserrat;font-weight:900;src:url(/node_modules/@fontsource/montserrat/files/montserrat-latin-900-normal.woff2) format("woff2")}
+</style><body style="margin:0;background:#000"><canvas id="c"></canvas>
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js'; globalThis.__GTAOPass = GTAOPass; if (new URLSearchParams(location.search).has('noao')) globalThis.__noAO = true;
+const q = new URLSearchParams(location.search), W = +q.get('w') || 1920, H = +q.get('h') || 1080; if (q.has('msaa')) globalThis.__msaa = +q.get('msaa');
+try {
+  await Promise.all([500,600,700,800,900].map(w => document.fonts.load(w + ' 40px Montserrat')));
+  const img = new Image(); img.src = '/logo.png'; await img.decode(); globalThis.__logoImg = img; globalThis.__hide = [118.9, 125.6]; globalThis.__merch = {}; for (const k of [3,4,6,7]) { const d = new Image(); d.src = '/decal' + k + '.png'; await d.decode(); globalThis.__merch[k] = d; }
+  const code = await (await fetch('/v2.js')).text();
+  const canvas = document.getElementById('c'); canvas.width = W; canvas.height = H;
+  new Function('THREE','OrbitControls','EffectComposer','RenderPass','UnrealBloomPass','canvas','width','height', code)(THREE,OrbitControls,EffectComposer,RenderPass,UnrealBloomPass,canvas,W,H); window.__ok = true; }
+catch (e) { window.__err = String(e.stack || e); }
+</script>

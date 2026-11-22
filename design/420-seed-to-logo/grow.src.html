@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seed to Logo</title>
+<style>
+  :root { --bg:#f4f3ef; --ink:#161a17; --green:#12752f; }
+  html,body { margin:0; height:100%; background:var(--bg); overflow:hidden; }
+  canvas { display:block; width:100vw; height:100vh; }
+  .ctl { position:fixed; left:50%; bottom:28px; transform:translateX(-50%);
+         font:600 13px/1 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing:.14em; text-transform:uppercase;
+         color:#f7f7f4; background:var(--ink); border:0; border-radius:999px; padding:15px 26px; cursor:pointer;
+         box-shadow:0 8px 24px rgba(0,0,0,.18); }
+  .ctl:focus-visible { outline:3px solid var(--green); outline-offset:3px; }
+  .ctl[hidden] { display:none; }
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="A seed is planted, watered, and grows into the 420 Friendly logo"></canvas>
+<button class="ctl" id="play" type="button">Play with sound</button>
+<audio id="snd" preload="auto" src="__AUDIO__"></audio>
+<script>
+(() => {
+const END = 12.5;
+const cv = document.getElementById('c'), cx2d = cv.getContext('2d');
+const logo = new Image(); logo.src = "__LOGO__";
+
+// ---------- helpers ----------
+const clamp = (x,a=0,b=1) => Math.max(a, Math.min(b, x));
+const seg = (t,a,b) => clamp((t-a)/(b-a));
+const lerp = (a,b,u) => a + (b-a)*u;
+const eOut = u => 1 - Math.pow(1-u, 3);
+const eIn = u => u*u*u;
+const eIO = u => u<.5 ? 4*u*u*u : 1 - Math.pow(-2*u+2,3)/2;
+const eBack = u => { const c1=1.70158, c3=c1+1; return 1 + c3*Math.pow(u-1,3) + c1*Math.pow(u-1,2); };
+function rng(seed){ return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed>>>15, 1|seed); t = t + Math.imul(t ^ t>>>7, 61|t) ^ t; return ((t ^ t>>>14) >>> 0) / 4294967296; }; }
+
+// ---------- timeline ----------
+const DROPS = [3.5, 3.75, 3.95, 4.15, 4.35, 4.55];
+const HIT = 9.4;
+const growT = t => eIO(seg(t, 5.2, 8.2));          // stem growth 0..1
+
+// ---------- layout ----------
+function layout(W, H){
+  const portrait = H > W, S = Math.min(W, H);
+  const groundY = H * (portrait ? 0.70 : 0.80);
+  const Lh = Math.min(H * (portrait ? 0.46 : 0.58), W * 0.80 * 760/655);
+  const Lw = Lh * 655/760, k = Lh/760, cx = W/2;
+  const lg = { x: cx - Lw/2, y: groundY - Lh*0.985, w: Lw, h: Lh };
+  const leafBase = { x: lg.x + 328*k, y: lg.y + 318*k };
+  const seedY = groundY + H*0.09;
+  const L = { W, H, S, portrait, groundY, Lh, Lw, k, cx, lg, leafBase, seedY };
+  // stem: seed -> leaf base
+  L.stem0 = { x: cx, y: seedY - S*0.006 };
+  const frac0 = (L.stem0.y - groundY) / (L.stem0.y - leafBase.y);
+  L.frac0 = frac0;
+  L.nodes = [0.10, 0.38, 0.64].map(f => frac0 + f*(1-frac0));
+  L.nodeT = L.nodes.map(n => { let t = 5.2; while (t < 8.2 && growT(t) < n) t += 0.002; return t; });
+  return L;
+}
+
+// ---------- static textures ----------
+let grain = null;
+function makeGrain(){
+  grain = document.createElement('canvas'); grain.width = grain.height = 256;
+  const g = grain.getContext('2d'), id = g.createImageData(256,256), r = rng(7);
+  for (let i = 0; i < id.data.length; i += 4){ const v = r()*255; id.data[i]=id.data[i+1]=id.data[i+2]=v; id.data[i+3]=255; }
+  g.putImageData(id,0,0);
+}
+
+// ---------- drawing pieces ----------
+function soilPath(c, L, o){
+  const { W, H, groundY, cx, S } = L;
+  const hw = o*S*0.06, depth = o*(L.seedY - groundY + S*0.022), lip = o*S*0.009;
+  c.beginPath();
+  c.moveTo(0, groundY);
+  for (let x = 0; x <= cx - hw - S*0.05; x += W/60) c.lineTo(x, groundY + Math.sin(x*0.013)*S*0.0016);
+  c.quadraticCurveTo(cx - hw - S*0.02, groundY - lip, cx - hw, groundY - lip*0.6);
+  if (o > 0.001){
+    c.lineTo(cx - hw*0.35, groundY + depth*0.92);
+    c.quadraticCurveTo(cx, groundY + depth*1.02, cx + hw*0.35, groundY + depth*0.92);
+  }
+  c.lineTo(cx + hw, groundY - lip*0.6);
+  c.quadraticCurveTo(cx + hw + S*0.02, groundY - lip, cx + hw + S*0.05, groundY);
+  for (let x = cx + hw + S*0.05; x <= W; x += W/60) c.lineTo(x, groundY + Math.sin(x*0.013)*S*0.0016);
+  c.lineTo(W, groundY); c.lineTo(W, H); c.lineTo(0, H); c.closePath();
+}
+
+function drawSoil(c, L, t){
+  const { W, H, groundY, cx, S } = L;
+  const o = eOut(seg(t, 0.6, 1.5)) * (1 - eIO(seg(t, 2.5, 3.15)));
+  // pit back wall
+  if (o > 0.001){ c.fillStyle = '#140e09'; c.fillRect(cx - S*0.1, groundY, S*0.2, L.seedY - groundY + S*0.06); }
+  c.save();
+  soilPath(c, L, o);
+  const g = c.createLinearGradient(0, groundY, 0, H);
+  g.addColorStop(0, '#4b3628'); g.addColorStop(0.35, '#3a2a1f'); g.addColorStop(1, '#1f160f');
+  c.fillStyle = g; c.fill();
+  c.clip();
+  // strata + specks
+  const r = rng(11);
+  for (let i = 0; i < 420; i++){
+    const x = r()*W, y = groundY + Math.pow(r(),1.3)*(H-groundY), s = (0.6 + r()*2.2)*S/1080;
+    c.fillStyle = r() < .5 ? 'rgba(120,92,66,.35)' : 'rgba(10,6,3,.35)';
+    c.beginPath(); c.ellipse(x, y, s*1.6, s, r()*3, 0, 7); c.fill();
+  }
+  for (let i = 0; i < 26; i++){            // pebbles
+    const x = r()*W, y = groundY + S*0.03 + r()*(H-groundY), s = (3 + r()*7)*S/1080;
+    if (Math.abs(x - cx) < S*0.05 && y < L.seedY + S*0.04) continue;
+    const pg = c.createRadialGradient(x - s*.3, y - s*.4, s*.1, x, y, s*1.2);
+    pg.addColorStop(0, '#8a7a68'); pg.addColorStop(1, '#3d3127');
+    c.fillStyle = pg; c.beginPath(); c.ellipse(x, y, s*1.3, s, r()*3, 0, 7); c.fill();
+  }
+  // water soaking down
+  const w = eOut(seg(t, 3.5, 4.9));
+  if (w > 0){
+    const ry = (L.seedY - groundY + S*0.045)*w, rx = S*0.075*Math.sqrt(w);
+    c.save(); c.translate(cx, groundY); c.scale(rx/ry, 1);
+    const wg = c.createRadialGradient(0, 0, 0, 0, 0, ry);
+    wg.addColorStop(0, 'rgba(8,14,22,.42)'); wg.addColorStop(.7, 'rgba(8,14,22,.22)'); wg.addColorStop(1, 'rgba(8,14,22,0)');
+    c.fillStyle = wg; c.beginPath(); c.arc(0, 0, ry, 0, 7); c.fill(); c.restore();
+  }
+  c.restore();
+  // topsoil edge
+  c.save(); soilPath(c, L, o); c.clip();
+  c.strokeStyle = 'rgba(122,92,64,.9)'; c.lineWidth = S*0.004;
+  c.beginPath(); c.moveTo(0, groundY + S*0.002); c.lineTo(W, groundY + S*0.002); c.stroke();
+  c.restore();
+  // crack lines while opening
+  const ck = seg(t, 0.6, 0.9) * (1 - seg(t, 2.6, 3.0));
+  if (ck > 0){
+    c.save(); soilPath(c, L, o); c.clip();
+    const r2 = rng(5);
+    c.strokeStyle = `rgba(12,8,5,${0.85*ck})`; c.lineWidth = S*0.0022; c.lineCap = 'round';
+    for (let k = 0; k < 7; k++){
+      let x = cx + (r2() - .5)*S*0.07, y = groundY + 1, a = Math.PI/2 + (r2() - .5)*1.6;
+      c.beginPath(); c.moveTo(x, y);
+      const n = 4 + (r2()*4|0);
+      for (let i = 0; i < n*ck; i++){ a += (r2() - .5)*.8; x += Math.cos(a)*S*0.014; y += Math.abs(Math.sin(a))*S*0.012; c.lineTo(x, y); }
+      c.stroke();
+    }
+    c.restore();
+  }
+  // mound of loosened soil after closing
+  const m = eOut(seg(t, 2.9, 3.4));
+  if (m > 0){
+    c.fillStyle = '#4b3628';
+    c.beginPath(); c.ellipse(cx, groundY + S*0.001, S*0.045, S*0.009*m, 0, Math.PI, 0); c.fill();
+  }
+}
+
+function drawDebris(c, L, t){
+  const T0 = 0.62; if (t < T0 || t > 1.9) return;
+  const r = rng(21), { cx, groundY, S } = L;
+  for (let i = 0; i < 30; i++){
+    const vx = (r() - .5)*S*0.5, vy = -(0.25 + r()*0.45)*S, s = (2 + r()*4)*S/1080, d = r()*0.25;
+    const tt = t - T0 - d; if (tt < 0) continue;
+    const x = cx + (r() - .5)*S*0.06 + vx*tt, y = groundY - S*0.004 + vy*tt + 0.5*S*2.6*tt*tt;
+    if (y > groundY + S*0.004) continue;
+    c.fillStyle = i % 3 ? '#4b3628' : '#7a5c40';
+    c.fillRect(x - s/2, y - s/2, s, s*0.8);
+  }
+}
+
+function seedState(L, t){
+  if (t < 1.6) return null;
+  const { H, S, cx, seedY } = L;
+  const p = seg(t, 1.6, 2.4);
+  let y = lerp(L.groundY - 0.34*H, seedY, p*p), rot = 0.6 + p*5.2;
+  if (t > 2.4){ const u = t - 2.4; y -= S*0.014*Math.abs(Math.sin(u*13))*Math.exp(-u*8); rot = 5.8 + 0.25*Math.sin(u*10)*Math.exp(-u*6); }
+  return { x: cx + Math.sin(p*3)*S*0.004, y, rot };
+}
+
+function drawSeed(c, L, t){
+  const s = seedState(L, t); if (!s) return;
+  const { S } = L, len = S*0.032, wid = len*0.62;
+  const split = eOut(seg(t, 4.95, 5.4));
+  c.save(); c.translate(s.x, s.y); c.rotate(s.rot);
+  for (const side of [-1, 1]){
+    c.save();
+    c.rotate(side*split*0.28); c.translate(side*split*S*0.003, 0);
+    c.beginPath();
+    c.moveTo(0, -len/2);
+    if (side < 0) c.bezierCurveTo(-wid*.75, -len*.2, -wid*.6, len*.42, 0, len/2);
+    else c.bezierCurveTo(wid*.75, -len*.2, wid*.6, len*.42, 0, len/2);
+    c.closePath();
+    const g = c.createLinearGradient(-wid/2, -len/2, wid/2, len/2);
+    g.addColorStop(0, '#b1a07e'); g.addColorStop(.55, '#6d5d44'); g.addColorStop(1, '#3a3024');
+    c.fillStyle = g; c.fill();
+    c.strokeStyle = 'rgba(40,30,20,.55)'; c.lineWidth = S*0.0011;
+    for (let i = 0; i < 3; i++){ c.beginPath(); c.moveTo(side*wid*(.12 + i*.1), -len*.3 + i*len*.18); c.quadraticCurveTo(side*wid*.3, -len*.15 + i*len*.18, side*wid*(.08 + i*.08), len*.05 + i*len*.14); c.stroke(); }
+    c.restore();
+  }
+  c.fillStyle = 'rgba(255,255,255,.35)';
+  c.beginPath(); c.ellipse(-wid*.16, -len*.18, wid*.09, len*.16, .3, 0, 7); c.fill();
+  c.restore();
+  // glint at the top of the fall
+  const gl = Math.sin(Math.PI*seg(t, 1.85, 2.15));
+  if (gl > 0) star(c, s.x + S*0.012, s.y - S*0.012, S*0.03*gl, `rgba(255,248,220,${gl})`);
+  // life glow before sprouting
+  const lg = Math.sin(Math.PI*seg(t, 4.7, 5.6));
+  if (lg > 0){
+    c.save(); c.globalCompositeOperation = 'lighter';
+    const g = c.createRadialGradient(s.x, s.y, 0, s.x, s.y, S*0.05);
+    g.addColorStop(0, `rgba(140,255,170,${0.55*lg})`); g.addColorStop(1, 'rgba(140,255,170,0)');
+    c.fillStyle = g; c.beginPath(); c.arc(s.x, s.y, S*0.05, 0, 7); c.fill(); c.restore();
+  }
+}
+
+function star(c, x, y, r, col){
+  c.save(); c.translate(x, y); c.fillStyle = col;
+  c.beginPath();
+  for (let i = 0; i < 8; i++){ const a = i*Math.PI/4, rr = i % 2 ? r*0.16 : r; c.lineTo(Math.cos(a)*rr, Math.sin(a)*rr); }
+  c.closePath(); c.fill(); c.restore();
+}
+
+function drawDrops(c, L, t){
+  const { H, S, cx, groundY } = L, off = [-0.012, 0.010, -0.004, 0.014, -0.016, 0.006];
+  DROPS.forEach((ti, i) => {
+    const x = cx + off[i]*S, t0 = ti - 0.42;
+    if (t >= t0 && t < ti){
+      const p = seg(t, t0, ti), y = lerp(groundY - 0.32*H, groundY - S*0.006, p*p);
+      const r = S*0.0085;
+      c.save(); c.translate(x, y);
+      c.beginPath(); c.moveTo(0, -r*2.4); c.bezierCurveTo(r*1.1, -r*.6, r*1.05, r, 0, r); c.bezierCurveTo(-r*1.05, r, -r*1.1, -r*.6, 0, -r*2.4);
+      const g = c.createLinearGradient(-r, -r*2, r, r);
+      g.addColorStop(0, '#d6f0ff'); g.addColorStop(1, '#4fa3d6');
+      c.fillStyle = g; c.fill();
+      c.fillStyle = 'rgba(255,255,255,.8)'; c.beginPath(); c.ellipse(-r*.35, -r*.2, r*.18, r*.35, 0, 0, 7); c.fill();
+      c.restore();
+    }
+    const u = t - ti;
+    if (u >= 0 && u < 0.45){
+      const a = 1 - u/0.45;
+      c.strokeStyle = `rgba(120,190,230,${0.7*a})`; c.lineWidth = S*0.0018;
+      c.beginPath(); c.ellipse(x, groundY - S*0.002, S*0.03*eOut(u/0.45), S*0.006*eOut(u/0.45), 0, 0, 7); c.stroke();
+      const r = rng(31 + i);
+      c.fillStyle = `rgba(150,205,240,${a})`;
+      for (let k = 0; k < 6; k++){
+        const vx = (r() - .5)*S*0.25, vy = -(0.18 + r()*0.2)*S;
+        const px = x + vx*u, py = groundY - S*0.004 + vy*u + 0.5*S*2.2*u*u;
+        if (py < groundY) { c.beginPath(); c.arc(px, py, S*0.0024, 0, 7); c.fill(); }
+      }
+    }
+  });
+}
+
+function drawRoots(c, L, t){
+  const s = seedState(L, t); if (!s || t < 4.95) return;
+  const { S, H } = L;
+  c.save(); c.lineCap = 'round';
+  for (let i = 0; i < 5; i++){
+    const r = rng(41 + i), p = eOut(seg(t, 4.95 + i*0.12, 7.8 + i*0.2));
+    let x = s.x + (r() - .5)*S*0.006, y = s.y + S*0.012, a = Math.PI/2 + (i - 2)*0.42;
+    const pts = [[x, y]], n = 18;
+    for (let k = 0; k < n; k++){ a += (r() - .5)*0.5 + (Math.PI/2 - a)*0.08; x += Math.cos(a)*S*0.009; y += Math.sin(a)*S*0.009; pts.push([x, y]); }
+    const m = Math.max(1, Math.floor(p*n));
+    for (let k = 1; k <= m; k++){
+      c.strokeStyle = 'rgba(226,212,182,.9)'; c.lineWidth = S*0.0032*(1 - k/(n + 2));
+      c.beginPath(); c.moveTo(pts[k-1][0], pts[k-1][1]); c.lineTo(pts[k][0], Math.min(pts[k][1], H)); c.stroke();
+    }
+  }
+  c.restore();
+}
+
+// stem curve, sways while growing and straightens to meet the leaf base
+function stemPoint(L, t, u){
+  const g = growT(t), sway = (1 - g);
+  const P0 = L.stem0, P3 = L.leafBase, S = L.S;
+  const P1 = { x: P0.x + S*0.035*Math.sin(t*2.1)*sway, y: lerp(P0.y, P3.y, 0.33) };
+  const P2 = { x: P3.x - S*0.03*Math.sin(t*1.7 + 1)*sway, y: lerp(P0.y, P3.y, 0.66) };
+  const v = 1 - u;
+  return { x: v*v*v*P0.x + 3*v*v*u*P1.x + 3*v*u*u*P2.x + u*u*u*P3.x,
+           y: v*v*v*P0.y + 3*v*v*u*P1.y + 3*v*u*u*P2.y + u*u*u*P3.y };
+}
+
+function drawStem(c, L, t){
+  const g = growT(t); if (g <= 0) return;
+  const { S } = L, N = 70, left = [], right = [];
+  for (let i = 0; i <= N; i++){
+    const u = g*i/N, p = stemPoint(L, t, u), q = stemPoint(L, t, Math.min(1, u + 0.002));
+    let dx = q.x - p.x, dy = q.y - p.y; const d = Math.hypot(dx, dy) || 1; dx /= d; dy /= d;
+    const w = lerp(S*0.0095, S*0.0045, u) * (i === N ? 0.5 : 1);
+    left.push([p.x - dy*w, p.y + dx*w]); right.push([p.x + dy*w, p.y - dx*w]);
+  }
+  c.beginPath(); left.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]));
+  for (let i = right.length - 1; i >= 0; i--) c.lineTo(right[i][0], right[i][1]);
+  c.closePath();
+  const gr = c.createLinearGradient(L.cx - S*0.01, 0, L.cx + S*0.01, 0);
+  gr.addColorStop(0, '#2f9a4c'); gr.addColorStop(.5, '#1f7d3b'); gr.addColorStop(1, '#0f4f22');
+  c.fillStyle = gr; c.fill();
+}
+
+// one serrated leaflet pointing up (-y), base at origin
+function leaflet(c, len, wid, S){
+  const n = 16, L = [], R = [];
+  for (let i = 0; i <= n; i++){
+    const u = i/n, hw = wid*0.5*Math.pow(Math.sin(Math.PI*Math.pow(u, 0.75)), 0.9) * (i % 2 ? 0.86 : 1);
+    L.push([-hw, -u*len]); R.push([hw, -u*len]);
+  }
+  c.beginPath(); c.moveTo(0, 0);
+  L.forEach(p => c.lineTo(p[0], p[1]));
+  for (let i = R.length - 1; i >= 0; i--) c.lineTo(R[i][0], R[i][1]);
+  c.closePath();
+  const g = c.createLinearGradient(0, 0, 0, -len);
+  g.addColorStop(0, '#0e5a27'); g.addColorStop(.5, '#1d8c42'); g.addColorStop(1, '#35b35a');
+  c.fillStyle = g; c.fill();
+  const g2 = c.createLinearGradient(-wid/2, 0, wid/2, 0);
+  g2.addColorStop(0, 'rgba(160,255,185,.28)'); g2.addColorStop(.5, 'rgba(255,255,255,0)'); g2.addColorStop(1, 'rgba(0,30,10,.22)');
+  c.fillStyle = g2; c.fill();
+  c.strokeStyle = 'rgba(8,60,25,.7)'; c.lineWidth = Math.max(1, S*0.0008); c.stroke();
+  c.strokeStyle = 'rgba(190,250,205,.75)'; c.lineWidth = Math.max(1, wid*0.06);
+  c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -len*0.9); c.stroke();
+}
+
+// fan leaf: angles (deg from up) and lengths per leaflet pair; open 0..1 per leaflet
+function fanLeaf(c, x, y, rot, size, spec, openFn, S){
+  c.save(); c.translate(x, y); c.rotate(rot);
+  const order = [];
+  spec.forEach((s, i) => { if (s.a === 0) order.push([s, 0, i]); else { order.push([s, -1, i]); order.push([s, 1, i]); } });
+  // draw outer leaflets first so the centre sits on top
+  order.sort((a, b) => b[0].a - a[0].a);
+  for (const [s, side, i] of order){
+    const o = openFn(i); if (o <= 0) continue;
+    c.save();
+    c.rotate((side || 0) * (s.a*Math.PI/180) * lerp(0.15, 1, clamp(o)));
+    const sc = Math.max(0.001, o);
+    c.scale(sc, sc);
+    leaflet(c, size*s.l, size*s.l*s.w, S);
+    c.restore();
+  }
+  c.restore();
+}
+
+const CROWN = [{ a: 0, l: 1, w: .31 }, { a: 27, l: .94, w: .31 }, { a: 50, l: .74, w: .32 }, { a: 67, l: .52, w: .34 }];
+const SMALL3 = [{ a: 0, l: 1, w: .3 }, { a: 38, l: .78, w: .32 }];
+const SMALL5 = [{ a: 0, l: 1, w: .27 }, { a: 32, l: .86, w: .28 }, { a: 62, l: .6, w: .3 }];
+
+function drawLeaves(c, L, t){
+  const g = growT(t), { S } = L;
+  L.nodes.forEach((n, j) => {
+    if (g < n) return;
+    const p = stemPoint(L, t, n), o = eBack(seg(t, L.nodeT[j], L.nodeT[j] + 0.75));
+    if (j === 0){                                    // seed leaves
+      for (const side of [-1, 1]){
+        c.save(); c.translate(p.x, p.y); c.rotate(side*1.15*lerp(0.2, 1, clamp(o)));
+        const len = S*0.032*o, w = len*0.48;
+        c.beginPath(); c.moveTo(0, 0); c.bezierCurveTo(w, -len*.3, w*.8, -len, 0, -len); c.bezierCurveTo(-w*.8, -len, -w, -len*.3, 0, 0);
+        c.fillStyle = '#3aa85a'; c.fill(); c.restore();
+      }
+      return;
+    }
+    const size = S*(j === 1 ? 0.055 : 0.08), spec = j === 1 ? SMALL3 : SMALL5;
+    for (const side of [-1, 1]){
+      const ang = side*(j === 1 ? 0.95 : 0.85)*lerp(0.25, 1, clamp(o));
+      const px = p.x + Math.sin(ang)*S*0.012, py = p.y - Math.cos(ang)*S*0.012;
+      c.strokeStyle = '#1f7d3b'; c.lineWidth = S*0.003;
+      c.beginPath(); c.moveTo(p.x, p.y); c.lineTo(px, py); c.stroke();
+      fanLeaf(c, px, py, ang, size, spec, () => o, S);
+    }
+  });
+  // crown leaf, built to the logo's own leaf
+  if (g > 0.97){
+    const tip = stemPoint(L, t, g), size = 290*L.k;
+    const delays = [0, .1, .22, .34];
+    fanLeaf(c, tip.x, tip.y, 0, size, CROWN, i => eBack(seg(t, 8.1 + delays[i], 8.1 + delays[i] + 0.5)), S);
+  }
+}
+
+function drawGather(c, L, t){
+  const a = seg(t, 8.85, HIT); if (a <= 0 || t > HIT + 0.05) return;
+  const { S, leafBase, k } = L, cx = leafBase.x, cy = leafBase.y - 150*k;
+  c.save(); c.globalCompositeOperation = 'lighter';
+  const R = S*lerp(0.08, 0.3, eIn(a));
+  const g = c.createRadialGradient(cx, cy, 0, cx, cy, R);
+  g.addColorStop(0, `rgba(255,240,190,${0.65*a})`); g.addColorStop(.4, `rgba(120,230,150,${0.35*a})`); g.addColorStop(1, 'rgba(120,230,150,0)');
+  c.fillStyle = g; c.beginPath(); c.arc(cx, cy, R, 0, 7); c.fill();
+  const r = rng(61);
+  for (let i = 0; i < 48; i++){
+    const ang = r()*Math.PI*2, d0 = S*(0.25 + r()*0.3), d = d0*(1 - eIn(seg(t, 8.85 + r()*0.15, HIT)));
+    c.fillStyle = r() < .5 ? 'rgba(255,236,170,.9)' : 'rgba(170,255,190,.9)';
+    c.beginPath(); c.arc(cx + Math.cos(ang)*d, cy + Math.sin(ang)*d, S*0.0022, 0, 7); c.fill();
+  }
+  c.restore();
+}
+
+function drawRays(c, L, t){
+  const env = seg(t, HIT, HIT + 0.25) * (1 - 0.7*seg(t, 10.6, 12.5));
+  if (env <= 0) return;
+  const { S, leafBase, k } = L, cx = leafBase.x, cy = leafBase.y - 120*k;
+  c.save(); c.translate(cx, cy); c.rotate((t - HIT)*0.12);
+  const R = S*0.75, n = 16;
+  for (let i = 0; i < n; i++){
+    c.rotate(Math.PI*2/n);
+    const g = c.createLinearGradient(0, 0, 0, -R);
+    g.addColorStop(0, `rgba(216,182,58,${0.28*env})`); g.addColorStop(1, 'rgba(216,182,58,0)');
+    c.fillStyle = g; c.beginPath(); c.moveTo(0, 0); c.lineTo(-R*0.07, -R); c.lineTo(R*0.07, -R); c.closePath(); c.fill();
+  }
+  c.restore();
+  c.save(); c.globalCompositeOperation = 'lighter';
+  const h = c.createRadialGradient(cx, cy, 0, cx, cy, S*0.45);
+  h.addColorStop(0, `rgba(160,235,180,${0.35*env})`); h.addColorStop(1, 'rgba(160,235,180,0)');
+  c.fillStyle = h; c.beginPath(); c.arc(cx, cy, S*0.45, 0, 7); c.fill();
+  c.restore();
+}
+
+function drawLogo(c, L, t){
+  if (t < HIT) return;
+  const u = t - HIT, { lg, groundY, S } = L;
+  const s = 1 + 0.06*Math.exp(-u*5)*Math.cos(u*11);
+  // ground shadow
+  c.save();
+  const sh = c.createRadialGradient(L.cx, groundY, 0, L.cx, groundY, lg.w*0.55);
+  sh.addColorStop(0, 'rgba(0,0,0,.45)'); sh.addColorStop(1, 'rgba(0,0,0,0)');
+  c.translate(L.cx, groundY); c.scale(1, 0.12); c.translate(-L.cx, -groundY);
+  c.fillStyle = sh; c.beginPath(); c.arc(L.cx, groundY, lg.w*0.55, 0, 7); c.fill();
+  c.restore();
+  c.save();
+  c.translate(L.cx, lg.y + lg.h); c.scale(s, s); c.translate(-L.cx, -(lg.y + lg.h));
+  if (logo.complete && logo.naturalWidth) c.drawImage(logo, lg.x, lg.y, lg.w, lg.h);
+  c.restore();
+}
+
+function drawBurst(c, L, t){
+  const u0 = t - HIT; if (u0 < 0 || u0 > 3.1) return;
+  const { S, leafBase, k } = L, cx = leafBase.x, cy = leafBase.y - 150*k;
+  // shockwave
+  if (u0 < 0.7){
+    const p = eOut(u0/0.7);
+    c.strokeStyle = `rgba(255,252,235,${0.8*(1 - p)})`; c.lineWidth = S*0.006*(1 - p) + 1;
+    c.beginPath(); c.arc(cx, cy, S*lerp(0.04, 0.7, p), 0, 7); c.stroke();
+  }
+  const r = rng(77), cols = ['#ffe9a3', '#ffffff', '#7fe39b', '#d8b63a', '#b8f5c8'];
+  c.save(); c.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 130; i++){
+    const ang = r()*Math.PI*2, sp = S*(0.25 + Math.pow(r(), 0.7)*0.95), life = 1.0 + r()*1.8, d = r()*0.12;
+    const col = cols[i % cols.length], sz = S*(0.0025 + r()*0.006), tw = r()*20;
+    const u = u0 - d; if (u < 0 || u > life) continue;
+    const drag = (1 - Math.exp(-2.2*u))/2.2;
+    const x = cx + Math.cos(ang)*sp*drag, y = cy + Math.sin(ang)*sp*drag + 0.5*S*0.12*u*u;
+    const a = Math.pow(1 - u/life, 1.4) * (0.6 + 0.4*Math.sin(u*14 + tw));
+    if (i % 4 === 0) star(c, x, y, sz*3.2*a + 0.5, hexA(col, a));
+    else { c.fillStyle = hexA(col, a); c.beginPath(); c.arc(x, y, sz*a + 0.3, 0, 7); c.fill(); }
+  }
+  c.restore();
+}
+function hexA(h, a){ const n = parseInt(h.slice(1), 16); return `rgba(${n>>16},${n>>8&255},${n&255},${clamp(a)})`; }
+
+function drawGrass(c, L, t){
+  const p = seg(t, HIT + 0.1, HIT + 1.3); if (p <= 0) return;
+  const r = rng(91), { W, groundY, S, cx, lg } = L;
+  c.lineCap = 'round';
+  for (let i = 0; i < 70; i++){
+    const x = r()*W; if (Math.abs(x - cx) < lg.w*0.42) { r(); r(); continue; }
+    const h = S*(0.008 + r()*0.022)*eBack(clamp(p*1.4 - r()*0.4)), lean = (r() - .5)*0.6;
+    if (h <= 0) continue;
+    c.strokeStyle = r() < .5 ? '#2f9a4c' : '#1f7d3b'; c.lineWidth = S*0.0022;
+    c.beginPath(); c.moveTo(x, groundY + S*0.002); c.quadraticCurveTo(x + lean*h*0.3, groundY - h*0.6, x + lean*h, groundY - h); c.stroke();
+  }
+}
+
+// ---------- frame ----------
+function draw(t, W, H){
+  const c = cx2d, L = layout(W, H), { S } = L;
+  // sky
+  const bg = c.createRadialGradient(W/2, H*0.42, 0, W/2, H*0.42, Math.max(W, H)*0.75);
+  bg.addColorStop(0, '#fbfaf7'); bg.addColorStop(1, '#e6e2da');
+  c.fillStyle = bg; c.fillRect(0, 0, W, H);
+  // tremor while the ground opens
+  const shake = Math.sin(seg(t, 0.55, 1.5)*Math.PI) * S*0.0035;
+  c.save(); c.translate(Math.sin(t*83)*shake, Math.cos(t*67)*shake*0.6);
+  // camera: starts close on the soil, pulls back as the plant grows
+  const cm = eIO(seg(t, 4.9, 8.6)), z = lerp(2.7, 1, cm), fy = lerp(L.groundY + H*0.015, H/2, cm);
+  c.translate(W/2, H/2); c.scale(z, z); c.translate(-W/2, -fy);
+  drawRays(c, L, t);
+  drawSoil(c, L, t);
+  const plantA = 1 - seg(t, HIT, HIT + 0.18);
+  if (plantA > 0){ c.save(); c.globalAlpha = plantA; drawRoots(c, L, t); drawSeed(c, L, t); drawStem(c, L, t); drawLeaves(c, L, t); c.restore(); }
+  drawDrops(c, L, t);
+  drawDebris(c, L, t);
+  drawGather(c, L, t);
+  drawLogo(c, L, t);
+  drawGrass(c, L, t);
+  drawBurst(c, L, t);
+  c.restore();
+  // flash
+  const fl = t < HIT ? Math.pow(seg(t, HIT - 0.1, HIT), 2) : Math.exp(-(t - HIT)*4.2);
+  if (fl > 0.002){ c.fillStyle = `rgba(255,253,244,${0.92*fl})`; c.fillRect(0, 0, W, H); }
+  // fade in from the page colour
+  const fi = 1 - seg(t, 0, 0.5);
+  if (fi > 0){ c.fillStyle = `rgba(244,243,239,${fi})`; c.fillRect(0, 0, W, H); }
+  // vignette + grain
+  const v = c.createRadialGradient(W/2, H/2, Math.min(W, H)*0.35, W/2, H/2, Math.max(W, H)*0.78);
+  v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(30,25,15,.18)');
+  c.fillStyle = v; c.fillRect(0, 0, W, H);
+  if (!grain) makeGrain();
+  c.save(); c.globalAlpha = 0.035; c.globalCompositeOperation = 'overlay';
+  const pat = c.createPattern(grain, 'repeat'); const o = ((t*30)|0)*37 % 256;
+  c.translate(o, o*1.7 % 256); c.fillStyle = pat; c.fillRect(-256, -256, W + 512, H + 512); c.restore();
+}
+
+// ---------- playback ----------
+let W = 0, H = 0, dpr = 1;
+function resize(){
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+  W = innerWidth; H = innerHeight;
+  cv.width = W*dpr; cv.height = H*dpr;
+}
+function paint(t){ cx2d.setTransform(dpr, 0, 0, dpr, 0, 0); draw(t, W, H); }
+
+const snd = document.getElementById('snd'), btn = document.getElementById('play');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let start = null, playing = false;
+function frame(now){
+  if (!playing) return;
+  let t = snd.paused ? (now - start)/1000 : snd.currentTime;
+  if (t >= END){ t = END; playing = false; btn.textContent = 'Replay'; btn.hidden = false; }
+  paint(t);
+  if (playing) requestAnimationFrame(frame);
+}
+function play(){
+  btn.hidden = true; playing = true; start = performance.now();
+  snd.currentTime = 0; snd.play().catch(() => {});
+  requestAnimationFrame(frame);
+}
+btn.addEventListener('click', play);
+
+window.__render = { draw: (t, w, h) => { cx2d.setTransform(1, 0, 0, 1, 0, 0); cv.width = w; cv.height = h; draw(t, w, h); }, layout, ready: () => logo.complete, END };
+if (!new URLSearchParams(location.search).has('render')){
+  resize(); addEventListener('resize', () => { resize(); if (!playing) paint(reduce ? END : 0.5); });
+  logo.onload = () => paint(reduce ? END : 0.5);
+  paint(reduce ? END : 0.5);
+}
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+420 FRIENDLY — HEADQUARTERS WALKTHROUGH
+Project package, version 2, 12 November 2026
+
+WHAT TO OPEN
+  video/420-Friendly-HQ-Walkthrough.mp4
+      The presentation copy. Full HD (1920x1080), 3 minutes 18 seconds.
+      Plays in QuickTime on a MacBook Pro. Use this one in the board meeting.
+  video/420-Friendly-HQ-Walkthrough-master.mp4
+      The same film at higher quality (larger file). Keep it as the archive
+      copy, or give it to an editor if the film is ever re-cut.
+
+WHAT CHANGED IN VERSION 2
+  - People in the rooms: 18 plain scale figures (staff, customers, podcast
+    hosts, editors) so each space reads at human size.
+  - Soft contact shadows where furniture, shelves and walls meet, so
+    objects sit on the floor instead of floating.
+  - Fuller plants and palms.
+  - Voice, music, camera path, captions and length are unchanged.
+
+WHAT ELSE IS HERE
+  audio/soundtrack-voice-and-beat.m4a   The finished soundtrack on its own.
+  audio/narration-only.m4a              Julian's voice with no music.
+  audio/narration-clips/                The 12 original voice recordings.
+  audio/narration-script.txt            Every line and when it plays.
+  audio/beat-original-...mp3            The beat as you uploaded it.
+  images/                               Logo cut-out, closing card, hoodie
+                                        samples, stills with people.
+  source/                               The 3D scene code and build scripts.
+
+HOW IT WAS MADE
+  Picture   A 3D model of the building written in code (Three.js), rendered
+            one frame at a time: 5,790 frames plus a 5-second logo card.
+  Voice     "Julian", generated through your Higgsfield account.
+  Music     "Chill Rap Beat" by Turning_Pages, from Pixabay, extended to fit.
+  Logo      Your own logo file, used at full resolution.
+  Hoodies   The chest prints are taken from your four hoodie images and
+            wrapped onto 3D display forms.
+
+CHECKS RUN ON THIS FILM
+  Every one of the 5,940 frames was scanned for jumps, black frames and
+  freezes. Nothing found beyond the intended fades and the closing hold.
+  Picture and sound are the same length. Loudness is -16.9 LUFS with a
+  peak of -4 dB, a normal level for laptop and meeting-room playback.
+
+LICENCES — WHAT WAS CHECKED
+  Music   Pixabay's Content License allows commercial use inside a larger
+          work such as this film, with no credit required. It does not
+          allow selling the track on its own. If the film is uploaded to
+          YouTube, a Content ID claim is possible; Pixabay's FAQ
+          (pixabay.com/service/faq/) explains how to clear one.
+  Voice   Higgsfield's help centre says you own what you generate and may
+          use it commercially on any plan. Its full terms of use were not
+          read line by line. Have counsel read them before any paid
+          advertising use.
+
+BEFORE YOU SHOW IT PUBLICLY
+  - Listen once start to finish on the MacBook's own speakers.
+  - The film describes a cannabis dispensary and is labelled "Concept
+    visualization" on the closing card. It is a concept, not a licensed
+    site. Keep it apart from marketing for the clothing line.
+  - The look is a clean architectural concept model, not photoreal. A
+    photoreal version would need the building rebuilt by a 3D artist.
+
+FOR A DEVELOPER (source folder)
+  v2.js            The complete scene exactly as rendered.
+  v2.html          The page that loads v2.js with the post-processing chain.
+  full.js          The interactive version made for the in-chat 3D viewer.
+  build.cjs        Applies the film-only changes to full.js to produce v2.js
+                   (V2=1 FINAL=1 MERCH=1 INLAY=1 OUT=v2.js node build.cjs).
+  merch-patch.js   The hoodie display forms and their prints.
+  people-patch.js  The scale figures and where each one stands.
+  render-v2.mjs    Steps the scene frame by frame in Chromium (Playwright)
+                   and pipes the frames to ffmpeg.
+  assemble-v2.sh   Joins the rendered halves, the logo card and the
+                   soundtrack into the two video files.
+  The scripts contain file paths from the cloud session they ran in. To
+  re-render, install Node, Playwright, three@0.181, @fontsource/montserrat
+  and ffmpeg, then update those paths.
