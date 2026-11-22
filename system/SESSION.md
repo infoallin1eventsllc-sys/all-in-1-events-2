@@ -3822,3 +3822,9 @@ both backgrounds, free: 4 shapes x 2 backgrounds, 32 s, -16 LUFS, plus 8 covers,
 saved in his Higgsfield library. Sunset Ribbon: 9x16 f0ab9dd8, 4x5 deca9c49, 1x1 4e27f711,
 16x9 f200641b. Houston Skyline: 9x16 990768de, 4x5 f0eebece, 1x1 63592e1c, 16x9 ffeb03a4.
 Nothing posted anywhere; posting waits for his "post it".
+Update: Otis opened Higgsfield Marketing Studio and picked "Wheatpaste Wall" (Motion, Hypermotion,
+preset 5e72e301-8f7a-4cc8-b0ae-2b8e888746ca). Quoted 30.15 / 59.85 / 89.55 credits for 5 / 10 /
+15 s; he approved 10 s at 59.85 using the Sunset Ribbon 4:5 film cover as the product image.
+Job 2dde5c29-a29c-4076-bb43-1aca247f24c0, 1440x2560, 10.1 s, with sound. The AI wrote its own
+copy ("Book a call / We build it / Launch and grow") and a hand-scrawled "meridian.interface",
+which is not his web address. No logo ending yet.
