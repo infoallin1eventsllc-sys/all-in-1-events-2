@@ -3,8 +3,8 @@ const { chromium } = require('playwright'); const { spawn } = require('child_pro
 const SZ={'16x9':[1920,1080],'9x16':[1080,1920],'4x5':[1080,1350],'1x1':[1080,1080]}[fmt];
 const b=await chromium.launch();const p=await b.newPage({viewport:{width:SZ[0],height:SZ[1]},deviceScaleFactor:mode==='stills'?0.5:1});
 const errs=[];p.on('pageerror',e=>errs.push(e.message));
-await p.goto(`file://${process.cwd()}/film5.html?fmt=${fmt}`);await p.evaluate(()=>document.fonts.ready);await p.waitForTimeout(500);
-if(mode==='stills'){for(const t of arg.split(',')){await p.evaluate(x=>render(x),+t);await p.screenshot({path:`chk5/${fmt}-t${t}.jpg`,type:'jpeg',quality:82});}
+await p.goto(`file://${process.cwd()}/film5.html?fmt=${fmt}${process.env.BGQ?'&bg='+process.env.BGQ:''}`);await p.evaluate(()=>document.fonts.ready);await p.waitForTimeout(500);
+if(mode==='stills'){for(const t of arg.split(',')){await p.evaluate(x=>render(x),+t);await p.screenshot({path:`${process.env.CHK||'chk5'}/${process.env.BGQ||'plain'}-${fmt}-t${t}.jpg`,type:'jpeg',quality:82});}
  console.log(fmt,'errors',errs.slice(0,3));await b.close();return;}
 if(mode==='cover'){await p.evaluate(x=>render(x),25.25);await p.screenshot({path:arg,type:'jpeg',quality:94});await b.close();return;}
 const FPS=30,DUR=32,t0=Date.now();

@@ -31,3 +31,12 @@ CRM laptop clip) and `endf/` (frames of `../end-card/meridian-logo-ending-clean-
 Voice and one music track were generated in Higgsfield (ElevenLabs engines) and mixed locally:
 the voice is cut into its lines and each is placed on its scene, the music ducks under the
 voice, and the mix sits at about -16 LUFS with the peak under -1.5 dBFS.
+
+## Backgrounds (22 Nov 2026)
+
+Otis found the plain dark blue ground boring. `film.html` now takes `&bg=<name>` and lays the film
+over one of his owned digital-card backgrounds (`bgs/<name>-wide.jpg` and `-tall.jpg`, made from
+the card kit's wallpaper plates): `ribbon`, `houston-skyline`, `light-trails`, `sunset`. The
+picture drifts slowly, a dark gradient sits behind the words, and the "before" part stays grey
+until the line passes. The laptop clip is screen-blended, so on a bright ground it needs the dark
+patch drawn behind it. Free: no new generation. `BGQ=<name>` selects it in `render.cjs`.

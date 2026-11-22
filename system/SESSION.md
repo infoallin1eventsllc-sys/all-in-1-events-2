@@ -3795,3 +3795,8 @@ Ending switched from my imitation to his standard logo light-up clip (end-card R
 four files, 32 s, 30 fps, -16 LUFS, plus four covers, uploaded to his Higgsfield library (media
 ids 7d0cbe34 9x16, 29abbe0c 4x5, d4df42b4 1x1, 797a69a9 16x9). Source in system/promo-ad/launch-film.
 Total Higgsfield credits on this film: 7.06 (music 4.66, two voice takes 2.4).
+Update: Otis said the film's dark blue ground is boring and asked for fun background previews.
+Free previews made on four of his owned card backgrounds; he picked Sunset Ribbon and Houston
+Skyline. Full 16:9 films rendered on both (0 credits) with the same voice and music. Higgsfield
+quotes given, nothing generated: new background image 1 credit; moving background 7.5 credits
+(5 s) or 17.5 (10 s, pro). Waiting for his pick before making the other three shapes.

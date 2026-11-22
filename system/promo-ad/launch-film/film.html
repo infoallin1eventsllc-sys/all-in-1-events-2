@@ -72,7 +72,9 @@ const se=x=>.5-.5*Math.cos(Math.PI*cl(x));
 const lerp=(a,b,p)=>a+(b-a)*p;
 const kf=(t,k)=>{if(t<=k[0][0])return k[0][1];for(let i=1;i<k.length;i++){if(t<=k[i][0])return lerp(k[i-1][1],k[i][1],se((t-k[i-1][0])/(k[i][0]-k[i-1][0])));}return k[k.length-1][1];};
 const fade=(t,a,d=.8)=>se(seg(t,a,a+d));
-const BG=`<div class="bg"></div><div class="floor"></div>`;
+const BGN=Q.get('bg');
+const SH=BGN==='houston-skyline'?[.84,.50,.20]:[.80,.50,.26];
+const BG=BGN?`<div class="bg" style="background:#050914 url(bgs/${BGN}-${W>H?'wide':'tall'}.jpg) 50% ${W>H?'55%':'100%'}/cover no-repeat;${BGN==='houston-skyline'?'filter:blur(1px);':''}transform:scale(var(--bz,1.05)) translateX(var(--bx,0px))"></div><div class="full" style="background:linear-gradient(${W>H?'90deg':'180deg'},rgba(3,6,20,${SH[0]}) 0%,rgba(3,6,20,${SH[1]}) 45%,rgba(3,6,20,${SH[2]}) 100%)"></div>`:`<div class="bg"></div><div class="floor"></div>`;
 const line=(x,op=1,back=false)=>`<div class="lineglow" style="left:${x-380}px;opacity:${op};${back?'z-index:0':''}"></div><div class="line" style="left:${x-2}px;opacity:${op};${back?'z-index:0':''}"></div>`;
 const clipL=(h,x,cls='')=>`<div class="full ${cls}" style="clip-path:inset(0 ${W-cl(x,0,W)}px 0 0)">${h}</div>`;
 const clipR=(h,x,cls='')=>`<div class="full ${cls}" style="clip-path:inset(0 0 0 ${cl(x,0,W)}px)">${h}</div>`;
@@ -126,6 +128,7 @@ function row(t,vis,first){const pos=gpos(t); let h='';
  for(let i=first?0:1;i<5;i++){const p=gpose(i,pos); p.op*=vis*ex; if(p.op<=0.01) continue; p.cy+=Math.sin(t*.7+i)*4*(i==0?fade(t,Mb,1.6):1);
   if(i==0) h+=phone(p,'phone-home.jpg');
   else if(i==4){const fi=String(cl(Math.round((t-CLIP)*23)+1,1,64)).padStart(3,'0'), cs=R.clipS*(1-.2*Math.min(Math.abs(i-pos),1.5));
+   if(BGN) h+=`<div style="position:absolute;left:${p.cx-290*cs*1.02}px;top:${p.cy-540*cs}px;width:${580*cs*1.02}px;height:${1120*cs}px;background:radial-gradient(closest-side,rgba(3,6,20,.94) 62%,rgba(3,6,20,0));opacity:${p.op}"></div>`;
    h+=`<img src="clipf/f${fi}.jpg" style="position:absolute;left:${p.cx-290}px;top:${p.cy-540+20}px;width:580px;height:1080px;mix-blend-mode:screen;opacity:${p.op};transform:scale(${cs});transform-origin:50% 53%;-webkit-mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent)">`;}
   else h+=panel(p,...[[0,0],[210,372],[230,410],[250,360]][i],['','ad.jpg','card.jpg','book.jpg'][i]);}
  GI.forEach((g,i)=>{const d=i-pos; let a=se(cl(1.3-Math.abs(d)*2.6))*vis*ex; if(i==0) a*=fade(t,Mb-.5,.9); if(a<=0.005) return;
@@ -174,6 +177,6 @@ function frame(t){
  }
  if(t>=E0) h+=ending(t);
  return h;}
-window.render=async t=>{st.innerHTML=frame(t)+(t<E0+XF?'<div class="vig"></div>':'');
+window.render=async t=>{st.style.setProperty('--bz',1.05+.09*t/32);st.style.setProperty('--bx',(-18+36*t/32)+'px');st.innerHTML=frame(t)+(t<E0+XF?'<div class="vig"></div>':'');
  await Promise.all([...document.images].map(i=>i.decode().catch(()=>{})));};
 </script></body></html>
