@@ -3748,3 +3748,14 @@ Saved for Monday: Otis sends the Gmail draft himself Monday morning after adding
 address. Full prospect package (watermarked and clean ads, card, email assets, voices, source) is
 in his Higgsfield file storage; the link and a send checklist are in "README - Monday Send" in his
 Drive folder "Meridian Saved Work 2026-11-20" (links kept out of this public repo).
+
+## 22 Nov 2026: Meridian launch film, first checkpoint (no credits)
+
+Otis asked about a Higgsfield studio article on a 25 s launch film built in Blender by code with
+helper sessions (Higgsfield made only the music). Not a preset. Quoted: music 3.64 credits per 25 s
+track, GPU rental from 71 credits per hour, plus heavy Claude usage. He chose the free first step.
+Made a concept ("The Line": the meridian line of light from the logo passes over an offline
+business and switches on everything it touches) and 4 styleframes (3D look, typography, glitch,
+transition) in HTML/CSS with Playwright, using his real screens. Blender could not be installed in
+this workspace, so the frames are code-built, not ray-traced 3D. 0 Higgsfield credits; 2 Firecrawl
+credits for the lookup. Waiting on his verdict before any animation, music or rendering.
