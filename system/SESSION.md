@@ -3852,3 +3852,5 @@ Inputs: his four Agent Dashboard captures (overview, agents, pipeline, Pipeline 
 10.1 s, -12.7 LUFS, peak +0.1 dBFS. Flat cartoon style on dark slate; it drew its own "M" and wrote
 meridianinterface.com correctly; the dashboard screens themselves barely appear. Delivered as is.
 Balance after: about 835.95.
+Update: "Save everything": launch-film covers (8) uploaded to his Higgsfield library; one index of
+every finished file and link written to system/promo-ad/DELIVERED.md.
