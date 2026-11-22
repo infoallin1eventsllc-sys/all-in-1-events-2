@@ -3828,3 +3828,8 @@ preset 5e72e301-8f7a-4cc8-b0ae-2b8e888746ca). Quoted 30.15 / 59.85 / 89.55 credi
 Job 2dde5c29-a29c-4076-bb43-1aca247f24c0, 1440x2560, 10.1 s, with sound. The AI wrote its own
 copy ("Book a call / We build it / Launch and grow") and a hand-scrawled "meridian.interface",
 which is not his web address. No logo ending yet.
+Update: Wheatpaste Wall fixed for free at Otis's "yes": cut at 8.1 s (frame 194 at 24 fps, before
+the blue circle and the made-up "meridian.interface" scrawl start at about 8.2 s), held the clean
+poster 1.1 s, 0.5 s fade into the launch film's ending (27.0 to 32.0 s of the 9:16 film: his logo
+light-up, "We put the future in your hands.", free 1-on-1 button, meridianinterface.com and phone,
+with the film's own voice and music). 13.7 s, 1080x1920, 30 fps, -16.1 LUFS. Not posted.
