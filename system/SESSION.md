@@ -3770,3 +3770,9 @@ close-ups, reassembles, own end card) to add to the film. Rough cut v2 puts the 
 explode, no labels) in the CRM feature slot, doubled to 6 beats, blended over the film's
 background; the tagline scene was shortened by 3 beats so the film stays 25 s. The clip's own end
 card and sound are not used. Still 0 credits. v1 kept. Waiting on his notes.
+Update: Otis said v2 was too sudden and too fast: it must be one fluid motion, no pops. Rough cut
+v3 rebuilt for flow (0 credits, 30 s): no glitch, slams, flashes or quick wipes; soft sine easing
+on everything; one continuous opening shot (before, slow line pass, pull back to all products);
+the products rearrange into a row and the camera glides along it (Websites, Video Ads, Digital
+Cards, Booking, CRM with his laptop clip); tagline with a slow line pass; soft logo ending.
+"ALL FROM ONE STUDIO" scene removed. v1 and v2 kept. Waiting on his notes.
