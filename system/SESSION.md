@@ -3800,3 +3800,7 @@ Free previews made on four of his owned card backgrounds; he picked Sunset Ribbo
 Skyline. Full 16:9 films rendered on both (0 credits) with the same voice and music. Higgsfield
 quotes given, nothing generated: new background image 1 credit; moving background 7.5 credits
 (5 s) or 17.5 (10 s, pro). Waiting for his pick before making the other three shapes.
+Update: Otis said both background versions looked blurry, with a haze around the laptop. Fixed
+for free: laptop cut out cleanly per frame (matte.cjs), no blend haze or dark patch, all
+soft-focus blur removed, encode quality raised. Both 16:9 versions re-sent. Still waiting for his
+pick between Sunset Ribbon and Houston Skyline before making the other three shapes.

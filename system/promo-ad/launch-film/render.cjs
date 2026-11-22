@@ -8,6 +8,6 @@ if(mode==='stills'){for(const t of arg.split(',')){await p.evaluate(x=>render(x)
  console.log(fmt,'errors',errs.slice(0,3));await b.close();return;}
 if(mode==='cover'){await p.evaluate(x=>render(x),25.25);await p.screenshot({path:arg,type:'jpeg',quality:94});await b.close();return;}
 const FPS=30,DUR=32,t0=Date.now();
-const ff=spawn('ffmpeg',['-v','error','-y','-f','image2pipe','-framerate',String(FPS),'-c:v','mjpeg','-i','-','-c:v','libx264','-profile:v','high','-crf','17','-preset','medium','-pix_fmt','yuv420p','-colorspace','bt709','-color_primaries','bt709','-color_trc','bt709','-movflags','+faststart',arg]);
+const ff=spawn('ffmpeg',['-v','error','-y','-f','image2pipe','-framerate',String(FPS),'-c:v','mjpeg','-i','-','-c:v','libx264','-profile:v','high','-crf','15','-preset','medium','-pix_fmt','yuv420p','-colorspace','bt709','-color_primaries','bt709','-color_trc','bt709','-movflags','+faststart',arg]);
 for(let i=0;i<FPS*DUR;i++){await p.evaluate(t=>render(t),i/FPS);const buf=await p.screenshot({type:'jpeg',quality:95});if(!ff.stdin.write(buf))await new Promise(r=>ff.stdin.once('drain',r));}
 ff.stdin.end();await new Promise(r=>ff.on('close',r));await b.close();console.log('done',arg,Math.round((Date.now()-t0)/1000)+'s','errors',errs.slice(0,3));})();

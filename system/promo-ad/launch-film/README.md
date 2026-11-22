@@ -40,3 +40,14 @@ the card kit's wallpaper plates): `ribbon`, `houston-skyline`, `light-trails`, `
 picture drifts slowly, a dark gradient sits behind the words, and the "before" part stays grey
 until the line passes. The laptop clip is screen-blended, so on a bright ground it needs the dark
 patch drawn behind it. Free: no new generation. `BGQ=<name>` selects it in `render.cjs`.
+
+## Sharpness (22 Nov 2026)
+
+Otis saw "an aura of blurriness" around the laptop. Cause: the clip sits on black, so it was
+screen-blended with a soft edge mask and a dark radial patch behind it, and the clip's own ground
+has a faint glow. Fix: `matte.cjs` cuts the laptop out of each frame (flood-fills the dark ground
+in from the frame edges at a threshold of 30, closes small leaks, feathers one pixel) and writes
+RGBA PNGs to `clipa/`; the film draws those with normal blending, no mask and no patch. Frames
+are taken from the source with a light unsharp filter. All depth-of-field blur on the far panels
+and on the row's neighbours was removed too, and the encode is crf 15.
+What cannot be fixed here: the small text on the laptop's own screen is soft in the source clip.

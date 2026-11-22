@@ -36,28 +36,28 @@ html,body{margin:0;overflow:hidden;background:#04070f;font-family:IN,sans-serif;
 const Q=new URLSearchParams(location.search), FMT=Q.get('fmt')||'16x9';
 const ALL={
 '16x9':{W:1920,H:1080,
- P:{desk:{cx:544,cy:455,s:.8,ry:34,rx:4,blur:1.2},dash:{cx:1516,cy:392,s:.817,ry:-36,rx:3,blur:1.2},card:{cx:530,cy:682,s:1.04,ry:26},book:{cx:1434,cy:720,s:1.09,ry:-24},ad:{cx:1721,cy:889,s:1.18,ry:-30,blur:1.5},phone:{cx:960,cy:553,s:1.118,ry:-22,rx:5,rz:1.5}},
+ P:{desk:{cx:544,cy:455,s:.8,ry:34,rx:4},dash:{cx:1516,cy:392,s:.817,ry:-36,rx:3},card:{cx:530,cy:682,s:1.04,ry:26},book:{cx:1434,cy:720,s:1.09,ry:-24},ad:{cx:1721,cy:889,s:1.18,ry:-30},phone:{cx:960,cy:553,s:1.118,ry:-22,rx:5,rz:1.5}},
  cam:{z0:1.2,z1:1.3,x0:250,x1:268,y0:-14}, search:{l:510,t:96,w:900}, nf:{fs:210,top:452}, tagFs:18,
  tags:{desk:[262,226],dash:[1480,150],card:[318,912],book:[1262,922],ad:[1560,640]},
  row:{GX:1250,GY:528,GAP:620,k:1,lx:120,tyTwo:330,tyOne:420,fsTwo:170,fsLong:150,fsShort:200,subFs:24,clipS:1.34},
  tl:{f1:257,f2:186,left:70,t1:236,t2:506,capTop:746,capFs:19,px:1640,py:545,ps:.96},
  end:{top:-360,ty:[548,632,782],tf:42,bf:34,cf:32}},
 '9x16':{W:1080,H:1920,
- P:{desk:{cx:300,cy:540,s:.62,ry:30,rx:4,blur:1.2},dash:{cx:790,cy:480,s:.62,ry:-32,rx:3,blur:1.2},card:{cx:172,cy:1150,s:.92,ry:24},book:{cx:905,cy:1000,s:.9,ry:-22},ad:{cx:872,cy:1420,s:1.08,ry:-26,blur:1.2},phone:{cx:540,cy:930,s:1.05,ry:-18,rx:5,rz:1.5}},
+ P:{desk:{cx:300,cy:540,s:.62,ry:30,rx:4},dash:{cx:790,cy:480,s:.62,ry:-32,rx:3},card:{cx:172,cy:1150,s:.92,ry:24},book:{cx:905,cy:1000,s:.9,ry:-22},ad:{cx:872,cy:1420,s:1.08,ry:-26},phone:{cx:540,cy:930,s:1.05,ry:-18,rx:5,rz:1.5}},
  cam:{z0:1.1,z1:1.17,x0:36,x1:44,y0:24}, search:{l:110,t:300,w:860}, nf:{fs:150,top:850}, tagFs:20,
  tags:{desk:[96,372],dash:[560,318],card:[56,930],book:[790,800],ad:[720,1178]},
  row:{GX:540,GY:1250,GAP:640,k:1.3,lx:70,tyTwo:352,tyOne:352,fsTwo:150,fsLong:158,fsShort:200,subFs:24,clipS:1.45},
  tl:{f1:180,f2:130,left:70,t1:320,t2:490,capTop:640,capFs:16,px:540,py:1290,ps:1},
  end:{top:0,ty:[925,1015,1172],tf:44,bf:34,cf:32}},
 '4x5':{W:1080,H:1350,
- P:{desk:{cx:290,cy:330,s:.6,ry:30,rx:4,blur:1.2},dash:{cx:800,cy:300,s:.6,ry:-32,rx:3,blur:1.2},card:{cx:165,cy:900,s:.9,ry:24},book:{cx:915,cy:830,s:.9,ry:-22},ad:{cx:880,cy:1160,s:.95,ry:-26,blur:1.2},phone:{cx:540,cy:720,s:.95,ry:-18,rx:5,rz:1.5}},
+ P:{desk:{cx:290,cy:330,s:.6,ry:30,rx:4},dash:{cx:800,cy:300,s:.6,ry:-32,rx:3},card:{cx:165,cy:900,s:.9,ry:24},book:{cx:915,cy:830,s:.9,ry:-22},ad:{cx:880,cy:1160,s:.95,ry:-26},phone:{cx:540,cy:720,s:.95,ry:-18,rx:5,rz:1.5}},
  cam:{z0:1.1,z1:1.17,x0:36,x1:44,y0:10}, search:{l:110,t:60,w:860}, nf:{fs:150,top:640}, tagFs:19,
  tags:{desk:[96,176],dash:[590,150],card:[56,1108],book:[800,640],ad:[575,1170]},
  row:{GX:540,GY:880,GAP:620,k:.98,lx:60,tyTwo:112,tyOne:128,fsTwo:120,fsLong:140,fsShort:170,subFs:22,clipS:1.1},
  tl:{f1:180,f2:130,left:70,t1:90,t2:260,capTop:410,capFs:16,px:540,py:930,ps:.9},
  end:{top:-225,ty:[690,776,930],tf:42,bf:34,cf:32}},
 '1x1':{W:1080,H:1080,
- P:{desk:{cx:270,cy:280,s:.55,ry:30,rx:4,blur:1.2},dash:{cx:810,cy:250,s:.55,ry:-32,rx:3,blur:1.2},card:{cx:170,cy:730,s:.8,ry:24},book:{cx:905,cy:690,s:.8,ry:-22},ad:{cx:880,cy:930,s:.8,ry:-26,blur:1.2},phone:{cx:540,cy:590,s:.82,ry:-18,rx:5,rz:1.5}},
+ P:{desk:{cx:270,cy:280,s:.55,ry:30,rx:4},dash:{cx:810,cy:250,s:.55,ry:-32,rx:3},card:{cx:170,cy:730,s:.8,ry:24},book:{cx:905,cy:690,s:.8,ry:-22},ad:{cx:880,cy:930,s:.8,ry:-26},phone:{cx:540,cy:590,s:.82,ry:-18,rx:5,rz:1.5}},
  cam:{z0:1.1,z1:1.17,x0:36,x1:44,y0:0}, search:{l:110,t:44,w:860}, nf:{fs:150,top:500}, tagFs:18,
  tags:{desk:[90,148],dash:[590,116],card:[56,912],book:[800,516],ad:[590,985]},
  row:{GX:800,GY:560,GAP:560,k:.88,lx:56,tyTwo:380,tyOne:440,fsTwo:108,fsLong:104,fsShort:150,subFs:15,clipS:.92},
@@ -74,7 +74,7 @@ const kf=(t,k)=>{if(t<=k[0][0])return k[0][1];for(let i=1;i<k.length;i++){if(t<=
 const fade=(t,a,d=.8)=>se(seg(t,a,a+d));
 const BGN=Q.get('bg');
 const SH=BGN==='houston-skyline'?[.84,.50,.20]:[.80,.50,.26];
-const BG=BGN?`<div class="bg" style="background:#050914 url(bgs/${BGN}-${W>H?'wide':'tall'}.jpg) 50% ${W>H?'55%':'100%'}/cover no-repeat;${BGN==='houston-skyline'?'filter:blur(1px);':''}transform:scale(var(--bz,1.05)) translateX(var(--bx,0px))"></div><div class="full" style="background:linear-gradient(${W>H?'90deg':'180deg'},rgba(3,6,20,${SH[0]}) 0%,rgba(3,6,20,${SH[1]}) 45%,rgba(3,6,20,${SH[2]}) 100%)"></div>`:`<div class="bg"></div><div class="floor"></div>`;
+const BG=BGN?`<div class="bg" style="background:#050914 url(bgs/${BGN}-${W>H?'wide':'tall'}.jpg) 50% ${W>H?'55%':'100%'}/cover no-repeat;transform:scale(var(--bz,1.05)) translateX(var(--bx,0px))"></div><div class="full" style="background:linear-gradient(${W>H?'90deg':'180deg'},rgba(3,6,20,${SH[0]}) 0%,rgba(3,6,20,${SH[1]}) 45%,rgba(3,6,20,${SH[2]}) 100%)"></div>`:`<div class="bg"></div><div class="floor"></div>`;
 const line=(x,op=1,back=false)=>`<div class="lineglow" style="left:${x-380}px;opacity:${op};${back?'z-index:0':''}"></div><div class="line" style="left:${x-2}px;opacity:${op};${back?'z-index:0':''}"></div>`;
 const clipL=(h,x,cls='')=>`<div class="full ${cls}" style="clip-path:inset(0 ${W-cl(x,0,W)}px 0 0)">${h}</div>`;
 const clipR=(h,x,cls='')=>`<div class="full ${cls}" style="clip-path:inset(0 0 0 ${cl(x,0,W)}px)">${h}</div>`;
@@ -118,7 +118,7 @@ const R=C.row;
 const GI=[['WEBSITES','BUILT FROM SCRATCH'],['VIDEO<br>ADS','MADE FOR EVERY FEED'],['DIGITAL<br>CARDS','ONE TAP TO CALL, BOOK AND SAVE'],['BOOKING','APPOINTMENTS BOOKED ONLINE'],['CRM','FOLLOWS UP WHILE YOU WORK']];
 const GB=[.9,1.85,1.7,1.9,1];
 function gpose(i,pos){const d=i-pos, ad=Math.abs(d);
- return {cx:R.GX+d*R.GAP,cy:R.GY,s:GB[i]*R.k*(1-.2*Math.min(ad,1.5)),ry:cl(-d*24,-38,38),rx:i==0?3:0,rz:0,op:(d<0?1-se(seg(-d,.12,.62)):cl(1-.55*Math.min(ad,1.7))*(1-seg(ad,1.5,1.9))),blur:Math.min(ad,1)*1.4};}
+ return {cx:R.GX+d*R.GAP,cy:R.GY,s:GB[i]*R.k*(1-.2*Math.min(ad,1.5)),ry:cl(-d*24,-38,38),rx:i==0?3:0,rz:0,op:(d<0?1-se(seg(-d,.12,.62)):cl(1-.55*Math.min(ad,1.7))*(1-seg(ad,1.5,1.9)))};}
 const soft=x=>{const e=.14;x=cl(x);return x<e?x*x/(2*e)/(1-e):x>1-e?1-(1-x)*(1-x)/(2*e)/(1-e):(x-e/2)/(1-e);};
 function gpos(t){ if(t<=Ga) return 0;
  if(t<Gb){const u=4*soft((t-Ga)/(Gb-Ga)), i=Math.min(3,Math.floor(u)), f=u-i; return i+lerp(f,se(f),.5);}
@@ -128,8 +128,7 @@ function row(t,vis,first){const pos=gpos(t); let h='';
  for(let i=first?0:1;i<5;i++){const p=gpose(i,pos); p.op*=vis*ex; if(p.op<=0.01) continue; p.cy+=Math.sin(t*.7+i)*4*(i==0?fade(t,Mb,1.6):1);
   if(i==0) h+=phone(p,'phone-home.jpg');
   else if(i==4){const fi=String(cl(Math.round((t-CLIP)*23)+1,1,64)).padStart(3,'0'), cs=R.clipS*(1-.2*Math.min(Math.abs(i-pos),1.5));
-   if(BGN) h+=`<div style="position:absolute;left:${p.cx-290*cs*1.02}px;top:${p.cy-540*cs}px;width:${580*cs*1.02}px;height:${1120*cs}px;background:radial-gradient(closest-side,rgba(3,6,20,.94) 62%,rgba(3,6,20,0));opacity:${p.op}"></div>`;
-   h+=`<img src="clipf/f${fi}.jpg" style="position:absolute;left:${p.cx-290}px;top:${p.cy-540+20}px;width:580px;height:1080px;mix-blend-mode:screen;opacity:${p.op};transform:scale(${cs});transform-origin:50% 53%;-webkit-mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent)">`;}
+   h+=`<img src="clipa/f${fi}.png" style="position:absolute;left:${p.cx-290}px;top:${p.cy-540+20}px;width:580px;height:1080px;opacity:${p.op};transform:scale(${cs});transform-origin:50% 53%">`;}
   else h+=panel(p,...[[0,0],[210,372],[230,410],[250,360]][i],['','ad.jpg','card.jpg','book.jpg'][i]);}
  GI.forEach((g,i)=>{const d=i-pos; let a=se(cl(1.3-Math.abs(d)*2.6))*vis*ex; if(i==0) a*=fade(t,Mb-.5,.9); if(a<=0.005) return;
   const two=g[0].includes('<br>'), fs=two?R.fsTwo:(g[0].length>6?R.fsLong:R.fsShort), th=two?fs*1.8:fs*.9, ty=two?R.tyTwo:R.tyOne, x=R.lx+d*150;
