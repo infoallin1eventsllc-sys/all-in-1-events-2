@@ -3870,3 +3870,8 @@ orchestra unlinked + 4 unused images, fontTools missing, 3 demo-honesty reminder
 aliased to meridianinterface.com; /card/ checked live: Facebook button present, links to
 facebook.com/profile.php?id=61596523703192.
 Update (23 Nov): Instagram created by Otis: @meridianinterface. Card tool now takes instagram_url; footer and card Instagram links built, QA running before push. He is having trouble linking Instagram to the Facebook Page; steps given.
+Shipped (23 Nov): website main 44abfa6 "Link Meridian Interface on Instagram from the footer and the
+digital card". QA before push: static 0 FAIL (6 known WARN), browser 0 FAIL 0 WARN. Vercel
+dpl_7PzHFeonorEeg51bQkrfBnGrDHB1 READY in production; /card/ checked: Instagram button links
+instagram.com/meridianinterface. Otis still linking Instagram to the Facebook Page himself (his browser
+kept picking his personal Instagram; told him to use a private window or the app's Edit profile > Page).
