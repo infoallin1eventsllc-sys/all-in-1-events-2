@@ -1,0 +1,43 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;overflow:hidden;background:#0d1b3d}
+#st{position:absolute;inset:0;overflow:hidden}
+.piece{position:absolute;left:0;top:0;width:100%;height:100%}
+.piece img{position:absolute;inset:0;width:100%;height:100%}
+</style></head><body><div id="st"></div><script>
+// Meridian live logo loop: the real mark (meridian-mark.png, 342x333) split along its own centre line
+// (columns 165-176) into left stroke, line and right stroke. Nothing is redrawn or recoloured.
+const Q=new URLSearchParams(location.search), W=+(Q.get('w')||1080), H=+(Q.get('h')||1080), MW=+(Q.get('mw')||430), CY=+(Q.get('cy')||0.5);
+document.body.style.width=W+'px';document.body.style.height=H+'px';
+const T=6, cl=(x,a=0,b=1)=>Math.min(b,Math.max(a,x)), se=x=>.5-.5*Math.cos(Math.PI*cl(x)), seg=(t,a,b)=>cl((t-a)/(b-a));
+const st=document.getElementById('st'), MH=MW*333/342, L=165/342*100, R=177/342*100, LC=163/342*100, RC=179/342*100; // halves cut 2 px clear of the line so no sliver of it rides along
+window.render=async t=>{t=((t%T)+T)%T;
+ // together from 1.6 s to 4.7 s, apart at the loop point: periodic, so frame 0 = frame T
+ const join=se(seg(t,0.2,1.6))*(1-se(seg(t,4.7,5.95)));
+ const whole=join>.997; // fully joined: show the untouched mark itself
+ const apart=1-join, dx=apart*MW*.16, ry=apart*28, tz=apart*30;
+ const turn=Math.sin((t-1.6)/3.1*Math.PI)*(t>1.6&&t<4.7?1:0)*10;      // gentle whole-mark turn while joined
+ const run=seg(t,1.7,3.0);                                                 // light runs down the centre line
+ const sheen=seg(t,2.6,4.2);                                               // diagonal shine across the M
+ const lineGlow=.35+.65*(se(seg(t,1.35,1.75))*(1-se(seg(t,1.9,3.2))))+.25*apart;
+ const glow=.25+.55*join;
+ const box=`left:${W/2-MW/2}px;top:${H*CY-MH/2}px;width:${MW}px;height:${MH}px`;
+ // each half carries its own cut-out, so it moves as one solid piece
+ const piece=(clip,tx,r,ox,extra='')=>`<div class="piece" style="transform:translateX(${tx}px) rotateY(${r}deg) translateZ(${tz}px);transform-origin:${ox}% 50%">
+   <div style="position:absolute;inset:0;clip-path:inset(${clip})"><img src="mark.png">${extra}</div></div>`;
+ const sheenEl=`<div style="position:absolute;inset:0;-webkit-mask:url(mark.png) center/100% 100% no-repeat;mask:url(mark.png) center/100% 100% no-repeat;
+   background:linear-gradient(115deg,transparent ${-40+sheen*170}%,rgba(255,255,255,.72) ${-22+sheen*170}%,transparent ${-4+sheen*170}%);opacity:${sheen>0&&sheen<1?1:0}"></div>`;
+ st.innerHTML=`<img src="plate.jpg" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+ <div style="position:absolute;left:${W/2-MW*.85}px;top:${H*CY-MW*.85}px;width:${MW*1.7}px;height:${MW*1.7}px;border-radius:50%;
+   background:radial-gradient(closest-side,rgba(80,140,255,${.38*glow}),rgba(37,99,235,${.12*glow}) 50%,rgba(37,99,235,0))"></div>
+ <div style="position:absolute;${box};perspective:1400px"><div style="position:absolute;inset:0;transform:rotateY(${turn}deg);transform-style:preserve-3d;filter:drop-shadow(0 18px 40px rgba(0,0,0,.45))">
+  ${whole?'':piece(`0 ${100-LC}% 0 0`,-dx,ry,LC,'')}
+  ${whole?'':piece(`0 0 0 ${RC}%`,dx,-ry,RC,'')}
+  ${whole?`<div class="piece"><img src="mark.png">${sheenEl}</div>`:''}
+  ${whole?'':`<div class="piece" style="clip-path:inset(0 ${100-R}% 0 ${L}%)"><img src="mark.png"></div>`}
+  <div style="position:absolute;left:${(L+R)/2}%;top:0;bottom:0;width:${MW*.05}px;margin-left:-${MW*.025}px;
+    background:radial-gradient(ellipse at 50% ${run*100}%,rgba(200,225,255,${lineGlow*(run>0&&run<1?1:.45)}) 0%,rgba(120,170,255,0) ${run>0&&run<1?18:60}%);mix-blend-mode:screen"></div>
+  ${run>0&&run<1?`<div style="position:absolute;left:${(L+R)/2}%;top:${run*100}%;width:${MW*.22}px;height:${MW*.22}px;margin:-${MW*.11}px 0 0 -${MW*.11}px;border-radius:50%;background:radial-gradient(closest-side,rgba(235,245,255,.95),rgba(120,170,255,.35) 40%,rgba(120,170,255,0));mix-blend-mode:screen"></div>`:''}
+  <div style="position:absolute;left:${(L+R)/2}%;top:-4%;bottom:-4%;width:2px;margin-left:-1px;background:linear-gradient(transparent,rgba(190,215,255,${.55*lineGlow}),transparent)"></div>
+ </div></div>`;
+ await Promise.all([...document.images].map(i=>i.decode().catch(()=>{})));};
+</script></body></html>

@@ -1,0 +1,96 @@
+<title>Meridian Live Logo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@600;800&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: one stage, the mark centred, a short caption under it. Single dark look on purpose (the brand's navy ground). */
+:root{
+  --ground:#0d1b3d; --ground-deep:#081230; --ink:#eef2fb; --muted:#9fb0cf; --line:#bcd3ff; --accent:#2563eb;
+  --display:"Hanken Grotesk","Helvetica Neue",Arial,sans-serif; --body:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:radial-gradient(120% 90% at 50% 38%,#173064 0%,var(--ground) 45%,var(--ground-deep) 100%);color:var(--ink);font-family:var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0;overflow-x:hidden}
+.wrap{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(12px,3vh,32px);padding-block:24px;overflow-x:clip}
+#stage{position:relative;width:min(78vw,460px);aspect-ratio:1;max-width:100%;touch-action:none;cursor:pointer;-webkit-tap-highlight-color:transparent;outline:none}
+#stage:focus-visible{box-shadow:0 0 0 3px var(--line);border-radius:24px}
+#halo{position:absolute;inset:-18%;border-radius:50%;pointer-events:none}
+#mark{position:absolute;left:12%;top:13%;width:76%;aspect-ratio:342/333;perspective:1200px}
+#tilt{position:absolute;inset:0;transform-style:preserve-3d;filter:drop-shadow(0 22px 44px rgba(0,0,0,.5))}
+.piece{position:absolute;inset:0}
+.piece>div{position:absolute;inset:0}
+.piece img{position:absolute;inset:0;width:100%;height:100%;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.sheen{position:absolute;inset:0;-webkit-mask:url(mark.png) center/100% 100% no-repeat;mask:url(mark.png) center/100% 100% no-repeat;pointer-events:none}
+#beam,#spark{position:absolute;pointer-events:none;mix-blend-mode:screen}
+.cap{text-align:center;display:grid;gap:6px;max-width:34rem}
+.name{font:800 clamp(20px,4.6vw,26px)/1 var(--display);letter-spacing:.2em;padding-left:.2em}
+.sub{font:500 11.5px/1 var(--body);letter-spacing:.42em;color:#cbd5e1;padding-left:.42em}
+.hint{margin-top:14px;font:400 14px/1.5 var(--body);color:var(--muted);text-wrap:balance}
+</style>
+
+<div class="wrap">
+  <div id="stage" tabindex="0" role="img" aria-label="Meridian Interface logo that tilts toward your pointer; tap to replay the lock-in">
+    <div id="halo"></div>
+    <div id="mark"><div id="tilt">
+      <div class="piece" id="left"><div style="clip-path:inset(0 52.34% 0 0)"><img src="mark.png" alt=""><div class="sheen" id="sheenL"></div></div></div>
+      <div class="piece" id="right"><div style="clip-path:inset(0 0 0 52.34%)"><img src="mark.png" alt=""><div class="sheen" id="sheenR"></div></div></div>
+      <div class="piece" id="mid"><div style="clip-path:inset(0 48.25% 0 48.25%)"><img src="mark.png" alt=""></div></div>
+      <div id="beam"></div><div id="spark"></div>
+    </div></div>
+  </div>
+  <div class="cap">
+    <div class="name">MERIDIAN</div><div class="sub">INTERFACE</div>
+    <p class="hint" id="hint">Move your mouse or finger over the logo. Tap it to replay the lock-in.</p>
+  </div>
+</div>
+
+<script>
+// The real mark (meridian-mark.png, 342 x 333) split along its own centre line, columns 165 to 176.
+// Halves are cut 2 px clear of the line; when fully joined the untouched file shows. Nothing is redrawn.
+const $=id=>document.getElementById(id);
+const stage=$('stage'), tilt=$('tilt'), left=$('left'), right=$('right'), mid=$('mid'), beam=$('beam'), spark=$('spark'), halo=$('halo');
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const cl=(x,a=0,b=1)=>Math.min(b,Math.max(a,x)), ease=x=>.5-.5*Math.cos(Math.PI*cl(x));
+const LINE=(165+177)/2/342*100;
+let px=0, py=0, tx=0, ty=0, active=false, lastMove=0, burst=-10, t0=performance.now();
+
+function point(e){const r=stage.getBoundingClientRect();
+  tx=cl(((e.clientX-r.left)/r.width)*2-1,-1.3,1.3); ty=cl(((e.clientY-r.top)/r.height)*2-1,-1.3,1.3); active=true; lastMove=performance.now();}
+stage.addEventListener('pointermove',point);
+stage.addEventListener('pointerdown',e=>{point(e);burst=performance.now();});
+stage.addEventListener('pointerleave',()=>{active=false;});
+stage.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();burst=performance.now();}});
+
+function frame(now){
+  const t=(now-t0)/1000;
+  // idle drift when nobody is touching it
+  if(!active||now-lastMove>2500){tx=Math.sin(t*.45)*.45; ty=Math.sin(t*.31)*.25;}
+  const k=reduce?1:.08; px+=(tx-px)*k; py+=(ty-py)*k;
+  // tap: halves part and lock back over 1.6 s
+  const b=(now-burst)/1000, part=reduce?0:(b<0?0:b<.45?ease(b/.45):b<1.6?1-ease((b-.45)/1.15):0);
+  const near=active?1:0;
+  const sep=part*14 + near*Math.hypot(px,py)*.8;            // % of the mark's width
+  const ry=px*16, rx=-py*12;
+  tilt.style.transform=`rotateY(${ry}deg) rotateX(${rx}deg)`;
+  const whole=sep<.15;
+  left.style.transform=`perspective(900px) translateX(${-sep}%) rotateY(${part*26}deg)`;
+  right.style.transform=`perspective(900px) translateX(${sep}%) rotateY(${-part*26}deg)`;
+  left.style.transformOrigin='47.7% 50%'; right.style.transformOrigin='52.3% 50%';
+  mid.style.opacity=whole?0:1;
+  if(whole){left.firstElementChild.style.clipPath='none';right.style.visibility='hidden';}
+  else{left.firstElementChild.style.clipPath='inset(0 52.34% 0 0)';right.style.visibility='visible';}
+  // light follows the pointer down the meridian line
+  const ly=cl((py+1)/2,0,1)*100, glow=.55+.45*Math.max(near,part);
+  beam.style.cssText=`left:${LINE}%;top:-3%;bottom:-3%;width:3%;margin-left:-1.5%;background:radial-gradient(ellipse 55% 22% at 50% ${ly}%,rgba(225,238,255,${glow}),rgba(120,170,255,0) 100%)`;
+  spark.style.cssText=`left:${LINE}%;top:${ly}%;width:24%;aspect-ratio:1;margin:-12% 0 0 -12%;border-radius:50%;background:radial-gradient(closest-side,rgba(240,247,255,${.85*glow}),rgba(120,170,255,${.25*glow}) 45%,rgba(120,170,255,0))`;
+  // shine angle and position follow the pointer
+  const pos=50+px*55, ang=110+py*20;
+  const sh=`linear-gradient(${ang}deg,transparent ${pos-16}%,rgba(255,255,255,.5) ${pos}%,transparent ${pos+16}%)`;
+  $('sheenL').style.background=sh; $('sheenR').style.background=sh;
+  halo.style.background=`radial-gradient(closest-side at ${50+px*12}% ${48+py*10}%,rgba(80,140,255,${.30+.2*Math.max(near,part)}),rgba(37,99,235,.10) 50%,rgba(37,99,235,0))`;
+  if(!reduce||now-lastMove<50) requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+if(reduce){stage.addEventListener('pointermove',()=>requestAnimationFrame(frame));$('hint').textContent='Move your mouse or finger over the logo to tilt it.';}
+</script>

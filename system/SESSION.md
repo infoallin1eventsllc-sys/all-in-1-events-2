@@ -3875,3 +3875,8 @@ digital card". QA before push: static 0 FAIL (6 known WARN), browser 0 FAIL 0 WA
 dpl_7PzHFeonorEeg51bQkrfBnGrDHB1 READY in production; /card/ checked: Instagram button links
 instagram.com/meridianinterface. Otis still linking Instagram to the Facebook Page himself (his browser
 kept picking his personal Instagram; told him to use a private window or the app's Edit profile > Page).
+
+## 23 Nov 2026: live logo
+- Moving loop (6 s, seamless) in 1:1, 9:16, 16:9 plus a 200 px email GIF, sent to Otis. 0 credits (code-built).
+- Interactive preview page (tilt toward pointer, light follows, tap replays the lock-in) published as a private artifact for Otis to try. Not on the website.
+- Sources: system/promo-ad/live-logo/. Logo file only moved, never redrawn.
