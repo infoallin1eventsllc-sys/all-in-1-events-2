@@ -35,7 +35,14 @@ Source and method: `join-ending/`. Cost 59.85 credits (the generation); everythi
 
 16:9 only (Higgsfield returned wide although tall was asked):
 https://d8j0ntlcm91z4.cloudfront.net/user_3JCJestVZgBp8lJ2tJ8CJXNSkbz/hf_20261122_035230_0322294a-6506-43e1-b82f-068254fb7dcc.mp4
-Cost 60 credits. Peaks at +0.1 dBFS (could crackle); a free -16 LUFS version and a tall cut were offered.
+Cost 60 credits. Peaks at +0.1 dBFS (could crackle).
+
+Tall 9:16 (free re-cut, -16 LUFS): https://d2ol7oe51mr4n9.cloudfront.net/user_3JCJestVZgBp8lJ2tJ8CJXNSkbz/62006978-3841-426f-8136-58e48e87629f.mp4
+How: the clip sits on its own slate ground (#2c344c), and the framing changes only on its cuts. Frames 0 to 34
+(person at the monitor) and 92 to 142 ("WORK" screen) fill the width (scale 1200, crop 1080, band 675, top 523);
+frames 35 to 91 (finger, bursts, flash, keyboard) are a 1080 square (scale 1920, centre crop, top 320);
+frames 143 on (envelope and web address, after an all-slate gap) use scale 1340 (band 754, top 483) so the address
+stays left of x 940 (Reels buttons) and above y 1250. Band edges fade into the slate over 90 px. No blur.
 
 ## Inputs kept in his library
 
