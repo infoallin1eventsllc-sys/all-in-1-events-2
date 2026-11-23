@@ -31,6 +31,7 @@ ICON = {
     'web': '<circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/>',
     'cal': '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
     'add': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>',
+    'fb': '<path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>',
     'image': '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
 }
 def ic(n): return f'<svg viewBox="0 0 24 24" aria-hidden="true">{ICON[n]}</svg>'
@@ -147,12 +148,15 @@ def build(c, layout):
     tel = 'tel:' + E(c['phone']); sms = 'sms:' + E(c['phone']); mail = 'mailto:' + E(c['email'])
     web = E(c['website']); book = E(c['booking_url']); vcf = E(c['vcard_url'])
     dl = f'download="{n}.vcf"'; first = E(c['name'].split()[0])
+    # Optional Facebook Page link (config "facebook_url"): one more round button on layout 1.
+    fbu = c.get('facebook_url')
+    FB = (f'<a class="dot" href="{E(fbu)}" target="_blank" rel="noopener" aria-label="{E(c.get("company","")) or first} on Facebook">{ic("fb")}</a>' if fbu else '')
     LOGO = logo_html(c)
     if layout == 1:
         return f'''<header class="content">{LOGO}<h1>{n}</h1><div class="role">{role}</div>
 <div class="tag">{tag}</div>
 <nav class="pills" aria-label="Contact {n}"><a class="pill" href="{tel}">{ic("phone")}Call</a><a class="pill" href="{mail}">{ic("mail")}Email</a><a class="pill book" href="{book}">{ic("cal")}{E(c.get("booking_label","Book a 1-on-1 appointment"))}</a></nav></header>
-<div class="art"><div class="dots"><a class="dot" href="{sms}" aria-label="Text {first}">{ic("text")}</a><a class="dot" href="{web}" aria-label="Website">{ic("web")}</a><a class="dot" href="{vcf}" {dl} aria-label="Save to contacts">{ic("add")}</a></div>{WP.replace('class="wpwrap"','class="wpwrap" style="position:absolute;left:0;right:0;top:calc(12% + 58px)"')}</div>'''
+<div class="art"><div class="dots"><a class="dot" href="{sms}" aria-label="Text {first}">{ic("text")}</a><a class="dot" href="{web}" aria-label="Website">{ic("web")}</a><a class="dot" href="{vcf}" {dl} aria-label="Save to contacts">{ic("add")}</a>{FB}</div>{WP.replace('class="wpwrap"','class="wpwrap" style="position:absolute;left:0;right:0;top:calc(12% + 58px)"')}</div>'''
     if layout == 2:
         first_last = n.replace(' ', '<br>', 1)
         return f'''<header class="content">{LOGO}<h1>{first_last}</h1><div class="role">{role}</div>

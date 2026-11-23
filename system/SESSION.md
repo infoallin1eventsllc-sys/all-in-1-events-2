@@ -3857,3 +3857,8 @@ every finished file and link written to system/promo-ad/DELIVERED.md.
 Update (23 Nov): Otis said yes to a tall PC Flat. Made free: 1080x1920, 24 fps, 10.1 s, -16.0 LUFS
 (peak -3.3), on the clip's own slate ground, framing changed only on its cuts. Saved to his library
 (62006978) and listed in DELIVERED.md. Not posted.
+Update (23 Nov): Otis asked to connect his Meridian Interface Facebook Page to the website; he chose
+the link option (not Pixel, not a feed). Added a Facebook link to the website footer (inline icon,
+no CSP change) and a round Facebook button on his digital card (card tool now takes `facebook_url`;
+a fresh build matched the live card except for the new button). Page:
+facebook.com/profile.php?id=61596523703192. Nothing was changed on Facebook itself.
