@@ -22,7 +22,7 @@
   "fonts_url": "/fonts",
   "favicon": "/brand/meridian-mark.png",
   "canonical": "https://meridianinterface.com/card/",
-  "og_image": "https://meridianinterface.com/brand/meridian-logo-square.png",
+  "og_image": "https://meridianinterface.com/card/share.jpg",
   "description": "Otis Williams, AI Architect at Meridian Interface. Call 281-882-9198, email otis@meridianinterface.com, or book a 1-on-1 appointment.",
   "layout": 1,
   "background": "ribbon",
@@ -36,5 +36,8 @@
   "background_public_base": "https://meridianinterface.com/card/bg/",
   "background_local_base": "/card/bg/",
   "facebook_url": "https://www.facebook.com/profile.php?id=61596523703192",
-  "instagram_url": "https://www.instagram.com/meridianinterface/"
+  "instagram_url": "https://www.instagram.com/meridianinterface/",
+  "og_image_width": 1200,
+  "og_image_height": 630,
+  "og_image_alt": "Otis Williams digital business card: call, email, book a free 1-on-1 appointment, or follow Meridian Interface."
 }

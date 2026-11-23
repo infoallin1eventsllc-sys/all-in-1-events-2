@@ -209,6 +209,10 @@ def main():
     title = f'{c["name"]} | {c.get("company","")}'.strip(' |')
     canon = f'<link rel="canonical" href="{E(c["canonical"])}">' if c.get('canonical') else ''
     og = ''.join(f'<meta property="og:{k}" content="{E(v)}">' for k, v in [('type', 'profile'), ('title', title), ('description', c.get('description', '')), ('url', c.get('canonical', '')), ('image', c.get('og_image', ''))] if v)
+    # Optional size and alt text for a wide (1200x630) share picture: Facebook then shows it as a large, tappable preview.
+    og += ''.join(f'<meta property="og:image:{k}" content="{E(str(c[f])) }">' for k, f in [('width', 'og_image_width'), ('height', 'og_image_height'), ('alt', 'og_image_alt')] if c.get(f))
+    if c.get('og_image_width'):
+        og += '<meta name="twitter:card" content="summary_large_image">'
     page = f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{E(title)}</title><meta name="description" content="{E(c.get("description",""))}">{canon}{og}
