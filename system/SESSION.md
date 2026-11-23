@@ -3883,3 +3883,4 @@ kept picking his personal Instagram; told him to use a private window or the app
 - Otis did not like the blue background or the motion. New "Ribbon Zipper" on white (system/promo-ad/live-logo/ribbon-zipper.html): 1:1 sent for review. Other shapes after he approves. 0 credits.
 - Digital card social pictures (4:5 feed, 9:16 story, with/without QR) in system/social/card-posts/. Sent to Otis; nothing posted.
 - 23 Nov 21:03 UTC: Otis said "You can post it". Posted to the Meridian Interface Facebook Page (1483203828202922) with the no-QR 4:5 picture: post 1483203828202922_122108006553550790, https://www.facebook.com/122094122127550790/posts/122108006553550790. Verified published. Instagram not posted (not linked to the Page; bio first).
+- 21:04 UTC: at Otis's request, removed the "Houston and Katy, TX" line and the #HoustonBusiness #KatyTX tags from that Facebook post (edited, verified). Instagram drafts updated the same way.
