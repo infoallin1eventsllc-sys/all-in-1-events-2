@@ -3881,3 +3881,4 @@ kept picking his personal Instagram; told him to use a private window or the app
 - Interactive preview page (tilt toward pointer, light follows, tap replays the lock-in) published as a private artifact for Otis to try. Not on the website.
 - Sources: system/promo-ad/live-logo/. Logo file only moved, never redrawn.
 - Otis did not like the blue background or the motion. New "Ribbon Zipper" on white (system/promo-ad/live-logo/ribbon-zipper.html): 1:1 sent for review. Other shapes after he approves. 0 credits.
+- Digital card social pictures (4:5 feed, 9:16 story, with/without QR) in system/social/card-posts/. Sent to Otis; nothing posted.
