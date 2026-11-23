@@ -3869,3 +3869,4 @@ orchestra unlinked + 4 unused images, fontTools missing, 3 demo-honesty reminder
 (every page at 1440/820/375/320, all 12 demos clicked). Vercel dpl_GBoeqYQ3npvt7SkMhM2f6RCqMAJu READY,
 aliased to meridianinterface.com; /card/ checked live: Facebook button present, links to
 facebook.com/profile.php?id=61596523703192.
+Update (23 Nov): Instagram created by Otis: @meridianinterface. Card tool now takes instagram_url; footer and card Instagram links built, QA running before push. He is having trouble linking Instagram to the Facebook Page; steps given.

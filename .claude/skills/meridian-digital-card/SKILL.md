@@ -55,6 +55,7 @@ For Otis's live card: build with his example config (it uses the site's
 | `booking_url`, `booking_label`, `booking_label_long` | The Book button. |
 | `vcard_url`, `qr` | The .vcf file and the QR image (layout 3). |
 | `facebook_url` | Optional. Adds a round Facebook button (opens in a new tab) after Save on layout 1. Otis's Page: facebook.com/profile.php?id=61596523703192. |
+| `instagram_url` | Optional. Adds a round Instagram button after Facebook on layout 1. Otis: instagram.com/meridianinterface. |
 | `logo` | `{mark, line1, line2}` for a mark plus live wordmark (Meridian), or `{image}` for a client's full logo. |
 | `fonts_url` | Omit to copy the fonts next to the page; Otis's site uses `/fonts`. |
 | `canonical`, `description`, `og_image`, `favicon` | Page and share-preview tags. |

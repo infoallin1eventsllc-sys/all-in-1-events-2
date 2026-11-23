@@ -12,6 +12,6 @@ Otis creates the account himself. Prepared for him:
 - Account type: Professional, Business, category Software Company (matches the Facebook Page).
 - Link it to the Facebook Page through Accounts Center so posts can share to both.
 
-After he sends the handle: add an Instagram link to the website footer and a round button on the
+Handle: @meridianinterface (created 23 Nov). After he sent the handle: add an Instagram link to the website footer and a round button on the
 card (`instagram_url` would mirror `facebook_url` in the card tool). Nothing gets posted without
 his "post it".

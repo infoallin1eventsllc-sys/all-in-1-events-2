@@ -35,5 +35,6 @@
   "background_endpoint": "https://glzodwhyavexpuusbqjy.supabase.co/functions/v1/site-images",
   "background_public_base": "https://meridianinterface.com/card/bg/",
   "background_local_base": "/card/bg/",
-  "facebook_url": "https://www.facebook.com/profile.php?id=61596523703192"
+  "facebook_url": "https://www.facebook.com/profile.php?id=61596523703192",
+  "instagram_url": "https://www.instagram.com/meridianinterface/"
 }

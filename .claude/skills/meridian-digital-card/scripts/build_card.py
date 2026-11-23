@@ -32,6 +32,7 @@ ICON = {
     'cal': '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
     'add': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>',
     'fb': '<path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>',
+    'ig': '<rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.4A4 4 0 1 1 12.6 8 4 4 0 0 1 16 11.4z"/><path d="M17.5 6.5h.01"/>',
     'image': '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>',
 }
 def ic(n): return f'<svg viewBox="0 0 24 24" aria-hidden="true">{ICON[n]}</svg>'
@@ -151,6 +152,9 @@ def build(c, layout):
     # Optional Facebook Page link (config "facebook_url"): one more round button on layout 1.
     fbu = c.get('facebook_url')
     FB = (f'<a class="dot" href="{E(fbu)}" target="_blank" rel="noopener" aria-label="{E(c.get("company","")) or first} on Facebook">{ic("fb")}</a>' if fbu else '')
+    # Optional Instagram link (config "instagram_url"): one more round button after Facebook.
+    igu = c.get('instagram_url')
+    if igu: FB += f'<a class="dot" href="{E(igu)}" target="_blank" rel="noopener" aria-label="{E(c.get("company","")) or first} on Instagram">{ic("ig")}</a>'
     LOGO = logo_html(c)
     if layout == 1:
         return f'''<header class="content">{LOGO}<h1>{n}</h1><div class="role">{role}</div>
