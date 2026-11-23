@@ -1,4 +1,4 @@
-# Digital card post text: DRAFT, not approved, nothing posted
+# Digital card post text: Facebook POSTED 23 Nov 2026 (Otis: "You can post it"); Instagram not posted
 
 ## Facebook post (either picture)
 My digital business card is live.
