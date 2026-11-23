@@ -3863,3 +3863,9 @@ no CSP change) and a round Facebook button on his digital card (card tool now ta
 a fresh build matched the live card except for the new button). Page:
 facebook.com/profile.php?id=61596523703192. Nothing was changed on Facebook itself.
 Update (23 Nov): Otis needs an Instagram account; he creates it. Setup kit (profile picture, bio, steps) in system/social/.
+Shipped (23 Nov): website main 7d08fc8 "Link the Meridian Interface Facebook Page from the footer and
+the digital card". meridian-prelaunch-qa before push: static 0 FAIL (6 known WARN: xlsx audit x2,
+orchestra unlinked + 4 unused images, fontTools missing, 3 demo-honesty reminders), browser 0 FAIL 0 WARN
+(every page at 1440/820/375/320, all 12 demos clicked). Vercel dpl_GBoeqYQ3npvt7SkMhM2f6RCqMAJu READY,
+aliased to meridianinterface.com; /card/ checked live: Facebook button present, links to
+facebook.com/profile.php?id=61596523703192.
