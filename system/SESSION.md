@@ -3880,3 +3880,4 @@ kept picking his personal Instagram; told him to use a private window or the app
 - Moving loop (6 s, seamless) in 1:1, 9:16, 16:9 plus a 200 px email GIF, sent to Otis. 0 credits (code-built).
 - Interactive preview page (tilt toward pointer, light follows, tap replays the lock-in) published as a private artifact for Otis to try. Not on the website.
 - Sources: system/promo-ad/live-logo/. Logo file only moved, never redrawn.
+- Otis did not like the blue background or the motion. New "Ribbon Zipper" on white (system/promo-ad/live-logo/ribbon-zipper.html): 1:1 sent for review. Other shapes after he approves. 0 credits.

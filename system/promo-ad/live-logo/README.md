@@ -14,3 +14,8 @@ Otis's real mark (`.claude/skills/meridian-brand/assets/logo/meridian-mark.png`,
 Needs `mark.png` next to it. The M tilts toward the mouse or finger, the light follows along the centre line, the halves part slightly while hovered, and a tap or Enter replays the lock-in. Idle drift when nobody touches it; respects reduced motion. Preview link given to Otis 23 Nov 2026. Not on the website: that needs his OK and meridian-prelaunch-qa first.
 
 Instagram profile pictures cannot move. Use the loop for the Facebook cover video, Reels, website and the email signature GIF.
+
+## Ribbon Zipper, white (23 Nov 2026, after Otis turned down the blue version)
+`ribbon-zipper.html` + `render-ribbon-zipper.cjs` (needs `mark.png` next to them). 8 s seamless loop on a white studio ground with a soft floor reflection. Each half is cut into one-pixel ribbons that ripple apart top first like silk, then lock back bottom first; a light climbs the centre line with the lock front, then a wash of light crosses the M and the glow fades back to rest.
+
+    NODE_PATH=/opt/node22/lib/node_modules node render-ribbon-zipper.cjs 1080 1080 "mw=460" Meridian-Live-Logo-White-1x1.mp4
