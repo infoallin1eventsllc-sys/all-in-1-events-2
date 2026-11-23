@@ -3862,3 +3862,4 @@ the link option (not Pixel, not a feed). Added a Facebook link to the website fo
 no CSP change) and a round Facebook button on his digital card (card tool now takes `facebook_url`;
 a fresh build matched the live card except for the new button). Page:
 facebook.com/profile.php?id=61596523703192. Nothing was changed on Facebook itself.
+Update (23 Nov): Otis needs an Instagram account; he creates it. Setup kit (profile picture, bio, steps) in system/social/.
