@@ -84,7 +84,7 @@ a:focus-visible,button:focus-visible{outline:3px solid #fff;outline-offset:2px}
       <button id="b-photo" aria-pressed="false">Living photo</button>
       <button id="b-still" aria-pressed="false">Today's card</button>
     </div>
-    <p class="hint" id="hint">The sun rises over the hills, then clouds and birds drift by. Move your finger and the hills shift; tap the sky for a burst of sunlight. Tap Sunrise to watch it again.</p>
+    <p class="hint" id="hint">The sun rises over misty mountains and a lake. Move your finger and the scene shifts; tap the sky for a burst of sunlight or the water for a ripple. Tap Sunrise to watch it again.</p>
   </div>
 </div>
 
@@ -94,12 +94,12 @@ const photo=document.getElementById('photo'),img=document.getElementById('img'),
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let W=0,H=0,DPR=1,mode='sunrise',t0=performance.now();
 const P={x:.5,y:.75,tx:.5,ty:.75,on:0,ton:0}; let ripples=[];
-function size(){const r=phone.getBoundingClientRect();DPR=Math.min(3,devicePixelRatio||1);W=r.width;H=r.height;cv.width=W*DPR;cv.height=H*DPR;g.setTransform(DPR,0,0,DPR,0,0);}
+function size(){const r=phone.getBoundingClientRect();DPR=Math.min(2,devicePixelRatio||1);W=r.width;H=r.height;cv.width=W*DPR;cv.height=H*DPR;g.setTransform(DPR,0,0,DPR,0,0);}
 new ResizeObserver(size).observe(phone);size();
 
 function pos(e){const r=phone.getBoundingClientRect();P.tx=(e.clientX-r.left)/r.width;P.ty=(e.clientY-r.top)/r.height;P.ton=1;}
 phone.addEventListener('pointermove',pos);
-phone.addEventListener('pointerdown',e=>{pos(e);if(!e.target.closest('a')){ripples.push({x:P.tx,y:P.ty,t:performance.now()});flares.push(performance.now());}});
+phone.addEventListener('pointerdown',e=>{pos(e);if(!e.target.closest('a')){ripples.push({x:P.tx,y:P.ty,t:performance.now()});if(P.ty<LAKE)flares.push(performance.now());}});
 phone.addEventListener('pointerleave',()=>{P.ton=0;});
 
 // Live ribbon: layered silk bands like the card's owned ribbon art, drawn fresh every frame.
@@ -143,68 +143,109 @@ function drawRibbon(t){
   if(P.on>.02){const lg=g.createRadialGradient(P.x*W,P.y*H,0,P.x*W,P.y*H,W*.35);lg.addColorStop(0,`rgba(120,180,255,${.22*P.on})`);lg.addColorStop(1,'rgba(120,180,255,0)');
     g.globalCompositeOperation='screen';g.fillStyle=lg;g.fillRect(0,0,W,H);g.globalCompositeOperation='source-over';}
 }
-// Sunrise: dawn over layered hills. The sun climbs for about 14 seconds, then the day holds with drifting clouds and birds.
+// Sunrise, realistic pass (all drawn by code, no generated art): dawn sky with stars fading, noise-built clouds lit by the sun,
+// misty mountain ridges, a lake with a path of sun glitter, pine shoreline, fine film grain. The sun climbs for about 16 s.
 let sunStart=performance.now(),flares=[];
 const lerp=(a,b,k)=>a+(b-a)*k,ease=x=>{x=Math.min(1,Math.max(0,x));return x*x*(3-2*x)};
-const mix=(c1,c2,k)=>`rgb(${lerp(c1[0],c2[0],k)|0},${lerp(c1[1],c2[1],k)|0},${lerp(c1[2],c2[2],k)|0})`;
-const CLOUDS=[[.12,.60,1.0],[.62,.565,.75],[.95,.66,1.1],[.38,.69,.7],[.80,.625,.6]];
-function hill(x,base,amp,f,ph){return base-amp*(Math.sin(x*f+ph)*.6+Math.sin(x*f*2.3+ph*1.7)*.3+Math.sin(x*f*5.1+ph*.4)*.1);}
+const sstep=(a,b,x)=>ease((x-a)/(b-a));
+const mix=(c1,c2,k,a=1)=>`rgba(${lerp(c1[0],c2[0],k)|0},${lerp(c1[1],c2[1],k)|0},${lerp(c1[2],c2[2],k)|0},${a})`;
+function mulberry(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function makeNoise(seed,px,py){const r=mulberry(seed),v=new Float32Array(px*py);for(let i=0;i<v.length;i++)v[i]=r();
+  return(x,y)=>{const xi=Math.floor(x),yi=Math.floor(y),fx=x-xi,fy=y-yi,u=fx*fx*(3-2*fx),w=fy*fy*(3-2*fy);
+    const X0=((xi%px)+px)%px,X1=(X0+1)%px,Y0=((yi%py)+py)%py,Y1=(Y0+1)%py,a=v[Y0*px+X0],b=v[Y0*px+X1],c=v[Y1*px+X0],d=v[Y1*px+X1];
+    return a+(b-a)*u+(c-a)*w+(a-b-c+d)*u*w}}
+function cloudTex(seed,w,h,lo,hi){const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d'),im=x.createImageData(w,h),d=im.data;
+  const oct=[];for(let o=0;o<5;o++)oct.push(makeNoise(seed+o*101,4<<o,6<<o));
+  for(let j=0;j<h;j++){const m=Math.pow(Math.sin(Math.PI*j/h),.8);
+    for(let i=0;i<w;i++){let n=0,amp=.5,tot=0;for(let o=0;o<5;o++){n+=oct[o](i/w*(4<<o),j/h*(6<<o))*amp;tot+=amp;amp*=.5}
+      const k=(j*w+i)*4;d[k]=d[k+1]=d[k+2]=255;d[k+3]=sstep(lo,hi,n/tot)*m*255}}
+  x.putImageData(im,0,0);return c}
+const RIDGES=[{b:.83,amp:.05,f:2.6,ridged:1,par:4,c1:[150,118,168],c2:[146,174,216]},
+              {b:.858,amp:.044,f:3.4,ridged:1,par:9,c1:[96,82,148],c2:[92,128,186]},
+              {b:.882,amp:.03,f:4.6,ridged:0,par:15,c1:[50,50,110],c2:[48,82,140]}];
+const LAKE=.9,PINES_L=[[.03,.085],[.09,.062],[.15,.1],[.21,.05],[.265,.036]],PINES_R=[[.725,.042],[.79,.068],[.86,.105],[.93,.074],[.985,.09]];
+const scene={W:0,H:0};let texA,texB,grain,cl,clx,stars;
+function buildScene(){scene.W=W;scene.H=H;
+  if(!texA){texA=cloudTex(7,512,256,.5,.76);texB=cloudTex(23,512,256,.54,.8);
+    const gc=document.createElement('canvas');gc.width=gc.height=128;const gx=gc.getContext('2d'),im=gx.createImageData(128,128),r=mulberry(5);
+    for(let i=0;i<im.data.length;i+=4){const v=r()*255|0;im.data[i]=im.data[i+1]=im.data[i+2]=v;im.data[i+3]=255}gx.putImageData(im,0,0);grain=g.createPattern(gc,'repeat');
+    const sr=mulberry(99);stars=[];for(let i=0;i<46;i++)stars.push([sr(),sr()*.5,.4+sr()*.9,sr()*6.28]);
+    cl=document.createElement('canvas');clx=cl.getContext('2d')}
+  cl.width=Math.round(W*1.25);cl.height=Math.round(H*1.25);
+  scene.ridges=RIDGES.map((L,li)=>{const N=Math.ceil(W*1.3/2)+2,a=new Float32Array(N),nz=[0,1,2,3].map(o=>makeNoise(31+li*17+o,1024,2));
+    for(let i=0;i<N;i++){const u=i*2/W*L.f;let n=0,amp=.5,tot=0;
+      for(let o=0;o<4;o++){let v=nz[o](u*(1<<o)+li*7.3,.5);if(L.ridged&&o<2)v=1-Math.abs(2*v-1);n+=v*amp;tot+=amp;amp*=.5}
+      a[i]=H*(L.b-L.amp*(n/tot))}return a})}
+function pine(x,y,h){g.beginPath();for(let k=0;k<4;k++){const ty=y-h+h*.8*(k/4),by=ty+h*.36,hw=h*.42*(.35+.65*(k+1)/4)*.5;g.moveTo(x,ty);g.lineTo(x+hw,by);g.lineTo(x-hw,by);g.closePath()}
+  g.rect(x-h*.02,y-h*.1,h*.04,h*.14);g.fill()}
 function drawSunrise(t,now){
-  const R=reduce?1:ease((now-sunStart)/14000);
-  const sky=g.createLinearGradient(0,0,0,H*.9);
-  sky.addColorStop(0,mix([16,32,92],[22,74,196],R));
-  sky.addColorStop(.45,mix([52,62,140],[70,138,228],R));
-  sky.addColorStop(.8,mix([214,112,104],[150,196,246],R));
-  sky.addColorStop(1,mix([255,170,110],[255,226,170],R));
+  if(scene.W!==W||scene.H!==H)buildScene();
+  const R=reduce?1:ease((now-sunStart)/16000),HZ=H*.875;
+  // sky
+  const sky=g.createLinearGradient(0,0,0,HZ);
+  sky.addColorStop(0,mix([10,18,58],[20,72,180],R));sky.addColorStop(.35,mix([34,44,112],[58,128,224],R));sky.addColorStop(.62,mix([120,80,140],[120,178,240],R));
+  sky.addColorStop(.84,mix([232,120,100],[196,220,246],R));sky.addColorStop(1,mix([255,178,110],[255,236,196],R));
   g.fillStyle=sky;g.fillRect(0,0,W,H);
-  const sx=W*(.5+(P.x-.5)*.04*P.on),sy=lerp(H*.93,H*.775,R),sr=W*.085;
-  // warm glow, kept light so the scene stays crisp
-  const gl=g.createRadialGradient(sx,sy,0,sx,sy,W*.9);
-  gl.addColorStop(0,'rgba(255,236,190,.5)');gl.addColorStop(.18,`rgba(255,200,130,${.26+.12*(1-R)})`);gl.addColorStop(.55,'rgba(255,170,120,.06)');gl.addColorStop(1,'rgba(255,170,120,0)');
-  g.globalCompositeOperation='screen';g.fillStyle=gl;g.fillRect(0,0,W,H);
-  g.save();g.translate(sx,sy);g.rotate(t*.02);
-  for(let i=0;i<14;i++){g.rotate(Math.PI*2/14);const a=.035+.02*Math.sin(t*.7+i);
-    const rg=g.createLinearGradient(0,0,W*1.1,0);rg.addColorStop(0,`rgba(255,230,170,${a})`);rg.addColorStop(1,'rgba(255,230,170,0)');
-    g.fillStyle=rg;g.beginPath();g.moveTo(0,0);g.lineTo(W*1.1,-W*.05);g.lineTo(W*1.1,W*.05);g.closePath();g.fill();}
-  g.restore();
-  for(const f of flares){const age=(now-f)/1000,r=W*(.1+age*.9),a=Math.max(0,.35*(1-age/1.6));
-    const fg=g.createRadialGradient(sx,sy,r*.6,sx,sy,r);fg.addColorStop(0,'rgba(255,220,160,0)');fg.addColorStop(.85,`rgba(255,225,170,${a})`);fg.addColorStop(1,'rgba(255,225,170,0)');
-    g.fillStyle=fg;g.fillRect(0,0,W,H);}
+  // last stars of the night
+  const sa=Math.max(0,1-R*2.4);if(sa>0){g.fillStyle='#fff';for(const [x,y,s,p] of stars){g.globalAlpha=sa*(.35+.4*Math.sin(t*1.7+p)**2);g.fillRect(x*W,y*H,s,s)}g.globalAlpha=1}
+  const sx=W*(.5+(P.x-.5)*.03*P.on),sy=H*lerp(.9,.75,R),up=sstep(.12,.5,R);
+  // sunlight: wide glow, glow hugging the horizon, slow rays, blown-out core
+  g.globalCompositeOperation='screen';
+  let gr=g.createRadialGradient(sx,sy,0,sx,sy,W*1.15);gr.addColorStop(0,`rgba(255,220,160,${.55})`);gr.addColorStop(.25,`rgba(255,170,110,${.30+.12*(1-R)})`);gr.addColorStop(.6,'rgba(255,140,110,.07)');gr.addColorStop(1,'rgba(255,140,110,0)');
+  g.fillStyle=gr;g.fillRect(0,0,W,H);
+  g.save();g.translate(sx,HZ-H*.02);g.scale(1,.22);gr=g.createRadialGradient(0,0,0,0,0,W*.9);gr.addColorStop(0,`rgba(255,214,150,${.55})`);gr.addColorStop(1,'rgba(255,214,150,0)');g.fillStyle=gr;g.beginPath();g.arc(0,0,W*.9,0,7);g.fill();g.restore();
+  g.save();g.translate(sx,sy);g.rotate(t*.015);for(let i=0;i<16;i++){g.rotate(Math.PI/8);const a=(.022+.016*Math.sin(t*.6+i*1.9))*up;
+    const rg=g.createLinearGradient(0,0,W*1.2,0);rg.addColorStop(0,`rgba(255,232,180,${a})`);rg.addColorStop(1,'rgba(255,232,180,0)');g.fillStyle=rg;g.beginPath();g.moveTo(0,0);g.lineTo(W*1.2,-W*.045);g.lineTo(W*1.2,W*.045);g.closePath();g.fill()}g.restore();
+  gr=g.createRadialGradient(sx,sy,0,sx,sy,W*.24);gr.addColorStop(0,'rgba(255,250,232,1)');gr.addColorStop(.16,'rgba(255,244,210,.95)');gr.addColorStop(.3,'rgba(255,214,150,.5)');gr.addColorStop(1,'rgba(255,190,120,0)');
+  g.fillStyle=gr;g.beginPath();g.arc(sx,sy,W*.24,0,7);g.fill();
+  for(const f of flares){const age=(now-f)/1000,r=W*(.1+age*.9),a=Math.max(0,.3*(1-age/1.6));const fg=g.createRadialGradient(sx,sy,r*.6,sx,sy,r);fg.addColorStop(0,'rgba(255,220,160,0)');fg.addColorStop(.85,`rgba(255,225,170,${a})`);fg.addColorStop(1,'rgba(255,225,170,0)');g.fillStyle=fg;g.fillRect(0,0,W,H)}
   g.globalCompositeOperation='source-over';
-  // the sun: a sharp, bright disc with a thin halo ring
-  const ring=g.createRadialGradient(sx,sy,sr,sx,sy,sr*1.7);ring.addColorStop(0,'rgba(255,244,200,.45)');ring.addColorStop(1,'rgba(255,244,200,0)');
-  g.fillStyle=ring;g.beginPath();g.arc(sx,sy,sr*1.7,0,7);g.fill();
-  const sd=g.createRadialGradient(sx,sy-sr*.2,0,sx,sy,sr);sd.addColorStop(0,'#ffffff');sd.addColorStop(.7,'#fff6d0');sd.addColorStop(1,'#ffe49a');
-  g.fillStyle=sd;g.beginPath();g.arc(sx,sy,sr,0,7);g.fill();
-  g.strokeStyle='rgba(255,255,255,.9)';g.lineWidth=1.25;g.stroke();
-  // clouds with clean edges: white on top, warm underneath
-  for(const [cx0,cy,s] of CLOUDS){const cx=((cx0+t*.006*s)%1.3-.15)*W,base=H*cy,w=W*.15*s;
-    g.save();g.beginPath();g.rect(cx-w*1.3,base-w,w*2.6,w);g.clip();
-    g.beginPath();for(const [ox,rr] of [[-.78,.16],[-.48,.3],[-.1,.44],[.32,.34],[.66,.22],[.9,.12]]){const px=cx+ox*w;g.moveTo(px+rr*w,base);g.arc(px,base,rr*w,0,Math.PI*2);}
-    const cg=g.createLinearGradient(0,base-w*.46,0,base);
-    cg.addColorStop(0,`rgba(255,255,255,${lerp(.82,.97,R)})`);cg.addColorStop(.55,mix([255,222,208],[248,251,255],R).replace('rgb','rgba').replace(')',`,${lerp(.8,.95,R)})`));
-    cg.addColorStop(1,mix([246,150,128],[206,224,250],R).replace('rgb','rgba').replace(')',',.9)'));
-    g.fillStyle=cg;g.fill();g.restore();}
-  // birds
-  g.strokeStyle=`rgba(16,24,64,${lerp(.6,.78,R)})`;g.lineWidth=1.6;g.lineCap='round';
-  for(let i=0;i<3;i++){const bx=((t*.018+i*.13+.2)%1.4-.2)*W,by=H*(.545+i*.022)+Math.sin(t*.8+i)*4,fl=Math.sin(t*6+i*2)*3,bw=6+i;
-    g.beginPath();g.moveTo(bx-bw,by-fl);g.quadraticCurveTo(bx-bw*.4,by-2,bx,by);g.quadraticCurveTo(bx+bw*.4,by-2,bx+bw,by-fl);g.stroke();}
-  // three layers of hills with a warm rim of light on each ridge; nearer ones move more with the finger
-  const layers=[[.875,H*.03,4.2,1.1,[118,128,190],[150,170,214],6],[.92,H*.04,3.1,2.6,[58,66,136],[66,96,170],14],[.965,H*.045,2.3,4.0,[22,30,84],[24,44,110],24]];
-  const step=Math.max(2,W/160);
-  layers.forEach(([b,amp,f,ph,c1,c2,par],li)=>{const off=(P.x-.5)*-par*P.on,Y=x=>hill((x-off)/W,H*b,amp,f,ph);
-    if(li===2){ // small pines along the nearest ridge
-      g.fillStyle=mix([14,20,62],[16,34,88],R);
-      for(let k=0;k<26;k++){const u=(Math.sin(k*12.9898)*43758.5453)%1,x=((k/26+Math.abs(u)*.03)%1)*W+off,hh=H*(.012+Math.abs(Math.sin(k*7.3))*.012),y=Y(x)+1;
-        if(k%5===2||k%7===3)continue;
-        g.beginPath();g.moveTo(x,y-hh);g.lineTo(x+hh*.36,y);g.lineTo(x-hh*.36,y);g.closePath();g.fill();}}
-    g.beginPath();g.moveTo(0,H);for(let x=-step;x<=W+step;x+=step)g.lineTo(x,Y(x));g.lineTo(W,H);g.closePath();
-    const hg=g.createLinearGradient(0,H*(b-.06),0,H);hg.addColorStop(0,mix(c1,c2,R));hg.addColorStop(1,'#0a1440');g.fillStyle=hg;g.fill();
-    g.beginPath();for(let x=-step;x<=W+step;x+=step){const y=Y(x);x<0?g.moveTo(x,y):g.lineTo(x,y);}
-    const rim=g.createLinearGradient(sx-W*.5,0,sx+W*.5,0);rim.addColorStop(0,'rgba(255,214,160,0)');rim.addColorStop(.5,`rgba(255,222,170,${[.75,.5,.3][li]})`);rim.addColorStop(1,'rgba(255,214,160,0)');
-    g.strokeStyle=rim;g.lineWidth=1.3;g.stroke();});
-  // keep the top calm and deep enough for white text
-  const top=g.createLinearGradient(0,0,0,H*.5);top.addColorStop(0,'rgba(6,16,60,.35)');top.addColorStop(1,'rgba(6,16,60,0)');g.fillStyle=top;g.fillRect(0,0,W,H*.5);
+  // clouds: two drifting layers of noise, shaded cool on top and lit warm from the sun
+  const cw=cl.width,ch=cl.height,k=cw/W;clx.globalCompositeOperation='source-over';clx.clearRect(0,0,cw,ch);
+  const wA=cw*2.1,oA=-((t*5*k)%wA),wB=cw*1.5,oB=-((t*9*k+200)%wB);
+  clx.globalAlpha=.95;clx.drawImage(texA,oA,ch*.34,wA,ch*.46);clx.drawImage(texA,oA+wA,ch*.34,wA,ch*.46);
+  clx.globalAlpha=.8;clx.drawImage(texB,oB,ch*.52,wB,ch*.3);clx.drawImage(texB,oB+wB,ch*.52,wB,ch*.3);clx.globalAlpha=1;
+  clx.globalCompositeOperation='source-in';const cg=clx.createLinearGradient(0,ch*.34,0,ch*.84);
+  cg.addColorStop(0,mix([58,52,104],[246,249,255],R));cg.addColorStop(.6,mix([150,84,120],[250,246,244],R));cg.addColorStop(1,mix([255,132,92],[255,232,196],R));clx.fillStyle=cg;clx.fillRect(0,0,cw,ch);
+  clx.globalCompositeOperation='source-atop';const ch2=clx.createRadialGradient(sx*k,sy*k,0,sx*k,sy*k,cw*.62);ch2.addColorStop(0,'rgba(255,236,190,.95)');ch2.addColorStop(.4,`rgba(255,180,120,${.55-.25*R})`);ch2.addColorStop(1,'rgba(255,170,120,0)');clx.fillStyle=ch2;clx.fillRect(0,0,cw,ch);
+  clx.globalCompositeOperation='destination-out';const hole=clx.createRadialGradient(sx*k,sy*k,0,sx*k,sy*k,cw*.17);hole.addColorStop(0,'rgba(0,0,0,.92)');hole.addColorStop(.5,'rgba(0,0,0,.6)');hole.addColorStop(1,'rgba(0,0,0,0)');clx.fillStyle=hole;clx.fillRect(0,0,cw,ch);
+  g.drawImage(cl,0,0,W,H);
+  // the sun's disc, bright and clear through the gap in the clouds
+  g.globalCompositeOperation='screen';gr=g.createRadialGradient(sx,sy,0,sx,sy,W*.13);gr.addColorStop(0,'rgba(255,246,214,.9)');gr.addColorStop(.45,'rgba(255,214,150,.35)');gr.addColorStop(1,'rgba(255,200,130,0)');g.fillStyle=gr;g.beginPath();g.arc(sx,sy,W*.13,0,7);g.fill();
+  g.globalCompositeOperation='source-over';gr=g.createRadialGradient(sx,sy,0,sx,sy,W*.045);gr.addColorStop(0,'#ffffff');gr.addColorStop(.72,'#fffbe6');gr.addColorStop(1,'rgba(255,240,190,0)');g.fillStyle=gr;g.beginPath();g.arc(sx,sy,W*.045,0,7);g.fill();
+  // birds, far off
+  g.strokeStyle=mix([20,20,50],[30,40,80],R,.7);g.lineWidth=1.2;g.lineCap='round';
+  for(let i=0;i<4;i++){const bx=((t*.014+i*.06+.25)%1.4-.2)*W,by=H*(.6+i*.014)+Math.sin(t*.8+i)*3,fl=Math.sin(t*6+i*2)*2.2,bw=3.5+i*.6;
+    g.beginPath();g.moveTo(bx-bw,by-fl);g.quadraticCurveTo(bx-bw*.4,by-1.5,bx,by);g.quadraticCurveTo(bx+bw*.4,by-1.5,bx+bw,by-fl);g.stroke()}
+  // mountain ridges, lighter and hazier with distance, mist pooled between them
+  RIDGES.forEach((L,li)=>{const a=scene.ridges[li],off=(P.x-.5)*-L.par*P.on-W*.15;
+    g.beginPath();g.moveTo(-2,H);for(let i=0;i<a.length;i++)g.lineTo(i*2+off,a[i]);g.lineTo(W+2,H);g.closePath();
+    const hg=g.createLinearGradient(0,H*(L.b-L.amp),0,H*(L.b+.03));hg.addColorStop(0,mix(L.c1,L.c2,R));hg.addColorStop(1,mix([200,150,150],[196,214,238],R,1-li*.3));g.fillStyle=hg;g.fill();
+    g.beginPath();for(let i=0;i<a.length;i++)i?g.lineTo(i*2+off,a[i]):g.moveTo(off,a[0]);
+    const rim=g.createLinearGradient(sx-W*.45,0,sx+W*.45,0);rim.addColorStop(0,'rgba(255,220,170,0)');rim.addColorStop(.5,`rgba(255,226,180,${(.55-li*.15)*up})`);rim.addColorStop(1,'rgba(255,220,170,0)');g.strokeStyle=rim;g.lineWidth=1;g.stroke();
+    const my=H*(L.b-.012),mh=H*.05,mg=g.createLinearGradient(0,my,0,my+mh);mg.addColorStop(0,mix([255,196,160],[236,243,255],R,0));mg.addColorStop(.5,mix([255,196,160],[236,243,255],R,.34));mg.addColorStop(1,mix([255,196,160],[236,243,255],R,0));g.fillStyle=mg;g.fillRect(0,my,W,mh);
+    g.globalAlpha=.22;const mw=W*3,mo=-((t*(3+li*2))%mw);g.drawImage(texB,mo,my-mh*.2,mw,mh*1.3);g.drawImage(texB,mo+mw,my-mh*.2,mw,mh*1.3);g.globalAlpha=1});
+  // the lake
+  const LY=H*LAKE,lg=g.createLinearGradient(0,LY,0,H);lg.addColorStop(0,mix([232,150,116],[226,226,214],R));lg.addColorStop(.3,mix([150,96,132],[120,170,224],R));lg.addColorStop(1,mix([30,32,86],[30,84,160],R));g.fillStyle=lg;g.fillRect(0,LY,W,H-LY);
+  const sh=g.createLinearGradient(0,LY,0,LY+H*.022);sh.addColorStop(0,mix([44,44,100],[44,76,130],R,.75));sh.addColorStop(1,mix([44,44,100],[44,76,130],R,0));g.fillStyle=sh;g.fillRect(0,LY,W,H*.022);
+  g.globalCompositeOperation='screen';
+  for(let i=0;i<14;i++){const y=LY+(H-LY)*Math.pow((i+.5)/14,1.3),x0=((t*(6+i)+i*97)%(W*1.6))-W*.3;g.fillStyle=`rgba(255,255,255,${.05+.03*Math.sin(t+i)})`;g.fillRect(x0,y,W*(.18+.1*Math.sin(i*2.1)),1)}
+  for(let i=0;i<130;i++){const h1=Math.abs(Math.sin(i*127.1)*43758.5453)%1,h2=Math.abs(Math.sin(i*311.7)*43758.5453)%1,f=Math.pow(h1,1.15),y=LY+2+(H-LY-2)*f,
+      fl=Math.pow(.5+.5*Math.sin(t*(2+h2*3)+i*12.9),2),w=lerp(3,W*.085,f)*(.4+.6*h2),x=sx+(h2*2-1)*lerp(3,W*.12,f)*(.6+.4*Math.sin(t*.9+i));
+    g.fillStyle=`rgba(255,${238-40*(1-R)|0},${200-70*(1-R)|0},${(.15+.85*fl)*up*lerp(1,.6,f)})`;g.fillRect(x-w/2,y,w,lerp(.8,1.8,f))}
+    g.save();g.translate(sx,LY);g.scale(.42,1);const ge=g.createRadialGradient(0,0,0,0,0,H-LY);ge.addColorStop(0,`rgba(255,226,170,${.5*up})`);ge.addColorStop(1,'rgba(255,226,170,0)');g.fillStyle=ge;g.fillRect(-W,0,W*2,H-LY);g.restore();
+  for(const r of ripples){if(r.y<LAKE)continue;const age=(now-r.t)/1000;for(let q=0;q<3;q++){const rr=W*(.03+age*.16)-q*W*.025;if(rr<=0)continue;g.strokeStyle=`rgba(255,255,255,${Math.max(0,.5*(1-age/3))})`;g.lineWidth=1.2;g.beginPath();g.ellipse(r.x*W,r.y*H,rr,rr*.22,0,0,7);g.stroke()}}
+  g.globalCompositeOperation='source-over';
+  // pine shoreline framing the bottom corners
+  const off=(P.x-.5)*-24*P.on,yL=x=>H*(.925+.085*sstep(0,.36,x/W)),yR=x=>H*(.912+.1*(1-sstep(.6,1,x/W)));
+  g.fillStyle=mix([8,10,34],[10,24,58],R);
+  g.beginPath();g.moveTo(-30,H+2);for(let x=-30;x<=W*.4;x+=6)g.lineTo(x+off,yL(x));g.lineTo(W*.4+off,H+2);g.closePath();g.fill();
+  g.beginPath();g.moveTo(W+30,H+2);for(let x=W+30;x>=W*.56;x-=6)g.lineTo(x+off,yR(x));g.lineTo(W*.56+off,H+2);g.closePath();g.fill();
+  for(const [x,h] of PINES_L)pine(x*W+off,yL(x*W)+2,h*H);for(const [x,h] of PINES_R)pine(x*W+off,yR(x*W)+2,h*H);
+  // finish: gentle vignette, calm top for the white text, fine grain
+  const vg=g.createRadialGradient(W/2,H*.6,H*.35,W/2,H*.6,H*.8);vg.addColorStop(0,'rgba(4,8,30,0)');vg.addColorStop(1,'rgba(4,8,30,.34)');g.fillStyle=vg;g.fillRect(0,0,W,H);
+  const top=g.createLinearGradient(0,0,0,H*.5);top.addColorStop(0,'rgba(6,14,52,.38)');top.addColorStop(1,'rgba(6,14,52,0)');g.fillStyle=top;g.fillRect(0,0,W,H*.5);
+  g.globalCompositeOperation='overlay';g.globalAlpha=.05;g.fillStyle=grain;g.fillRect(0,0,W,H);g.globalAlpha=1;g.globalCompositeOperation='source-over';
 }
 // Living photo: today's owned ribbon picture, with depth that follows the finger and a slow light passing along the lines.
 function drawPhoto(t){
@@ -223,7 +264,7 @@ function frame(now){
 requestAnimationFrame(frame);
 if(reduce)phone.addEventListener('pointermove',()=>requestAnimationFrame(frame));
 
-const HINTS={sunrise:'The sun rises over the hills, then clouds and birds drift by. Move your finger and the hills shift; tap the sky for a burst of sunlight. Tap Sunrise to watch it again.',
+const HINTS={sunrise:'The sun rises over misty mountains and a lake. Move your finger and the scene shifts; tap the sky for a burst of sunlight or the water for a ripple. Tap Sunrise to watch it again.',
   ribbon:'The waves drift on their own. Move your mouse or finger over the card and they rise toward you; tap the background to send a ripple.',
   photo:'Your current background picture, brought to life: it shifts with your finger for depth, and a soft light passes along the ribbons.',
   still:'This is how your card looks today, for comparison.'};

@@ -8,3 +8,7 @@
 - **Today's card:** the still version, for comparison.
 
 Respects reduced motion. Preview only, shared with Otis as a private artifact; not on the website. To ship: move the canvas into build_card.py as an optional background, keep the top 55 percent calm for text, run meridian-prelaunch-qa, and get Otis's OK.
+
+## Realistic sunrise, still free (24 Nov 2026)
+Otis asked for "more realistic, more amazing" at 1080 and chose to spend no credits (quotes he declined: 0.75 for a photo, 14 more for an 8 s video). The sunrise is now all code: stars fading at dawn, clouds from tileable noise textures tinted by the sun, three misty mountain ridges, a lake with a sun-glitter path, pine shoreline, vignette and fine grain. Sun climbs for 16 s and stops at 0.75 of the card height, between the round buttons (which sit near 0.69) and the ridge line. Tap sky = light pulse, tap lake = ripple.
+Speed notes: a canvas blur filter and 3x device pixels halved the frame rate in testing; the canvas is capped at 2x and the cloud layer at 1.25x.
