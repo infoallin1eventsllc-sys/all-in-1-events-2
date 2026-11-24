@@ -26,3 +26,10 @@ Otis asked to push the code-drawn style as far as it can go. `drawOcean` is a pe
 - First pass was washed out: the wide sun-glow lobe (`pow(sd,5)`) and half-coverage clouds greyed the whole sky. Fixed with narrower lobes, sparser clouds, darker zenith, a saturation lift and a stronger top shade for the white text.
 - Quality adapts: the canvas starts at 2x and drops in steps to 0.5x when frames run slow. Headless Chromium renders it in software (about 100 ms a frame), so judge speed on a real phone, not in tests.
 - The camera math in JS (`uy=.5-r.y+.30`, focal 1.2) must match the shader so tap ripples land under the finger.
+
+## Video backgrounds from Otis's own ads (24 Nov 2026)
+Two themes under "Your videos" play an mp4 in a `<video id="vid">` pinned to the bottom of the card (muted, loop, playsinline); the card behind takes the video's own ground colour (`bg`) and the top edge is feathered (`feather`, percent).
+- `bg-pcflat.mp4`: the tall PC Flat cut cropped to its picture band, `crop=1080:757:0:483`, 864 px wide, crf 25, no audio, 0.57 MB.
+- `bg-laptop.mp4`: the exploding-laptop reel, first 9.6 s only (the logo end plate starts fading in at 9.8 s and the card already carries the logo), `crop=1080:1040:0:450`, crf 26, no audio, 1.4 MB.
+Why crop: the card's buttons cover roughly 0.34 to 0.72 of its height, so a full-frame 9:16 video hides its own action. A wide band at the bottom keeps everything visible.
+Testing trap: `python3 -m http.server` has no range support, so setting `currentTime` in a test silently stays on the first frame; let the video play and wait instead.
