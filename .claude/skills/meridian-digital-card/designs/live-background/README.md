@@ -16,3 +16,7 @@ Speed notes: a canvas blur filter and 3x device pixels halved the frame rate in 
 ## Collection (24 Nov 2026)
 The preview now has a theme picker fed by a `THEMES` list: Sunrise, Rocket launch, Sailing, Aurora, Dance party, Live ribbon, Living photo, Today's card. Each theme is `{id, name, canvas, draw(t, now), start?, tap?, hint}`. Product plan: `system/products/live-cards/PLAN.md`.
 Trap: a tap's timestamp can be later than the frame's timestamp, so ages can be slightly negative; clamp before using them as a radius.
+
+## Twelve themes (24 Nov 2026)
+Added Mountain bike, Jet ski, Jets, Drag race, Night ride, Snowboarding, Fireworks; the picker groups themes by collection (`col` on each THEMES entry). All 60 fps in headless tests at 2x. Vehicles and people are drawn as clean illustrations (rear-view cars and motorcycle, line-built bicycle, planform jets); photo-real versions belong to the Cinematic tier.
+Notes: scenes that loop on a clock keep their own start time (`start` hook) so a theme always opens at a good moment; taps reach a scene through `tap(now)` or the shared `ripples` list (`hop(now)` gives a 0 to 1 jump curve from the last tap).

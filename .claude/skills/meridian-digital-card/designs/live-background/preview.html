@@ -48,6 +48,7 @@ a:focus-visible,button:focus-visible{outline:3px solid #fff;outline-offset:2px}
 .seg{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
 .seg button{font:600 14px var(--body);color:var(--white);background:var(--chip);border:1px solid #2a376b;border-radius:999px;padding:10px 16px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--chip-on);color:var(--ink);border-color:var(--chip-on)}
+.col{width:100%;text-align:center;font:600 11px/1 var(--body);letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-top:8px}
 .hint{margin:0;font:400 13.5px/1.5 var(--body);color:var(--muted);text-align:center;text-wrap:balance}
 </style>
 
@@ -78,9 +79,9 @@ a:focus-visible,button:focus-visible{outline:3px solid #fff;outline-offset:2px}
   </div>
 
   <div class="controls">
+    <p class="hint" id="hint">The sun rises over misty mountains and a lake. Move your finger and the scene shifts; tap the sky for a burst of sunlight or the water for a ripple. Tap Sunrise to watch it again.</p>
     <div class="seg" id="seg" role="group" aria-label="Background">
     </div>
-    <p class="hint" id="hint">The sun rises over misty mountains and a lake. Move your finger and the scene shifts; tap the sky for a burst of sunlight or the water for a ripple. Tap Sunrise to watch it again.</p>
   </div>
 </div>
 
@@ -369,16 +370,198 @@ function drawDance(t,now){
     g.lineWidth=hr*.55;for(const s of [-1,1]){if(hsh(i,9+s)>.3){const ax=x+s*hr*1.3,ay=y+hr*1.9,an=-Math.PI/2+s*.35+sway;g.beginPath();g.moveTo(ax,ay);g.lineTo(ax+Math.cos(an)*hr*3,ay+Math.sin(an)*hr*3-pulse*3);g.stroke()}}}
   topShade(.5)}
 
+// ---------- Collection, part 2: motorsport, snow, sky, water, fun, outdoors ----------
+const tapAge=now=>ripples.length?Math.max(0,(now-ripples[ripples.length-1].t)/1000):99;
+const hop=(now,d=.9)=>{const a=tapAge(now);return a<d?Math.sin(Math.PI*a/d):0};
+function glowDot(x,y,r,col){const q=g.createRadialGradient(x,y,0,x,y,r);q.addColorStop(0,col);q.addColorStop(1,col.replace(/[\d.]+\)$/,'0)'));g.fillStyle=q;g.beginPath();g.arc(x,y,r,0,7);g.fill()}
+function rr(x,y,w,h,r){g.beginPath();g.roundRect?g.roundRect(x,y,w,h,r):g.rect(x,y,w,h);g.fill()}
+function ln(a,b,c,d){g.beginPath();g.moveTo(a,b);g.lineTo(c,d);g.stroke()}
+function ridgePath(b,amp,f,ph,par){const off=(P.x-.5)*-par*P.on;g.beginPath();g.moveTo(0,H);for(let x=-4;x<=W+4;x+=4){const u=(x-off)/W;g.lineTo(x,H*b-H*amp*(Math.abs(Math.sin(u*f+ph))*.7+Math.sin(u*f*2.7+ph*2)*.2+Math.sin(u*f*6.3)*.1))}g.lineTo(W,H);g.closePath()}
+function seaBands(t,HZ,SEA,mid,drawMid){const step=Math.max(3,W/110);for(let i=0;i<8;i++){if(i===mid)drawMid();
+    g.beginPath();g.moveTo(0,H);for(let x=0;x<=W+step;x+=step)g.lineTo(x,i?seaY(i,x,t):HZ);g.lineTo(W,H);g.closePath();const c=SEA[i],c2=SEA[Math.min(7,i+1)],yb=H*(.745+.27*Math.pow(i/7,1.25));
+    const wg=g.createLinearGradient(0,yb-4,0,yb+H*.08);wg.addColorStop(0,`rgb(${c[0]},${c[1]},${c[2]})`);wg.addColorStop(1,`rgb(${c2[0]},${c2[1]},${c2[2]})`);g.fillStyle=wg;g.fill();
+    if(i){g.beginPath();for(let x=0;x<=W+step;x+=step){const y=seaY(i,x,t);x?g.lineTo(x,y):g.moveTo(x,y)}g.strokeStyle=`rgba(255,255,255,${.34-i*.03})`;g.lineWidth=1;g.stroke()}}}
+
+// Drag race: the lights count down, two cars launch off the line and shrink toward the far end. A tap drops the green early.
+let dr={t0:performance.now()};
+function dragStart(){dr.t0=performance.now()}
+function dragTap(now){const e=(now-dr.t0)/1000;if(e<2.8)dr.t0=now-2800;else if(e>5)dr.t0=now}
+function carRear(x,y,s,body,brake){const w=W*.27*s,h=w*.52;
+  g.fillStyle='rgba(0,0,0,.5)';g.beginPath();g.ellipse(x,y,w*.6,h*.12,0,0,7);g.fill();
+  g.fillStyle='#07070c';rr(x-w*.5,y-h*.36,w*.24,h*.38,w*.05);rr(x+w*.26,y-h*.36,w*.24,h*.38,w*.05);
+  const bg=g.createLinearGradient(0,y-h*.66,0,y-h*.14);bg.addColorStop(0,body[0]);bg.addColorStop(1,body[1]);g.fillStyle=bg;rr(x-w*.47,y-h*.66,w*.94,h*.5,w*.07);
+  g.fillStyle=body[1];g.beginPath();g.moveTo(x-w*.36,y-h*.62);g.lineTo(x-w*.26,y-h);g.lineTo(x+w*.26,y-h);g.lineTo(x+w*.36,y-h*.62);g.closePath();g.fill();
+  g.fillStyle='rgba(120,160,230,.45)';g.beginPath();g.moveTo(x-w*.3,y-h*.66);g.lineTo(x-w*.22,y-h*.94);g.lineTo(x+w*.22,y-h*.94);g.lineTo(x+w*.3,y-h*.66);g.closePath();g.fill();
+  g.fillStyle='#0a0b14';g.fillRect(x-w*.5,y-h*.8,w,h*.05);g.fillRect(x-w*.4,y-h*.78,w*.03,h*.14);g.fillRect(x+w*.37,y-h*.78,w*.03,h*.14);rr(x-w*.38,y-h*.27,w*.76,h*.12,2);
+  g.fillStyle=brake?'#ff3b30':'#b0201c';rr(x-w*.42,y-h*.52,w*.24,h*.09,2);rr(x+w*.18,y-h*.52,w*.24,h*.09,2);
+  if(s>.2){g.globalCompositeOperation='screen';for(const d of [-1,1])glowDot(x+d*w*.3,y-h*.47,w*.24,`rgba(255,60,40,${brake?.7:.35})`);g.globalCompositeOperation='source-over'}}
+function drawDrag(t,now){
+  let e=reduce?1.2:(now-dr.t0)/1000;if(e>9.5){dr.t0=now;e=0}
+  const vp=H*.75,by=H*.958,tau=Math.max(0,e-2.8),tw=W*.66;
+  const sky=g.createLinearGradient(0,0,0,vp);sky.addColorStop(0,'#04071a');sky.addColorStop(.7,'#0d1740');sky.addColorStop(1,'#2a2f6a');g.fillStyle=sky;g.fillRect(0,0,W,H);drawStars(t,.6,.5);
+  g.globalCompositeOperation='screen';glowDot(W/2,vp,W*.7,'rgba(120,150,255,.3)');g.globalCompositeOperation='source-over';
+  g.fillStyle='#070916';g.beginPath();g.moveTo(0,vp-H*.06);g.lineTo(W*.47,vp);g.lineTo(0,H);g.closePath();g.fill();g.beginPath();g.moveTo(W,vp-H*.06);g.lineTo(W*.53,vp);g.lineTo(W,H);g.closePath();g.fill();
+  for(let i=0;i<60;i++){const s=.08+.5*hsh(i,1),d=i%2?1:-1,x=W/2+d*lerp(10,tw*1.25,s),y=lerp(vp,by,s)-H*.03*s-hsh(i,2)*H*.05*s;g.fillStyle=`rgba(255,${200+hsh(i,3)*55|0},${150+hsh(i,4)*100|0},${.25+.5*hsh(i,5)})`;g.fillRect(x,y,1.3,1.3)}
+  const ag=g.createLinearGradient(0,vp,0,H);ag.addColorStop(0,'#1b1e30');ag.addColorStop(1,'#33384e');g.fillStyle=ag;g.beginPath();g.moveTo(W/2-5,vp);g.lineTo(W/2+5,vp);g.lineTo(W/2+tw,H);g.lineTo(W/2-tw,H);g.closePath();g.fill();
+  g.fillStyle='rgba(8,8,14,.5)';for(const d of [-1,1]){g.beginPath();g.moveTo(W/2+d*2,vp);g.lineTo(W/2+d*W*.12,H);g.lineTo(W/2+d*W*.3,H);g.closePath();g.fill()}
+  g.strokeStyle='rgba(255,255,255,.7)';g.lineWidth=1.5;ln(W/2,vp,W/2,H);g.strokeStyle='rgba(255,170,60,.8)';ln(W/2-5,vp,W/2-tw,H);ln(W/2+5,vp,W/2+tw,H);
+  g.strokeStyle='rgba(255,255,255,.85)';g.lineWidth=2;ln(W/2-tw*.93,H*.972,W/2+tw*.93,H*.972);
+  for(const s of [.14,.26,.46,.8])for(const d of [-1,1]){const x=W/2+d*lerp(8,tw*1.06,s),y=lerp(vp,by,s),ph=H*.2*s;g.strokeStyle='#0a0c18';g.lineWidth=Math.max(1,3*s);ln(x,y,x,y-ph);g.globalCompositeOperation='screen';glowDot(x,y-ph,W*.16*s+3,'rgba(210,225,255,.8)');g.globalCompositeOperation='source-over'}
+  const ts=.42,ty=lerp(vp,by,ts),th=H*.075;g.fillStyle='#0b0d18';g.fillRect(W/2-2,ty-th,4,th);
+  const on=[e>1&&e<2.8,e>1.6&&e<2.8,e>2.2&&e<2.8,e>=2.8];
+  for(let k=0;k<4;k++)for(const d of [-1,1]){const x=W/2+d*5,y=ty-th+(k+.6)*th*.2,col=k<3?(on[k]?'rgba(255,176,32,1)':'rgba(70,52,16,1)'):(on[3]?'rgba(60,255,110,1)':'rgba(16,60,28,1)');g.fillStyle=col;g.beginPath();g.arc(x,y,2.4,0,7);g.fill();if(on[k]){g.globalCompositeOperation='screen';glowDot(x,y,9,col.replace(',1)',',.7)'));g.globalCompositeOperation='source-over'}}
+  const s1=1/(1+1.7*tau*tau),s2=1/(1+1.25*Math.pow(Math.max(0,tau-.1),2)),shake=e>1&&e<2.8?Math.sin(t*46)*.7:0;
+  const cars=[[-1,s1,['#3b82f6','#1d4ed8']],[1,s2,['#ff8a3c','#c2410c']]].sort((a,b)=>a[1]-b[1]);
+  for(const [d,s,col] of cars)if(s>.05)carRear(W/2+d*W*.21*s,lerp(vp,by,s)+shake,s,col,e<2.8);
+  if(tau>0&&tau<3.4)for(let k=0;k<18;k++){const a=tau-k*.04;if(a<=0)continue;g.fillStyle=`rgba(214,218,232,${.3*Math.max(0,1-a/3.2)})`;g.beginPath();g.arc(W/2+(k%2?1:-1)*W*.21+(hsh(k,1)-.5)*W*.22,by-H*.012-a*H*.022,W*(.035+.085*a),0,7);g.fill()}
+  if(tau>2.6&&tau<6){g.globalCompositeOperation='screen';glowDot(W/2-8,vp-H*.012,W*.1,`rgba(80,160,255,${.5+.5*Math.sin(t*14)})`);g.globalCompositeOperation='source-over'}
+  topShade(.3)}
+
+// Night ride: a motorcycle leaning through a winding road at dusk. It leans toward the finger.
+function drawRide(t,now){
+  const hz=H*.765;const sky=g.createLinearGradient(0,0,0,hz);sky.addColorStop(0,'#0a0e36');sky.addColorStop(.6,'#3a2a78');sky.addColorStop(.9,'#d0607a');sky.addColorStop(1,'#ff9a5a');g.fillStyle=sky;g.fillRect(0,0,W,H);drawStars(t,.8,.45);
+  g.globalCompositeOperation='screen';glowDot(W/2,hz,W*.8,'rgba(255,150,90,.45)');g.globalCompositeOperation='source-over';
+  ridgePath(.775,.06,3.4,.9,4);g.fillStyle='#231a4e';g.fill();
+  g.fillStyle='#0b0d22';g.fillRect(0,hz,W,H-hz);
+  const curve=z=>Math.sin(t*.45+(1-z)*2.6)*W*.34*Math.pow(1-z,1.5),N=46,yz=z=>hz+(H-hz)*Math.pow(z,1.7),hw=z=>lerp(3,W*.82,Math.pow(z,1.7));
+  for(let i=0;i<N;i++){const z0=i/N,z1=(i+1)/N,y0=yz(z0),y1=yz(z1)+.6,c0=W/2+curve(z0),c1=W/2+curve(z1),h0=hw(z0),h1=hw(z1),ph=Math.floor(3.2/(z0+.07)+t*8)%2;
+    g.fillStyle=ph?'#1d2036':'#212540';g.beginPath();g.moveTo(c0-h0,y0);g.lineTo(c0+h0,y0);g.lineTo(c1+h1,y1);g.lineTo(c1-h1,y1);g.closePath();g.fill();
+    g.fillStyle='rgba(240,240,255,.8)';for(const d of [-1,1]){g.beginPath();g.moveTo(c0+d*h0,y0);g.lineTo(c0+d*h0*.95,y0);g.lineTo(c1+d*h1*.95,y1);g.lineTo(c1+d*h1,y1);g.closePath();g.fill()}
+    if(ph){g.fillStyle='rgba(255,200,80,.9)';g.beginPath();g.moveTo(c0-h0*.02,y0);g.lineTo(c0+h0*.02,y0);g.lineTo(c1+h1*.02,y1);g.lineTo(c1-h1*.02,y1);g.closePath();g.fill()}
+    if(i%5===2){for(const d of [-1,1]){g.fillStyle='rgba(255,120,60,.9)';g.fillRect(c0+d*h0*1.12,y0-4*z0-2,1.5+2*z0,3+5*z0)}}}
+  const lean=Math.sin(t*.45+.9)*.2+(P.x-.5)*.55*P.on,bx=W/2+lean*W*.12,by=H*.972,u=H*.058;
+  g.globalCompositeOperation='screen';g.save();g.translate(bx+lean*W*.2,yz(.55));g.scale(1,.35);glowDot(0,0,W*.34,'rgba(255,244,210,.4)');g.restore();g.globalCompositeOperation='source-over';
+  g.save();g.translate(bx,by);g.rotate(lean);g.lineCap='round';
+  g.fillStyle='#06070d';rr(-u*.21,-u*1.15,u*.42,u*1.15,u*.18);
+  g.fillStyle='#8a8f9e';rr(u*.3,-u*1.0,u*.15,u*.5,u*.06);
+  g.fillStyle='#0d1020';g.beginPath();g.ellipse(-u*.55,-u*1.3,u*.22,u*.52,.25,0,7);g.fill();g.beginPath();g.ellipse(u*.55,-u*1.3,u*.22,u*.52,-.25,0,7);g.fill();rr(-u*.72,-u*.95,u*.26,u*.3,u*.06);rr(u*.46,-u*.95,u*.26,u*.3,u*.06);
+  g.fillStyle='#1d4ed8';rr(-u*.36,-u*1.55,u*.72,u*.5,u*.2);g.fillStyle='#ff3b30';rr(-u*.2,-u*1.36,u*.4,u*.1,2);g.fillStyle='#f4f6fb';rr(-u*.13,-u*1.2,u*.26,u*.14,1);
+  g.strokeStyle='#0a0c18';g.lineWidth=u*.09;ln(-u*.98,-u*1.95,u*.98,-u*1.95);g.fillStyle='#0a0c18';g.beginPath();g.ellipse(-u*1.02,-u*2.12,u*.12,u*.08,0,0,7);g.fill();g.beginPath();g.ellipse(u*1.02,-u*2.12,u*.12,u*.08,0,0,7);g.fill();
+  g.strokeStyle='#141a3a';g.lineWidth=u*.22;ln(-u*.5,-u*2.45,-u*.86,-u*1.95);ln(u*.5,-u*2.45,u*.86,-u*1.95);
+  g.fillStyle='#141a3a';g.beginPath();g.moveTo(-u*.42,-u*1.45);g.quadraticCurveTo(-u*.66,-u*2.2,-u*.5,-u*2.6);g.quadraticCurveTo(0,-u*2.85,u*.5,-u*2.6);g.quadraticCurveTo(u*.66,-u*2.2,u*.42,-u*1.45);g.closePath();g.fill();
+  g.fillStyle='#2563eb';rr(-u*.3,-u*2.5,u*.6,u*.12,2);
+  g.fillStyle='#eef0f7';g.beginPath();g.arc(0,-u*3.02,u*.34,0,7);g.fill();g.fillStyle='#2563eb';g.fillRect(-u*.05,-u*3.36,u*.1,u*.66);
+  g.restore();g.globalCompositeOperation='screen';glowDot(bx+Math.sin(lean)*u*1.3,by-Math.cos(lean)*u*1.3,u*.8,'rgba(255,50,40,.6)');
+  for(let i=0;i<14;i++){const d=i%2?1:-1,ph=(t*1.6+hsh(i,1))%1,x0=W/2+d*W*(.2+.3*hsh(i,2)),y0=hz+H*.02;g.strokeStyle=`rgba(255,255,255,${.25*ph})`;g.lineWidth=1;ln(lerp(x0,x0+d*W*.5,ph*ph),lerp(y0,H,ph*ph),lerp(x0,x0+d*W*.5,ph*ph*1.15),lerp(y0,H,ph*ph*1.15))}
+  g.globalCompositeOperation='source-over';topShade(.3)}
+
+// Snowboarding: a rider carves down a sunny slope with powder spraying and snow falling. A tap makes them jump and spin.
+function drawSnow(t,now){if(scene.W!==W||scene.H!==H)buildScene();
+  const sky=g.createLinearGradient(0,0,0,H*.85);sky.addColorStop(0,'#1f5cc0');sky.addColorStop(.6,'#6fa9ea');sky.addColorStop(1,'#dcecff');g.fillStyle=sky;g.fillRect(0,0,W,H);
+  g.globalCompositeOperation='screen';glowDot(W*.84,H*.6,W*.5,'rgba(255,250,220,.7)');g.globalCompositeOperation='source-over';
+  g.globalAlpha=.6;const cw=W*2.2,co=-((t*4)%cw);g.drawImage(texA,co,H*.4,cw,H*.3);g.drawImage(texA,co+cw,H*.4,cw,H*.3);g.globalAlpha=1;
+  ridgePath(.83,.13,3.3,.7,5);let rg=g.createLinearGradient(0,H*.68,0,H*.86);rg.addColorStop(0,'#ffffff');rg.addColorStop(.5,'#c2d3ee');rg.addColorStop(1,'#8fa8d6');g.fillStyle=rg;g.fill();
+  ridgePath(.875,.06,4.1,2.2,10);rg=g.createLinearGradient(0,H*.8,0,H*.9);rg.addColorStop(0,'#f2f7ff');rg.addColorStop(1,'#b5c8e8');g.fillStyle=rg;g.fill();
+  const off=(P.x-.5)*-16*P.on,sl=x=>H*(.845+.1*(x/W))+Math.sin(x/W*5+1)*H*.008;
+  g.fillStyle='#1d3b4a';for(let k=0;k<7;k++){const x=W*(.04+k*.16)+off;pine(x,sl(x)-H*.012+2,H*(.03+.03*hsh(k,3)))}
+  g.beginPath();g.moveTo(-4,H);for(let x=-4;x<=W+4;x+=6)g.lineTo(x,sl(x));g.lineTo(W+4,H);g.closePath();rg=g.createLinearGradient(0,H*.84,0,H);rg.addColorStop(0,'#ffffff');rg.addColorStop(1,'#cddbf3');g.fillStyle=rg;g.fill();
+  const cyc=7,v=W*1.3/cyc,px=((t/cyc)%1)*1.3-.15,x=reduce?W*.5:px*W,jp=hop(now),carve=Math.sin(t*3.2),y=sl(x)-jp*H*.075,u=H*.047,ja=tapAge(now);
+  g.strokeStyle='rgba(110,140,200,.55)';g.lineWidth=2;g.beginPath();for(let d=0;d<W*.4;d+=6){const xx=x-d,yy=sl(xx)+Math.sin((t-d/v)*3.2)*H*.005;d?g.lineTo(xx,yy):g.moveTo(xx,yy)}g.stroke();
+  if(jp<.05)for(let k=0;k<26;k++){const a=k/26*.7,xx=x-a*v*.9-u*.3,yy=sl(xx)-(a*1.1-a*a*1.6)*H*.1*(.5+hsh(k,1));g.fillStyle=`rgba(255,255,255,${.85*(1-a/.7)})`;g.beginPath();g.arc(xx,yy,1.2+a*6,0,7);g.fill()}
+  g.save();g.translate(x,y);g.rotate(.1+carve*.12+(ja<.9?ja/.9*Math.PI*2:0));g.lineCap='round';
+  g.strokeStyle='#1d4ed8';g.lineWidth=u*.16;g.beginPath();g.moveTo(-u*.8,-u*.08);g.quadraticCurveTo(-u*.7,0,-u*.5,0);g.lineTo(u*.5,0);g.quadraticCurveTo(u*.7,0,u*.8,-u*.08);g.stroke();
+  g.strokeStyle='#1b1f2c';g.lineWidth=u*.2;ln(-u*.3,-u*.05,-u*.12,-u*.55);ln(u*.3,-u*.05,u*.12,-u*.55);
+  g.strokeStyle='#ff7a1a';g.lineWidth=u*.36;ln(0,-u*.6,u*.1*carve,-u*1.15);g.lineWidth=u*.14;ln(u*.1*carve,-u*1.1,-u*.6,-u*.85+carve*u*.2);ln(u*.1*carve,-u*1.1,u*.6,-u*.85-carve*u*.2);
+  g.fillStyle='#f3f5fa';g.beginPath();g.arc(u*.12*carve,-u*1.45,u*.21,0,7);g.fill();g.fillStyle='#1b1f2c';g.fillRect(u*.12*carve-u*.02,-u*1.52,u*.24,u*.1);g.restore();
+  g.fillStyle='rgba(255,255,255,.85)';for(let i=0;i<90;i++){const xx=((hsh(i,1)*W+t*12*(hsh(i,2)-.5)+(P.x-.5)*-40*P.on*hsh(i,3))%W+W)%W,yy=(t*(28+hsh(i,2)*50)+hsh(i,4)*H)%H;g.beginPath();g.arc(xx,yy,.7+hsh(i,5)*1.6,0,7);g.fill()}
+  topShade(.42)}
+
+// Jets: a formation climbs across the sky leaving white trails. A tap calls a second pass from the other side.
+let jetExtra=-1e9,jetT0=performance.now();
+function jetPass(e,dir){const D=5.2;if(e<0||e>D+1.5)return;const k=e/D,L=W*.105,x0=dir>0?-W*.25:W*1.25,x1=dir>0?W*1.3:-W*.3,y0=H*1.03,y1=H*.34,ang=Math.atan2(y1-y0,x1-x0),ca=Math.cos(ang),sa=Math.sin(ang);
+  for(const [ox,oy] of [[0,0],[-1.5,1.05],[-1.5,-1.05]]){const x=lerp(x0,x1,k)+ca*ox*L-sa*oy*L,y=lerp(y0,y1,k)+sa*ox*L+ca*oy*L,len=W*.95;
+    for(const s of [-1,1]){const tx=x-sa*s*L*.13-ca*L*.7,ty=y+ca*s*L*.13-sa*L*.7,gx=g.createLinearGradient(tx,ty,tx-ca*len,ty-sa*len);gx.addColorStop(0,'rgba(255,255,255,.8)');gx.addColorStop(1,'rgba(255,255,255,0)');g.strokeStyle=gx;g.lineWidth=L*.09;g.lineCap='round';ln(tx,ty,tx-ca*len,ty-sa*len)}
+    g.save();g.translate(x,y);g.rotate(ang);g.scale(1,.88+.12*Math.sin(e*2+ox));
+    const pts=[[1,0],[.25,.09],[-.3,.42],[-.48,.42],[-.28,.11],[-.72,.2],[-.84,.2],[-.74,0]];g.beginPath();g.moveTo(L,0);for(const [a,b] of pts.slice(1))g.lineTo(L*a,L*b);for(const [a,b] of pts.slice(1,-1).reverse())g.lineTo(L*a,-L*b);g.closePath();
+    const jg=g.createLinearGradient(0,-L*.4,0,L*.4);jg.addColorStop(0,'#6b7896');jg.addColorStop(.5,'#3b455e');jg.addColorStop(1,'#222a3e');g.fillStyle=jg;g.fill();
+    g.fillStyle='rgba(170,215,255,.85)';g.beginPath();g.ellipse(L*.42,0,L*.16,L*.045,0,0,7);g.fill();
+    g.globalCompositeOperation='screen';glowDot(-L*.8,0,L*.22,'rgba(255,170,90,.9)');g.globalCompositeOperation='source-over';g.restore()}}
+function drawJets(t,now){if(scene.W!==W||scene.H!==H)buildScene();
+  const sky=g.createLinearGradient(0,0,0,H*.9);sky.addColorStop(0,'#0e3c98');sky.addColorStop(.45,'#3b80d6');sky.addColorStop(.82,'#a6cbf1');sky.addColorStop(1,'#ffe6c4');g.fillStyle=sky;g.fillRect(0,0,W,H);
+  g.globalCompositeOperation='screen';glowDot(W*.16,H*.84,W*.7,'rgba(255,236,190,.7)');g.globalCompositeOperation='source-over';
+  const cw=W*2.2,co=-((t*4)%cw);g.globalAlpha=.85;g.drawImage(texA,co,H*.42,cw,H*.34);g.drawImage(texA,co+cw,H*.42,cw,H*.34);g.globalAlpha=.7;const c2=-((t*7+90)%(W*1.6));g.drawImage(texB,c2,H*.66,W*1.6,H*.2);g.drawImage(texB,c2+W*1.6,H*.66,W*1.6,H*.2);g.globalAlpha=1;
+  jetPass(reduce?2.9:((now-jetT0)/1000)%9,1);jetPass((now-jetExtra)/1000,-1);
+  ridgePath(.93,.035,3.5,1,8);g.fillStyle='#2b4e80';g.fill();ridgePath(.97,.03,2.4,3,16);g.fillStyle='#162f58';g.fill();
+  topShade(.42)}
+
+// Jet ski: a rider skims a turquoise bay throwing spray. A tap makes it jump.
+function jetski(x,y,u,ang){g.save();g.translate(x,y);g.rotate(ang);g.lineCap='round';g.lineJoin='round';
+  g.fillStyle='#f5f7fb';g.beginPath();g.moveTo(-u*1.3,-u*.1);g.lineTo(-u*1.25,-u*.5);g.lineTo(u*.5,-u*.62);g.quadraticCurveTo(u*1.35,-u*.5,u*1.6,-u*.28);g.quadraticCurveTo(u*.9,u*.1,-u*1.1,u*.1);g.closePath();g.fill();
+  g.fillStyle='#2563eb';g.beginPath();g.moveTo(-u*1.28,-u*.34);g.lineTo(u*1.5,-u*.34);g.lineTo(u*1.6,-u*.28);g.quadraticCurveTo(u*1.2,-u*.14,-u*1.22,-u*.16);g.closePath();g.fill();
+  g.fillStyle='#16203f';g.beginPath();g.moveTo(-u*1.0,-u*.5);g.lineTo(-u*.9,-u*.78);g.lineTo(u*.05,-u*.82);g.lineTo(u*.5,-u*1.08);g.lineTo(u*.74,-u*.6);g.closePath();g.fill();
+  g.strokeStyle='#11162c';g.lineWidth=u*.24;g.beginPath();g.moveTo(-u*.38,-u*.98);g.lineTo(u*.12,-u*.86);g.lineTo(-u*.02,-u*.52);g.stroke();
+  g.strokeStyle='#ff7a1a';g.lineWidth=u*.4;ln(-u*.38,-u*1.0,u*.0,-u*1.75);g.strokeStyle='#d9a27e';g.lineWidth=u*.14;ln(u*.02,-u*1.68,u*.58,-u*1.18);
+  g.strokeStyle='#0c1020';g.lineWidth=u*.08;ln(u*.5,-u*1.05,u*.62,-u*1.24);g.fillStyle='#3a2a22';g.beginPath();g.arc(u*.1,-u*2.05,u*.22,0,7);g.fill();g.restore()}
+function drawSki(t,now){if(scene.W!==W||scene.H!==H)buildScene();
+  const HZ=H*.745;const sky=g.createLinearGradient(0,0,0,HZ);sky.addColorStop(0,'#1259bd');sky.addColorStop(.6,'#48a4e8');sky.addColorStop(1,'#c4e8fb');g.fillStyle=sky;g.fillRect(0,0,W,H);
+  g.globalCompositeOperation='screen';glowDot(W*.2,H*.56,W*.6,'rgba(255,252,230,.6)');g.globalCompositeOperation='source-over';
+  g.globalAlpha=.8;const cw=W*2.2,co=-((t*4)%cw);g.drawImage(texA,co,H*.42,cw,H*.3);g.drawImage(texA,co+cw,H*.42,cw,H*.3);g.globalAlpha=1;
+  const ix=W*.78+(P.x-.5)*-6*P.on;g.fillStyle='#1d5a4a';g.beginPath();g.moveTo(ix-W*.2,HZ+1);g.quadraticCurveTo(ix-W*.05,HZ-H*.035,ix+W*.08,HZ-H*.02);g.quadraticCurveTo(ix+W*.18,HZ-H*.008,ix+W*.24,HZ+1);g.closePath();g.fill();
+  g.strokeStyle='#143c33';g.lineCap='round';for(const [px,ph,ln_] of [[-.04,.075,1],[.07,.06,-1]]){const bx=ix+px*W,ty=HZ-H*.02-ph*H;g.lineWidth=2;g.beginPath();g.moveTo(bx,HZ-H*.02);g.quadraticCurveTo(bx+ln_*6,HZ-H*.02-ph*H*.5,bx+ln_*3,ty);g.stroke();g.lineWidth=1.6;for(let k=0;k<6;k++){const a=-Math.PI/2+(k-2.5)*.55+Math.sin(t*.8+k)*.05;g.beginPath();g.moveTo(bx+ln_*3,ty);g.quadraticCurveTo(bx+ln_*3+Math.cos(a)*10,ty+Math.sin(a)*10-3,bx+ln_*3+Math.cos(a)*16,ty+Math.sin(a)*12+5);g.stroke()}}
+  const cyc=8,x=reduce?W*.5:(((t/cyc)%1)*1.4-.2)*W,jp=hop(now),u=H*.03,yb=seaY(4,x,t),sl=Math.atan2(seaY(4,x+10,t)-seaY(4,x-10,t),20);
+  seaBands(t,HZ,[[176,236,240],[104,212,228],[58,184,218],[34,156,208],[22,128,194],[14,102,174],[10,80,150],[8,60,124]],5,()=>{
+    g.strokeStyle='rgba(255,255,255,.7)';g.lineWidth=2;g.beginPath();for(let d=u*1.2;d<W*.45;d+=6){const xx=x-d,yy=seaY(4,xx,t)+2;d>u*1.3?g.lineTo(xx,yy):g.moveTo(xx,yy)}g.stroke();
+    for(let k=0;k<34;k++){const a=k/34,xx=x-u*1.2-a*W*.17,yy=yb-jp*H*.03-(a*1.05-a*a*1.15)*H*.12*(.5+.6*hsh(k,1));g.fillStyle=`rgba(255,255,255,${.85*(1-a)})`;g.beginPath();g.arc(xx,yy,1.4+a*5,0,7);g.fill()}
+    jetski(x,yb-jp*H*.065-Math.abs(Math.sin(t*5))*H*.003+u*.1,u,sl*.9-.1-jp*.35)});
+  g.globalCompositeOperation='screen';for(let i=0;i<60;i++){const f=Math.pow(hsh(i,1),1.1),fl=Math.pow(.5+.5*Math.sin(t*(2+hsh(i,2)*3)+i*12.9),3);g.fillStyle=`rgba(255,255,255,${.7*fl})`;g.fillRect(hsh(i,3)*W,HZ+3+(H-HZ)*f,lerp(3,14,f),1.2)}
+  g.globalCompositeOperation='source-over';topShade(.42)}
+
+// Fireworks: shells rise and burst over a city skyline. A tap sets one off where the finger lands.
+function fwBurst(cx,cy,age,hue,seed,sc){if(age<0||age>2.4)return;const n=72,fade=Math.max(0,1-age/2.4),a0=Math.max(0,age-.3);
+  glowDot(cx,cy,W*.45*sc,`hsla(${hue},100%,62%,${.45*Math.max(0,1-age/.8)})`);g.lineWidth=2.2;
+  for(let k=0;k<n;k++){const an=k/n*6.283+hsh(k,seed)*.3,sp=(k%2?.55+.45*hsh(k,seed+1):.28+.2*hsh(k,seed+1))*W*.34*sc,d=1-Math.exp(-age*2.2),d0=1-Math.exp(-a0*2.2);
+    g.strokeStyle=`hsla(${hue+(k%2?0:40)+hsh(k,seed+2)*30},100%,${62+30*fade}%,${Math.min(1,fade*1.5)*(.7+.3*Math.sin(age*22+k))})`;ln(cx+Math.cos(an)*sp*d0,cy+Math.sin(an)*sp*d0+H*.05*a0*a0,cx+Math.cos(an)*sp*d,cy+Math.sin(an)*sp*d+H*.05*age*age)}}
+function drawFire(t,now){
+  const sky=g.createLinearGradient(0,0,0,H);sky.addColorStop(0,'#03051a');sky.addColorStop(.6,'#0b1238');sky.addColorStop(.9,'#1c1f58');g.fillStyle=sky;g.fillRect(0,0,W,H);drawStars(t,.7,.6);
+  g.globalCompositeOperation='screen';g.lineCap='round';const per=1.2,tt=reduce?3.1:t;
+  for(let j=0;j<4;j++){const idx=Math.floor(tt/per)-j;if(idx<0)continue;const e=tt-idx*per,cx=W*(.12+.76*hsh(idx,1)),cy=H*(.3+.38*hsh(idx,2)),hue=hsh(idx,3)*360,rise=.7;
+    if(e<rise){const k=e/rise,y=lerp(H*.92,cy,1-(1-k)*(1-k));g.strokeStyle='rgba(255,220,160,.85)';g.lineWidth=1.5;ln(cx,y+14,cx,y)}else fwBurst(cx,cy,e-rise,hue,idx%50,.8+.5*hsh(idx,4))}
+  for(const r of ripples)fwBurst(r.x*W,r.y*H,Math.max(0,(now-r.t)/1000),(r.t*.37)%360,7,1);
+  g.globalCompositeOperation='source-over';
+  const bw=W/13,off=(P.x-.5)*-10*P.on;for(let i=-1;i<15;i++){const x=i*bw+off,h=H*(.05+.11*hsh(i+3,11));g.fillStyle='#060918';g.fillRect(x,H-h,bw-1.5,h+2);
+    for(let r=0;r<h/7-1;r++)for(let c=0;c<4;c++)if(hsh(i*31+r*7+c,12)>.6){g.fillStyle=`rgba(255,${200+hsh(r,c)*40|0},130,.8)`;g.fillRect(x+3+c*(bw-7)/4,H-h+4+r*7,2,3)}
+    if(hsh(i+3,13)>.7){g.fillStyle='#060918';g.fillRect(x+bw*.45,H-h-H*.02,1.5,H*.02);g.fillStyle=`rgba(255,60,60,${Math.sin(t*4+i)>0?1:.2})`;g.fillRect(x+bw*.45-.5,H-h-H*.022,2.5,2.5)}}
+  topShade(.3)}
+
+// Mountain bike: a rider pedals a ridge trail against a huge setting sun. A tap makes them jump.
+function drawBike(t,now){
+  const sky=g.createLinearGradient(0,0,0,H*.92);sky.addColorStop(0,'#24195c');sky.addColorStop(.5,'#a8437c');sky.addColorStop(.8,'#ff8a4a');sky.addColorStop(1,'#ffd27a');g.fillStyle=sky;g.fillRect(0,0,W,H);
+  const sx=W*.56,sy=H*.845;g.globalCompositeOperation='screen';glowDot(sx,sy,W*.8,'rgba(255,190,110,.6)');g.globalCompositeOperation='source-over';
+  const sd=g.createLinearGradient(0,sy-W*.2,0,sy+W*.2);sd.addColorStop(0,'#fff6cc');sd.addColorStop(1,'#ffb347');g.fillStyle=sd;g.beginPath();g.arc(sx,sy,W*.2,0,7);g.fill();
+  g.strokeStyle='rgba(40,20,60,.7)';g.lineWidth=1.2;g.lineCap='round';for(let i=0;i<3;i++)bird(((t*.015+i*.07+.15)%1.4-.2)*W,H*(.62+i*.016)+Math.sin(t+i)*3,4+i*.6,Math.sin(t*6+i*2)*2.2);
+  ridgePath(.9,.05,3,1.2,4);g.fillStyle='#6a2c68';g.fill();
+  const v=reduce?0:W*.24,ty=x=>{const u=(x+t*v)/W;return H*(.935-.03*Math.sin(u*2.1)-.013*Math.sin(u*5.3+1)-.005*Math.sin(u*11))},INK='#0c0716';
+  g.fillStyle=INK;g.beginPath();g.moveTo(0,H);for(let x=0;x<=W+4;x+=4)g.lineTo(x,ty(x));g.lineTo(W,H);g.closePath();g.fill();
+  for(let k=0;k<5;k++){const x=((k*W*.43-t*v)%(W*2.15)+W*2.15)%(W*2.15)-W*.1;if(x<W*1.1)pine(x,ty(x)+2,H*(.035+.045*hsh(k,1)))}
+  const u=H*.027,bx=W*.4,jp=hop(now),yR=ty(bx-u*1.6),yF=ty(bx+u*1.6),ang=Math.atan2(yF-yR,u*3.2)-jp*.28,ph=t*v/u;
+  for(let k=0;k<14;k++){const a=k/14,xx=bx-u*1.8-a*W*.13;g.fillStyle=`rgba(255,196,140,${jp>.05?0:.4*(1-a)})`;g.beginPath();g.arc(xx,ty(xx)-a*(1-a)*H*.035-2,2+a*7,0,7);g.fill()}
+  g.save();g.translate(bx,(yR+yF)/2-jp*H*.07);g.rotate(ang);g.strokeStyle=INK;g.fillStyle=INK;g.lineCap='round';g.lineJoin='round';
+  const Rw=[-u*1.6,-u],Fw=[u*1.6,-u],BB=[-u*.1,-u*.95],S=[-u*.62,-u*2.1],HD=[u*1.05,-u*2.05],HB=[u*1.22,-u*2.45];
+  for(const [cx,cy] of [Rw,Fw]){g.lineWidth=u*.17;g.beginPath();g.arc(cx,cy,u*.92,0,7);g.stroke();g.lineWidth=u*.05;for(let s=0;s<3;s++){const a=ph+s*Math.PI/3;ln(cx-Math.cos(a)*u*.9,cy-Math.sin(a)*u*.9,cx+Math.cos(a)*u*.9,cy+Math.sin(a)*u*.9)}}
+  g.lineWidth=u*.13;ln(Rw[0],Rw[1],BB[0],BB[1]);ln(BB[0],BB[1],S[0],S[1]);ln(S[0],S[1],HD[0],HD[1]);ln(BB[0],BB[1],HD[0],HD[1]);ln(Rw[0],Rw[1],S[0],S[1]);ln(HD[0],HD[1],Fw[0],Fw[1]);ln(HD[0],HD[1],HB[0],HB[1]);
+  g.lineWidth=u*.16;ln(S[0]-u*.28,S[1]-u*.1,S[0]+u*.26,S[1]-u*.1);
+  const Hp=[S[0]+u*.02,S[1]-u*.3],Sh=[u*.5,-u*3.3],c=ph*.5;
+  for(const s of [0,Math.PI]){const pd=[BB[0]+Math.cos(c+s)*u*.42,BB[1]+Math.sin(c+s)*u*.42],kn=[(Hp[0]+pd[0])/2+u*.5,(Hp[1]+pd[1])/2-u*.12];g.lineWidth=u*.3;g.beginPath();g.moveTo(Hp[0],Hp[1]);g.lineTo(kn[0],kn[1]);g.lineTo(pd[0],pd[1]);g.stroke();g.lineWidth=u*.14;ln(pd[0]-u*.18,pd[1],pd[0]+u*.18,pd[1])}
+  g.lineWidth=u*.44;ln(Hp[0],Hp[1],Sh[0],Sh[1]);g.lineWidth=u*.2;ln(Sh[0],Sh[1],HB[0],HB[1]);g.beginPath();g.arc(u*.82,-u*3.72,u*.31,0,7);g.fill();g.restore();
+  topShade(.36)}
+
 // Theme list for the picker
 const THEMES=[
-  {id:'sunrise',name:'Sunrise',canvas:1,draw:(t,n)=>drawSunrise(t,n),start:()=>{sunStart=performance.now()},hint:'The sun rises over misty mountains and a lake. Move your finger and the scene shifts; tap the sky for a burst of sunlight or the water for a ripple. Tap Sunrise to watch it again.'},
-  {id:'rocket',name:'Rocket launch',canvas:1,draw:(t,n)=>drawRocket(t,n),start:rocketStart,tap:rocketTap,hint:'Steam builds on the pad, the engines light, and the rocket climbs right through the card. It repeats on its own. Tap the background to launch early.'},
-  {id:'sail',name:'Sailing',canvas:1,draw:(t,n)=>drawSail(t,n),hint:'A sailboat rides the swell at golden hour while the sun sparkles on the water. Move your finger and the waves lift toward it; tap the sea for a ripple.'},
-  {id:'aurora',name:'Aurora',canvas:1,draw:(t,n)=>drawAurora(t,n),hint:'Northern lights drift over the mountains while a seated figure breathes with a slow glow. The lights brighten near your finger; tap to send out a ring of light.'},
-  {id:'dance',name:'Dance party',canvas:1,draw:(t,n)=>drawDance(t,n),hint:'Stage lights sweep to the beat over a glowing floor and a crowd with their hands up. The lights lean toward your finger; tap for a confetti burst.'},
-  {id:'ribbon',name:'Live ribbon',canvas:1,draw:t=>drawRibbon(t),hint:'The waves drift on their own. Move your mouse or finger over the card and they rise toward you; tap the background to send a ripple.'},
-  {id:'photo',name:'Living photo',draw:t=>drawPhoto(t),hint:'Your current background picture, brought to life: it shifts with your finger for depth, and a soft light passes along the ribbons.'},
-  {id:'still',name:"Today's card",hint:'This is how your card looks today, for comparison.'}];
+  {col:'Nature and outdoors',id:'sunrise',name:'Sunrise',canvas:1,draw:(t,n)=>drawSunrise(t,n),start:()=>{sunStart=performance.now()},hint:'The sun rises over misty mountains and a lake. Move your finger and the scene shifts; tap the sky for a burst of sunlight or the water for a ripple. Tap Sunrise to watch it again.'},
+  {col:'Nature and outdoors',id:'bike',name:'Mountain bike',canvas:1,draw:(t,n)=>drawBike(t,n),hint:'A rider pedals a ridge trail against a huge setting sun, kicking up dust. Tap the background to make them jump.'},
+  {col:'Water',id:'sail',name:'Sailing',canvas:1,draw:(t,n)=>drawSail(t,n),hint:'A sailboat rides the swell at golden hour while the sun sparkles on the water. Move your finger and the waves lift toward it; tap the sea for a ripple.'},
+  {col:'Water',id:'ski',name:'Jet ski',canvas:1,draw:(t,n)=>drawSki(t,n),hint:'A jet ski skims a turquoise bay past a palm island, throwing spray. The waves lift toward your finger; tap to make it jump.'},
+  {col:'Sky and space',id:'rocket',name:'Rocket launch',canvas:1,draw:(t,n)=>drawRocket(t,n),start:rocketStart,tap:rocketTap,hint:'Steam builds on the pad, the engines light, and the rocket climbs right through the card. It repeats on its own. Tap the background to launch early.'},
+  {col:'Sky and space',id:'jets',name:'Jets',canvas:1,draw:(t,n)=>drawJets(t,n),start:()=>{jetT0=performance.now()-600;jetExtra=-1e9},tap:n=>{jetExtra=n},hint:'A formation of jets climbs across the sky leaving white trails. Tap to call a second pass from the other side.'},
+  {col:'Motorsport',id:'drag',name:'Drag race',canvas:1,draw:(t,n)=>drawDrag(t,n),start:dragStart,tap:dragTap,hint:'The lights count down, then two cars launch off the line in a cloud of tire smoke. It repeats on its own. Tap to drop the green light early.'},
+  {col:'Motorsport',id:'ride',name:'Night ride',canvas:1,draw:(t,n)=>drawRide(t,n),hint:'A motorcycle leans through a winding road at dusk. Move your finger left or right and the rider leans with you.'},
+  {col:'Snow and mountain',id:'snow',name:'Snowboarding',canvas:1,draw:(t,n)=>drawSnow(t,n),hint:'A snowboarder carves down a sunny slope with powder spraying and snow falling. Tap to make them jump and spin.'},
+  {col:'Spirit',id:'aurora',name:'Aurora',canvas:1,draw:(t,n)=>drawAurora(t,n),hint:'Northern lights drift over the mountains while a seated figure breathes with a slow glow. The lights brighten near your finger; tap to send out a ring of light.'},
+  {col:'Fun and party',id:'dance',name:'Dance party',canvas:1,draw:(t,n)=>drawDance(t,n),hint:'Stage lights sweep to the beat over a glowing floor and a crowd with their hands up. The lights lean toward your finger; tap for a confetti burst.'},
+  {col:'Fun and party',id:'fire',name:'Fireworks',canvas:1,draw:(t,n)=>drawFire(t,n),hint:'Fireworks rise and burst over a city skyline. Tap anywhere to set one off right under your finger.'},
+  {col:'Meridian classics',id:'ribbon',name:'Live ribbon',canvas:1,draw:t=>drawRibbon(t),hint:'The waves drift on their own. Move your mouse or finger over the card and they rise toward you; tap the background to send a ripple.'},
+  {col:'Meridian classics',id:'photo',name:'Living photo',draw:t=>drawPhoto(t),hint:'Your current background picture, brought to life: it shifts with your finger for depth, and a soft light passes along the ribbons.'},
+  {col:'Meridian classics',id:'still',name:"Today's card",hint:'This is how your card looks today, for comparison.'}];
 const THEME=Object.fromEntries(THEMES.map(x=>[x.id,x]));
 // Living photo: today's owned ribbon picture, with depth that follows the finger and a slow light passing along the lines.
 function drawPhoto(t){
@@ -398,7 +581,7 @@ requestAnimationFrame(frame);
 if(reduce)phone.addEventListener('pointermove',()=>requestAnimationFrame(frame));
 
 const seg=document.getElementById('seg');
-for(const T of THEMES){const b=document.createElement('button');b.id='b-'+T.id;b.textContent=T.name;b.setAttribute('aria-pressed',String(T.id===mode));b.onclick=()=>set(T.id);seg.appendChild(b)}
+let lastCol='';for(const T of THEMES){if(T.col!==lastCol){lastCol=T.col;const l=document.createElement('div');l.className='col';l.textContent=T.col;seg.appendChild(l)}const b=document.createElement('button');b.id='b-'+T.id;b.textContent=T.name;b.setAttribute('aria-pressed',String(T.id===mode));b.onclick=()=>set(T.id);seg.appendChild(b)}
 function set(m){mode=m;const T=THEME[m];
   for(const X of THEMES)document.getElementById('b-'+X.id).setAttribute('aria-pressed',String(X.id===m));
   cv.hidden=!T.canvas;photo.hidden=!!T.canvas;if(T.start)T.start();ripples=[];flares=[];

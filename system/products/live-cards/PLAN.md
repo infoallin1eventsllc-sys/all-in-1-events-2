@@ -4,7 +4,7 @@ Otis's idea: sell digital business cards whose background is alive and reacts to
 
 ## What exists today
 Working preview (private artifact, source in `.claude/skills/meridian-digital-card/designs/live-background/preview.html`), all drawn by code, 0 credits:
-Sunrise, Rocket launch, Sailing, Aurora, Dance party, Live ribbon, Living photo. Each reacts to a finger and to taps; text and buttons stay readable; reduced-motion phones get a still.
+twelve Live Art backgrounds in seven collections. Nature and outdoors: Sunrise, Mountain bike. Water: Sailing, Jet ski. Sky and space: Rocket launch, Jets. Motorsport: Drag race, Night ride (motorcycle). Snow and mountain: Snowboarding. Spirit: Aurora. Fun and party: Dance party, Fireworks. Plus the Meridian classics (Live ribbon, Living photo). Each reacts to a finger and to taps; text and buttons stay readable; reduced-motion phones get a still.
 
 ## Two ways to make a background
 | | Live Art (code) | Cinematic (video) |
@@ -43,4 +43,4 @@ Rule from the card skill still applies: only owned or generated art, never third
 6. Samples for selling: a short video of each background for social posts and the pitch email.
 
 ## Suggested order
-Finish 10 to 12 Live Art themes first (free), ship Otis's own card with one, build the catalog page, then add Cinematic themes as clients ask for them so credits are only spent on paid work.
+The first 12 Live Art themes are done (24 Nov). Next: ship Otis's own card with one, build the catalog page, then add Cinematic themes as clients ask for them so credits are only spent on paid work.
