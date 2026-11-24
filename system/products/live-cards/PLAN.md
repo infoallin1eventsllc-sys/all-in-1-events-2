@@ -44,3 +44,16 @@ Rule from the card skill still applies: only owned or generated art, never third
 
 ## Suggested order
 The first 12 Live Art themes are done (24 Nov). Next: ship Otis's own card with one, build the catalog page, then add Cinematic themes as clients ask for them so credits are only spent on paid work.
+
+## Higgsfield quotes for Cinematic versions (24 Nov 2026, nothing generated)
+Per background, 9:16, silent: picture (gpt_image_2_6) 0.75 credits, plus the video:
+| Video setting | Video | Per background | All 12 |
+|---|---|---|---|
+| Kling 3.0 standard, 5 s | 7.5 | 8.25 | 99 |
+| Kling 3.0 pro, 5 s | 8.75 | 9.5 | 114 |
+| Kling 3.0 standard, 8 s | 12 | 12.75 | 153 |
+| Kling 3.0 pro, 8 s | 14 | 14.75 | 177 |
+| Kling 3.0 4K, 8 s | 48 | 48.75 | 585 |
+| Seedance 2.5 720p, 8 s | 56 | 56.75 | 681 |
+| Seedance 2.5 1080p, 8 s | 128 | 128.75 | 1,545 |
+Balance at the time: 799.86 credits. Quotes were taken without a start picture attached, so re-quote each one before generating. Allow roughly half again for retakes. Otis must approve before any spend.
