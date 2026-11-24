@@ -20,3 +20,12 @@ Otis's idea: after trying the demo, a client downloads an app, picks photos or v
 
 ## Suggested order
 Prototype (done) -> web app with sign-in and saving for a few test clients -> payments -> store apps if clients ask for them.
+
+## Built (24 Nov 2026), switched off, waiting for Otis's decision
+Website repo, branch `claude/live-cards-app` (not merged, not on the live site):
+- `/live-cards/` landing with a working sample card, `/studio/` the installable app, `/c/<name>` public cards, terms and privacy drafts.
+- Service code (accounts by email code, publish, uploads, report, delete account) behind `public/live/config.js` `enabled:false`.
+- `mobile/` Capacitor wrapper and store checklist; `docs/LIVE-CARDS.md` is the full guide and go-live order.
+This repo: `system/supabase/migrations/0047_live_cards.sql`, NOT applied. Dry run on the live project inside a rolled-back transaction: 17 access checks passed (one card on the free plan, clients cannot set blocked or owner, anon reads published cards only, anon cannot read reports, account deletion removes the user and cards); afterwards 0 lc_ tables, 0 policies, no bucket, no test user remained.
+Checks: site security policy applied in a browser test of all four pages with no errors; a `javascript:` link typed into a field is dropped.
+Not verified: anything that needs the live service (sign-in emails, uploads, publishing); speed of the WebGL scene on real phones; a real store build.
