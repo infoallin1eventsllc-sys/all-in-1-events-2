@@ -2,6 +2,7 @@
 
 `preview.html` (needs `ribbon.jpg` and `mark.png` beside it) shows Otis's card, layout 1, with a moving background:
 
+- **Sunrise (default, added at Otis's request):** dawn sky over three layers of hills; the sun climbs for about 14 s and stops in clear sky below the round buttons (it hid behind them at first), then clouds and birds drift. Finger shifts the hills for depth; a tap sends a warm pulse of light. Pressing Sunrise replays it.
 - **Live ribbon:** layered blue bands with lime and cyan glow lines, drawn on a canvas every frame. They drift on their own, rise toward the pointer or finger, and a tap on the background sends a ripple. Free: no generated art, no video file.
 - **Living photo:** the owned ribbon.jpg with slight parallax that follows the finger and a soft light passing along it.
 - **Today's card:** the still version, for comparison.

@@ -79,11 +79,12 @@ a:focus-visible,button:focus-visible{outline:3px solid #fff;outline-offset:2px}
 
   <div class="controls">
     <div class="seg" role="group" aria-label="Background">
-      <button id="b-ribbon" aria-pressed="true">Live ribbon</button>
+      <button id="b-sun" aria-pressed="true">Sunrise</button>
+      <button id="b-ribbon" aria-pressed="false">Live ribbon</button>
       <button id="b-photo" aria-pressed="false">Living photo</button>
       <button id="b-still" aria-pressed="false">Today's card</button>
     </div>
-    <p class="hint" id="hint">The waves drift on their own. Move your mouse or finger over the card and they rise toward you; tap the background to send a ripple.</p>
+    <p class="hint" id="hint">The sun rises over the hills, then clouds and birds drift by. Move your finger and the hills shift; tap the sky for a burst of sunlight. Tap Sunrise to watch it again.</p>
   </div>
 </div>
 
@@ -91,14 +92,14 @@ a:focus-visible,button:focus-visible{outline:3px solid #fff;outline-offset:2px}
 const phone=document.getElementById('phone'),cv=document.getElementById('waves'),g=cv.getContext('2d');
 const photo=document.getElementById('photo'),img=document.getElementById('img'),glow=document.getElementById('glow'),hint=document.getElementById('hint');
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
-let W=0,H=0,DPR=1,mode='ribbon',t0=performance.now();
+let W=0,H=0,DPR=1,mode='sunrise',t0=performance.now();
 const P={x:.5,y:.75,tx:.5,ty:.75,on:0,ton:0}; let ripples=[];
 function size(){const r=phone.getBoundingClientRect();DPR=Math.min(2,devicePixelRatio||1);W=r.width;H=r.height;cv.width=W*DPR;cv.height=H*DPR;g.setTransform(DPR,0,0,DPR,0,0);}
 new ResizeObserver(size).observe(phone);size();
 
 function pos(e){const r=phone.getBoundingClientRect();P.tx=(e.clientX-r.left)/r.width;P.ty=(e.clientY-r.top)/r.height;P.ton=1;}
 phone.addEventListener('pointermove',pos);
-phone.addEventListener('pointerdown',e=>{pos(e);if(!e.target.closest('a'))ripples.push({x:P.tx,y:P.ty,t:performance.now()});});
+phone.addEventListener('pointerdown',e=>{pos(e);if(!e.target.closest('a')){ripples.push({x:P.tx,y:P.ty,t:performance.now()});flares.push(performance.now());}});
 phone.addEventListener('pointerleave',()=>{P.ton=0;});
 
 // Live ribbon: layered silk bands like the card's owned ribbon art, drawn fresh every frame.
@@ -142,6 +143,61 @@ function drawRibbon(t){
   if(P.on>.02){const lg=g.createRadialGradient(P.x*W,P.y*H,0,P.x*W,P.y*H,W*.35);lg.addColorStop(0,`rgba(120,180,255,${.22*P.on})`);lg.addColorStop(1,'rgba(120,180,255,0)');
     g.globalCompositeOperation='screen';g.fillStyle=lg;g.fillRect(0,0,W,H);g.globalCompositeOperation='source-over';}
 }
+// Sunrise: dawn over layered hills. The sun climbs for about 14 seconds, then the day holds with drifting clouds and birds.
+let sunStart=performance.now(),flares=[];
+const lerp=(a,b,k)=>a+(b-a)*k,ease=x=>{x=Math.min(1,Math.max(0,x));return x*x*(3-2*x)};
+const mix=(c1,c2,k)=>`rgb(${lerp(c1[0],c2[0],k)|0},${lerp(c1[1],c2[1],k)|0},${lerp(c1[2],c2[2],k)|0})`;
+const CLOUDS=[[.12,.58,1.0],[.62,.53,.8],[.95,.66,1.2],[.38,.70,.7],[.80,.47,.6]];
+function hill(x,base,amp,f,ph){return base-amp*(Math.sin(x*f+ph)*.6+Math.sin(x*f*2.3+ph*1.7)*.3+Math.sin(x*f*5.1+ph*.4)*.1);}
+function drawSunrise(t,now){
+  const R=reduce?1:ease((now-sunStart)/14000);
+  const sky=g.createLinearGradient(0,0,0,H*.9);
+  sky.addColorStop(0,mix([16,32,92],[22,74,196],R));
+  sky.addColorStop(.45,mix([52,62,140],[70,138,228],R));
+  sky.addColorStop(.8,mix([214,112,104],[150,196,246],R));
+  sky.addColorStop(1,mix([255,170,110],[255,226,170],R));
+  g.fillStyle=sky;g.fillRect(0,0,W,H);
+  const sx=W*(.5+(P.x-.5)*.04*P.on),sy=lerp(H*.93,H*.775,R),sr=W*.085;
+  // big warm glow around the sun
+  const gl=g.createRadialGradient(sx,sy,0,sx,sy,W*.95);
+  gl.addColorStop(0,`rgba(255,236,190,${.85})`);gl.addColorStop(.18,`rgba(255,200,130,${.45+.15*(1-R)})`);gl.addColorStop(.55,'rgba(255,170,120,.12)');gl.addColorStop(1,'rgba(255,170,120,0)');
+  g.globalCompositeOperation='screen';g.fillStyle=gl;g.fillRect(0,0,W,H);
+  // slow light rays
+  g.save();g.translate(sx,sy);g.rotate(t*.02);
+  for(let i=0;i<14;i++){g.rotate(Math.PI*2/14);const a=.05+.03*Math.sin(t*.7+i);
+    const rg=g.createLinearGradient(0,0,W*1.1,0);rg.addColorStop(0,`rgba(255,230,170,${a})`);rg.addColorStop(1,'rgba(255,230,170,0)');
+    g.fillStyle=rg;g.beginPath();g.moveTo(0,0);g.lineTo(W*1.1,-W*.06);g.lineTo(W*1.1,W*.06);g.closePath();g.fill();}
+  g.restore();
+  // the sun itself
+  const sd=g.createRadialGradient(sx,sy,0,sx,sy,sr);sd.addColorStop(0,'#ffffff');sd.addColorStop(.6,'#fff4cc');sd.addColorStop(.85,'#ffd98a');sd.addColorStop(1,'rgba(255,200,110,0)');
+  g.fillStyle=sd;g.beginPath();g.arc(sx,sy,sr*1.15,0,7);g.fill();
+  // tap: a warm pulse of light from the sun
+  for(const f of flares){const age=(now-f)/1000,r=W*(.1+age*.9),a=Math.max(0,.35*(1-age/1.6));
+    const fg=g.createRadialGradient(sx,sy,r*.6,sx,sy,r);fg.addColorStop(0,'rgba(255,220,160,0)');fg.addColorStop(.85,`rgba(255,225,170,${a})`);fg.addColorStop(1,'rgba(255,225,170,0)');
+    g.fillStyle=fg;g.fillRect(0,0,W,H);}
+  g.globalCompositeOperation='source-over';
+  // soft clouds, lit warm from below
+  for(const [cx0,cy,s] of CLOUDS){const cx=((cx0+t*.006*s)%1.3-.15)*W,y=H*cy,w=W*.22*s;
+    for(const [ox,oy,rr] of [[-.5,.1,.45],[0,-.1,.6],[.55,.05,.42],[.25,.15,.5],[-.2,.18,.48]]){
+      const px=cx+ox*w,py=y+oy*w,r=rr*w,cg=g.createRadialGradient(px,py-r*.3,0,px,py,r);
+      cg.addColorStop(0,`rgba(255,255,255,${lerp(.28,.55,R)})`);cg.addColorStop(.6,mix([255,190,170],[255,240,225],R).replace('rgb','rgba').replace(')',`,${lerp(.22,.35,R)})`));cg.addColorStop(1,'rgba(255,230,210,0)');
+      g.fillStyle=cg;g.beginPath();g.arc(px,py,r,0,7);g.fill();}}
+  // birds gliding across
+  g.strokeStyle=`rgba(20,30,70,${lerp(.35,.55,R)})`;g.lineWidth=1.4;
+  for(let i=0;i<3;i++){const bx=((t*.018+i*.13+.2)%1.4-.2)*W,by=H*(.5+i*.03)+Math.sin(t*.8+i)*4,fl=Math.sin(t*6+i*2)*3,bw=5+i;
+    g.beginPath();g.moveTo(bx-bw,by-fl);g.quadraticCurveTo(bx-bw*.4,by-2,bx,by);g.quadraticCurveTo(bx+bw*.4,by-2,bx+bw,by-fl);g.stroke();}
+  // three layers of hills, nearer ones move more with the finger
+  const layers=[[.875,H*.03,4.2,1.1,[118,128,190],[150,170,214],6],[.92,H*.04,3.1,2.6,[58,66,136],[66,96,170],14],[.965,H*.045,2.3,4.0,[22,30,84],[24,44,110],24]];
+  const step=Math.max(4,W/80);
+  for(const [b,amp,f,ph,c1,c2,par] of layers){const off=(P.x-.5)*-par*P.on;
+    g.beginPath();g.moveTo(0,H);for(let x=-step;x<=W+step;x+=step)g.lineTo(x,hill((x-off)/W,H*b,amp,f,ph));g.lineTo(W,H);g.closePath();
+    const hg=g.createLinearGradient(0,H*(b-.06),0,H);hg.addColorStop(0,mix(c1,c2,R));hg.addColorStop(1,'#0a1440');g.fillStyle=hg;g.fill();}
+  // warm haze where the light meets the hills
+  const hz=g.createLinearGradient(0,H*.8,0,H*.95);hz.addColorStop(0,'rgba(255,200,150,0)');hz.addColorStop(.5,`rgba(255,205,160,${lerp(.18,.10,R)})`);hz.addColorStop(1,'rgba(255,200,150,0)');
+  g.fillStyle=hz;g.fillRect(0,H*.8,W,H*.15);
+  // keep the top calm and deep enough for white text
+  const top=g.createLinearGradient(0,0,0,H*.5);top.addColorStop(0,'rgba(6,16,60,.35)');top.addColorStop(1,'rgba(6,16,60,0)');g.fillStyle=top;g.fillRect(0,0,W,H*.5);
+}
 // Living photo: today's owned ribbon picture, with depth that follows the finger and a slow light passing along the lines.
 function drawPhoto(t){
   const dx=(P.x-.5)*-18*P.on+Math.sin(t*.15)*6,dy=(P.y-.6)*-12*P.on+Math.sin(t*.11)*5,s=1+Math.sin(t*.09)*.012;
@@ -152,20 +208,22 @@ function drawPhoto(t){
 function frame(now){
   const t=(now-t0)/1000;
   P.x+=(P.tx-P.x)*.08;P.y+=(P.ty-P.y)*.08;P.on+=(P.ton-P.on)*.06;
-  ripples=ripples.filter(r=>now-r.t<3500);
-  if(mode==='ribbon')drawRibbon(reduce?0:t);else if(mode==='photo')drawPhoto(reduce?0:t);
+  ripples=ripples.filter(r=>now-r.t<3500);flares=flares.filter(f=>now-f<1600);
+  if(mode==='sunrise')drawSunrise(reduce?0:t,now);else if(mode==='ribbon')drawRibbon(reduce?0:t);else if(mode==='photo')drawPhoto(reduce?0:t);
   if(!reduce)requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 if(reduce)phone.addEventListener('pointermove',()=>requestAnimationFrame(frame));
 
-const HINTS={ribbon:'The waves drift on their own. Move your mouse or finger over the card and they rise toward you; tap the background to send a ripple.',
+const HINTS={sunrise:'The sun rises over the hills, then clouds and birds drift by. Move your finger and the hills shift; tap the sky for a burst of sunlight. Tap Sunrise to watch it again.',
+  ribbon:'The waves drift on their own. Move your mouse or finger over the card and they rise toward you; tap the background to send a ripple.',
   photo:'Your current background picture, brought to life: it shifts with your finger for depth, and a soft light passes along the ribbons.',
   still:'This is how your card looks today, for comparison.'};
 function set(m){mode=m;
-  for(const [id,k] of [['b-ribbon','ribbon'],['b-photo','photo'],['b-still','still']])document.getElementById(id).setAttribute('aria-pressed',String(k===m));
-  cv.hidden=m!=='ribbon';photo.hidden=m==='ribbon';
+  for(const [id,k] of [['b-sun','sunrise'],['b-ribbon','ribbon'],['b-photo','photo'],['b-still','still']])document.getElementById(id).setAttribute('aria-pressed',String(k===m));
+  const canvasMode=m==='ribbon'||m==='sunrise';cv.hidden=!canvasMode;photo.hidden=canvasMode;if(m==='sunrise')sunStart=performance.now();
   img.style.transform='none';glow.style.background='none';hint.textContent=HINTS[m];if(reduce)requestAnimationFrame(frame);}
+document.getElementById('b-sun').onclick=()=>set('sunrise');
 document.getElementById('b-ribbon').onclick=()=>set('ribbon');
 document.getElementById('b-photo').onclick=()=>set('photo');
 document.getElementById('b-still').onclick=()=>set('still');
