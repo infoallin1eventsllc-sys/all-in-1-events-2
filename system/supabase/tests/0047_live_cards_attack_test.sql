@@ -1,11 +1,10 @@
--- Attack test for migration 0047 (Live Cards). 53 checks; all passed on 24 Nov 2026.
+-- Attack test for migration 0047 (Live Cards). 55 checks; all passed on 24 Nov 2026 (second run, after the same-instant locks were added).
 -- How to run without leaving anything behind: send ONE query made of
 --   begin;  +  the whole of migrations/0047_live_cards.sql  +  this file
 -- The last line raises an error on purpose, which rolls the whole transaction back. The error text is the result list.
 -- Afterwards confirm nothing remains: no lc_ tables, functions or policies, no live-cards bucket, no lc-dryrun users.
--- One line of lc_txt was rewritten after this run (hidden direction marks are now removed with translate() and chr() so the file holds no invisible characters);
--- that exact expression was checked on the database with a read-only query the same day.
--- Not covered here: deleting stored files (Supabase blocks direct deletes in SQL; test that through the Storage API at go-live).
+-- Not covered here: two requests arriving at the same instant (needs two live connections; the row lock and advisory locks are in place, test at go-live),
+-- and deleting stored files (Supabase blocks direct deletes in SQL; test that through the Storage API at go-live).
 
 do $t$
 declare
@@ -46,10 +45,11 @@ begin
   select owner = u1 and not blocked into b from public.lc_cards where id = cid;
   r := r || case when b then 'PASS' else 'FAIL' end || ' owner set by the server' || E'\n';
 
-  update public.lc_cards set data = jsonb_build_object('name','Test One','background', jsonb_build_object('type','video','url', base || u1 || '/bg-abc123.mp4'),
+  update public.lc_cards set data = jsonb_build_object('name','Test' || chr(8238) || ' One','background', jsonb_build_object('type','video','url', base || u1 || '/bg-abc123.mp4'),
     'logo', jsonb_build_object('url', base || u2 || '/logo-abc123.jpg')) where id = cid returning data into j;
   r := r || case when j->'background'->>'type' = 'video' and j->'background'->>'url' = base || u1 || '/bg-abc123.mp4' then 'PASS' else 'FAIL' end || ' own uploaded video accepted' || E'\n';
   r := r || case when j->'logo'->>'url' = '' then 'PASS' else 'FAIL' end || ' another account''s file refused' || E'\n';
+  r := r || case when j->>'name' = 'Test One' then 'PASS' else 'FAIL' end || ' hidden direction mark removed from a name' || E'\n';
 
   begin insert into public.lc_cards(slug, data, published, owner) values ('dryrun-x', '{"name":"x"}', false, u2); r := r || 'FAIL client set owner' || E'\n';
   exception when insufficient_privilege then r := r || 'PASS client cannot set owner' || E'\n'; end;
@@ -80,6 +80,8 @@ begin
   exception when insufficient_privilege then r := r || 'PASS cannot upload into another account''s folder' || E'\n'; end;
   begin insert into storage.objects(bucket_id, name) values ('live-cards', u1 || '/sub/bg-a1.mp4'); r := r || 'FAIL nested path allowed' || E'\n';
   exception when insufficient_privilege then r := r || 'PASS nested paths refused' || E'\n'; end;
+  begin insert into storage.objects(bucket_id, name) values ('live-cards', u1 || '/../' || u2 || '/bg-a1.mp4'); r := r || 'FAIL path trick allowed' || E'\n';
+  exception when insufficient_privilege then r := r || 'PASS dot-dot path trick refused' || E'\n'; end;
   begin
     for i in 2..8 loop insert into storage.objects(bucket_id, name) values ('live-cards', u1 || '/bg-a' || i || '.mp4'); end loop;
     begin insert into storage.objects(bucket_id, name) values ('live-cards', u1 || '/bg-a9.mp4'); r := r || 'FAIL ninth file allowed' || E'\n';

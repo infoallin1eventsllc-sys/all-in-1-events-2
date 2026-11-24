@@ -1,5 +1,5 @@
 -- 0047 Live Cards: client-made digital cards with their own accounts, public links and uploads.
--- NOT APPLIED. Hardened on 24 Nov 2026 and attack-tested in a rolled-back transaction (53 checks, see ../tests/0047_live_cards_attack_test.sql). Otis decides when it goes live.
+-- NOT APPLIED. Hardened on 24 Nov 2026 and attack-tested in a rolled-back transaction (55 checks, see ../tests/0047_live_cards_attack_test.sql). Otis decides when it goes live.
 -- Everything here is new and self-contained (prefix lc_, bucket live-cards). It does not touch the marketing system's tables.
 --
 -- Security shape (the browser is never trusted):
@@ -138,19 +138,18 @@ begin
     new.blocked := false;
     if public.lc_slug_reserved(new.slug) then raise exception 'That link is reserved. Try another.' using errcode = '23505'; end if;
     insert into public.lc_accounts(user_id) values (new.owner) on conflict do nothing;
+    -- Lock this account's row. Two saves sent at the same instant are then handled one after the other, so the card limit cannot be slipped past.
+    select plan into v_plan from public.lc_accounts where user_id = new.owner for update;
+    v_limit := case v_plan when 'pro' then 5 else 1 end;
+    select count(*) into v_count from public.lc_cards where owner = new.owner;
+    if v_count >= v_limit then raise exception 'Your plan allows % card(s).', v_limit using errcode = 'P0001'; end if;
   else
     new.id         := old.id;
     new.owner      := old.owner;
     new.blocked    := old.blocked;
     new.created_at := old.created_at;
     if new.slug <> old.slug and public.lc_slug_reserved(new.slug) then raise exception 'That link is reserved. Try another.' using errcode = '23505'; end if;
-  end if;
-
-  select coalesce((select plan from public.lc_accounts where user_id = new.owner), 'free') into v_plan;
-  if tg_op = 'INSERT' then
-    v_limit := case v_plan when 'pro' then 5 else 1 end;
-    select count(*) into v_count from public.lc_cards where owner = new.owner;
-    if v_count >= v_limit then raise exception 'Your plan allows % card(s).', v_limit using errcode = 'P0001'; end if;
+    select coalesce((select plan from public.lc_accounts where user_id = new.owner), 'free') into v_plan;
   end if;
 
   new.data := public.lc_clean_card(new.data, new.owner, v_plan);
@@ -172,6 +171,7 @@ declare v_reason text := public.lc_txt(p_reason, 500);
 begin
   if length(v_reason) < 3 or coalesce(p_slug, '') !~ '^[a-z0-9-]{3,40}$' then return; end if;
   if not exists (select 1 from public.lc_cards where slug = p_slug and published) then return; end if;
+  perform pg_advisory_xact_lock(hashtextextended('lc-report', 0)); -- one at a time, so a burst cannot overshoot the limits below
   if (select count(*) from public.lc_reports where slug = p_slug and created_at > now() - interval '1 hour') >= 5 then return; end if;
   if (select count(*) from public.lc_reports where created_at > now() - interval '1 hour') >= 200 then return; end if;
   insert into public.lc_reports(slug, reason) values (p_slug, v_reason);
@@ -188,10 +188,16 @@ begin
 end $$;
 
 -- how many files the signed-in account already holds (takes no argument, so nobody can count another account's files)
+-- It also makes one account's uploads wait for each other, so uploads sent at the same instant cannot slip past the file limit.
 create or replace function public.lc_file_count() returns int
-language sql stable security definer set search_path = '' as $$
-  select count(*)::int from storage.objects o where o.bucket_id = 'live-cards' and o.name like (select auth.uid())::text || '/%'
-$$;
+language plpgsql volatile security definer set search_path = '' as $$
+declare v_uid uuid := auth.uid(); v_n int;
+begin
+  if v_uid is null then return 2147483647; end if;
+  perform pg_advisory_xact_lock(hashtextextended('lc-files:' || v_uid::text, 0));
+  select count(*)::int into v_n from storage.objects o where o.bucket_id = 'live-cards' and o.name like v_uid::text || '/%';
+  return v_n;
+end $$;
 
 -- ---------- access rules
 alter table public.lc_accounts       enable row level security;
