@@ -23,6 +23,9 @@ canvas,.photo{position:absolute;inset:0;width:100%;height:100%}
 .photo{overflow:hidden}
 .photo .img{position:absolute;inset:-6%;background:url(ribbon.jpg) 50% 0/auto 112% no-repeat;will-change:transform}
 .photo .glow{position:absolute;inset:0;mix-blend-mode:screen;pointer-events:none}
+#snd{position:absolute;z-index:3;top:max(12px,env(safe-area-inset-top,0px));right:12px;width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.35);background:rgba(0,0,0,.35);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);display:grid;place-items:center;cursor:pointer;padding:0}
+#snd svg{width:20px;height:20px;stroke:#fff}
+#snd[aria-pressed="true"]{background:var(--white)}#snd[aria-pressed="true"] svg{stroke:var(--ink)}
 .card{position:relative;height:100%;display:flex;flex-direction:column;pointer-events:none}
 .card a{pointer-events:auto}
 .content{padding:30px 18px 0;display:grid;justify-items:center;text-align:center}
@@ -59,6 +62,7 @@ a:focus-visible,button:focus-visible{outline:3px solid #fff;outline-offset:2px}
     <canvas id="gl" aria-hidden="true" hidden></canvas>
     <canvas id="waves" aria-hidden="true"></canvas>
     <div class="photo" id="photo" hidden><div class="img" id="img"></div><div class="glow" id="glow"></div></div>
+    <button id="snd" type="button" aria-pressed="false" aria-label="Turn sound on" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path id="snd-x" d="m22 9-6 6M16 9l6 6"/><path id="snd-w" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" style="display:none"/></svg></button>
     <div class="card">
       <header class="content">
         <div class="logo"><img src="mark.png" alt="" width="342" height="333"><div aria-label="Meridian Interface"><b>MERIDIAN</b><span>INTERFACE</span></div></div>
@@ -89,7 +93,9 @@ a:focus-visible,button:focus-visible{outline:3px solid #fff;outline-offset:2px}
 </div>
 
 <script>
-const vid=document.getElementById('vid');
+const vid=document.getElementById('vid'),snd=document.getElementById('snd');
+function setSound(on){vid.muted=!on;snd.setAttribute('aria-pressed',String(on));snd.setAttribute('aria-label',on?'Turn sound off':'Turn sound on');document.getElementById('snd-x').style.display=on?'none':'';document.getElementById('snd-w').style.display=on?'':'none'}
+snd.onclick=()=>{const on=vid.muted;setSound(on);if(on){const pr=vid.play();if(pr)pr.catch(()=>setSound(false))}};
 const phone=document.getElementById('phone'),cv=document.getElementById('waves'),g=cv.getContext('2d');
 const photo=document.getElementById('photo'),img=document.getElementById('img'),glow=document.getElementById('glow'),hint=document.getElementById('hint');
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -100,7 +106,7 @@ new ResizeObserver(size).observe(phone);size();
 
 function pos(e){const r=phone.getBoundingClientRect();P.tx=(e.clientX-r.left)/r.width;P.ty=(e.clientY-r.top)/r.height;P.ton=1;}
 phone.addEventListener('pointermove',pos);
-phone.addEventListener('pointerdown',e=>{pos(e);if(!e.target.closest('a')){ripples.push({x:P.tx,y:P.ty,t:performance.now()});if(P.ty<LAKE)flares.push(performance.now());if(THEME[mode].tap)THEME[mode].tap(performance.now());}});
+phone.addEventListener('pointerdown',e=>{pos(e);if(!e.target.closest('a,button')){ripples.push({x:P.tx,y:P.ty,t:performance.now()});if(P.ty<LAKE)flares.push(performance.now());if(THEME[mode].tap)THEME[mode].tap(performance.now());}});
 phone.addEventListener('pointerleave',()=>{P.ton=0;});
 
 // Live ribbon: layered silk bands like the card's owned ribbon art, drawn fresh every frame.
@@ -621,8 +627,8 @@ function drawOcean(t,now){if(!GL)return;
   GL.uniform3f(glU.uPtr,P.x,P.y,P.on);GL.uniform3fv(glU.uTap,taps);GL.drawArrays(GL.TRIANGLES,0,3)}
 // Theme list for the picker
 const THEMES=[
-  {col:'Your videos',id:'vflat',name:'PC Flat',video:'bg-pcflat.mp4',bg:'#2c344c',feather:9,hint:'Your PC Flat ad playing behind the card on a loop, with no sound. It sits in the open space under the buttons so nothing is covered.'},
-  {col:'Your videos',id:'vlap',name:'Exploding laptop',video:'bg-laptop.mp4',bg:'#000000',feather:24,hint:'Your laptop reel playing behind the card on a loop, with no sound. It fades in under the buttons, and the loop ends before the logo screen because your logo is already on the card.'},
+  {col:'Your videos',id:'vflat',name:'PC Flat',video:'bg-pcflat.mp4',bg:'#2c344c',feather:9,hint:'Your PC Flat ad playing behind the card on a loop, silently at first. Tap the speaker button at the top right of the card to turn its sound on or off.'},
+  {col:'Your videos',id:'vlap',name:'Exploding laptop',video:'bg-laptop.mp4',bg:'#000000',feather:24,hint:'Your laptop reel playing behind the card on a loop, silently at first. Tap the speaker button at the top right of the card to turn its sound on or off.'},
   ...(glOK?[{col:'Max quality',id:'ocean',name:'Ocean sunrise',gl:1,draw:(t,n)=>drawOcean(t,n),start:()=>{oceanStart=performance.now()},tap:n=>{if(P.ty<.795)glFlare=n},hint:'This one is computed pixel by pixel on your device: real-looking water, clouds and light. The sun rises over the sea in about 20 seconds. Move your finger to look around; tap the water for ripples or the sky for a flash of sunlight.'}]:[]),
   {col:'Nature and outdoors',id:'sunrise',name:'Sunrise',canvas:1,draw:(t,n)=>drawSunrise(t,n),start:()=>{sunStart=performance.now()},hint:'The sun rises over misty mountains and a lake. Move your finger and the scene shifts; tap the sky for a burst of sunlight or the water for a ripple. Tap Sunrise to watch it again.'},
   {col:'Nature and outdoors',id:'bike',name:'Mountain bike',canvas:1,draw:(t,n)=>drawBike(t,n),hint:'A rider pedals a ridge trail against a huge setting sun, kicking up dust. Tap the background to make them jump.'},
@@ -662,7 +668,7 @@ let lastCol='';for(const T of THEMES){if(T.col!==lastCol){lastCol=T.col;const l=
 function set(m){mode=m;const T=THEME[m];
   for(const X of THEMES)document.getElementById('b-'+X.id).setAttribute('aria-pressed',String(X.id===m));
   cv.hidden=!T.canvas;glc.hidden=!T.gl;photo.hidden=!!(T.canvas||T.gl||T.video);
-  vid.hidden=!T.video;phone.style.background=T.video?T.bg:'';if(T.video){{const m=`linear-gradient(to bottom,transparent 0,#000 ${T.feather||0}%)`;vid.style.webkitMaskImage=m;vid.style.maskImage=m}if(vid.getAttribute('src')!==T.video)vid.src=T.video;vid.currentTime=0;if(!reduce){const pr=vid.play();if(pr)pr.catch(()=>{})}}else vid.pause();if(T.start)T.start();ripples=[];flares=[];
+  vid.hidden=!T.video;snd.hidden=!T.video;if(!T.video)setSound(false);phone.style.background=T.video?T.bg:'';if(T.video){{const m=`linear-gradient(to bottom,transparent 0,#000 ${T.feather||0}%)`;vid.style.webkitMaskImage=m;vid.style.maskImage=m}if(vid.getAttribute('src')!==T.video)vid.src=T.video;vid.currentTime=0;if(!reduce){const pr=vid.play();if(pr)pr.catch(()=>{})}}else vid.pause();if(T.start)T.start();ripples=[];flares=[];
   img.style.transform='none';glow.style.background='none';hint.textContent=T.hint;if(reduce)requestAnimationFrame(frame);}
 set('vflat');
 </script>

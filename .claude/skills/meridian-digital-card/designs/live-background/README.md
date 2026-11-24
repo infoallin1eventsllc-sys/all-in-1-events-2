@@ -33,3 +33,7 @@ Two themes under "Your videos" play an mp4 in a `<video id="vid">` pinned to the
 - `bg-laptop.mp4`: the exploding-laptop reel, first 9.6 s only (the logo end plate starts fading in at 9.8 s and the card already carries the logo), `crop=1080:1040:0:450`, crf 26, no audio, 1.4 MB.
 Why crop: the card's buttons cover roughly 0.34 to 0.72 of its height, so a full-frame 9:16 video hides its own action. A wide band at the bottom keeps everything visible.
 Testing trap: `python3 -m http.server` has no range support, so setting `currentTime` in a test silently stays on the first frame; let the video play and wait instead.
+
+## Sound (24 Nov 2026)
+Both video backgrounds now carry their audio (AAC 112k, about -16 LUFS each; the laptop cut was 2.2 dB hotter and was turned down, with a 0.7 s fade-out so the loop does not cut off mid-note). Browsers refuse to auto-play sound, so the card always opens silent and a round speaker button (`#snd`, top right) unmutes on tap; switching to a theme without sound mutes again.
+Trap: the HTML `hidden` attribute does not hide SVG child elements outside the artifact's reset, so the speaker icon's two states are switched with `style.display`.
