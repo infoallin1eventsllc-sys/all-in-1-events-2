@@ -78,11 +78,7 @@ a:focus-visible,button:focus-visible{outline:3px solid #fff;outline-offset:2px}
   </div>
 
   <div class="controls">
-    <div class="seg" role="group" aria-label="Background">
-      <button id="b-sun" aria-pressed="true">Sunrise</button>
-      <button id="b-ribbon" aria-pressed="false">Live ribbon</button>
-      <button id="b-photo" aria-pressed="false">Living photo</button>
-      <button id="b-still" aria-pressed="false">Today's card</button>
+    <div class="seg" id="seg" role="group" aria-label="Background">
     </div>
     <p class="hint" id="hint">The sun rises over misty mountains and a lake. Move your finger and the scene shifts; tap the sky for a burst of sunlight or the water for a ripple. Tap Sunrise to watch it again.</p>
   </div>
@@ -99,7 +95,7 @@ new ResizeObserver(size).observe(phone);size();
 
 function pos(e){const r=phone.getBoundingClientRect();P.tx=(e.clientX-r.left)/r.width;P.ty=(e.clientY-r.top)/r.height;P.ton=1;}
 phone.addEventListener('pointermove',pos);
-phone.addEventListener('pointerdown',e=>{pos(e);if(!e.target.closest('a')){ripples.push({x:P.tx,y:P.ty,t:performance.now()});if(P.ty<LAKE)flares.push(performance.now());}});
+phone.addEventListener('pointerdown',e=>{pos(e);if(!e.target.closest('a')){ripples.push({x:P.tx,y:P.ty,t:performance.now()});if(P.ty<LAKE)flares.push(performance.now());if(THEME[mode].tap)THEME[mode].tap(performance.now());}});
 phone.addEventListener('pointerleave',()=>{P.ton=0;});
 
 // Live ribbon: layered silk bands like the card's owned ribbon art, drawn fresh every frame.
@@ -247,6 +243,143 @@ function drawSunrise(t,now){
   const top=g.createLinearGradient(0,0,0,H*.5);top.addColorStop(0,'rgba(6,14,52,.38)');top.addColorStop(1,'rgba(6,14,52,0)');g.fillStyle=top;g.fillRect(0,0,W,H*.5);
   g.globalCompositeOperation='overlay';g.globalAlpha=.05;g.fillStyle=grain;g.fillRect(0,0,W,H);g.globalAlpha=1;g.globalCompositeOperation='source-over';
 }
+// ---------- Live Cards collection: more scenes on the same engine (all drawn by code) ----------
+const rnd=mulberry(2024),STARS2=Array.from({length:80},()=>[rnd(),rnd()*.8,.5+rnd()*1.1,rnd()*6.28]);
+const hsh=(i,k)=>{const v=Math.sin(i*127.1+k*311.7)*43758.5453;return v-Math.floor(v)};
+function drawStars(t,a,maxY){g.fillStyle='#fff';for(const [x,y,s,p] of STARS2){if(y>maxY)continue;g.globalAlpha=a*(.3+.6*Math.sin(t*1.5+p)**2);g.fillRect(x*W,y*H,s,s)}g.globalAlpha=1}
+function topShade(a){const top=g.createLinearGradient(0,0,0,H*.5);top.addColorStop(0,`rgba(4,8,30,${a})`);top.addColorStop(1,'rgba(4,8,30,0)');g.fillStyle=top;g.fillRect(0,0,W,H*.5)}
+function bird(x,y,w,fl){g.beginPath();g.moveTo(x-w,y-fl);g.quadraticCurveTo(x-w*.4,y-1.5,x,y);g.quadraticCurveTo(x+w*.4,y-1.5,x+w,y-fl);g.stroke()}
+
+// Rocket launch: countdown steam, ignition, liftoff through the card, smoke that billows and clears. Loops; a tap launches early.
+let rk={t0:performance.now(),parts:[],last:0};
+function rocketStart(){rk={t0:performance.now(),parts:[],last:0}}
+function rocketTap(now){const e=(now-rk.t0)/1000;if(e<2.2)rk.t0=now-2200;else if(e>9.5)rocketStart()}
+function rocketShape(x,y,h){const w=h*.2;
+  g.fillStyle='#c8393b';for(const s of [-1,1]){g.beginPath();g.moveTo(x+s*w*.5,y-h*.24);g.lineTo(x+s*w*1.2,y+h*.01);g.lineTo(x+s*w*.5,y-h*.05);g.closePath();g.fill()}
+  const bg=g.createLinearGradient(x-w*.5,0,x+w*.5,0);bg.addColorStop(0,'#c9d1e3');bg.addColorStop(.42,'#ffffff');bg.addColorStop(1,'#8690ad');
+  g.fillStyle=bg;g.beginPath();g.moveTo(x-w*.5,y);g.lineTo(x-w*.5,y-h*.7);g.quadraticCurveTo(x-w*.48,y-h*.9,x,y-h);g.quadraticCurveTo(x+w*.48,y-h*.9,x+w*.5,y-h*.7);g.lineTo(x+w*.5,y);g.closePath();g.fill();
+  g.fillStyle='#c8393b';g.beginPath();g.moveTo(x-w*.36,y-h*.86);g.quadraticCurveTo(x-w*.2,y-h*.96,x,y-h);g.quadraticCurveTo(x+w*.2,y-h*.96,x+w*.36,y-h*.86);g.closePath();g.fill();
+  g.fillRect(x-w*.5,y-h*.42,w,h*.03);g.fillStyle='#15357e';g.beginPath();g.arc(x,y-h*.62,w*.2,0,7);g.fill();g.strokeStyle='#eef1f8';g.lineWidth=1;g.stroke();
+  g.fillStyle='#343b57';g.fillRect(x-w*.3,y,w*.6,h*.035)}
+function drawRocket(t,now){
+  let e=reduce?0:(now-rk.t0)/1000;if(e>13.5){rocketStart();e=0}
+  const dt=Math.min(.05,rk.last?(now-rk.last)/1000:0);rk.last=now;
+  const padY=H*.905,rh=H*.105,rx=W*.5+(P.x-.5)*-10*P.on,lift=Math.max(0,e-2.6),ry=padY-(lift*lift*H*.02+lift*H*.012),burn=e>2.2&&ry>-rh*4,
+        power=burn?Math.min(1,(e-2.2)/.5)*Math.max(0,Math.min(1,(ry+rh*4)/(H*.5)+.25)):0;
+  const sky=g.createLinearGradient(0,0,0,padY);sky.addColorStop(0,'#040922');sky.addColorStop(.55,'#0c1a4c');sky.addColorStop(1,mix([38,40,104],[120,70,80],power));g.fillStyle=sky;g.fillRect(0,0,W,H);
+  drawStars(t,1,.84);
+  const fy=ry+rh*.04;
+  if(power>0){g.globalCompositeOperation='screen';const gl=g.createRadialGradient(rx,fy,0,rx,fy,W*1.05);gl.addColorStop(0,`rgba(255,200,120,${.5*power})`);gl.addColorStop(.35,`rgba(255,130,70,${.2*power})`);gl.addColorStop(1,'rgba(255,120,60,0)');g.fillStyle=gl;g.fillRect(0,0,W,H);g.globalCompositeOperation='source-over'}
+  // ground and far lights
+  const gg=g.createLinearGradient(0,padY,0,H);gg.addColorStop(0,mix([10,14,40],[70,44,40],power*.8));gg.addColorStop(1,'#04060f');g.fillStyle=gg;g.fillRect(0,padY,W,H-padY);
+  for(let i=0;i<9;i++){g.fillStyle=`rgba(255,${190+hsh(i,1)*50|0},140,${.5+.4*Math.sin(t*2+i)})`;g.fillRect(hsh(i,2)*W,padY-1-hsh(i,3)*2,1.5,1.5)}
+  // particles: steam before ignition, then exhaust that rolls outward on the pad and trails behind in the air
+  if(!reduce&&dt>0){const P_=rk.parts;
+    if(e>.6&&e<2.6&&P_.length<240&&Math.random()<.5)P_.push({x:rx+(Math.random()-.5)*rh*.3,y:padY,vx:(Math.random()-.5)*50,vy:-10-Math.random()*25,r:3+Math.random()*4,a:0,m:1.6+Math.random(),hot:0});
+    if(burn&&P_.length<260)for(let k=0;k<3;k++){const near=ry>padY-H*.12,s=Math.random()<.5?-1:1;
+      P_.push(near?{x:rx+s*rh*.1,y:padY-2,vx:s*(60+Math.random()*150),vy:-8-Math.random()*26,r:6+Math.random()*8,a:0,m:2.6+Math.random()*2.2,hot:1}
+                  :{x:rx+(Math.random()-.5)*rh*.12,y:fy+rh*.35,vx:(Math.random()-.5)*16,vy:30+Math.random()*50,r:4+Math.random()*5,a:0,m:1.8+Math.random()*1.6,hot:1})}
+    for(const p of P_){p.a+=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.985;p.vy*=.985;p.r+=dt*(p.hot?9:5)}rk.parts=P_.filter(p=>p.a<p.m)}
+  for(const p of rk.parts){const k=p.a/p.m,warm=p.hot?Math.max(0,1-p.a/1.1)*power:0;g.fillStyle=mix([196,202,220],[255,186,120],warm,(1-k)*.42);g.beginPath();g.arc(p.x,p.y,p.r,0,7);g.fill()}
+  // launch tower
+  const tx=rx-rh*.42,tw=rh*.07;g.fillStyle=mix([14,18,48],[60,40,44],power*.7);g.fillRect(tx,padY-rh*1.08,tw,rh*1.08);
+  g.strokeStyle=g.fillStyle;g.lineWidth=1;for(let i=0;i<7;i++){const y=padY-rh*1.08*(i/7);g.beginPath();g.moveTo(tx,y);g.lineTo(tx+tw,y-rh*.15);g.stroke()}
+  if(e<2.9){g.lineWidth=2;g.beginPath();g.moveTo(tx+tw,padY-rh*.72);g.lineTo(rx-rh*.1,padY-rh*.72);g.stroke()}
+  g.fillStyle=`rgba(255,60,60,${.4+.6*(Math.sin(t*5)>0)})`;g.beginPath();g.arc(tx+tw/2,padY-rh*1.1,1.8,0,7);g.fill();
+  // flame and rocket
+  if(power>0){const fl=rh*(.55+.2*Math.sin(t*40)+.1*Math.sin(t*67))*(.5+.5*power),fw=rh*.085;
+    g.globalCompositeOperation='screen';const fg=g.createLinearGradient(0,fy,0,fy+fl);fg.addColorStop(0,'rgba(255,255,255,1)');fg.addColorStop(.25,'rgba(255,232,150,.95)');fg.addColorStop(.6,'rgba(255,140,60,.7)');fg.addColorStop(1,'rgba(255,90,40,0)');
+    g.fillStyle=fg;g.beginPath();g.moveTo(rx-fw,fy);g.quadraticCurveTo(rx-fw*1.5,fy+fl*.45,rx,fy+fl);g.quadraticCurveTo(rx+fw*1.5,fy+fl*.45,rx+fw,fy);g.closePath();g.fill();
+    const hg=g.createRadialGradient(rx,fy+fl*.2,0,rx,fy+fl*.2,rh*.9);hg.addColorStop(0,'rgba(255,220,150,.75)');hg.addColorStop(1,'rgba(255,160,80,0)');g.fillStyle=hg;g.beginPath();g.arc(rx,fy+fl*.2,rh*.9,0,7);g.fill();g.globalCompositeOperation='source-over'}
+  if(ry>-rh*1.5)rocketShape(rx,ry,rh);
+  topShade(.3)}
+
+// Sailing: golden-hour sea, a sailboat riding the swell, sun glitter and gulls. Waves lift toward the finger.
+function seaY(i,x,t){const f=i/7,base=H*(.745+.27*Math.pow(f,1.25)),amp=H*(.003+.013*f);
+  let y=base+Math.sin(x/W*(6-i*.45)*Math.PI+t*(.9+i*.12)+i*1.7)*amp+Math.sin(x/W*13+t*1.6+i)*amp*.3;
+  const dx=x/W-P.x;y-=Math.exp(-dx*dx/.03)*Math.exp(-Math.pow((base/H-P.y)*4,2))*P.on*H*.02;return y}
+function sailboat(x,y,s,ang){g.save();g.translate(x,y);g.rotate(ang);
+  g.strokeStyle='#1a2140';g.lineWidth=Math.max(1.2,s*.02);g.beginPath();g.moveTo(0,-s*.06);g.lineTo(0,-s);g.stroke();
+  let sg=g.createLinearGradient(0,-s,s*.5,-s*.1);sg.addColorStop(0,'#ffffff');sg.addColorStop(1,'#ffd9a8');g.fillStyle=sg;g.beginPath();g.moveTo(s*.035,-s*.97);g.quadraticCurveTo(s*.42,-s*.5,s*.5,-s*.13);g.lineTo(s*.035,-s*.13);g.closePath();g.fill();
+  sg=g.createLinearGradient(-s*.38,-s*.1,0,-s*.9);sg.addColorStop(0,'#ffe8c8');sg.addColorStop(1,'#f7f9ff');g.fillStyle=sg;g.beginPath();g.moveTo(-s*.035,-s*.88);g.quadraticCurveTo(-s*.2,-s*.5,-s*.42,-s*.13);g.lineTo(-s*.035,-s*.13);g.closePath();g.fill();
+  g.fillStyle='#152048';g.beginPath();g.moveTo(-s*.5,-s*.08);g.lineTo(s*.6,-s*.08);g.quadraticCurveTo(s*.5,s*.07,s*.36,s*.08);g.lineTo(-s*.4,s*.08);g.quadraticCurveTo(-s*.5,s*.03,-s*.5,-s*.08);g.closePath();g.fill();
+  g.fillStyle='#f4f6fb';g.fillRect(-s*.47,-s*.05,s*1.02,s*.022);g.restore()}
+function drawSail(t,now){if(scene.W!==W||scene.H!==H)buildScene();
+  const HZ=H*.745,sx=W*.7,sy=H*.705;
+  const sky=g.createLinearGradient(0,0,0,HZ);sky.addColorStop(0,'#143676');sky.addColorStop(.45,'#4f79bd');sky.addColorStop(.8,'#f0a070');sky.addColorStop(1,'#ffd28c');g.fillStyle=sky;g.fillRect(0,0,W,H);
+  g.globalCompositeOperation='screen';let gr=g.createRadialGradient(sx,sy,0,sx,sy,W);gr.addColorStop(0,'rgba(255,230,170,.75)');gr.addColorStop(.3,'rgba(255,170,110,.3)');gr.addColorStop(1,'rgba(255,150,100,0)');g.fillStyle=gr;g.fillRect(0,0,W,H);g.globalCompositeOperation='source-over';
+  gr=g.createRadialGradient(sx,sy,0,sx,sy,W*.055);gr.addColorStop(0,'#fff');gr.addColorStop(.7,'#fff6d2');gr.addColorStop(1,'rgba(255,236,180,0)');g.fillStyle=gr;g.beginPath();g.arc(sx,sy,W*.055,0,7);g.fill();
+  g.globalAlpha=.42;const cw=W*2.2,co=-((t*5)%cw);g.drawImage(texA,co,H*.38,cw,H*.34);g.drawImage(texA,co+cw,H*.38,cw,H*.34);g.globalAlpha=1;
+  g.strokeStyle='rgba(20,26,60,.6)';g.lineWidth=1.2;g.lineCap='round';for(let i=0;i<3;i++)bird(((t*.016+i*.07+.1)%1.4-.2)*W,H*(.6+i*.018)+Math.sin(t+i)*3,4+i*.6,Math.sin(t*6+i*2)*2.2);
+  g.fillStyle='rgba(58,66,128,.8)';g.beginPath();g.moveTo(0,HZ+1);g.quadraticCurveTo(W*.1,HZ-H*.03,W*.24,HZ-H*.012);g.quadraticCurveTo(W*.32,HZ-H*.004,W*.4,HZ+1);g.closePath();g.fill();
+  const SEA=[[250,190,140],[196,170,170],[120,150,196],[70,120,190],[40,92,170],[24,66,140],[14,44,104],[8,26,72]];
+  const bx=W*(.36+.1*Math.sin(t*.07))+(P.x-.5)*-8*P.on,by=seaY(3,bx,t),ang=Math.atan2(seaY(3,bx+8,t)-seaY(3,bx-8,t),16)*.9+Math.sin(t*.8)*.03,step=Math.max(3,W/110);
+  for(let i=0;i<8;i++){if(i===4)sailboat(bx,by+H*.004,H*.115,ang);
+    g.beginPath();g.moveTo(0,H);for(let x=0;x<=W+step;x+=step)g.lineTo(x,i?seaY(i,x,t):HZ);g.lineTo(W,H);g.closePath();const c=SEA[i],c2=SEA[Math.min(7,i+1)],yb=H*(.745+.27*Math.pow(i/7,1.25));
+    const wg=g.createLinearGradient(0,yb-4,0,yb+H*.08);wg.addColorStop(0,`rgb(${c[0]},${c[1]},${c[2]})`);wg.addColorStop(1,`rgb(${c2[0]},${c2[1]},${c2[2]})`);g.fillStyle=wg;g.fill();
+    if(i){g.beginPath();for(let x=0;x<=W+step;x+=step){const y=seaY(i,x,t);x?g.lineTo(x,y):g.moveTo(x,y)}g.strokeStyle=`rgba(255,240,220,${.3-i*.025})`;g.lineWidth=1;g.stroke()}}
+  g.globalCompositeOperation='screen';for(let i=0;i<110;i++){const h1=hsh(i,1),h2=hsh(i,2),f=Math.pow(h1,1.1),y=HZ+2+(H-HZ)*f,fl=Math.pow(.5+.5*Math.sin(t*(2+h2*3)+i*12.9),2),w=lerp(3,W*.09,f)*(.4+.6*h2);
+    g.fillStyle=`rgba(255,226,170,${(.15+.8*fl)*lerp(1,.5,f)})`;g.fillRect(sx+(h2*2-1)*lerp(4,W*.16,f)-w/2,y,w,lerp(.8,1.8,f))}
+  for(const r of ripples){if(r.y<.745)continue;const age=(now-r.t)/1000;for(let q=0;q<3;q++){const rr=W*(.03+age*.16)-q*W*.025;if(rr<=0)continue;g.strokeStyle=`rgba(255,255,255,${Math.max(0,.5*(1-age/3))})`;g.lineWidth=1.2;g.beginPath();g.ellipse(r.x*W,r.y*H,rr,rr*.22,0,0,7);g.stroke()}}
+  g.globalCompositeOperation='source-over';topShade(.42)}
+
+// Aurora: northern lights over mountains, a seated figure breathing with a slow halo, lights rising. Calm and spiritual.
+function drawAurora(t,now){
+  const bg=g.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#030716');bg.addColorStop(.6,'#0a1b3a');bg.addColorStop(.9,'#123058');g.fillStyle=bg;g.fillRect(0,0,W,H);
+  drawStars(t,1,.8);g.globalCompositeOperation='screen';
+  const COL=[[70,255,170],[70,200,255],[190,120,255]],sw=Math.max(4,Math.round(W/70));
+  for(let c=0;c<3;c++)for(let x=0;x<W;x+=sw){const u=x/W,yT=H*(.3+.08*c)+Math.sin(u*3+t*.25+c*2)*H*.05+Math.sin(u*7-t*.18+c)*H*.02,hh=H*(.3+.09*Math.sin(u*5+t*.3+c)),
+      a=.2+.24*Math.sin(u*9+t*.6+c*3)**2+Math.exp(-Math.pow(u-P.x,2)/.02)*.2*P.on,ag=g.createLinearGradient(0,yT,0,yT+hh),k=COL[c];
+    ag.addColorStop(0,`rgba(${k[0]},${k[1]},${k[2]},0)`);ag.addColorStop(.75,`rgba(${k[0]},${k[1]},${k[2]},${a})`);ag.addColorStop(1,`rgba(${k[0]},${k[1]},${k[2]},0)`);g.fillStyle=ag;g.fillRect(x,yT,sw,hh)}
+  for(const r of ripples){const age=Math.max(0,(now-r.t)/1000),rr=W*age*.45;g.strokeStyle=`rgba(170,255,214,${Math.max(0,.6*(1-age/3))})`;g.lineWidth=2;g.beginPath();g.arc(r.x*W,r.y*H,rr,0,7);g.stroke()}
+  g.globalCompositeOperation='source-over';
+  const ridge=(b,amp,f,ph,par)=>{const off=(P.x-.5)*-par*P.on;g.beginPath();g.moveTo(0,H);for(let x=-4;x<=W+4;x+=4){const u=(x-off)/W;g.lineTo(x,H*b-H*amp*(Math.abs(Math.sin(u*f+ph))*.7+Math.sin(u*f*2.7+ph*2)*.2+Math.sin(u*f*6.3)*.1))}g.lineTo(W,H);g.closePath()};
+  ridge(.86,.07,4.4,1.3,6);g.fillStyle='#0a1a36';g.fill();g.strokeStyle='rgba(120,255,200,.22)';g.lineWidth=1;g.stroke();
+  ridge(.915,.05,3.1,3.2,14);g.fillStyle='#050d20';g.fill();
+  const cx=W*.5+(P.x-.5)*-18*P.on,cy=H*.925,u=H*.042,br=.5+.5*Math.sin(t*Math.PI*2/8);
+  g.fillStyle='#03070f';g.beginPath();g.ellipse(cx,cy+u*1.2,W*.42,u*1.5,0,0,7);g.fill();
+  g.globalCompositeOperation='screen';const hl=g.createRadialGradient(cx,cy-u,0,cx,cy-u,u*(3+br*1.2));hl.addColorStop(0,`rgba(255,236,180,${.5+.25*br})`);hl.addColorStop(.4,`rgba(150,255,210,${.16+.1*br})`);hl.addColorStop(1,'rgba(120,220,255,0)');g.fillStyle=hl;g.beginPath();g.arc(cx,cy-u,u*(3+br*1.2),0,7);g.fill();
+  for(let i=0;i<34;i++){const ph=(t*(.02+hsh(i,1)*.03)+hsh(i,2))%1,x=cx+(hsh(i,3)-.5)*W*.9+Math.sin(t*.6+i)*8,y=H*(.95-ph*.5);g.fillStyle=`rgba(255,240,190,${Math.sin(ph*Math.PI)*.8})`;g.beginPath();g.arc(x,y,.8+hsh(i,4)*1.4,0,7);g.fill()}
+  g.globalCompositeOperation='source-over';g.fillStyle='#02050c';g.strokeStyle='#02050c';g.lineCap='round';
+  g.beginPath();g.ellipse(cx,cy,u*1.15,u*.3,0,0,7);g.fill();
+  g.beginPath();g.moveTo(cx-u*.5,cy-u*1.12);g.quadraticCurveTo(cx,cy-u*1.3,cx+u*.5,cy-u*1.12);g.lineTo(cx+u*.6,cy-u*.05);g.lineTo(cx-u*.6,cy-u*.05);g.closePath();g.fill();
+  g.beginPath();g.arc(cx,cy-u*1.62,u*.3,0,7);g.fill();g.lineWidth=u*.2;for(const s of [-1,1]){g.beginPath();g.moveTo(cx+s*u*.48,cy-u*1.02);g.quadraticCurveTo(cx+s*u*.95,cy-u*.6,cx+s*u*.92,cy-u*.14);g.stroke()}
+  topShade(.25)}
+
+// Dance party: sweeping stage lights on the beat, a glowing floor, a crowd with hands up, confetti. A tap pops a burst.
+function drawDance(t,now){
+  const beat=(t*2)%1,pulse=Math.pow(1-beat,3),bar=Math.floor(t*2);
+  const bg=g.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#090420');bg.addColorStop(.7,'#1c0a3e');bg.addColorStop(1,'#2a0f52');g.fillStyle=bg;g.fillRect(0,0,W,H);
+  const hy=H*.8;for(let r=0;r<6;r++){const y0=hy+(H-hy)*Math.pow(r/6,1.5),y1=hy+(H-hy)*Math.pow((r+1)/6,1.5),w0=W*.1*(1+(y0-hy)/(H-hy)*2.2),w1=W*.1*(1+(y1-hy)/(H-hy)*2.2);
+    for(let c=-6;c<6;c++){const on=hsh(c*7+r*13,bar)>.55;g.fillStyle=`hsla(${(c*47+r*71+bar*50)%360},90%,${on?58:30}%,${on?.55:.24})`;
+      g.beginPath();g.moveTo(W/2+c*w0+1,y0);g.lineTo(W/2+(c+1)*w0-1,y0);g.lineTo(W/2+(c+1)*w1-1,y1-1);g.lineTo(W/2+c*w1+1,y1-1);g.closePath();g.fill()}}
+  g.globalCompositeOperation='screen';
+  for(let i=0;i<6;i++){const ox=W*(.08+.168*i),a=Math.PI/2+Math.sin(t*(.5+.13*i)+i*1.9)*.5+(P.x-.5)*.5*P.on,L=H*1.05,ex=ox+Math.cos(a)*L,ey=Math.sin(a)*L,nx=-Math.sin(a)*W*.13,ny=Math.cos(a)*W*.13,hue=(i*60+t*24)%360;
+    const bgm=g.createLinearGradient(ox,0,ex,ey);bgm.addColorStop(0,`hsla(${hue},100%,65%,${.32+.2*pulse})`);bgm.addColorStop(.4,`hsla(${hue},100%,60%,${.2+.12*pulse})`);bgm.addColorStop(1,`hsla(${hue},100%,60%,0)`);
+    g.fillStyle=bgm;g.beginPath();g.moveTo(ox-3,-4);g.lineTo(ox+3,-4);g.lineTo(ex+nx,ey+ny);g.lineTo(ex-nx,ey-ny);g.closePath();g.fill()}
+  const fl=g.createRadialGradient(W/2,hy,0,W/2,hy,W*.8);fl.addColorStop(0,`rgba(255,120,220,${.22+.2*pulse})`);fl.addColorStop(1,'rgba(255,120,220,0)');g.fillStyle=fl;g.fillRect(0,0,W,H);
+  g.globalCompositeOperation='source-over';
+  for(let i=0;i<70;i++){const y=((t*(34+hsh(i,2)*60)+hsh(i,3)*H*1.1)%(H*1.1))-H*.05,x=hsh(i,1)*W+Math.sin(t*1.4+i)*12,a=.22+.7*sstep(.5,.72,y/H);
+    g.save();g.translate(x,y);g.rotate(t*(1.5+hsh(i,4)*3)+i);g.fillStyle=`hsla(${hsh(i,5)*360},95%,62%,${a})`;g.fillRect(-2,-3.5,4,7);g.restore()}
+  for(const r of ripples){const age=Math.max(0,(now-r.t)/1000);if(age>2.4)continue;for(let k=0;k<28;k++){const an=k*2.4,sp=(.14+.26*hsh(k,r.t%97))*W,x=r.x*W+Math.cos(an)*sp*age,y=r.y*H+Math.sin(an)*sp*age+H*.22*age*age;
+      g.save();g.translate(x,y);g.rotate(age*6+k);g.fillStyle=`hsla(${k*47%360},95%,64%,${Math.max(0,1-age/2.4)})`;g.fillRect(-2.5,-4,5,8);g.restore()}}
+  g.fillStyle='#07031a';g.strokeStyle='#07031a';g.lineCap='round';
+  for(let i=0;i<11;i++){const x=W*(i+.5)/11+(hsh(i,6)-.5)*W*.03+(P.x-.5)*-10*P.on,sc=.8+hsh(i,7)*.5,hr=W*.024*sc,y=H*(.93+hsh(i,8)*.03)-pulse*H*.012*(i%2?1:.55),sway=Math.sin(t*Math.PI*2+i*1.3)*.35;
+    g.beginPath();g.arc(x,y,hr,0,7);g.fill();g.beginPath();g.moveTo(x-hr*1.5,H+2);g.lineTo(x-hr*1.4,y+hr*1.9);g.quadraticCurveTo(x,y+hr*1.1,x+hr*1.4,y+hr*1.9);g.lineTo(x+hr*1.5,H+2);g.closePath();g.fill();
+    g.lineWidth=hr*.55;for(const s of [-1,1]){if(hsh(i,9+s)>.3){const ax=x+s*hr*1.3,ay=y+hr*1.9,an=-Math.PI/2+s*.35+sway;g.beginPath();g.moveTo(ax,ay);g.lineTo(ax+Math.cos(an)*hr*3,ay+Math.sin(an)*hr*3-pulse*3);g.stroke()}}}
+  topShade(.5)}
+
+// Theme list for the picker
+const THEMES=[
+  {id:'sunrise',name:'Sunrise',canvas:1,draw:(t,n)=>drawSunrise(t,n),start:()=>{sunStart=performance.now()},hint:'The sun rises over misty mountains and a lake. Move your finger and the scene shifts; tap the sky for a burst of sunlight or the water for a ripple. Tap Sunrise to watch it again.'},
+  {id:'rocket',name:'Rocket launch',canvas:1,draw:(t,n)=>drawRocket(t,n),start:rocketStart,tap:rocketTap,hint:'Steam builds on the pad, the engines light, and the rocket climbs right through the card. It repeats on its own. Tap the background to launch early.'},
+  {id:'sail',name:'Sailing',canvas:1,draw:(t,n)=>drawSail(t,n),hint:'A sailboat rides the swell at golden hour while the sun sparkles on the water. Move your finger and the waves lift toward it; tap the sea for a ripple.'},
+  {id:'aurora',name:'Aurora',canvas:1,draw:(t,n)=>drawAurora(t,n),hint:'Northern lights drift over the mountains while a seated figure breathes with a slow glow. The lights brighten near your finger; tap to send out a ring of light.'},
+  {id:'dance',name:'Dance party',canvas:1,draw:(t,n)=>drawDance(t,n),hint:'Stage lights sweep to the beat over a glowing floor and a crowd with their hands up. The lights lean toward your finger; tap for a confetti burst.'},
+  {id:'ribbon',name:'Live ribbon',canvas:1,draw:t=>drawRibbon(t),hint:'The waves drift on their own. Move your mouse or finger over the card and they rise toward you; tap the background to send a ripple.'},
+  {id:'photo',name:'Living photo',draw:t=>drawPhoto(t),hint:'Your current background picture, brought to life: it shifts with your finger for depth, and a soft light passes along the ribbons.'},
+  {id:'still',name:"Today's card",hint:'This is how your card looks today, for comparison.'}];
+const THEME=Object.fromEntries(THEMES.map(x=>[x.id,x]));
 // Living photo: today's owned ribbon picture, with depth that follows the finger and a slow light passing along the lines.
 function drawPhoto(t){
   const dx=(P.x-.5)*-18*P.on+Math.sin(t*.15)*6,dy=(P.y-.6)*-12*P.on+Math.sin(t*.11)*5,s=1+Math.sin(t*.09)*.012;
@@ -258,22 +391,16 @@ function frame(now){
   const t=(now-t0)/1000;
   P.x+=(P.tx-P.x)*.08;P.y+=(P.ty-P.y)*.08;P.on+=(P.ton-P.on)*.06;
   ripples=ripples.filter(r=>now-r.t<3500);flares=flares.filter(f=>now-f<1600);
-  if(mode==='sunrise')drawSunrise(reduce?0:t,now);else if(mode==='ribbon')drawRibbon(reduce?0:t);else if(mode==='photo')drawPhoto(reduce?0:t);
+  const T_=THEME[mode];if(T_.draw)T_.draw(reduce?0:t,now);
   if(!reduce)requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 if(reduce)phone.addEventListener('pointermove',()=>requestAnimationFrame(frame));
 
-const HINTS={sunrise:'The sun rises over misty mountains and a lake. Move your finger and the scene shifts; tap the sky for a burst of sunlight or the water for a ripple. Tap Sunrise to watch it again.',
-  ribbon:'The waves drift on their own. Move your mouse or finger over the card and they rise toward you; tap the background to send a ripple.',
-  photo:'Your current background picture, brought to life: it shifts with your finger for depth, and a soft light passes along the ribbons.',
-  still:'This is how your card looks today, for comparison.'};
-function set(m){mode=m;
-  for(const [id,k] of [['b-sun','sunrise'],['b-ribbon','ribbon'],['b-photo','photo'],['b-still','still']])document.getElementById(id).setAttribute('aria-pressed',String(k===m));
-  const canvasMode=m==='ribbon'||m==='sunrise';cv.hidden=!canvasMode;photo.hidden=canvasMode;if(m==='sunrise')sunStart=performance.now();
-  img.style.transform='none';glow.style.background='none';hint.textContent=HINTS[m];if(reduce)requestAnimationFrame(frame);}
-document.getElementById('b-sun').onclick=()=>set('sunrise');
-document.getElementById('b-ribbon').onclick=()=>set('ribbon');
-document.getElementById('b-photo').onclick=()=>set('photo');
-document.getElementById('b-still').onclick=()=>set('still');
+const seg=document.getElementById('seg');
+for(const T of THEMES){const b=document.createElement('button');b.id='b-'+T.id;b.textContent=T.name;b.setAttribute('aria-pressed',String(T.id===mode));b.onclick=()=>set(T.id);seg.appendChild(b)}
+function set(m){mode=m;const T=THEME[m];
+  for(const X of THEMES)document.getElementById('b-'+X.id).setAttribute('aria-pressed',String(X.id===m));
+  cv.hidden=!T.canvas;photo.hidden=!!T.canvas;if(T.start)T.start();ripples=[];flares=[];
+  img.style.transform='none';glow.style.background='none';hint.textContent=T.hint;if(reduce)requestAnimationFrame(frame);}
 </script>
