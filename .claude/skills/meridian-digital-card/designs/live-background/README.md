@@ -37,3 +37,7 @@ Testing trap: `python3 -m http.server` has no range support, so setting `current
 ## Sound (24 Nov 2026)
 Both video backgrounds now carry their audio (AAC 112k, about -16 LUFS each; the laptop cut was 2.2 dB hotter and was turned down, with a 0.7 s fade-out so the loop does not cut off mid-note). Browsers refuse to auto-play sound, so the card always opens silent and a round speaker button (`#snd`, top right) unmutes on tap; switching to a theme without sound mutes again.
 Trap: the HTML `hidden` attribute does not hide SVG child elements outside the artifact's reset, so the speaker icon's two states are switched with `style.display`.
+
+## Interactive demo ad (24 Nov 2026)
+`demo-ad.html` is the client-facing version of the preview: pitch ("The business card that moves."), the working card, a grouped background picker, four plain statements of what it does, and "Book a free 1-on-1" (links to `/?book=web_design`). Otis asked for an ad clients can click, touch and use, instead of a video. Differences from `preview.html`: the card's name is a `.nm` div so the page owns the only `h1`; the picker drops Living photo and Today's card and lists Signature, then "Your own video", then the collections; picking a background scrolls the card back into view on small screens. No prices, no em dashes.
+Published as a private artifact for Otis. To reach clients it needs either sharing from the artifact's Share menu or a home on meridianinterface.com (his OK plus meridian-prelaunch-qa; the page needs the site's CSP checked for `<video>` and WebGL).
