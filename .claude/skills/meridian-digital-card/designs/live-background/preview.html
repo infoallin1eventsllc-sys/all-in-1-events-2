@@ -20,6 +20,17 @@ body{background:radial-gradient(90% 70% at 50% 30%,var(--stage-2),var(--stage));
 @media (max-width:480px){.phone{width:100%;box-shadow:0 30px 60px rgba(0,0,0,.5);border-radius:26px}}
 canvas,.photo{position:absolute;inset:0;width:100%;height:100%}
 #vid{position:absolute;left:0;bottom:0;width:100%;height:auto;display:block}
+#vid.fill{top:0;height:100%;object-fit:cover}
+#snd[hidden]{display:none}
+#scrim{position:absolute;inset:0;pointer-events:none;background:linear-gradient(to bottom,rgba(4,8,26,.72) 0,rgba(4,8,26,.5) 38%,rgba(4,8,26,.12) 70%,rgba(4,8,26,.3) 100%)}
+.mk{width:min(100%,400px);display:flex;flex-direction:column;gap:10px;align-items:center;padding:16px;border:1px dashed #33427c;border-radius:18px;margin-top:6px}
+.mk .up{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;border-radius:999px;background:var(--acc);color:var(--white);font:700 15px var(--display);cursor:pointer;text-align:center}
+.mk .up:focus-within{outline:3px solid #fff;outline-offset:2px}
+.mk .row{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+.mk input[type=text]{min-width:0;width:100%;font:500 15px var(--body);color:var(--white);background:var(--chip);border:1px solid #2a376b;border-radius:12px;padding:11px 12px}
+.mk input[type=text]::placeholder{color:#8091b8}
+.mk .note{margin:0;font:400 12.5px/1.5 var(--body);color:var(--muted);text-align:center}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 .photo{overflow:hidden}
 .photo .img{position:absolute;inset:-6%;background:url(ribbon.jpg) 50% 0/auto 112% no-repeat;will-change:transform}
 .photo .glow{position:absolute;inset:0;mix-blend-mode:screen;pointer-events:none}
@@ -62,6 +73,7 @@ a:focus-visible,button:focus-visible{outline:3px solid #fff;outline-offset:2px}
     <canvas id="gl" aria-hidden="true" hidden></canvas>
     <canvas id="waves" aria-hidden="true"></canvas>
     <div class="photo" id="photo" hidden><div class="img" id="img"></div><div class="glow" id="glow"></div></div>
+    <div id="scrim" hidden></div>
     <button id="snd" type="button" aria-pressed="false" aria-label="Turn sound on" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path id="snd-x" d="m22 9-6 6M16 9l6 6"/><path id="snd-w" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" style="display:none"/></svg></button>
     <div class="card">
       <header class="content">
@@ -87,6 +99,13 @@ a:focus-visible,button:focus-visible{outline:3px solid #fff;outline-offset:2px}
 
   <div class="controls">
     <p class="hint" id="hint">The sun rises over misty mountains and a lake. Move your finger and the scene shifts; tap the sky for a burst of sunlight or the water for a ripple. Tap Sunrise to watch it again.</p>
+    <div class="mk">
+      <div class="col">Make your own (prototype)</div>
+      <label class="up" for="mk-file">Choose a photo or video<input class="vh" id="mk-file" type="file" accept="image/*,video/*"></label>
+      <div class="row"><input type="text" id="mk-name" placeholder="Your name" autocomplete="off" aria-label="Your name"><input type="text" id="mk-role" placeholder="Your title" autocomplete="off" aria-label="Your title"></div>
+      <div class="seg" role="group" aria-label="How the picture fits"><button type="button" id="mk-fill" aria-pressed="true">Fill the card</button><button type="button" id="mk-band" aria-pressed="false">Bottom of the card</button></div>
+      <p class="note" id="mk-note">Your file stays on this device. Nothing is uploaded.</p>
+    </div>
     <div class="seg" id="seg" role="group" aria-label="Background">
     </div>
   </div>
@@ -669,7 +688,18 @@ let lastCol='';for(const T of THEMES){if(T.col!==lastCol){lastCol=T.col;const l=
 function set(m){mode=m;const T=THEME[m];
   for(const X of THEMES)document.getElementById('b-'+X.id).setAttribute('aria-pressed',String(X.id===m));
   cv.hidden=!T.canvas;glc.hidden=!T.gl;photo.hidden=!!(T.canvas||T.gl||T.video);
-  vid.hidden=!T.video;snd.hidden=!T.video;if(!T.video)setSound(false);phone.style.background=T.video?T.bg:'';if(T.video){{const m=`linear-gradient(to bottom,transparent 0,#000 ${T.feather||0}%)`;vid.style.webkitMaskImage=m;vid.style.maskImage=m}if(vid.getAttribute('src')!==T.video)vid.src=T.video;vid.currentTime=0;if(!reduce){const pr=vid.play();if(pr)pr.catch(()=>{})}}else vid.pause();if(T.start)T.start();ripples=[];flares=[];
+  vid.hidden=!T.video;snd.hidden=!T.video;if(!T.video)setSound(false);vid.classList.toggle('fill',!!T.fill);document.getElementById('scrim').hidden=!T.scrim;img.style.background=T.image?`#000 url("${T.image}") center/cover no-repeat`:'';if(T.image)img.style.inset=T.fill?'-4%':'auto -4% -2% -4%',img.style.height=T.fill?'':'46%',img.style.webkitMaskImage=img.style.maskImage=T.fill?'':'linear-gradient(to bottom,transparent 0,#000 22%)';else{img.style.inset='';img.style.height='';img.style.webkitMaskImage=img.style.maskImage=''}phone.style.background=(T.video||T.image)?T.bg:'';if(T.video){{const m=`linear-gradient(to bottom,transparent 0,#000 ${T.feather||0}%)`;vid.style.webkitMaskImage=m;vid.style.maskImage=m}if(vid.getAttribute('src')!==T.video)vid.src=T.video;vid.currentTime=0;if(!reduce){const pr=vid.play();if(pr)pr.catch(()=>{})}}else vid.pause();if(T.start)T.start();ripples=[];flares=[];
   img.style.transform='none';glow.style.background='none';hint.textContent=T.hint;if(reduce)requestAnimationFrame(frame);}
+// Make your own (prototype): a photo or video from the visitor's own library becomes the card background, on this device only.
+let mkURL='',mkFill=true;const mkName=document.getElementById('mk-name'),mkRole=document.getElementById('mk-role'),mkNote=document.getElementById('mk-note');
+function mkApply(){if(!mkURL)return;const isV=THEME.custom.kind==='video';Object.assign(THEME.custom,{fill:mkFill,scrim:mkFill,feather:mkFill?0:14,video:isV?mkURL:undefined,image:isV?undefined:mkURL});set('custom')}
+THEME.custom={id:'custom',name:'My own',bg:'#000000',draw:t=>{if(THEME.custom.image&&THEME.custom.fill)drawPhoto(t)},hint:'Your own picture is now the background of the card. Try the two fit buttons, and type your name and title.'};
+document.getElementById('mk-file').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;
+  if(!/^(image|video)\//.test(f.type)){mkNote.textContent='That file is not a photo or a video. Please choose a different one.';return}
+  if(mkURL)URL.revokeObjectURL(mkURL);mkURL=URL.createObjectURL(f);THEME.custom.kind=f.type.startsWith('video')?'video':'image';
+  mkNote.textContent=(THEME.custom.kind==='video'?'Video':'Photo')+' loaded. It stays on this device; nothing is uploaded.';mkApply();phone.scrollIntoView({block:'center',behavior:reduce?'auto':'smooth'})});
+for(const [id,v] of [['mk-fill',true],['mk-band',false]])document.getElementById(id).onclick=()=>{mkFill=v;document.getElementById('mk-fill').setAttribute('aria-pressed',String(v));document.getElementById('mk-band').setAttribute('aria-pressed',String(!v));mkApply()};
+const nmEl=document.querySelector('.card h1'),roleEl=document.querySelector('.card .role'),nm0=nmEl.textContent,role0=roleEl.textContent;
+mkName.addEventListener('input',()=>{nmEl.textContent=mkName.value.trim()||nm0});mkRole.addEventListener('input',()=>{roleEl.textContent=mkRole.value.trim()||role0});
 set('vflat');
 </script>

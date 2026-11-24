@@ -45,3 +45,6 @@ Published as a private artifact for Otis. To reach clients it needs either shari
 ## Motorcycle video (24 Nov 2026)
 `bg-moto.mp4`: Otis's 16:9 exploded-motorcycle clip, whole frame (a 16:9 picture is about 26 percent of the card's height, which is exactly the open zone under the buttons, so no crop), 1280x720, crf 26, 2.5 MB, loudness raised from -21.6 to -16 LUFS, picture and sound fade to black at the loop point because the clip starts wide and ends close. Added to both pages as "Motorcycle".
 Caution before public use: the bike is styled like a well-known touring model and has a badge on the tank. A card or ad for a real client should not look like another brand's product; check with Otis where the clip came from.
+
+## Make your own (prototype), 24 Nov 2026
+`preview.html` only. `THEME.custom` is filled from a file input (`image/*,video/*`) via `URL.createObjectURL`; `fill` puts the picture or video full-card under a dark scrim (`#scrim`) so white text stays readable, otherwise it sits in the bottom zone with a feathered top. Name and title inputs rewrite the card text live. Plan for the real app: `system/products/live-cards/APP-PLAN.md`.
