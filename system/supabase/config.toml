@@ -450,6 +450,11 @@ verify_jwt = false
 verify_jwt = false
 [functions.pay-webhook]
 verify_jwt = false
+# Live Cards plans (not deployed yet). The checkout needs a signed-in account; the webhook is public and proves itself by Stripe's signature.
+[functions.lc-billing]
+verify_jwt = true
+[functions.lc-billing-webhook]
+verify_jwt = false
 [functions.site-images]
 verify_jwt = false
 [functions.unsubscribe]

@@ -160,6 +160,52 @@ export async function createCheckoutSession(args: {
   }, args.idempotencyKey);
 }
 
+/* ------------------------------------------------- Live Cards (plans) --- */
+
+export type Subscription = { id: string; status: string; customer: string; metadata?: Record<string, string> };
+
+/**
+ * Hosted checkout for a Live Cards plan. The price is a Stripe price id held
+ * as a server secret; the browser never names an amount or a price. The
+ * account id rides along so the webhook can find the account without trusting
+ * the redirect.
+ */
+export async function createPlanCheckout(args: {
+  priceId: string;
+  userId: string;
+  email?: string | null;
+  customerId?: string | null;
+  successUrl: string;
+  cancelUrl: string;
+  idempotencyKey: string;
+}): Promise<CheckoutSession> {
+  const meta = { product: "live-cards", user_id: args.userId };
+  return await stripePost<CheckoutSession>("/checkout/sessions", {
+    mode: "subscription",
+    line_items: [{ price: args.priceId, quantity: 1 }],
+    client_reference_id: args.userId,
+    customer: args.customerId || undefined,
+    customer_email: args.customerId ? undefined : (args.email || undefined),
+    metadata: meta,
+    subscription_data: { metadata: meta },
+    success_url: args.successUrl,
+    cancel_url: args.cancelUrl,
+  }, args.idempotencyKey);
+}
+
+/** Stripe's own page for changing a card or cancelling. We never build one. */
+export async function createPortalSession(customerId: string, returnUrl: string): Promise<{ url: string }> {
+  if (!/^cus_[A-Za-z0-9]+$/.test(customerId)) throw new Error("not a customer id");
+  return await stripePost<{ url: string }>("/billing_portal/sessions", { customer: customerId, return_url: returnUrl });
+}
+
+/** The subscription as Stripe holds it right now. Events can arrive late or
+    out of order, so the webhook asks rather than believing the event's copy. */
+export async function getSubscription(id: string): Promise<Subscription> {
+  if (!/^sub_[A-Za-z0-9]+$/.test(id)) throw new Error("not a subscription id");
+  return await stripeGet<Subscription>(`/subscriptions/${id}`);
+}
+
 /* -------------------------------------------------------- webhook auth --- */
 
 const toHex = (b: ArrayBuffer) =>

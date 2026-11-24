@@ -1,5 +1,5 @@
 -- 0047 Live Cards: client-made digital cards with their own accounts, public links and uploads.
--- NOT APPLIED. Hardened on 24 Nov 2026; the attack-test dry run of this version is still waiting on Otis's approval. Otis decides when it goes live.
+-- NOT APPLIED. Hardened on 24 Nov 2026 and attack-tested in a rolled-back transaction (53 checks, see ../tests/0047_live_cards_attack_test.sql). Otis decides when it goes live.
 -- Everything here is new and self-contained (prefix lc_, bucket live-cards). It does not touch the marketing system's tables.
 --
 -- Security shape (the browser is never trusted):
@@ -53,12 +53,13 @@ comment on table public.lc_billing_events is 'Live Cards: payment webhook events
 create or replace function public.lc_txt(v text, n int) returns text
 language sql immutable set search_path = '' as $$
   -- control characters become spaces; hidden text-direction marks (used to disguise names and links) are removed
-  select left(btrim(regexp_replace(regexp_replace(coalesce(v, ''), '[[:cntrl:]]', ' ', 'g'), '[\u202A-\u202E\u2066-\u2069]', '', 'g')), n)
+  select left(btrim(translate(regexp_replace(coalesce(v, ''), '[[:cntrl:]]', ' ', 'g'),
+    chr(8234) || chr(8235) || chr(8236) || chr(8237) || chr(8238) || chr(8294) || chr(8295) || chr(8296) || chr(8297), '')), n)
 $$;
 
 create or replace function public.lc_link(v text) returns text
 language sql immutable set search_path = '' as $$
-  select case when public.lc_txt(v, 500) ~ '^https?://[^[:space:]<>"''`]{3,490}$' then public.lc_txt(v, 500) else '' end
+  select case when public.lc_txt(v, 500) ~ '^https?://[^[:space:]<>"''`]{3,}$' then public.lc_txt(v, 500) else '' end
 $$;
 
 -- A picture or video on a card must be a file this account uploaded to its own folder. No other address is accepted.
