@@ -20,3 +20,9 @@ Trap: a tap's timestamp can be later than the frame's timestamp, so ages can be 
 ## Twelve themes (24 Nov 2026)
 Added Mountain bike, Jet ski, Jets, Drag race, Night ride, Snowboarding, Fireworks; the picker groups themes by collection (`col` on each THEMES entry). All 60 fps in headless tests at 2x. Vehicles and people are drawn as clean illustrations (rear-view cars and motorcycle, line-built bicycle, planform jets); photo-real versions belong to the Cinematic tier.
 Notes: scenes that loop on a clock keep their own start time (`start` hook) so a theme always opens at a good moment; taps reach a scene through `tap(now)` or the shared `ripples` list (`hop(now)` gives a 0 to 1 jump curve from the last tap).
+
+## Max quality: Ocean sunrise (WebGL), 24 Nov 2026
+Otis asked to push the code-drawn style as far as it can go. `drawOcean` is a per-pixel fragment shader (original, no art files) on a second canvas `#gl`: sky with a low sun and glow, noise clouds lit from the sun side, hazy mountains left and right of an open horizon, a normal-perturbed ocean plane with Fresnel sky reflection and a sun glitter path, tap ripples in the wave height, stars at dawn, filmic tone mapping, vignette and grain. The sun rises over 20 s. It is the default theme when WebGL is available (`glOK`); otherwise the picker simply omits it.
+- First pass was washed out: the wide sun-glow lobe (`pow(sd,5)`) and half-coverage clouds greyed the whole sky. Fixed with narrower lobes, sparser clouds, darker zenith, a saturation lift and a stronger top shade for the white text.
+- Quality adapts: the canvas starts at 2x and drops in steps to 0.5x when frames run slow. Headless Chromium renders it in software (about 100 ms a frame), so judge speed on a real phone, not in tests.
+- The camera math in JS (`uy=.5-r.y+.30`, focal 1.2) must match the shader so tap ripples land under the finger.

@@ -54,6 +54,7 @@ a:focus-visible,button:focus-visible{outline:3px solid #fff;outline-offset:2px}
 
 <div class="wrap">
   <div class="phone" id="phone">
+    <canvas id="gl" aria-hidden="true" hidden></canvas>
     <canvas id="waves" aria-hidden="true"></canvas>
     <div class="photo" id="photo" hidden><div class="img" id="img"></div><div class="glow" id="glow"></div></div>
     <div class="card">
@@ -545,8 +546,79 @@ function drawBike(t,now){
   g.lineWidth=u*.44;ln(Hp[0],Hp[1],Sh[0],Sh[1]);g.lineWidth=u*.2;ln(Sh[0],Sh[1],HB[0],HB[1]);g.beginPath();g.arc(u*.82,-u*3.72,u*.31,0,7);g.fill();g.restore();
   topShade(.36)}
 
+// ---------- Max quality: a sunrise over open ocean, computed per pixel on the graphics chip (WebGL). Original shader, no art files. ----------
+const glc=document.getElementById('gl');let GL=null,glP=null,glU={},glQ=1,glEma=16,glN=0,glLast=0,oceanStart=performance.now(),glFlare=-1e9;
+const OCEAN_FS=`precision highp float;
+uniform vec2 uRes;uniform float uTime,uRise,uFlare;uniform vec3 uPtr;uniform vec3 uTap[3];
+float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
+const mat2 M2=mat2(1.6,1.2,-1.2,1.6);
+float fbm(vec2 p){float a=.5,s=0.;for(int i=0;i<5;i++){s+=a*noise(p);p=M2*p+vec2(17.1,9.2);a*=.5;}return s;}
+float fbm3(vec2 p){float a=.5,s=0.;for(int i=0;i<3;i++){s+=a*noise(p);p=M2*p+vec2(3.1,7.7);a*=.5;}return s;}
+vec3 skyCol(vec3 rd,vec3 sun,float rise){float y=max(rd.y,0.);
+  vec3 zen=mix(vec3(.006,.012,.06),vec3(.02,.10,.36),rise),mid=mix(vec3(.05,.04,.16),vec3(.10,.30,.66),rise),hor=mix(vec3(.62,.17,.07),vec3(.72,.52,.38),rise);
+  vec3 c=mix(hor,mid,smoothstep(0.,.16,y));c=mix(c,zen,smoothstep(.08,.7,y));
+  float sd=max(dot(rd,sun),0.);vec3 gc=mix(vec3(1.,.40,.14),vec3(1.,.76,.46),rise);
+  c+=gc*(pow(sd,9.)*.16+pow(sd,70.)*.5+pow(sd,500.)*.9)*(.95-.45*rise)*(1.+uFlare);return c;}
+float waveH(vec2 p,float t,float dt){float h=0.;
+  h+=sin(dot(p,vec2(.9,.45))*.9+t*.9)*.10;h+=sin(dot(p,vec2(-.4,1.))*1.7+t*1.3)*.05;h+=sin(dot(p,vec2(.7,-.75))*3.1+t*1.9)*.022;
+  h+=(noise(p*1.5+vec2(t*.25,t*.18))-.5)*.11*dt;h+=(noise(p*4.3-vec2(t*.4,t*.3))-.5)*.04*dt;h+=(noise(p*11.+vec2(t*.6,-t*.5))-.5)*.014*dt*dt;
+  for(int i=0;i<3;i++){float a=uTap[i].z;if(a<6.){float d=length(p-uTap[i].xy);h+=.07*sin(d*8.-a*7.)*exp(-d*.45)*exp(-a*.7)*smoothstep(a*1.6+.6,a*1.6,d);}}
+  return h;}
+void main(){
+  vec2 uv=(gl_FragCoord.xy-.5*uRes)/uRes.y;float top=1.-gl_FragCoord.y/uRes.y;
+  float yaw=(uPtr.x-.5)*.12*uPtr.z;vec3 rd=normalize(vec3(uv.x,uv.y+.30+(uPtr.y-.5)*-.015*uPtr.z,-1.2));
+  rd.xz=mat2(cos(yaw),-sin(yaw),sin(yaw),cos(yaw))*rd.xz;
+  float el=mix(-.062,.040,uRise);vec3 sun=normalize(vec3(0.,sin(el),-cos(el)));
+  vec3 sunC=mix(vec3(1.,.42,.16),vec3(1.,.90,.72),uRise);vec3 col;
+  if(rd.y>0.){
+    col=skyCol(rd,sun,uRise);
+    vec2 sp=rd.xy/-rd.z*150.,id=floor(sp);float st=step(.93,hash(id))*smoothstep(.16,0.,length(fract(sp)-.5-(vec2(hash(id+3.1),hash(id+7.7))-.5)*.6));col+=st*(.55+.45*sin(uTime*2.+id.x))*clamp(1.-uRise*2.6,0.,1.)*1.6*smoothstep(.05,.3,rd.y);
+    float sd=max(dot(rd,sun),0.);col+=sunC*smoothstep(.99965,.99985,sd)*7.*smoothstep(-.004,.006,rd.y);
+    vec2 p=rd.xz/(rd.y+.04)*.5+vec2(uTime*.010,uTime*.022);
+    float b=fbm(p*1.25),d=b+.45*fbm3(p*3.3+7.)-.76;float cov=smoothstep(0.,.3,d);
+    if(cov>.001){float b2=fbm(p*1.25+vec2(0.,-.22));float lit=clamp((b-b2)*2.4+.5,0.,1.);
+      vec3 dark=mix(vec3(.07,.05,.13),vec3(.34,.40,.56),uRise),bright=mix(vec3(1.,.36,.14),vec3(1.,.90,.78),uRise);
+      vec3 cc=mix(dark,bright,lit)+bright*pow(sd,10.)*.9*(1.-cov*.6);col=mix(col,cc,cov*.92*smoothstep(0.,.10,rd.y));}
+    float a=atan(rd.x,-rd.z),e=rd.y/length(rd.xz),open=smoothstep(.045,.15,abs(a));
+    float r1=(.012+.050*noise(vec2(a*5.,1.))+.018*noise(vec2(a*17.,3.)))*open,r2=(.004+.03*noise(vec2(a*8.+20.,5.))+.008*noise(vec2(a*31.,9.)))*smoothstep(.10,.2,abs(a));
+    vec3 hz=skyCol(normalize(vec3(rd.x,.004,rd.z)),sun,uRise);
+    col=mix(col,mix(mix(vec3(.16,.12,.26),vec3(.24,.34,.52),uRise),hz,.62),smoothstep(r1+.0016,r1,e));
+    col=mix(col,mix(mix(vec3(.07,.05,.14),vec3(.10,.18,.32),uRise),hz,.34),smoothstep(r2+.0014,r2,e));
+  }else{
+    float dist=1./max(-rd.y,1e-4);vec2 p=rd.xz*dist;float att=1./(1.+dist*dist*.0018),ep=.03+dist*.012;
+    float h=waveH(p,uTime,att),hx=waveH(p+vec2(ep,0.),uTime,att),hz2=waveH(p+vec2(0.,ep),uTime,att);
+    vec3 n=normalize(vec3(-(hx-h)/ep*att,1.,-(hz2-h)/ep*att));
+    vec3 R=reflect(rd,n);R.y=abs(R.y)+.002;R=normalize(R);
+    float F=.02+.98*pow(1.-max(dot(-rd,n),0.),5.);
+    vec3 deep=mix(vec3(.004,.012,.05),vec3(.006,.06,.14),uRise);
+    vec3 refl=skyCol(R,sun,uRise);
+    vec2 cp=R.xz/(R.y+.04)*.5+vec2(uTime*.010,uTime*.022);float cb=fbm3(cp*1.25)-.5;refl=mix(refl,mix(vec3(.5,.3,.3),vec3(.95,.95,.97),uRise),smoothstep(0.,.3,cb)*.35);
+    col=mix(deep,refl,F);col+=mix(vec3(0.,.05,.06),vec3(.0,.10,.10),uRise)*max(h*4.,0.)*att;
+    float sd=max(dot(R,sun),0.),vis=smoothstep(-.03,.012,sun.y);
+    col+=sunC*(pow(sd,mix(700.,90.,smoothstep(0.,70.,dist)))*mix(5.,3.2,uRise)+pow(sd,28.)*mix(.22,.10,uRise))*vis*(1.+uFlare);
+    vec3 hzc=skyCol(normalize(vec3(rd.x,.004,rd.z)),sun,uRise);col=mix(col,hzc,(1.-exp(-dist*.004))*mix(.7,.45,uRise));
+  }
+  col=mix(vec3(dot(col,vec3(.299,.587,.114))),col,1.22);col=max(col,0.);col=(col*(2.51*col+.03))/(col*(2.43*col+.59)+.14);col=pow(clamp(col,0.,1.),vec3(.4545));
+  vec2 q=gl_FragCoord.xy/uRes;col*=mix(.74,1.,smoothstep(0.,.5,q.x*(1.-q.x)*4.));col*=mix(.5,1.,smoothstep(0.,.55,top));
+  col+=(hash(gl_FragCoord.xy+fract(uTime)*71.)-.5)*.022;gl_FragColor=vec4(col,1.);}`;
+function glInit(){try{GL=glc.getContext('webgl',{antialias:false,alpha:false,powerPreference:'high-performance'});if(!GL)return false;
+    const sh=(ty,src)=>{const s=GL.createShader(ty);GL.shaderSource(s,src);GL.compileShader(s);if(!GL.getShaderParameter(s,GL.COMPILE_STATUS))throw new Error(GL.getShaderInfoLog(s));return s};
+    glP=GL.createProgram();GL.attachShader(glP,sh(GL.VERTEX_SHADER,'attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}'));GL.attachShader(glP,sh(GL.FRAGMENT_SHADER,OCEAN_FS));GL.linkProgram(glP);
+    if(!GL.getProgramParameter(glP,GL.LINK_STATUS))throw new Error(GL.getProgramInfoLog(glP));GL.useProgram(glP);
+    GL.bindBuffer(GL.ARRAY_BUFFER,GL.createBuffer());GL.bufferData(GL.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),GL.STATIC_DRAW);const loc=GL.getAttribLocation(glP,'a');GL.enableVertexAttribArray(loc);GL.vertexAttribPointer(loc,2,GL.FLOAT,false,0,0);
+    for(const n of ['uRes','uTime','uRise','uFlare','uPtr','uTap'])glU[n]=GL.getUniformLocation(glP,n);return true}catch(err){console.warn('WebGL scene unavailable',err);GL=null;return false}}
+const glOK=glInit();
+function glSize(){const s=Math.min(2,devicePixelRatio||1)*glQ,w=Math.max(2,Math.round(W*s)),h=Math.max(2,Math.round(H*s));if(glc.width!==w||glc.height!==h){glc.width=w;glc.height=h;GL.viewport(0,0,w,h)}}
+function drawOcean(t,now){if(!GL)return;
+  if(glLast&&!reduce){const d=now-glLast;if(d<200){glEma+=(d-glEma)*.1;if(++glN>45&&glEma>30&&glQ>.5){glQ=Math.max(.5,glQ*.8);glN=0;glEma=18}}}glLast=now;glSize();
+  const rise=reduce?1:ease((now-oceanStart)/20000),taps=new Float32Array(9).fill(99);let k=0;
+  for(let i=ripples.length-1;i>=0&&k<3;i--){const r=ripples[i],ux=(r.x-.5)*W/H,uy=.5-r.y+.30,l=Math.hypot(ux,uy,1.2),ry=uy/l;if(ry>=-.002)continue;const d=1/-ry;taps[k*3]=ux/l*d;taps[k*3+1]=-1.2/l*d;taps[k*3+2]=Math.max(0,(now-r.t)/1000);k++}
+  GL.uniform2f(glU.uRes,glc.width,glc.height);GL.uniform1f(glU.uTime,reduce?40:(t%3600));GL.uniform1f(glU.uRise,rise);GL.uniform1f(glU.uFlare,.9*Math.exp(-Math.max(0,(now-glFlare)/1000)*2.2));
+  GL.uniform3f(glU.uPtr,P.x,P.y,P.on);GL.uniform3fv(glU.uTap,taps);GL.drawArrays(GL.TRIANGLES,0,3)}
 // Theme list for the picker
 const THEMES=[
+  ...(glOK?[{col:'Max quality',id:'ocean',name:'Ocean sunrise',gl:1,draw:(t,n)=>drawOcean(t,n),start:()=>{oceanStart=performance.now()},tap:n=>{if(P.ty<.795)glFlare=n},hint:'This one is computed pixel by pixel on your device: real-looking water, clouds and light. The sun rises over the sea in about 20 seconds. Move your finger to look around; tap the water for ripples or the sky for a flash of sunlight.'}]:[]),
   {col:'Nature and outdoors',id:'sunrise',name:'Sunrise',canvas:1,draw:(t,n)=>drawSunrise(t,n),start:()=>{sunStart=performance.now()},hint:'The sun rises over misty mountains and a lake. Move your finger and the scene shifts; tap the sky for a burst of sunlight or the water for a ripple. Tap Sunrise to watch it again.'},
   {col:'Nature and outdoors',id:'bike',name:'Mountain bike',canvas:1,draw:(t,n)=>drawBike(t,n),hint:'A rider pedals a ridge trail against a huge setting sun, kicking up dust. Tap the background to make them jump.'},
   {col:'Water',id:'sail',name:'Sailing',canvas:1,draw:(t,n)=>drawSail(t,n),hint:'A sailboat rides the swell at golden hour while the sun sparkles on the water. Move your finger and the waves lift toward it; tap the sea for a ripple.'},
@@ -584,6 +656,7 @@ const seg=document.getElementById('seg');
 let lastCol='';for(const T of THEMES){if(T.col!==lastCol){lastCol=T.col;const l=document.createElement('div');l.className='col';l.textContent=T.col;seg.appendChild(l)}const b=document.createElement('button');b.id='b-'+T.id;b.textContent=T.name;b.setAttribute('aria-pressed',String(T.id===mode));b.onclick=()=>set(T.id);seg.appendChild(b)}
 function set(m){mode=m;const T=THEME[m];
   for(const X of THEMES)document.getElementById('b-'+X.id).setAttribute('aria-pressed',String(X.id===m));
-  cv.hidden=!T.canvas;photo.hidden=!!T.canvas;if(T.start)T.start();ripples=[];flares=[];
+  cv.hidden=!T.canvas;glc.hidden=!T.gl;photo.hidden=!!(T.canvas||T.gl);if(T.start)T.start();ripples=[];flares=[];
   img.style.transform='none';glow.style.background='none';hint.textContent=T.hint;if(reduce)requestAnimationFrame(frame);}
+if(glOK)set('ocean');
 </script>
