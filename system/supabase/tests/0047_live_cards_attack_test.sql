@@ -1,4 +1,5 @@
--- Attack test for migration 0047 (Live Cards). 55 checks; all passed on 24 Nov 2026 (second run, after the same-instant locks were added).
+-- Attack test for migration 0047 (Live Cards). 61 checks. 55 passed on the real database on 24 Nov 2026 (rolled back). The block-list rules and 6 more checks were added after that and
+-- have only been run on the local stand-in (tests/local/run.sh): 61 pass. Re-run on the real database before launch.
 -- How to run without leaving anything behind: send ONE query made of
 --   begin;  +  the whole of migrations/0047_live_cards.sql  +  this file
 -- The last line raises an error on purpose, which rolls the whole transaction back. The error text is the result list.
@@ -9,8 +10,8 @@
 do $t$
 declare
   r text := '';
-  u1 uuid := gen_random_uuid(); u2 uuid := gen_random_uuid();
-  j jsonb; n int; cid uuid; b boolean; i int;
+  u1 uuid := gen_random_uuid(); u2 uuid := gen_random_uuid(); u3 uuid := gen_random_uuid();
+  j jsonb; n int; cid uuid; cid2 uuid; b boolean; i int;
   base text := 'https://glzodwhyavexpuusbqjy.supabase.co/storage/v1/object/public/live-cards/';
   c1 text; c2 text; canon text;
 begin
@@ -104,7 +105,7 @@ begin
   exception when sqlstate '23505' then r := r || 'PASS reserved links refused' || E'\n'; end;
   begin insert into public.lc_cards(slug, data) values ('dryrun-card-one', '{"name":"x"}'); r := r || 'FAIL duplicate link taken' || E'\n';
   exception when unique_violation then r := r || 'PASS a link in use cannot be taken' || E'\n'; end;
-  insert into public.lc_cards(slug, data, published) values ('dryrun-card-b', '{"name":"Second Person"}', false);
+  insert into public.lc_cards(slug, data, published) values ('dryrun-card-b', '{"name":"Second Person"}', false) returning id into cid2;
   r := r || case when not public.lc_slug_available('dryrun-card-one') and public.lc_slug_available('dryrun-free-name') and not public.lc_slug_available('studio') then 'PASS' else 'FAIL' end || ' link check answers correctly' || E'\n';
 
   execute 'reset role';
@@ -134,16 +135,28 @@ begin
   perform set_config('request.jwt.claims', '', true);
   select count(*) into n from public.lc_reports;
   r := r || case when n = 5 then 'PASS' else 'FAIL (' || n || ')' end || ' reports throttled to 5 an hour per card' || E'\n';
-  update public.lc_cards set blocked = true where id = cid;
-  select blocked into b from public.lc_cards where id = cid;
-  r := r || case when b then 'PASS' else 'FAIL' end || ' owner can block a card' || E'\n';
+  perform public.lc_set_blocked(cid, true);
+  select c.blocked and a.blocked into b from public.lc_cards c join public.lc_accounts a on a.user_id = c.owner where c.id = cid;
+  r := r || case when b then 'PASS' else 'FAIL' end || ' owner can take a card down (card and account blocked)' || E'\n';
   perform set_config('request.jwt.claims', canon, true); execute 'set local role anon';
   r := r || case when public.lc_get_card('dryrun-card-one') is null then 'PASS' else 'FAIL' end || ' blocked card disappears for visitors' || E'\n';
   execute 'reset role';
   perform set_config('request.jwt.claims', c1, true); execute 'set local role authenticated';
-  update public.lc_cards set published = true, data = '{"name":"Back Again"}' where id = cid;
-  select blocked into b from public.lc_cards where id = cid;
-  r := r || case when b then 'PASS' else 'FAIL' end || ' client cannot unblock by saving again' || E'\n';
+  begin update public.lc_cards set published = true, data = '{"name":"Back Again"}' where id = cid; r := r || 'FAIL blocked client saved again' || E'\n';
+  exception when sqlstate 'P0001' then r := r || 'PASS blocked client cannot save or republish' || E'\n'; end;
+  begin perform public.lc_set_blocked(cid, false); r := r || 'FAIL client unblocked itself' || E'\n';
+  exception when insufficient_privilege then r := r || 'PASS client cannot run the owner''s block tool' || E'\n'; end;
+  begin insert into storage.objects(bucket_id, name) values ('live-cards', u1 || '/logo-blk.jpg'); r := r || 'FAIL blocked client uploaded' || E'\n';
+  exception when insufficient_privilege then r := r || 'PASS blocked client cannot upload' || E'\n'; end;
+  delete from public.lc_cards where id = cid; get diagnostics n = row_count;
+  begin insert into public.lc_cards(slug, data, published) values ('dryrun-fresh-start', '{"name":"Fresh Start"}', true); r := r || 'FAIL blocked client deleted the card and made a new one' || E'\n';
+  exception when sqlstate 'P0001' then r := r || 'PASS blocked client cannot delete the card and start over' || E'\n'; end;
+  execute 'reset role'; perform set_config('request.jwt.claims', '', true);
+  -- put the card back (as the owner's tools would restore from a backup) and lift the block
+  insert into public.lc_cards(id, owner, slug, data, published, blocked) values (cid, u1, 'dryrun-card-one', '{"name":"Test One"}', true, true);
+  perform public.lc_set_blocked(cid, false);
+  perform set_config('request.jwt.claims', canon, true); execute 'set local role anon';
+  r := r || case when public.lc_get_card('dryrun-card-one')->>'name' = 'Test One' then 'PASS' else 'FAIL' end || ' owner can restore: the card is visible again' || E'\n';
   execute 'reset role'; perform set_config('request.jwt.claims', '', true);
   update public.lc_accounts set plan = 'pro' where user_id = u1;
   perform set_config('request.jwt.claims', c1, true); execute 'set local role authenticated';
@@ -151,8 +164,18 @@ begin
     r := r || case when (j->>'showMade') = 'false' then 'PASS' else 'FAIL' end || ' paid plan (set by owner tools) unlocks more cards and hiding the line' || E'\n';
   exception when others then r := r || 'FAIL pro second card: ' || sqlerrm || E'\n'; end;
 
-  perform set_config('request.jwt.claims', c2, true);
+  -- a blocked account deletes itself, then tries to start over with the same email
+  execute 'reset role'; perform set_config('request.jwt.claims', '', true);
+  perform public.lc_set_blocked(cid2, true);
+  perform set_config('request.jwt.claims', c2, true); execute 'set local role authenticated';
   perform public.lc_delete_account();
+  execute 'reset role'; perform set_config('request.jwt.claims', '', true);
+  insert into auth.users(id, instance_id, aud, role, email) values (u3,'00000000-0000-0000-0000-000000000000','authenticated','authenticated','LC-Dryrun-2@example.invalid');
+  perform set_config('request.jwt.claims', json_build_object('sub',u3,'role','authenticated')::text, true); execute 'set local role authenticated';
+  begin insert into public.lc_cards(slug, data, published) values ('dryrun-came-back', '{"name":"Came Back"}', true); r := r || 'FAIL blocked person signed up again and published' || E'\n';
+  exception when sqlstate 'P0001' then r := r || 'PASS a blocked person cannot start over with the same email' || E'\n'; end;
+  begin select count(*) into n from public.lc_blocklist; r := r || 'FAIL client read the block list' || E'\n';
+  exception when insufficient_privilege then r := r || 'PASS client cannot read the block list' || E'\n'; end;
   execute 'reset role'; perform set_config('request.jwt.claims', '', true);
   select count(*) into n from auth.users where id = u2;
   select count(*) into i from public.lc_cards where owner = u2;

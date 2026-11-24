@@ -455,6 +455,9 @@ verify_jwt = false
 verify_jwt = true
 [functions.lc-billing-webhook]
 verify_jwt = false
+# Owner-only moderation desk for Live Cards (not deployed yet). Checks the owner session itself, like leads.
+[functions.lc-admin]
+verify_jwt = false
 [functions.site-images]
 verify_jwt = false
 [functions.unsubscribe]

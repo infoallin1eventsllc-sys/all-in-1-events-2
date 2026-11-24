@@ -8,7 +8,8 @@
 --     through lc_get_card(); nobody can list cards, so contact details cannot be harvested in bulk.
 --   * Whatever a client sends is rebuilt field by field by lc_clean_card(): unknown fields are dropped, text is trimmed and
 --     stripped of control characters, links must be http(s), and pictures/video must be the client's OWN uploaded files.
---   * Plan, blocked and owner can only be changed by the owner's tools (service role). Payments set the plan from a
+--   * Plan, blocked and owner can only be changed by the owner's tools (service role). Taking a card down blocks the whole account,
+--     and a blocked account that deletes itself cannot start over with the same email. Payments set the plan from a
 --     signature-checked webhook, never from the app.
 --   * Uploads: own folder only, fixed file names, pictures and video only, 25 MB each, at most 8 files per account.
 --   * Reports go through lc_report(), which is throttled, and cannot be read by the public.
@@ -16,6 +17,7 @@
 create table if not exists public.lc_accounts (
   user_id                uuid primary key references auth.users(id) on delete cascade,
   plan                   text not null default 'free' check (plan in ('free','pro')),
+  blocked                boolean not null default false,
   stripe_customer_id     text,
   stripe_subscription_id text,
   created_at             timestamptz not null default now()
@@ -38,9 +40,16 @@ create table if not exists public.lc_reports (
   id         bigint generated always as identity primary key,
   slug       text not null,
   reason     text not null,
+  handled    boolean not null default false,
   created_at timestamptz not null default now()
 );
 create index if not exists lc_reports_recent_idx on public.lc_reports(created_at);
+
+-- Emails that may not hold a publishing account. Filled when a blocked account deletes itself, so signing up again does not wipe the slate.
+create table if not exists public.lc_blocklist (
+  email      text primary key check (email = lower(email) and length(email) between 3 and 320),
+  created_at timestamptz not null default now()
+);
 
 create table if not exists public.lc_billing_events (
   event_id   text primary key,
@@ -119,6 +128,26 @@ language sql stable security definer set search_path = '' as $$
      and not exists (select 1 from public.lc_cards c where c.slug = p_slug)
 $$;
 
+-- ---------- blocked accounts
+create or replace function public.lc_is_blocked(p_uid uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.lc_accounts a where a.user_id = p_uid and a.blocked)
+      or exists (select 1 from public.lc_blocklist b join auth.users u on lower(u.email) = b.email where u.id = p_uid)
+$$;
+
+-- Owner tools only. Taking a card down blocks the whole account: every card it holds is hidden and it cannot save, publish or upload.
+-- Without this, a client whose card was taken down could delete it and publish a fresh one.
+create or replace function public.lc_set_blocked(p_card uuid, p_blocked boolean) returns void
+language plpgsql security definer set search_path = '' as $$
+declare v_owner uuid;
+begin
+  select owner into v_owner from public.lc_cards where id = p_card;
+  if v_owner is null then raise exception 'No such card.' using errcode = 'P0002'; end if;
+  insert into public.lc_accounts(user_id, blocked) values (v_owner, p_blocked) on conflict (user_id) do update set blocked = excluded.blocked;
+  update public.lc_cards set blocked = p_blocked where owner = v_owner;
+  if not p_blocked then delete from public.lc_blocklist b using auth.users u where u.id = v_owner and b.email = lower(u.email); end if;
+end $$;
+
 -- ---------- guard on every card write
 create or replace function public.lc_cards_guard() returns trigger
 language plpgsql security definer set search_path = '' as $$
@@ -132,6 +161,7 @@ begin
   new.updated_at := now();
   if v_trusted then return new; end if;
   if auth.uid() is null then raise exception 'Not signed in.' using errcode = '28000'; end if;
+  if public.lc_is_blocked(auth.uid()) then raise exception 'This account cannot publish cards. Contact Meridian Interface.' using errcode = 'P0001'; end if;
 
   if tg_op = 'INSERT' then
     new.owner   := auth.uid();
@@ -163,6 +193,7 @@ create trigger lc_cards_guard before insert or update on public.lc_cards for eac
 create or replace function public.lc_get_card(p_slug text) returns jsonb
 language sql stable security definer set search_path = '' as $$
   select c.data from public.lc_cards c where c.slug = p_slug and c.published and not c.blocked
+     and not exists (select 1 from public.lc_accounts a where a.user_id = c.owner and a.blocked)
 $$;
 
 create or replace function public.lc_report(p_slug text, p_reason text) returns void
@@ -182,6 +213,10 @@ language plpgsql security definer set search_path = '' as $$
 declare v_uid uuid := auth.uid();
 begin
   if v_uid is null then raise exception 'Not signed in.' using errcode = '28000'; end if;
+  -- A blocked account may still delete itself, but its email is remembered so it cannot simply sign up again.
+  if public.lc_is_blocked(v_uid) or exists (select 1 from public.lc_cards where owner = v_uid and blocked) then
+    insert into public.lc_blocklist(email) select lower(u.email) from auth.users u where u.id = v_uid and u.email is not null on conflict do nothing;
+  end if;
   delete from public.lc_cards where owner = v_uid;
   delete from public.lc_accounts where user_id = v_uid;
   delete from auth.users where id = v_uid;
@@ -193,7 +228,7 @@ create or replace function public.lc_file_count() returns int
 language plpgsql volatile security definer set search_path = '' as $$
 declare v_uid uuid := auth.uid(); v_n int;
 begin
-  if v_uid is null then return 2147483647; end if;
+  if v_uid is null or public.lc_is_blocked(v_uid) then return 2147483647; end if;
   perform pg_advisory_xact_lock(hashtextextended('lc-files:' || v_uid::text, 0));
   select count(*)::int into v_n from storage.objects o where o.bucket_id = 'live-cards' and o.name like v_uid::text || '/%';
   return v_n;
@@ -204,6 +239,7 @@ alter table public.lc_accounts       enable row level security;
 alter table public.lc_cards          enable row level security;
 alter table public.lc_reports        enable row level security;
 alter table public.lc_billing_events enable row level security;
+alter table public.lc_blocklist      enable row level security;
 
 drop policy if exists lc_accounts_read_own on public.lc_accounts;
 create policy lc_accounts_read_own on public.lc_accounts for select to authenticated using (user_id = (select auth.uid()));
@@ -218,13 +254,14 @@ drop policy if exists lc_cards_delete_own on public.lc_cards;
 create policy lc_cards_delete_own on public.lc_cards for delete to authenticated using (owner = (select auth.uid()));
 drop policy if exists lc_reports_insert_any on public.lc_reports;
 
-revoke all on public.lc_accounts, public.lc_cards, public.lc_reports, public.lc_billing_events from public, anon, authenticated;
+revoke all on public.lc_accounts, public.lc_cards, public.lc_reports, public.lc_billing_events, public.lc_blocklist from public, anon, authenticated;
 grant select (user_id, plan) on public.lc_accounts to authenticated;
 grant select, delete on public.lc_cards to authenticated;
 grant insert (slug, data, published), update (slug, data, published) on public.lc_cards to authenticated;
 
 revoke all on function public.lc_txt(text,int), public.lc_link(text), public.lc_media(text,uuid), public.lc_clean_card(jsonb,uuid,text), public.lc_slug_reserved(text),
-  public.lc_slug_available(text), public.lc_cards_guard(), public.lc_get_card(text), public.lc_report(text,text), public.lc_delete_account(), public.lc_file_count()
+  public.lc_slug_available(text), public.lc_cards_guard(), public.lc_get_card(text), public.lc_report(text,text), public.lc_delete_account(), public.lc_file_count(),
+  public.lc_is_blocked(uuid), public.lc_set_blocked(uuid,boolean)
   from public, anon, authenticated;
 grant execute on function public.lc_slug_available(text), public.lc_get_card(text), public.lc_report(text,text) to anon, authenticated;
 grant execute on function public.lc_delete_account() to authenticated;
