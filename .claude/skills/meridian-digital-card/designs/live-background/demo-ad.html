@@ -676,6 +676,7 @@ function drawOcean(t,now){if(!GL)return;
 // Theme list for the picker
 const THEMES=[
   {col:'Your own video',id:'vflat',name:'Animated ad',video:'bg-pcflat.mp4',bg:'#2c344c',feather:9,hint:'This background is a video. Yours can be your own ad or footage. Tap the speaker at the top right of the card to hear it.'},
+  {col:'Your own video',id:'vmoto',name:'Motorcycle',video:'bg-moto.mp4',bg:'#000000',feather:14,hint:'A video background: a motorcycle comes apart and goes back together behind the card. Tap the speaker at the top right of the card to hear it.'},
   {col:'Your own video',id:'vlap',name:'Product reel',video:'bg-laptop.mp4',bg:'#000000',feather:24,hint:'A product video playing behind the card. Yours can show your own product. Tap the speaker at the top right of the card to hear it.'},
   ...(glOK?[{col:'Signature',id:'ocean',name:'Ocean sunrise',gl:1,draw:(t,n)=>drawOcean(t,n),start:()=>{oceanStart=performance.now()},tap:n=>{if(P.ty<.795)glFlare=n},hint:'The sun rises over the sea. Move your finger to look around, tap the water for ripples, tap the sky for a flash of sunlight.'}]:[]),
   {col:'Nature and outdoors',id:'sunrise',name:'Sunrise',canvas:1,draw:(t,n)=>drawSunrise(t,n),start:()=>{sunStart=performance.now()},hint:'The sun rises over misty mountains and a lake. Move your finger and the scene shifts; tap the sky for a burst of sunlight or the water for a ripple. Tap Sunrise to watch it again.'},
