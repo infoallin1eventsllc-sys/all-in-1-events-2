@@ -103,6 +103,7 @@ T(r.cors === 'https://meridianinterface.com', 'only the Meridian site may call i
 db.lc_accounts.push({ user_id: U2, plan: 'pro', stripe_customer_id: 'cus_B', stripe_subscription_id: 'sub_B' });
 r = await bill('good-2', { action: 'checkout' }); T(r.status === 409, 'an account that already has the plan cannot be charged twice');
 r = await bill('good-2', { action: 'portal' }); T(r.status === 200 && r.json.url.startsWith('https://billing.stripe.com/') && decodeURIComponent(stripeCalls.at(-1).body).includes('customer=cus_B'), 'manage-plan opens Stripe\'s own page for that account only');
+db.lc_accounts.find(a => a.user_id === U1).plan = 'free'; db.lc_accounts.find(a => a.user_id === U1).blocked = true; { const before = stripeCalls.length; r = await bill('good-1', { action: 'checkout' }); T(r.status === 403 && stripeCalls.length === before, 'an account whose card was taken down cannot buy a plan'); } db.lc_accounts.find(a => a.user_id === U1).blocked = false;
 rateOk = false; r = await bill('good-1', { action: 'checkout' }); rateOk = true; T(r.status === 429, 'too many tries are slowed down');
 delete env.LC_STRIPE_PRICE_ID; db.lc_accounts = db.lc_accounts.filter(a => a.user_id !== U1); r = await bill('good-1', { action: 'checkout' }); T(r.status === 503, 'with no price configured, payments stay off');
 T(stripeCalls.every(c => c.url.startsWith('https://api.stripe.com/v1/')), 'the functions only ever talk to Stripe');

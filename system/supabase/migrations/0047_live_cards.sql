@@ -213,6 +213,10 @@ language plpgsql security definer set search_path = '' as $$
 declare v_uid uuid := auth.uid();
 begin
   if v_uid is null then raise exception 'Not signed in.' using errcode = '28000'; end if;
+  -- A paying account must cancel first. Deleting the account would not stop the card being charged, so it is refused with a plain reason.
+  if exists (select 1 from public.lc_accounts where user_id = v_uid and plan = 'pro' and stripe_subscription_id is not null) then
+    raise exception 'Cancel your paid plan first (Share, then Manage my plan). Then you can delete your account.' using errcode = 'P0001';
+  end if;
   -- A blocked account may still delete itself, but its email is remembered so it cannot simply sign up again.
   if public.lc_is_blocked(v_uid) or exists (select 1 from public.lc_cards where owner = v_uid and blocked) then
     insert into public.lc_blocklist(email) select lower(u.email) from auth.users u where u.id = v_uid and u.email is not null on conflict do nothing;

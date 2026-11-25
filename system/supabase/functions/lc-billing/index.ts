@@ -60,8 +60,10 @@ Deno.serve(async (req) => {
   if (!stripeKey()) return reply({ ok: false, error: "Payments are not switched on yet." }, 503);
 
   const { data: acct, error: acctErr } = await sb.from("lc_accounts")
-    .select("plan, stripe_customer_id").eq("user_id", user.id).maybeSingle();
+    .select("plan, blocked, stripe_customer_id").eq("user_id", user.id).maybeSingle();
   if (acctErr) return reply({ ok: false, error: "Try again in a moment." }, 500);
+  // An account whose card was taken down cannot buy its way back. It can still open the portal to cancel.
+  if (acct?.blocked && action === "checkout") return reply({ ok: false, error: "This account cannot buy a plan. Contact Meridian Interface." }, 403);
 
   try {
     if (action === "portal") {

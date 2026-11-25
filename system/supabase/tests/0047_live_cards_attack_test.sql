@@ -1,5 +1,5 @@
--- Attack test for migration 0047 (Live Cards). 61 checks. 55 passed on the real database on 24 Nov 2026 (rolled back). The block-list rules and 6 more checks were added after that and
--- have only been run on the local stand-in (tests/local/run.sh): 61 pass. Re-run on the real database before launch.
+-- Attack test for migration 0047 (Live Cards). 62 checks. 55 passed on the real database on 24 Nov 2026 (rolled back). The block-list rules and 7 more checks were added after that and
+-- have only been run on the local stand-in (tests/local/run.sh): 62 pass. Re-run on the real database before launch.
 -- How to run without leaving anything behind: send ONE query made of
 --   begin;  +  the whole of migrations/0047_live_cards.sql  +  this file
 -- The last line raises an error on purpose, which rolls the whole transaction back. The error text is the result list.
@@ -164,6 +164,12 @@ begin
     r := r || case when (j->>'showMade') = 'false' then 'PASS' else 'FAIL' end || ' paid plan (set by owner tools) unlocks more cards and hiding the line' || E'\n';
   exception when others then r := r || 'FAIL pro second card: ' || sqlerrm || E'\n'; end;
 
+  -- a paying account cannot delete itself while the card is still being charged
+  execute 'reset role'; perform set_config('request.jwt.claims', '', true);
+  update public.lc_accounts set stripe_subscription_id = 'sub_dryrun' where user_id = u1;
+  perform set_config('request.jwt.claims', c1, true); execute 'set local role authenticated';
+  begin perform public.lc_delete_account(); r := r || 'FAIL paying account deleted itself' || E'\n';
+  exception when sqlstate 'P0001' then r := r || 'PASS a paying account must cancel before it can delete itself' || E'\n'; end;
   -- a blocked account deletes itself, then tries to start over with the same email
   execute 'reset role'; perform set_config('request.jwt.claims', '', true);
   perform public.lc_set_blocked(cid2, true);

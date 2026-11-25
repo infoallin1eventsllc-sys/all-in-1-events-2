@@ -1,0 +1,16 @@
+<!-- Live Cards sign-in email. Paste this into BOTH templates in Supabase: Authentication > Emails > "Magic Link" and "Confirm signup".
+     Subject for both: Your Live Cards sign-in code: {{ .Token }}
+     The code is the whole point of the email. There is deliberately no link to click, so a forwarded or intercepted email
+     cannot sign anyone in after the code has been used or has expired. -->
+<div style="margin:0;padding:24px;background:#f3f5f9;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0b1220;">
+  <div style="max-width:440px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:28px;">
+    <p style="margin:0 0 4px;font-size:12px;letter-spacing:.18em;font-weight:700;color:#2563eb;">MERIDIAN LIVE CARDS</p>
+    <h1 style="margin:0 0 14px;font-size:20px;line-height:1.3;">Your sign-in code</h1>
+    <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#334155;">Type this code into Live Cards to sign in. It works once and stops working after ten minutes.</p>
+    <p style="margin:0 0 18px;font-size:34px;font-weight:800;letter-spacing:.3em;font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;color:#0b1220;">{{ .Token }}</p>
+    <p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#334155;">Nobody from Meridian Interface will ever ask you for this code. If someone does, do not share it.</p>
+    <p style="margin:0;font-size:14px;line-height:1.6;color:#334155;">If you did not ask to sign in, you can ignore this email. No account is changed unless the code is entered.</p>
+    <hr style="border:none;border-top:1px solid #e2e8f0;margin:22px 0 14px;">
+    <p style="margin:0;font-size:12px;line-height:1.6;color:#64748b;">Meridian Interface, Houston, Texas. This is a sign-in message, not marketing.</p>
+  </div>
+</div>
