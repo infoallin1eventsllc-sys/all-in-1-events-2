@@ -6,9 +6,10 @@ Rule for this product: the browser is never trusted. Every protection that matte
 ## What was tested, and how
 | Test | Where | Result |
 |---|---|---|
-| Database rules under attack | Real database, inside a transaction that was thrown away (24 Nov): 55 checks, nothing left behind. Since then 7 checks were added (blocking, block list, paying accounts) and all 62 run on a local stand-in database. | 62 pass locally; 55 of them also proven on the real database |
-| Same-instant requests | Local database, many connections released at the same clock time. Before the locks: 22 cards on a 5-card plan, 24 files on an 8-file limit. After: exactly 1, 5, 8 and 5. | 4 pass |
+| Database rules under attack | Real database, inside a transaction that was thrown away (24 Nov): 55 checks, nothing left behind. Since then 18 checks were added (blocking, block list, paying accounts; on 25 Nov the headshot, link preview picture, address, hours, review and payment fields, and the 12 file limit) and all 73 run on a local stand-in database. | 73 pass locally; 55 of them also proven on the real database |
+| Same-instant requests | Local database, many connections released at the same clock time. Before the locks: 22 cards on a 5-card plan, 24 files on an 8-file limit. After: exactly 1 card, 5 cards, 12 files (the limit since 25 Nov) and 5 reports. | 4 pass |
 | The app under its browser policy | Real pages in a browser with the exact headers from `vercel.json`, against a stand-in service. | 36 pass |
+| Link preview, headshot and the new buttons | The real link page function run against hostile, broken and slow answers; then the same browser method for the headshot, directions, review and pay buttons, the contact file and the file limit. | 62 pass |
 | Plans, human check, own address | Same method. | 19 pass |
 | Owner desk screen | Same method, desktop and phone. | 24 pass |
 | Payment functions under attack | Both functions run for real against stand-ins for the database and Stripe. | 32 pass |
@@ -28,8 +29,11 @@ Mistakes found by these tests and fixed: a link check the database refused to ru
 | Put a harmful link on a card (`javascript:`, `data:`) | The server rebuilds every card field by field. Only http and https links survive. The card page checks again before showing anything. | Database test, app test |
 | Put code in a name or company field | Everything is shown as plain text, never as page code. The browser policy also blocks inline code, so even a mistake here would not run. | App test |
 | Use a card to load pictures or video from an outside server (tracking, offensive swaps) | A card's picture or video must be a file that same account uploaded. The browser policy only allows pictures and video from this site and the Live Cards file store. | Database test, app test |
-| Upload a web page, a script or an SVG | Uploads accept JPG pictures and MP4, MOV, WebM video only, with generated file names, in the account's own folder, 25 MB each, 8 files an account. Files cannot be renamed or replaced. | Database test |
-| Fill the storage or the reports list | 8 files an account; old files are removed after each publish. Reports are limited to 5 an hour per card and 200 an hour in total, and cannot be read by the public. | Database test, app test |
+| Upload a web page, a script or an SVG | Uploads accept JPG pictures and MP4, MOV, WebM video only, with generated file names, in the account's own folder, 25 MB each, 12 files an account. Each file belongs to one slot (background, logo, headshot, link preview picture) and is refused in any other; only a background may be a video. Files cannot be renamed or replaced. | Database test |
+| Fill the storage or the reports list | 12 files an account; old files are removed after each publish. Reports are limited to 5 an hour per card and 200 an hour in total, and cannot be read by the public. | Database test, app test |
+| Use a card's link preview to run code, or to show a picture from somewhere else | The link page function writes every card value as escaped text. The picture must be that account's own link preview file in the file store; anything else is replaced by the standard picture. The page's security headers are the same as before. | Link preview test |
+| Use the link page function to reach other servers, or to break card links | It contacts one address only (the service named in the site's own settings, which must be a supabase.co address), asks one fixed public question, and never uses an address from the link. Odd link names are answered without asking anything. It holds no secret and cannot write. If the service is off, slow or broken it gives up within two seconds and serves the plain card page. | Link preview test |
+| Put a harmful link or code behind a pay or review button | Payment names may only be letters, numbers, dash and underscore, and are placed into fixed cash.app and venmo.com addresses. A Zelle entry must be an email or phone number and is only shown and copied as text. A review link must be http or https. Checked on the card and again by the server. | Database test, link preview test |
 | Get taken down, then delete the card or the account and start again | Taking a card down blocks the whole account: no saving, publishing, uploading or buying a plan. If that account deletes itself, its email goes on a block list. | Database test, payment test |
 | Use the owner's moderation desk without being the owner | Every request needs the owner's portal session (passcode, plus the code when two-step is on). A client sign-in is refused. Every change is logged. | Owner desk test |
 | Sign in on the wrong address so the sign-in can be stolen there | When the app has its own address, it refuses to run anywhere else and removes any sign-in kept there. | Plans test |
@@ -58,7 +62,7 @@ Otis sent a short video listing 20 common attacks. The list is sound: every item
 | 11 | Two requests at the same instant | Closed in the rules, live test still owed | Found a real gap from this item: two saves sent together could slip past the one-card limit, the file limit or the report limit. Locks added to all three. A true same-instant test needs the service on. |
 | 12 | Account set up in your name before you arrive | Closed | An account only exists after a code sent to that email is entered. Recheck if Apple or Google sign-in is ever added. |
 | 13 | Abandoned subdomain taken over | Not a risk yet | Becomes relevant when the app gets its own address: never leave a DNS record pointing at a host that is no longer attached. |
-| 14 | Making the server fetch an address the attacker chose | Closed | The Live Cards functions only ever contact Stripe (payment test). |
+| 14 | Making the server fetch an address the attacker chose | Closed | The payment functions only ever contact Stripe (payment test). The link page function only contacts the service named in the site's own settings, never an address taken from the link (link preview test). |
 | 15 | Dot-dot file path tricks | Closed | Database test and app test. |
 | 16 | Poisoned password-reset links | Does not apply | No passwords and no reset links. At launch, set the sign-in service's site address and allowed return addresses to the app's address only. |
 | 17 | Source maps exposing the code | Closed | No source maps in the built site. The app's code holds no secrets either way. |
@@ -73,12 +77,14 @@ Everything that could be closed without Otis and without cost is closed. What re
 1. **The app's own address** is built as a switch (`appOrigin`) but needs the address chosen and its DNS record.
 2. **The human check** is built and tested but needs a free Cloudflare key and one agreed line in the browser policy.
 3. **Sign-in email settings** and a real sender. The email template is written.
-4. **The real-database re-run** of the 7 newer checks needs one approval.
+4. **The real-database re-run** of the 18 newer checks needs one approval.
 5. **File type is declared by the browser.** A mislabelled file is served from the file store as a picture or video, not from the site. The owner desk can remove an account's files.
 6. **Looking up cards is not rate limited.** A card only holds what its owner made public. Building this properly needs the service on.
 7. **Never tested live:** real sign-in emails, real uploads, real phones, real Stripe.
 8. **Owner accounts are the master keys** (database, payments, hosting, code, domain). Unique passwords and two-step sign-in on each.
-9. **Terms and privacy are drafts**, and an outside security review before real money moves is worth considering. Both can cost.
+9. **A dishonest owner can list their own payment name** on a card that pretends to be another business. The code cannot tell; this is what Report, take-down and the block list are for. The terms forbid it.
+10. **The link page function has not run on Vercel with the service on.** It is tested here against stand-ins. On the first preview with the service on: open a card link, view the page source, and check the link in iMessage, WhatsApp and Facebook's Sharing Debugger.
+11. **Terms and privacy are drafts**, and an outside security review before real money moves is worth considering. Both can cost.
 
 ## Launch order for the security parts
 Own address, then database, then advisor check, then email and human check, then real-phone tests with the service on and payments off, then Stripe in test mode, then live keys.

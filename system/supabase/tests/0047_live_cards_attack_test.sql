@@ -1,5 +1,6 @@
--- Attack test for migration 0047 (Live Cards). 62 checks. 55 passed on the real database on 24 Nov 2026 (rolled back). The block-list rules and 7 more checks were added after that and
--- have only been run on the local stand-in (tests/local/run.sh): 62 pass. Re-run on the real database before launch.
+-- Attack test for migration 0047 (Live Cards). 73 checks. 55 passed on the real database on 24 Nov 2026 (rolled back). The block-list rules, the headshot, link preview,
+-- address, hours, review and payment fields, and the 12 file cap were added after that and have only been run on the local stand-in (tests/local/run.sh): 73 pass.
+-- Re-run on the real database before launch.
 -- How to run without leaving anything behind: send ONE query made of
 --   begin;  +  the whole of migrations/0047_live_cards.sql  +  this file
 -- The last line raises an error on purpose, which rolls the whole transaction back. The error text is the result list.
@@ -52,6 +53,29 @@ begin
   r := r || case when j->'logo'->>'url' = '' then 'PASS' else 'FAIL' end || ' another account''s file refused' || E'\n';
   r := r || case when j->>'name' = 'Test One' then 'PASS' else 'FAIL' end || ' hidden direction mark removed from a name' || E'\n';
 
+  -- headshot, link preview picture, address, hours, review and payment names (added 25 Nov 2026)
+  update public.lc_cards set data = jsonb_build_object('name','New Fields','hours','Mon to Fri' || chr(10) || repeat('h', 200),
+    'photo', jsonb_build_object('url', base || u2 || '/photo-abc1.jpg', 'evil', 1), 'preview', jsonb_build_object('url','https://evil.example/og-abc1.jpg'),
+    'actions', jsonb_build_object('address', repeat('B', 300) || chr(8238), 'review','javascript:alert(1)','cashapp','bad name"><script>','venmo','x','zelle','<script>alert(1)</script>'))
+    where id = cid returning data into j;
+  r := r || case when j->'photo'->>'url' = '' and not (j->'photo' ? 'evil') then 'PASS' else 'FAIL' end || ' another account''s headshot refused' || E'\n';
+  r := r || case when j->'preview'->>'url' = '' then 'PASS' else 'FAIL' end || ' outside link preview picture refused' || E'\n';
+  r := r || case when length(j->'actions'->>'address') = 140 and length(j->>'hours') = 60 and position(chr(10) in j->>'hours') = 0 then 'PASS' else 'FAIL' end || ' address and hours trimmed, no line breaks' || E'\n';
+  r := r || case when j->'actions'->>'review' = '' then 'PASS' else 'FAIL' end || ' javascript review link removed' || E'\n';
+  r := r || case when j->'actions'->>'cashapp' = '' and j->'actions'->>'venmo' = '' and j->'actions'->>'zelle' = '' then 'PASS' else 'FAIL' end || ' bad payment names removed' || E'\n';
+  update public.lc_cards set data = jsonb_build_object('name','New Fields','hours','Mon to Fri, 9 am to 5 pm',
+    'photo', jsonb_build_object('url', base || u1 || '/photo-abc1.jpg'), 'preview', jsonb_build_object('url', base || u1 || '/og-abc1.jpg'),
+    'actions', jsonb_build_object('address','123 Main St, Katy, TX 77494','review','https://g.page/r/abc/review','cashapp','RiversRealty','venmo','rivers-realty','zelle','+1 (281) 555-0100'))
+    where id = cid returning data into j;
+  r := r || case when j->'photo'->>'url' = base || u1 || '/photo-abc1.jpg' and j->'preview'->>'url' = base || u1 || '/og-abc1.jpg' then 'PASS' else 'FAIL' end || ' own headshot and link preview picture accepted' || E'\n';
+  r := r || case when j->'actions'->>'address' = '123 Main St, Katy, TX 77494' and j->>'hours' = 'Mon to Fri, 9 am to 5 pm' and j->'actions'->>'review' = 'https://g.page/r/abc/review'
+                  and j->'actions'->>'cashapp' = 'RiversRealty' and j->'actions'->>'venmo' = 'rivers-realty' and j->'actions'->>'zelle' = '+12815550100' then 'PASS' else 'FAIL' end || ' good address, hours, review link and payment names kept' || E'\n';
+  update public.lc_cards set data = jsonb_build_object('name','New Fields','photo', jsonb_build_object('url', base || u1 || '/bg-abc123.mp4'), 'preview', jsonb_build_object('url', base || u1 || '/photo-abc1.jpg'),
+    'logo', jsonb_build_object('url', base || u1 || '/logo-abc1.mp4'), 'actions', jsonb_build_object('zelle','pay@rivers.example'))
+    where id = cid returning data into j;
+  r := r || case when j->'photo'->>'url' = '' and j->'preview'->>'url' = '' and j->'logo'->>'url' = '' then 'PASS' else 'FAIL' end || ' a file is only accepted in its own slot, and only a background may be a video' || E'\n';
+  r := r || case when j->'actions'->>'zelle' = 'pay@rivers.example' then 'PASS' else 'FAIL' end || ' Zelle email kept' || E'\n';
+
   begin insert into public.lc_cards(slug, data, published, owner) values ('dryrun-x', '{"name":"x"}', false, u2); r := r || 'FAIL client set owner' || E'\n';
   exception when insufficient_privilege then r := r || 'PASS client cannot set owner' || E'\n'; end;
   begin update public.lc_cards set blocked = true where id = cid; r := r || 'FAIL client set blocked' || E'\n';
@@ -83,10 +107,14 @@ begin
   exception when insufficient_privilege then r := r || 'PASS nested paths refused' || E'\n'; end;
   begin insert into storage.objects(bucket_id, name) values ('live-cards', u1 || '/../' || u2 || '/bg-a1.mp4'); r := r || 'FAIL path trick allowed' || E'\n';
   exception when insufficient_privilege then r := r || 'PASS dot-dot path trick refused' || E'\n'; end;
+  begin insert into storage.objects(bucket_id, name) values ('live-cards', u1 || '/photo-a1.jpg'), ('live-cards', u1 || '/og-a1.jpg'), ('live-cards', u1 || '/logo-a1.jpg'); r := r || 'PASS headshot, link preview and logo uploads allowed' || E'\n';
+  exception when others then r := r || 'FAIL headshot upload refused: ' || sqlerrm || E'\n'; end;
+  begin insert into storage.objects(bucket_id, name) values ('live-cards', u1 || '/photo-a2.mp4'); r := r || 'FAIL video uploaded as a headshot' || E'\n';
+  exception when insufficient_privilege then r := r || 'PASS only a background may be a video' || E'\n'; end;
   begin
-    for i in 2..8 loop insert into storage.objects(bucket_id, name) values ('live-cards', u1 || '/bg-a' || i || '.mp4'); end loop;
-    begin insert into storage.objects(bucket_id, name) values ('live-cards', u1 || '/bg-a9.mp4'); r := r || 'FAIL ninth file allowed' || E'\n';
-    exception when insufficient_privilege then r := r || 'PASS ninth file refused (8 file cap)' || E'\n'; end;
+    for i in 2..9 loop insert into storage.objects(bucket_id, name) values ('live-cards', u1 || '/bg-a' || i || '.mp4'); end loop;
+    begin insert into storage.objects(bucket_id, name) values ('live-cards', u1 || '/bg-a13.mp4'); r := r || 'FAIL thirteenth file allowed' || E'\n';
+    exception when insufficient_privilege then r := r || 'PASS thirteenth file refused (12 file cap)' || E'\n'; end;
   exception when others then r := r || 'FAIL filling to cap: ' || sqlerrm || E'\n'; end;
   begin update storage.objects set name = u1 || '/bg-zz.mp4' where bucket_id = 'live-cards' and name = u1 || '/bg-a1.mp4'; get diagnostics n = row_count;
     r := r || case when n = 0 then 'PASS' else 'FAIL' end || ' files cannot be renamed or replaced' || E'\n';
@@ -125,7 +153,7 @@ begin
   exception when insufficient_privilege then r := r || 'PASS visitor cannot run account deletion' || E'\n'; end;
   begin insert into storage.objects(bucket_id, name) values ('live-cards', u1 || '/bg-an.mp4'); r := r || 'FAIL visitor uploaded' || E'\n';
   exception when insufficient_privilege then r := r || 'PASS visitor cannot upload' || E'\n'; end;
-  r := r || case when public.lc_get_card('dryrun-card-one')->>'name' = 'Test One' then 'PASS' else 'FAIL' end || ' visitor opens a published card by its link' || E'\n';
+  r := r || case when public.lc_get_card('dryrun-card-one')->>'name' = 'New Fields' then 'PASS' else 'FAIL' end || ' visitor opens a published card by its link' || E'\n';
   r := r || case when public.lc_get_card('dryrun-card-b') is null then 'PASS' else 'FAIL' end || ' unpublished card stays hidden' || E'\n';
   for i in 1..9 loop perform public.lc_report('dryrun-card-one', 'spam report number ' || i); end loop;
   perform public.lc_report('no-such-card-here', 'ghost report');

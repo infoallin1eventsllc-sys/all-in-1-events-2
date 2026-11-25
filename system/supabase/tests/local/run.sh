@@ -33,7 +33,7 @@ gate; for i in $(seq 1 30); do as_anon "select public.lc_report('race-target', '
 su postgres -c "psql -X -qAt -d $DB" <<SQL
 select case when (select count(*) from public.lc_cards where owner = '$U') = 1 then 'PASS' else 'FAIL' end || ' 24 saves at once on the free plan: ' || (select count(*) from public.lc_cards where owner = '$U') || ' card kept (limit 1)';
 select case when (select count(*) from public.lc_cards where owner = '$UP') = 5 then 'PASS' else 'FAIL' end || ' 24 saves at once on the paid plan: ' || (select count(*) from public.lc_cards where owner = '$UP') || ' cards kept (limit 5)';
-select case when (select count(*) from storage.objects where name like '$U/%') = 8 then 'PASS' else 'FAIL' end || ' 30 uploads at once: ' || (select count(*) from storage.objects where name like '$U/%') || ' files kept (limit 8)';
+select case when (select count(*) from storage.objects where name like '$U/%') = 12 then 'PASS' else 'FAIL' end || ' 30 uploads at once: ' || (select count(*) from storage.objects where name like '$U/%') || ' files kept (limit 12)';
 select case when (select count(*) from public.lc_reports where slug = 'race-target') = 5 then 'PASS' else 'FAIL' end || ' 30 reports at once: ' || (select count(*) from public.lc_reports where slug = 'race-target') || ' kept (limit 5 an hour)';
 SQL
 grep -v "Your plan allows\|row-level security\|^CONTEXT" "$WORK/errors.log" | sort | uniq -c | head -5 || true

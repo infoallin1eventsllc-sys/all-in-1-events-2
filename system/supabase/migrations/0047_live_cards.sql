@@ -1,5 +1,6 @@
 -- 0047 Live Cards: client-made digital cards with their own accounts, public links and uploads.
--- NOT APPLIED. Hardened on 24 Nov 2026 and attack-tested in a rolled-back transaction (55 checks, see ../tests/0047_live_cards_attack_test.sql). Otis decides when it goes live.
+-- NOT APPLIED. Hardened on 24 Nov 2026 and attack-tested in a rolled-back transaction on the real database (55 checks). Fields and file slots added 25 Nov 2026 (headshot, link preview picture,
+-- address, hours, review link, payment names; 12 file limit): 73 checks pass on the local stand-in only (../tests/0047_live_cards_attack_test.sql). Otis decides when it goes live.
 -- Everything here is new and self-contained (prefix lc_, bucket live-cards). It does not touch the marketing system's tables.
 --
 -- Security shape (the browser is never trusted):
@@ -11,7 +12,8 @@
 --   * Plan, blocked and owner can only be changed by the owner's tools (service role). Taking a card down blocks the whole account,
 --     and a blocked account that deletes itself cannot start over with the same email. Payments set the plan from a
 --     signature-checked webhook, never from the app.
---   * Uploads: own folder only, fixed file names, pictures and video only, 25 MB each, at most 8 files per account.
+--   * Uploads: own folder only, fixed file names (background, logo, headshot, link preview picture), pictures and video only,
+--     25 MB each, at most 12 files per account. Only a background may be a video.
 --   * Reports go through lc_report(), which is throttled, and cannot be read by the public.
 
 create table if not exists public.lc_accounts (
@@ -72,10 +74,20 @@ language sql immutable set search_path = '' as $$
 $$;
 
 -- A picture or video on a card must be a file this account uploaded to its own folder. No other address is accepted.
-create or replace function public.lc_media(v text, p_owner uuid) returns text
+drop function if exists public.lc_media(text, uuid);
+-- p_kind is the slot the file is for: bg (background), logo, photo (headshot) or og (link preview picture).
+-- A file is only accepted in its own slot, and only a background may be a video.
+create or replace function public.lc_media(v text, p_owner uuid, p_kind text) returns text
 language sql immutable set search_path = '' as $$
-  select case when coalesce(v, '') ~ ('^https://glzodwhyavexpuusbqjy\.supabase\.co/storage/v1/object/public/live-cards/' || p_owner::text || '/(bg|logo)-[a-z0-9]{1,16}\.(jpg|mp4|mov|webm)$')
+  select case when p_kind in ('bg','logo','photo','og')
+               and coalesce(v, '') ~ ('^https://glzodwhyavexpuusbqjy\.supabase\.co/storage/v1/object/public/live-cards/' || p_owner::text || '/' || p_kind || '-[a-z0-9]{1,16}\.'
+                                      || case when p_kind = 'bg' then '(jpg|mp4|mov|webm)' else 'jpg' end || '$')
               then v else '' end
+$$;
+-- a payment name (Cash App, Venmo): letters, numbers, dash and underscore only
+create or replace function public.lc_handle(v text, p_min int, p_max int, p_dash boolean) returns text
+language sql immutable set search_path = '' as $$
+  select case when coalesce(v, '') ~ ('^[A-Za-z0-9_' || case when p_dash then '-' else '' end || ']{' || p_min || ',' || p_max || '}$') then v else '' end
 $$;
 
 create or replace function public.lc_clean_card(p jsonb, p_owner uuid, p_plan text) returns jsonb
@@ -84,26 +96,37 @@ declare
   a jsonb := case when jsonb_typeof(p->'actions') = 'object' then p->'actions' else '{}'::jsonb end;
   b jsonb := case when jsonb_typeof(p->'background') = 'object' then p->'background' else '{}'::jsonb end;
   l jsonb := case when jsonb_typeof(p->'logo') = 'object' then p->'logo' else '{}'::jsonb end;
+  ph jsonb := case when jsonb_typeof(p->'photo') = 'object' then p->'photo' else '{}'::jsonb end;
+  pv jsonb := case when jsonb_typeof(p->'preview') = 'object' then p->'preview' else '{}'::jsonb end;
   v_type  text := case when b->>'type' in ('scene','image','video') then b->>'type' else 'scene' end;
-  v_url   text := public.lc_media(b->>'url', p_owner);
+  v_url   text := public.lc_media(b->>'url', p_owner, 'bg');
   v_phone text := regexp_replace(coalesce(a->>'phone', ''), '[^0-9+]', '', 'g');
   v_email text := public.lc_txt(a->>'email', 200);
+  v_zelle text := public.lc_txt(a->>'zelle', 200);
+  v_zphone text := regexp_replace(coalesce(a->>'zelle', ''), '[^0-9+]', '', 'g');
 begin
   if v_type <> 'scene' and v_url = '' then v_type := 'scene'; end if;
   if v_phone !~ '^\+?[0-9]{7,15}$' then v_phone := ''; end if;
   if v_email !~ '^[^[:space:]@<>"'']+@[^[:space:]@<>"'']+\.[^[:space:]@<>"'']+$' then v_email := ''; end if;
+  -- Zelle goes to an email or a phone number; anything else is dropped
+  if v_zelle !~ '^[^[:space:]@<>"'']+@[^[:space:]@<>"'']+\.[^[:space:]@<>"'']+$' then v_zelle := case when v_zphone ~ '^\+?[0-9]{7,15}$' then v_zphone else '' end; end if;
   return jsonb_build_object(
     'v', 1,
     'name', public.lc_txt(p->>'name', 60), 'company', public.lc_txt(p->>'company', 60),
     'role', public.lc_txt(p->>'role', 60), 'tagline', public.lc_txt(p->>'tagline', 90),
     'accent', case when p->>'accent' ~ '^#[0-9a-fA-F]{6}$' then p->>'accent' else '#2563eb' end,
-    'logo', jsonb_build_object('url', public.lc_media(l->>'url', p_owner), 'mark', false,
+    'logo', jsonb_build_object('url', public.lc_media(l->>'url', p_owner, 'logo'), 'mark', false,
                                'line1', public.lc_txt(l->>'line1', 24), 'line2', public.lc_txt(l->>'line2', 24)),
+    'photo', jsonb_build_object('url', public.lc_media(ph->>'url', p_owner, 'photo')),
+    'preview', jsonb_build_object('url', public.lc_media(pv->>'url', p_owner, 'og')),
+    'hours', public.lc_txt(p->>'hours', 60),
     'actions', jsonb_build_object(
       'phone', v_phone, 'text', (a->'text') = 'true'::jsonb, 'email', v_email,
       'booking', public.lc_link(a->>'booking'), 'bookingLabel', public.lc_txt(a->>'bookingLabel', 34),
       'website', public.lc_link(a->>'website'), 'facebook', public.lc_link(a->>'facebook'), 'instagram', public.lc_link(a->>'instagram'),
-      'linkedin', public.lc_link(a->>'linkedin'), 'tiktok', public.lc_link(a->>'tiktok'), 'youtube', public.lc_link(a->>'youtube')),
+      'linkedin', public.lc_link(a->>'linkedin'), 'tiktok', public.lc_link(a->>'tiktok'), 'youtube', public.lc_link(a->>'youtube'),
+      'address', public.lc_txt(a->>'address', 140), 'review', public.lc_link(a->>'review'),
+      'cashapp', public.lc_handle(a->>'cashapp', 1, 20, false), 'venmo', public.lc_handle(a->>'venmo', 5, 30, true), 'zelle', v_zelle),
     'background', jsonb_build_object(
       'type', v_type, 'id', case when b->>'id' ~ '^[a-z]{2,12}$' then b->>'id' else 'ocean' end,
       'url', case when v_type = 'scene' then '' else v_url end,
@@ -263,7 +286,7 @@ grant select (user_id, plan) on public.lc_accounts to authenticated;
 grant select, delete on public.lc_cards to authenticated;
 grant insert (slug, data, published), update (slug, data, published) on public.lc_cards to authenticated;
 
-revoke all on function public.lc_txt(text,int), public.lc_link(text), public.lc_media(text,uuid), public.lc_clean_card(jsonb,uuid,text), public.lc_slug_reserved(text),
+revoke all on function public.lc_txt(text,int), public.lc_link(text), public.lc_media(text,uuid,text), public.lc_handle(text,int,int,boolean), public.lc_clean_card(jsonb,uuid,text), public.lc_slug_reserved(text),
   public.lc_slug_available(text), public.lc_cards_guard(), public.lc_get_card(text), public.lc_report(text,text), public.lc_delete_account(), public.lc_file_count(),
   public.lc_is_blocked(uuid), public.lc_set_blocked(uuid,boolean)
   from public, anon, authenticated;
@@ -278,8 +301,8 @@ on conflict (id) do update set public = excluded.public, file_size_limit = exclu
 drop policy if exists lc_files_insert_own on storage.objects;
 create policy lc_files_insert_own on storage.objects for insert to authenticated
   with check (bucket_id = 'live-cards'
-              and name ~ ('^' || (select auth.uid())::text || '/(bg|logo)-[a-z0-9]{1,16}\.(jpg|mp4|mov|webm)$')
-              and public.lc_file_count() < 8);
+              and name ~ ('^' || (select auth.uid())::text || '/(bg-[a-z0-9]{1,16}\.(jpg|mp4|mov|webm)|(logo|photo|og)-[a-z0-9]{1,16}\.jpg)$')
+              and public.lc_file_count() < 12);
 drop policy if exists lc_files_update_own on storage.objects;
 drop policy if exists lc_files_delete_own on storage.objects;
 create policy lc_files_delete_own on storage.objects for delete to authenticated

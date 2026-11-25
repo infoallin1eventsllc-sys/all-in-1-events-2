@@ -33,9 +33,10 @@ Do them in this order; each one makes the next one safe to test.
 ## 4. Switch on, payments still off
 1. Claude: `config.js`: paste the project's publishable key into `key`, set `enabled:true`, leave `billing:false`.
 2. Claude with approval: deploy `lc-admin` only (Supabase dashboard or CLI on Otis's machine; never from the cloud sandbox).
-3. Run meridian-prelaunch-qa and the three Live Cards tests in `tools/`, then merge.
+3. Run meridian-prelaunch-qa and the four Live Cards tests in `tools/`, then merge. After the merge, open a card link and view the page source: the title and `og:image` should be that card's (the link page function, `api/lc-card.js`, reads the same `config.js`, so there is no second switch).
 4. Real-phone test, two phones: sign up, add a photo and a video, publish, edit and update, open the link on the other phone, report the card, see the report in the portal's Live Cards tab, take the card down, put it back, delete the account.
 5. Deleting stored files and two uploads at the same instant can only be tested here. Do both.
+6. Link preview: text the card's link in iMessage and WhatsApp and run it through Facebook's Sharing Debugger. Save to contacts on an iPhone and an Android phone: the contact should carry the photo and address.
 
 ## 5. Payments
 1. Otis: decide what the paid plan includes and its price. Today the only built extra is hiding the "Made with" line; the database allows five cards on the paid plan but the Studio manages one.
