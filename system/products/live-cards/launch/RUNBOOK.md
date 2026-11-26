@@ -3,6 +3,14 @@
 Nothing here has been done. Each step says who does it. "Claude" steps still need Otis's go-ahead at the time.
 Do them in this order; each one makes the next one safe to test.
 
+## 0. Real-phone check of the front end (Otis, about 15 minutes, before any back-end work)
+Open the Studio preview link on your iPhone (and an Android phone if you have one). The service stays off; nothing is saved anywhere but your phone.
+1. Details tab: tap Your name. The keyboard opens; the four tabs at the bottom should not cover the box you are typing in.
+2. Add a photo, drag it and zoom it. Pick a trade. Switch the card language to Español and back.
+3. Buttons tab: fill everything in. Background tab: try two live backgrounds and one of your own photos.
+4. Tell Claude anything that looked wrong, felt slow, or was not clear. Screenshots help.
+Lock screen picture, email signature and tap card can only be tried after publishing, so they wait for step 4 below.
+
 ## 1. The app's own address
 1. Otis: choose the address (example used below: `cards.meridianinterface.com`).
 2. Otis or Claude with approval: add that address to the Vercel project and add the DNS record Vercel shows. Free on the current plan.

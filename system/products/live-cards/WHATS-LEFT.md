@@ -14,6 +14,11 @@ Built and tested 26 Nov 2026:
 6. [x] Views and taps report screen (shows real numbers once the back end is on).
 7. [x] Team cards screens.
 8. [x] Spanish, covering every screen above, the card, the terms and the privacy page.
+Also front end, written down on 25 Nov and finished 26 Nov:
+9. [x] Design pass on the owner desk tab in the portal (reports first, one row of actions, the take-down explained before the second tap).
+10. [x] A note in the Studio preview when a full card is taller than the frame ("Scroll the card to see the rest"), shown until the card is scrolled.
+11. [x] Empty states: decided against illustrations (they would repeat what the words already say). Every empty list says what it means and what to do next.
+12. [ ] Real-phone checks: the tab bar with the keyboard open, writing a tap card, the lock-screen picture, the email signature in a real email app. Waiting on Otis's phone (15 minutes; steps in launch/RUNBOOK.md).
 The front end is complete when Otis has looked at the review page and has no changes. Not yet seen on a real phone: writing a tap card, the lock-screen picture as a real lock screen, and the email signature pasted into a real email app.
 Cannot have a front end yet: Apple and Google Wallet (needs Apple's paid developer account and a signing server before any button can work).
 
