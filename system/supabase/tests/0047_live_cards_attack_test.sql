@@ -1,5 +1,5 @@
--- Attack test for migration 0047 (Live Cards). 73 checks. 55 passed on the real database on 24 Nov 2026 (rolled back). The block-list rules, the headshot, link preview,
--- address, hours, review and payment fields, and the 12 file cap were added after that and have only been run on the local stand-in (tests/local/run.sh): 73 pass.
+-- Attack test for migration 0047 (Live Cards). 75 checks. 55 passed on the real database on 24 Nov 2026 (rolled back). The block-list rules, the headshot, link preview,
+-- address, hours, review and payment fields, and the 12 file cap were added after that and have only been run on the local stand-in (tests/local/run.sh): 75 pass.
 -- Re-run on the real database before launch.
 -- How to run without leaving anything behind: send ONE query made of
 --   begin;  +  the whole of migrations/0047_live_cards.sql  +  this file
@@ -65,16 +65,19 @@ begin
   r := r || case when j->'actions'->>'cashapp' = '' and j->'actions'->>'venmo' = '' and j->'actions'->>'zelle' = '' then 'PASS' else 'FAIL' end || ' bad payment names removed' || E'\n';
   update public.lc_cards set data = jsonb_build_object('name','New Fields','hours','Mon to Fri, 9 am to 5 pm',
     'photo', jsonb_build_object('url', base || u1 || '/photo-abc1.jpg'), 'preview', jsonb_build_object('url', base || u1 || '/og-abc1.jpg'),
-    'actions', jsonb_build_object('address','123 Main St, Katy, TX 77494','review','https://g.page/r/abc/review','cashapp','RiversRealty','venmo','rivers-realty','zelle','+1 (281) 555-0100'))
+    'actions', jsonb_build_object('address','123 Main St, Katy, TX 77494','review','https://g.page/r/abc/review','cashapp','RiversRealty','venmo','rivers-realty','zelle','+1 (281) 555-0100','leads',true))
     where id = cid returning data into j;
   r := r || case when j->'photo'->>'url' = base || u1 || '/photo-abc1.jpg' and j->'preview'->>'url' = base || u1 || '/og-abc1.jpg' then 'PASS' else 'FAIL' end || ' own headshot and link preview picture accepted' || E'\n';
   r := r || case when j->'actions'->>'address' = '123 Main St, Katy, TX 77494' and j->>'hours' = 'Mon to Fri, 9 am to 5 pm' and j->'actions'->>'review' = 'https://g.page/r/abc/review'
-                  and j->'actions'->>'cashapp' = 'RiversRealty' and j->'actions'->>'venmo' = 'rivers-realty' and j->'actions'->>'zelle' = '+12815550100' then 'PASS' else 'FAIL' end || ' good address, hours, review link and payment names kept' || E'\n';
+                  and j->'actions'->>'cashapp' = 'RiversRealty' and j->'actions'->>'venmo' = 'rivers-realty' and j->'actions'->>'zelle' = '+12815550100' and (j->'actions'->'leads') = 'true'::jsonb then 'PASS' else 'FAIL' end || ' good address, hours, review link and payment names kept' || E'\n';
   update public.lc_cards set data = jsonb_build_object('name','New Fields','photo', jsonb_build_object('url', base || u1 || '/bg-abc123.mp4'), 'preview', jsonb_build_object('url', base || u1 || '/photo-abc1.jpg'),
-    'logo', jsonb_build_object('url', base || u1 || '/logo-abc1.mp4'), 'actions', jsonb_build_object('zelle','pay@rivers.example'))
+    'logo', jsonb_build_object('url', base || u1 || '/logo-abc1.mp4'), 'actions', jsonb_build_object('zelle','pay@rivers.example','leads','yes'))
     where id = cid returning data into j;
   r := r || case when j->'photo'->>'url' = '' and j->'preview'->>'url' = '' and j->'logo'->>'url' = '' then 'PASS' else 'FAIL' end || ' a file is only accepted in its own slot, and only a background may be a video' || E'\n';
-  r := r || case when j->'actions'->>'zelle' = 'pay@rivers.example' then 'PASS' else 'FAIL' end || ' Zelle email kept' || E'\n';
+  r := r || case when j->'actions'->>'zelle' = 'pay@rivers.example' and (j->'actions'->'leads') = 'false'::jsonb then 'PASS' else 'FAIL' end || ' Zelle email kept; the info switch is only ever true or false' || E'\n';
+  update public.lc_cards set data = jsonb_build_object('name','New Fields','logo', jsonb_build_object('url', base || u1 || '/logo-abc1.png'), 'photo', jsonb_build_object('url', base || u1 || '/photo-abc1.png'),
+    'background', jsonb_build_object('type','image','url', base || u1 || '/bg-abc1.png')) where id = cid returning data into j;
+  r := r || case when j->'logo'->>'url' = base || u1 || '/logo-abc1.png' and j->'photo'->>'url' = '' and j->'background'->>'type' = 'scene' then 'PASS' else 'FAIL' end || ' a PNG is accepted as a logo and nowhere else' || E'\n';
 
   begin insert into public.lc_cards(slug, data, published, owner) values ('dryrun-x', '{"name":"x"}', false, u2); r := r || 'FAIL client set owner' || E'\n';
   exception when insufficient_privilege then r := r || 'PASS client cannot set owner' || E'\n'; end;
@@ -107,8 +110,10 @@ begin
   exception when insufficient_privilege then r := r || 'PASS nested paths refused' || E'\n'; end;
   begin insert into storage.objects(bucket_id, name) values ('live-cards', u1 || '/../' || u2 || '/bg-a1.mp4'); r := r || 'FAIL path trick allowed' || E'\n';
   exception when insufficient_privilege then r := r || 'PASS dot-dot path trick refused' || E'\n'; end;
-  begin insert into storage.objects(bucket_id, name) values ('live-cards', u1 || '/photo-a1.jpg'), ('live-cards', u1 || '/og-a1.jpg'), ('live-cards', u1 || '/logo-a1.jpg'); r := r || 'PASS headshot, link preview and logo uploads allowed' || E'\n';
+  begin insert into storage.objects(bucket_id, name) values ('live-cards', u1 || '/photo-a1.jpg'), ('live-cards', u1 || '/og-a1.jpg'), ('live-cards', u1 || '/logo-a1.png'); r := r || 'PASS headshot, link preview and see-through logo uploads allowed' || E'\n';
   exception when others then r := r || 'FAIL headshot upload refused: ' || sqlerrm || E'\n'; end;
+  begin insert into storage.objects(bucket_id, name) values ('live-cards', u1 || '/bg-a2.png'); r := r || 'FAIL PNG uploaded as a background' || E'\n';
+  exception when insufficient_privilege then r := r || 'PASS only a logo may be a PNG' || E'\n'; end;
   begin insert into storage.objects(bucket_id, name) values ('live-cards', u1 || '/photo-a2.mp4'); r := r || 'FAIL video uploaded as a headshot' || E'\n';
   exception when insufficient_privilege then r := r || 'PASS only a background may be a video' || E'\n'; end;
   begin

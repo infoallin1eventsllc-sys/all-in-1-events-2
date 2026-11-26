@@ -13,7 +13,7 @@
 --     and a blocked account that deletes itself cannot start over with the same email. Payments set the plan from a
 --     signature-checked webhook, never from the app.
 --   * Uploads: own folder only, fixed file names (background, logo, headshot, link preview picture), pictures and video only,
---     25 MB each, at most 12 files per account. Only a background may be a video.
+--     25 MB each, at most 12 files per account. Only a background may be a video; only a logo may be a PNG.
 --   * Reports go through lc_report(), which is throttled, and cannot be read by the public.
 
 create table if not exists public.lc_accounts (
@@ -76,12 +76,12 @@ $$;
 -- A picture or video on a card must be a file this account uploaded to its own folder. No other address is accepted.
 drop function if exists public.lc_media(text, uuid);
 -- p_kind is the slot the file is for: bg (background), logo, photo (headshot) or og (link preview picture).
--- A file is only accepted in its own slot, and only a background may be a video.
+-- A file is only accepted in its own slot, only a background may be a video, and only a logo may be a PNG (a see-through logo).
 create or replace function public.lc_media(v text, p_owner uuid, p_kind text) returns text
 language sql immutable set search_path = '' as $$
   select case when p_kind in ('bg','logo','photo','og')
                and coalesce(v, '') ~ ('^https://glzodwhyavexpuusbqjy\.supabase\.co/storage/v1/object/public/live-cards/' || p_owner::text || '/' || p_kind || '-[a-z0-9]{1,16}\.'
-                                      || case when p_kind = 'bg' then '(jpg|mp4|mov|webm)' else 'jpg' end || '$')
+                                      || case when p_kind = 'bg' then '(jpg|mp4|mov|webm)' when p_kind = 'logo' then '(jpg|png)' else 'jpg' end || '$')
               then v else '' end
 $$;
 -- a payment name (Cash App, Venmo): letters, numbers, dash and underscore only
@@ -126,7 +126,8 @@ begin
       'website', public.lc_link(a->>'website'), 'facebook', public.lc_link(a->>'facebook'), 'instagram', public.lc_link(a->>'instagram'),
       'linkedin', public.lc_link(a->>'linkedin'), 'tiktok', public.lc_link(a->>'tiktok'), 'youtube', public.lc_link(a->>'youtube'),
       'address', public.lc_txt(a->>'address', 140), 'review', public.lc_link(a->>'review'),
-      'cashapp', public.lc_handle(a->>'cashapp', 1, 20, false), 'venmo', public.lc_handle(a->>'venmo', 5, 30, true), 'zelle', v_zelle),
+      'cashapp', public.lc_handle(a->>'cashapp', 1, 20, false), 'venmo', public.lc_handle(a->>'venmo', 5, 30, true), 'zelle', v_zelle,
+      'leads', (a->'leads') = 'true'::jsonb),
     'background', jsonb_build_object(
       'type', v_type, 'id', case when b->>'id' ~ '^[a-z]{2,12}$' then b->>'id' else 'ocean' end,
       'url', case when v_type = 'scene' then '' else v_url end,
@@ -295,13 +296,13 @@ grant execute on function public.lc_delete_account() to authenticated;
 
 -- ---------- uploads
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('live-cards', 'live-cards', true, 26214400, array['image/jpeg','video/mp4','video/quicktime','video/webm'])
+values ('live-cards', 'live-cards', true, 26214400, array['image/jpeg','image/png','video/mp4','video/quicktime','video/webm'])
 on conflict (id) do update set public = excluded.public, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
 
 drop policy if exists lc_files_insert_own on storage.objects;
 create policy lc_files_insert_own on storage.objects for insert to authenticated
   with check (bucket_id = 'live-cards'
-              and name ~ ('^' || (select auth.uid())::text || '/(bg-[a-z0-9]{1,16}\.(jpg|mp4|mov|webm)|(logo|photo|og)-[a-z0-9]{1,16}\.jpg)$')
+              and name ~ ('^' || (select auth.uid())::text || '/(bg-[a-z0-9]{1,16}\.(jpg|mp4|mov|webm)|logo-[a-z0-9]{1,16}\.(jpg|png)|(photo|og)-[a-z0-9]{1,16}\.jpg)$')
               and public.lc_file_count() < 12);
 drop policy if exists lc_files_update_own on storage.objects;
 drop policy if exists lc_files_delete_own on storage.objects;
