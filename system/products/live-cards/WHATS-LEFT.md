@@ -3,6 +3,19 @@
 Written 25 Nov 2026; updated the same day after the headshot, extra buttons and link preview were added. Everything that needed neither Otis nor money is built and tested. The service is still off; nothing is applied, deployed or merged.
 Step-by-step instructions for each item are in `launch/RUNBOOK.md`.
 
+## Front end: all of this is finished before any back-end work (Otis, 26 Nov 2026)
+Done: headshot, link preview, more buttons (directions, hours, review, pay), the "say it once" clarity pass.
+Open, in the order they are being built:
+1. [ ] Move the photo inside its circle.
+2. [ ] Logos with a see-through background.
+3. [ ] Starting points by trade.
+4. [ ] Downloads: print QR code, lock-screen picture, email signature; tap card (NFC) set-up where the phone supports it.
+5. [ ] "Share your info back": the form on the card and the inbox in the Studio (front end; goes live with the back end).
+6. [ ] Views and taps report screen (front end; shows real numbers once the back end is on).
+7. [ ] Team cards screens.
+8. [ ] Spanish, last, so it covers every screen above.
+Cannot have a front end yet: Apple and Google Wallet (needs Apple's paid developer account and a signing server before any button can work).
+
 ## A. Decisions only Otis can make (no cost)
 1. The app's own address. Recommended: cards.meridianinterface.com. Free.
 2. What the paid plan includes, and its price. Today the only built extra is hiding the "Made with Meridian Live Cards" line.
