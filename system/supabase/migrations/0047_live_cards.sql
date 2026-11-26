@@ -111,7 +111,7 @@ begin
   -- Zelle goes to an email or a phone number; anything else is dropped
   if v_zelle !~ '^[^[:space:]@<>"'']+@[^[:space:]@<>"'']+\.[^[:space:]@<>"'']+$' then v_zelle := case when v_zphone ~ '^\+?[0-9]{7,15}$' then v_zphone else '' end; end if;
   return jsonb_build_object(
-    'v', 1,
+    'v', 1, 'lang', case when p->>'lang' = 'es' then 'es' else 'en' end,
     'name', public.lc_txt(p->>'name', 60), 'company', public.lc_txt(p->>'company', 60),
     'role', public.lc_txt(p->>'role', 60), 'tagline', public.lc_txt(p->>'tagline', 90),
     'accent', case when p->>'accent' ~ '^#[0-9a-fA-F]{6}$' then p->>'accent' else '#2563eb' end,

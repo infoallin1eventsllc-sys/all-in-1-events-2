@@ -5,15 +5,16 @@ Step-by-step instructions for each item are in `launch/RUNBOOK.md`.
 
 ## Front end: all of this is finished before any back-end work (Otis, 26 Nov 2026)
 Done: headshot, link preview, more buttons (directions, hours, review, pay), the "say it once" clarity pass.
-Open, in the order they are being built:
-1. [ ] Move the photo inside its circle.
-2. [ ] Logos with a see-through background.
-3. [ ] Starting points by trade.
-4. [ ] Downloads: print QR code, lock-screen picture, email signature; tap card (NFC) set-up where the phone supports it.
-5. [ ] "Share your info back": the form on the card and the inbox in the Studio (front end; goes live with the back end).
-6. [ ] Views and taps report screen (front end; shows real numbers once the back end is on).
-7. [ ] Team cards screens.
-8. [ ] Spanish, last, so it covers every screen above.
+Built and tested 26 Nov 2026:
+1. [x] Move the photo inside its circle.
+2. [x] Logos with a see-through background.
+3. [x] Starting points by trade.
+4. [x] Downloads: print QR code, lock-screen picture, email signature; tap card (NFC) set-up where the phone supports it.
+5. [x] "Send me your info": the form on the card and the list in the Studio (goes live with the back end).
+6. [x] Views and taps report screen (shows real numbers once the back end is on).
+7. [x] Team cards screens.
+8. [x] Spanish, covering every screen above, the card, the terms and the privacy page.
+The front end is complete when Otis has looked at the review page and has no changes. Not yet seen on a real phone: writing a tap card, the lock-screen picture as a real lock screen, and the email signature pasted into a real email app.
 Cannot have a front end yet: Apple and Google Wallet (needs Apple's paid developer account and a signing server before any button can work).
 
 ## A. Decisions only Otis can make (no cost)
@@ -21,13 +22,18 @@ Cannot have a front end yet: Apple and Google Wallet (needs Apple's paid develop
 2. What the paid plan includes, and its price. Today the only built extra is hiding the "Made with Meridian Live Cards" line.
 3. The refund rule for paid plans.
 4. Whether clients must be 18 or over.
-5. Read and approve the terms and privacy drafts. Both gained a sentence on 25 Nov: privacy now lists address, hours, payment names and the link preview picture; terms say payments made from a card's pay buttons are between the visitor and the card's owner. A lawyer's look is worth it before taking money (that part costs).
+5. Read and approve the terms and privacy drafts, in English and in Spanish (the Spanish is a translation of the English drafts; a Spanish-speaking reader should check it). Both gained a sentence on 25 Nov: privacy now lists address, hours, payment names and the link preview picture; terms say payments made from a card's pay buttons are between the visitor and the card's owner. A lawyer's look is worth it before taking money (that part costs).
 6. Whether a public card may be found by search engines. Today cards ask search engines not to list them.
 7. Whether the motorcycle video may be used publicly (the bike looks like a known brand's).
 8. When to launch at all.
 
+## Back end the new front end is waiting for (nothing here is started)
+1. Activity: `lc_hit`, `lc_send_info`, `lc_card_stats` and the `lc_leads` table, with rate limits. Shapes and rules are in the website repo, `docs/LIVE-CARDS.md`. Then set `activity:true`.
+2. Teams: a higher file limit for the paid plan (today 12 files is exactly five cards with nothing to spare).
+3. The database test is now 75 checks; 55 were proven on the real database, the other 20 only on the local copy.
+
 ## B. Approvals Claude needs from Otis (a tap each, no cost)
-1. One more Supabase approval pop-up, to re-run the 73-check attack test on the real database (throw-away run).
+1. One more Supabase approval pop-up, to re-run the 75-check attack test on the real database (throw-away run).
 2. Applying the database part for real.
 3. Deploying the three functions (owner desk, checkout, payment webhook).
 4. Adding the human-check line to the Live Cards browser policy.

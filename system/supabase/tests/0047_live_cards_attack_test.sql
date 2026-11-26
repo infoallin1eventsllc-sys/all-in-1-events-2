@@ -63,18 +63,18 @@ begin
   r := r || case when length(j->'actions'->>'address') = 140 and length(j->>'hours') = 60 and position(chr(10) in j->>'hours') = 0 then 'PASS' else 'FAIL' end || ' address and hours trimmed, no line breaks' || E'\n';
   r := r || case when j->'actions'->>'review' = '' then 'PASS' else 'FAIL' end || ' javascript review link removed' || E'\n';
   r := r || case when j->'actions'->>'cashapp' = '' and j->'actions'->>'venmo' = '' and j->'actions'->>'zelle' = '' then 'PASS' else 'FAIL' end || ' bad payment names removed' || E'\n';
-  update public.lc_cards set data = jsonb_build_object('name','New Fields','hours','Mon to Fri, 9 am to 5 pm',
+  update public.lc_cards set data = jsonb_build_object('name','New Fields','lang','es','hours','Mon to Fri, 9 am to 5 pm',
     'photo', jsonb_build_object('url', base || u1 || '/photo-abc1.jpg'), 'preview', jsonb_build_object('url', base || u1 || '/og-abc1.jpg'),
     'actions', jsonb_build_object('address','123 Main St, Katy, TX 77494','review','https://g.page/r/abc/review','cashapp','RiversRealty','venmo','rivers-realty','zelle','+1 (281) 555-0100','leads',true))
     where id = cid returning data into j;
   r := r || case when j->'photo'->>'url' = base || u1 || '/photo-abc1.jpg' and j->'preview'->>'url' = base || u1 || '/og-abc1.jpg' then 'PASS' else 'FAIL' end || ' own headshot and link preview picture accepted' || E'\n';
   r := r || case when j->'actions'->>'address' = '123 Main St, Katy, TX 77494' and j->>'hours' = 'Mon to Fri, 9 am to 5 pm' and j->'actions'->>'review' = 'https://g.page/r/abc/review'
-                  and j->'actions'->>'cashapp' = 'RiversRealty' and j->'actions'->>'venmo' = 'rivers-realty' and j->'actions'->>'zelle' = '+12815550100' and (j->'actions'->'leads') = 'true'::jsonb then 'PASS' else 'FAIL' end || ' good address, hours, review link and payment names kept' || E'\n';
+                  and j->'actions'->>'cashapp' = 'RiversRealty' and j->'actions'->>'venmo' = 'rivers-realty' and j->'actions'->>'zelle' = '+12815550100' and (j->'actions'->'leads') = 'true'::jsonb and j->>'lang' = 'es' then 'PASS' else 'FAIL' end || ' good address, hours, review link and payment names kept' || E'\n';
   update public.lc_cards set data = jsonb_build_object('name','New Fields','photo', jsonb_build_object('url', base || u1 || '/bg-abc123.mp4'), 'preview', jsonb_build_object('url', base || u1 || '/photo-abc1.jpg'),
-    'logo', jsonb_build_object('url', base || u1 || '/logo-abc1.mp4'), 'actions', jsonb_build_object('zelle','pay@rivers.example','leads','yes'))
+    'logo', jsonb_build_object('url', base || u1 || '/logo-abc1.mp4'), 'lang','<script>','actions', jsonb_build_object('zelle','pay@rivers.example','leads','yes'))
     where id = cid returning data into j;
   r := r || case when j->'photo'->>'url' = '' and j->'preview'->>'url' = '' and j->'logo'->>'url' = '' then 'PASS' else 'FAIL' end || ' a file is only accepted in its own slot, and only a background may be a video' || E'\n';
-  r := r || case when j->'actions'->>'zelle' = 'pay@rivers.example' and (j->'actions'->'leads') = 'false'::jsonb then 'PASS' else 'FAIL' end || ' Zelle email kept; the info switch is only ever true or false' || E'\n';
+  r := r || case when j->'actions'->>'zelle' = 'pay@rivers.example' and (j->'actions'->'leads') = 'false'::jsonb and j->>'lang' = 'en' then 'PASS' else 'FAIL' end || ' Zelle email kept; the info switch is only ever true or false; the language is only ever en or es' || E'\n';
   update public.lc_cards set data = jsonb_build_object('name','New Fields','logo', jsonb_build_object('url', base || u1 || '/logo-abc1.png'), 'photo', jsonb_build_object('url', base || u1 || '/photo-abc1.png'),
     'background', jsonb_build_object('type','image','url', base || u1 || '/bg-abc1.png')) where id = cid returning data into j;
   r := r || case when j->'logo'->>'url' = base || u1 || '/logo-abc1.png' and j->'photo'->>'url' = '' and j->'background'->>'type' = 'scene' then 'PASS' else 'FAIL' end || ' a PNG is accepted as a logo and nowhere else' || E'\n';
