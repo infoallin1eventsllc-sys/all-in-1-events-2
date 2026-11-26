@@ -33,6 +33,12 @@ Cannot have a front end yet: Apple and Google Wallet (needs Apple's paid develop
 8. When to launch at all.
 
 ## Back end the new front end is waiting for (nothing here is started)
+Decide at the start of the back end (Otis, 26 Nov: "when we get to that point, we'll figure it all out"):
+- Where client data lives. Recommended: a separate Supabase organization on the Pro plan just for Live Cards (about $25 a month, checked on Supabase's pricing pages 26 Nov), so client cards never sit beside his marketing system, leads and invoices. His current org is on the free plan with two running projects (the limit), so a third free project is not possible, and free projects pause after a quiet week. Alternative: upgrade the current org to Pro (about $45 a month for three projects). Nothing created, nothing spent.
+- Tracking. Otis: "I only want that live card to track my personal card, not the clients or customers." Open: whether client cards get the Activity tab and "Send me your info" at all. If not, the switch stays off for clients and the screens stay hidden.
+- His own card (meridianinterface.com/card/, not part of the Live Cards app) can get open and tap counts on his personal back end; small and free.
+- The portal's Live Cards tab (reports, take a card down): kept for now; needed if clients publish on a back end he runs. Otis was not told before it was added on 25 Nov; from now on, say before changing anything inside his portal.
+
 1. Activity: `lc_hit`, `lc_send_info`, `lc_card_stats` and the `lc_leads` table, with rate limits. Shapes and rules are in the website repo, `docs/LIVE-CARDS.md`. Then set `activity:true`.
 2. Teams: a higher file limit for the paid plan (today 12 files is exactly five cards with nothing to spare).
 3. The database test is now 75 checks; 55 were proven on the real database, the other 20 only on the local copy.
