@@ -1,5 +1,5 @@
--- Attack test for migration 0047 (Live Cards). 75 checks. 55 passed on the real database on 24 Nov 2026 (rolled back). The block-list rules, the headshot, link preview,
--- address, hours, review and payment fields, and the 12 file cap were added after that and have only been run on the local stand-in (tests/local/run.sh): 75 pass.
+-- Attack test for migration 0047 (Live Cards). 77 checks. 55 passed on the real database on 24 Nov 2026 (rolled back). The block-list rules, the headshot, link preview,
+-- address, hours, review and payment fields, and the 12 file cap were added after that and have only been run on the local stand-in (tests/local/run.sh): 77 pass.
 -- Re-run on the real database before launch.
 -- How to run without leaving anything behind: send ONE query made of
 --   begin;  +  the whole of migrations/0047_live_cards.sql  +  this file
@@ -75,6 +75,10 @@ begin
     where id = cid returning data into j;
   r := r || case when j->'photo'->>'url' = '' and j->'preview'->>'url' = '' and j->'logo'->>'url' = '' then 'PASS' else 'FAIL' end || ' a file is only accepted in its own slot, and only a background may be a video' || E'\n';
   r := r || case when j->'actions'->>'zelle' = 'pay@rivers.example' and (j->'actions'->'leads') = 'false'::jsonb and j->>'lang' = 'en' then 'PASS' else 'FAIL' end || ' Zelle email kept; the info switch is only ever true or false; the language is only ever en or es' || E'\n';
+  update public.lc_cards set data = jsonb_build_object('name','Samples','background', jsonb_build_object('type','video','url','/live/samples/bg-moto.mp4')) where id = cid returning data into j;
+  r := r || case when j->'background'->>'type' = 'video' and j->'background'->>'url' = '/live/samples/bg-moto.mp4' then 'PASS' else 'FAIL' end || ' a ready-made background from the site is accepted' || E'\n';
+  update public.lc_cards set data = jsonb_build_object('name','Samples','background', jsonb_build_object('type','image','url','/live/samples/../../evil.jpg'), 'logo', jsonb_build_object('url','/live/samples/photo-ribbon.jpg')) where id = cid returning data into j;
+  r := r || case when j->'background'->>'type' = 'scene' and j->'logo'->>'url' = '' then 'PASS' else 'FAIL' end || ' only real sample files, and only as a background' || E'\n';
   update public.lc_cards set data = jsonb_build_object('name','New Fields','logo', jsonb_build_object('url', base || u1 || '/logo-abc1.png'), 'photo', jsonb_build_object('url', base || u1 || '/photo-abc1.png'),
     'background', jsonb_build_object('type','image','url', base || u1 || '/bg-abc1.png')) where id = cid returning data into j;
   r := r || case when j->'logo'->>'url' = base || u1 || '/logo-abc1.png' and j->'photo'->>'url' = '' and j->'background'->>'type' = 'scene' then 'PASS' else 'FAIL' end || ' a PNG is accepted as a logo and nowhere else' || E'\n';
