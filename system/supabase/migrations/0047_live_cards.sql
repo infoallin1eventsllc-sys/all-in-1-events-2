@@ -79,8 +79,7 @@ drop function if exists public.lc_media(text, uuid);
 -- A file is only accepted in its own slot, only a background may be a video, and only a logo may be a PNG (a see-through logo).
 create or replace function public.lc_media(v text, p_owner uuid, p_kind text) returns text
 language sql immutable set search_path = '' as $$
-  select case when p_kind = 'bg' and coalesce(v, '') ~ '^/live/samples/(bg|photo)-[a-z0-9-]{1,40}\.(mp4|jpg)$' then v -- Meridian's own ready-made backgrounds on the site
-              when p_kind in ('bg','logo','photo','og')
+  select case when p_kind in ('bg','logo','photo','og')
                and coalesce(v, '') ~ ('^https://glzodwhyavexpuusbqjy\.supabase\.co/storage/v1/object/public/live-cards/' || p_owner::text || '/' || p_kind || '-[a-z0-9]{1,16}\.'
                                       || case when p_kind = 'bg' then '(jpg|mp4|mov|webm)' when p_kind = 'logo' then '(jpg|png)' else 'jpg' end || '$')
               then v else '' end
