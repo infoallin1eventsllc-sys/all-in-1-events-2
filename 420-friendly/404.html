@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>420 FRIENDLY — Not Found</title>
+<meta name="robots" content="noindex"/>
+<link href="assets/tailwind.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link rel="icon" href="assets/favicon.ico" sizes="any"/>
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+
+<!-- Netlify serves this for any missing path under /420-friendly/ (the
+     redirect rule in netlify.toml). Links are absolute so it works from any
+     depth; a relative "shop.html" from /420-friendly/old/path/ would miss. -->
+<main class="pt-20 md:pt-[116px] max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+  <section class="pt-16 md:pt-24 pb-10 max-w-3xl">
+    <p class="font-label-caps text-label-caps text-tertiary mb-4">404</p>
+    <h1 class="font-headline-xl-mobile text-headline-xl-mobile md:font-headline-xl md:text-headline-xl text-on-surface uppercase tracking-tighter">
+      Nothing here.
+    </h1>
+    <p class="font-body-lg text-body-lg text-on-surface-variant mt-5">
+      That page moved, sold out, or never existed. The archive is this way.
+    </p>
+    <div class="flex flex-wrap gap-3 mt-8">
+      <a href="/420-friendly/shop.html" class="rounded-full bg-primary text-on-primary py-3 px-8 font-label-caps text-label-caps hover:bg-inverse-surface transition-all duration-300">SHOP ALL</a>
+      <a href="/420-friendly/drops.html" class="rounded-full border border-on-surface/30 text-on-surface py-3 px-8 font-label-caps text-label-caps hover:border-tertiary hover:text-tertiary transition-all duration-300">NEXT DROP</a>
+      <a href="/420-friendly/" class="rounded-full border border-on-surface/30 text-on-surface py-3 px-8 font-label-caps text-label-caps hover:border-tertiary hover:text-tertiary transition-all duration-300">HOME</a>
+    </div>
+  </section>
+
+  <section class="pb-24 max-w-md">
+    <form action="/420-friendly/shop.html" method="get" class="flex items-center gap-2 bg-surface-container rounded-full px-5 py-3">
+      <span class="material-symbols-outlined text-on-surface-variant text-[20px]" aria-hidden="true">search</span>
+      <label class="sr-only" for="lost-search">Search the shop</label>
+      <input id="lost-search" name="q" type="search" placeholder="Search the shop"
+        class="bg-transparent border-0 focus:ring-0 p-0 flex-1 font-body-md text-body-md text-on-surface placeholder:text-outline"/>
+    </form>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+<script src="/420-friendly/assets/products.js"></script>
+<script src="/420-friendly/assets/app.js"></script>
+<script>
+  renderChrome("SHOP ALL");
+</script>
+</body>
+</html>

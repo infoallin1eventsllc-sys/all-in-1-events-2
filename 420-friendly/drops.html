@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>420 FRIENDLY — Drops</title>
+<meta name="description" content="The 420 Friendly drop calendar: what lands next and when. Members see every release 24 hours early."/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="420 FRIENDLY"/>
+<meta property="og:title" content="420 FRIENDLY — Drops"/>
+<meta property="og:description" content="The 420 Friendly drop calendar: what lands next and when. Members see every release 24 hours early."/>
+<meta property="og:image" content="https://allin1-events.netlify.app/420-friendly/assets/og-image.jpg"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<link href="assets/tailwind.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&amp;family=JetBrains+Mono:wght@500&amp;family=Inter:wght@400&amp;display=swap" rel="stylesheet"/>
+<link rel="icon" href="assets/favicon.ico" sizes="any"/>
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png"/>
+<link href="assets/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background text-on-background antialiased overflow-x-hidden min-h-screen pb-32 md:pb-0">
+<div id="site-header"></div>
+
+<main class="pt-20 md:pt-[116px] max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop">
+  <section class="reveal pt-12 md:pt-16 pb-8">
+    <p class="font-label-caps text-label-caps text-tertiary flex items-center gap-2 mb-4">
+      <span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+      DROP CALENDAR
+    </p>
+    <h1 class="font-headline-xl-mobile text-headline-xl-mobile md:font-headline-xl md:text-headline-xl text-on-surface uppercase tracking-tighter">
+      When it's gone,<br/><span class="text-secondary">it's gone.</span>
+    </h1>
+  </section>
+
+  <!-- Next drop.
+       To announce a date, put it in data-drop-at as an ISO timestamp WITH its
+       UTC offset, e.g. "2026-11-20T16:20:00-08:00" — the countdown then runs
+       in every visitor's local time and flips to "Drop is live" at zero. Left
+       empty, the panel says the date is to be announced rather than inventing
+       one. Put the drop's name in data-drop-name. -->
+  <section class="reveal ambient-glow rounded-2xl bg-surface-container-low/80 panel panel--quiet md:p-10 mt-4">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-8">
+      <div>
+        <p class="font-label-caps text-label-caps text-secondary mb-3">NEXT DROP</p>
+        <p class="font-body-md text-body-md text-on-surface-variant max-w-md">
+          Archive V.24 is live now. The next release has no date yet &mdash; when it does, it appears here first, and the list hears 24 hours before anyone else.
+        </p>
+      </div>
+      <div id="countdown" class="grid grid-cols-4 gap-3 md:gap-4" data-drop-at="" data-drop-name="">
+        <!-- filled by script -->
+      </div>
+    </div>
+    <a href="shop.html" class="inline-flex items-center gap-2 mt-8 rounded-full bg-primary text-on-primary py-4 px-8 font-label-caps text-label-caps hover:bg-inverse-surface transition-all duration-300">
+      SHOP THE ARCHIVE
+      <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+    </a>
+  </section>
+
+  <!-- Drop history / schedule -->
+  <section class="reveal mt-16">
+    <h2 class="h-section text-on-surface mb-6">The Schedule</h2>
+    <div class="divide-y divide-outline-variant/50 border-y border-outline-variant/50">
+      <div class="py-6 flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div>
+          <p class="font-label-caps text-label-caps text-on-surface">ARCHIVE V.24</p>
+          <p class="font-body-md text-body-md text-on-surface-variant mt-1">Sixteen pieces &mdash; four hoodies, four sweatpants, two tees, six pieces of headwear. Small runs, no restocks.</p>
+        </div>
+        <span class="font-label-caps text-label-caps text-tertiary flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>LIVE NOW
+        </span>
+      </div>
+      <div class="py-6 flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div>
+          <p class="font-label-caps text-label-caps text-on-surface">NEXT DROP</p>
+          <p class="font-body-md text-body-md text-on-surface-variant mt-1">Details go to the list first.</p>
+        </div>
+        <span class="font-label-caps text-label-caps text-outline">DATE TBA</span>
+      </div>
+    </div>
+    <p class="font-body-md text-body-md text-on-surface-variant mt-8">
+      Want first access? <a href="members.html" class="text-secondary underline decoration-1 underline-offset-4 hover:text-tertiary transition-colors">Join the list</a> &mdash; members see every drop 24 hours early.
+    </p>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<div id="site-bottom-nav"></div>
+
+<script src="assets/products.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/soundtrack.js"></script>
+<script>
+  renderChrome("DROPS");
+
+  const countdownEl = document.getElementById("countdown");
+  const dropAtRaw = (countdownEl.dataset.dropAt || "").trim();
+  const dropAt = dropAtRaw ? new Date(dropAtRaw).getTime() : NaN;
+  const dropName = (countdownEl.dataset.dropName || "").trim();
+
+  function cell(value, label) {
+    return (
+      '<div class="glass-panel rounded-xl px-3 py-4 md:px-5 text-center min-w-[64px]">' +
+      '<div class="font-headline-md text-headline-md text-tertiary tabular-nums">' + value + "</div>" +
+      '<div class="font-label-caps text-label-caps text-on-surface-variant text-[10px] mt-1">' + label + "</div></div>"
+    );
+  }
+
+  function banner(headline, note) {
+    return (
+      '<div class="col-span-4">' +
+      '<div class="font-headline-md text-headline-md text-tertiary uppercase">' + esc(headline) + "</div>" +
+      (note ? '<p class="font-body-md text-[13px] text-on-surface-variant mt-2">' + esc(note) + "</p>" : "") +
+      "</div>"
+    );
+  }
+
+  // Returns true while there is still something to count down to.
+  function tick() {
+    if (!Number.isFinite(dropAt)) {
+      // No date set (or an unreadable one): say so, rather than a countdown
+      // frozen at NaN or a timer to a date nobody chose.
+      countdownEl.innerHTML = banner("Date TBA", "Members hear first.");
+      return false;
+    }
+    const diff = dropAt - Date.now();
+    if (diff <= 0) {
+      countdownEl.innerHTML = banner(dropName ? dropName + " is live." : "Drop is live.");
+      return false;
+    }
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    const pad = (n) => String(n).padStart(2, "0");
+    countdownEl.innerHTML =
+      cell(pad(d), "DAYS") + cell(pad(h), "HRS") + cell(pad(m), "MIN") + cell(pad(s), "SEC");
+    return true;
+  }
+
+  if (tick()) {
+    const timer = setInterval(() => { if (!tick()) clearInterval(timer); }, 1000);
+  }
+</script>
+</body>
+</html>

@@ -163,6 +163,13 @@ function mockFor(prompt: string): string {
       body: "[mock draft] Hi there — thanks so much for getting in touch! We'd love to help make your event unforgettable. Could you share your date and guest count? I'll put together a couple of options right away. (This is placeholder text — add an Anthropic key for real, personalized copy.)",
     });
   }
+  // The summary branch must come before the content branch: the report prompt
+  // ("Write the owner summary...") also matches /write a/, and used to fall
+  // through to the caption mock — a weekly report that read like an Instagram
+  // post. Keyed on phrases only the report prompt contains.
+  if (/owner summary|week's numbers/i.test(prompt)) {
+    return "[mock] This week: leads came in and were followed up, drafts were queued for your approval, and the pipeline advanced. (Placeholder summary — add an Anthropic key for a real one written from the actual numbers. The metrics shown beside this text are real either way.)\n\nSuggested next step: review the approval queue.";
+  }
   if (/write a|content|post|caption/i.test(prompt)) {
     return JSON.stringify({
       title: "[mock draft] Your Event, Elevated",
