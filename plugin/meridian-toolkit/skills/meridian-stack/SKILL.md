@@ -29,6 +29,8 @@ Match the job, not the brand name. Everything below is on this account.
 | A TikTok, Reel or Short Otis wants read, traced and kept | the `reverse-engineer-video` skill — the read scripts, the tool that reaches TikTok, one card per feature with a source, the video library, where each finding lands |
 | Charts and stat tiles, inside a dashboard or alone | The bundled `dataviz` skill |
 | Find or preview a typeface | **Adobe** — `font_search`, `font_recommend`, `font_preview` |
+| A client's existing logo, colors and fonts, from their domain | **Brandfetch** — free plan; connect from the claude.ai directory (recommended 28 Nov 2026, not yet connected) |
+| Real photography instead of an AI image | **Unsplash** — free; finish its connection in claude.ai Settings → Connectors |
 | Photo/video edit, background removal, vectorize | **Adobe for creativity** |
 | Client-facing marketing collateral, bulk variants | **Canva** — `generate-design`, `create-design-from-brand-template` |
 | Generate UI from a prompt, iterate visually | **Magic Patterns** |

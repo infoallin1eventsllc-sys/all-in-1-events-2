@@ -1,4 +1,27 @@
-# Connectors (24)
+# Connectors
+
+## Design stack, checked 28 Nov 2026 (`ListConnectors`)
+
+Connected and on: Figma, Adobe for creativity (Photoshop edits, Firefly,
+fonts, vectorize, background removal), Canva, Magic Patterns, 21st.dev,
+Mobbin, Higgsfield (Nano Banana, video, 3D), ElevenLabs, Raylight,
+HyperFrames, Clipkit, Descript, Three.js 3D Viewer, Trimble SketchUp, Wix,
+Lovable, B12.
+
+To finish connecting (sign-in never completed): **Unsplash** (free stock
+photography, use it), Whimsical, Webflow, Riverside.
+Sign-in expired: UX Pilot, 3DOptix, Railway.
+Not on the account and worth adding: **Brandfetch** (free plan): a
+client's real logo, colors and fonts from their domain, for client work.
+Checked and skipped: Glif (paid for Claude use, duplicates Higgsfield),
+Subframe, Wonder, Framer, Orshot, Moda (each duplicates Figma, Magic
+Patterns or Canva).
+
+No connector exists for color or icons, and none is needed: Adobe
+`suggest_type_palettes` and `font_recommend`, the `ui-ux-pro-max` palettes,
+the `dataviz` palette validator, and stroke SVG icons cover them.
+
+## Snapshot 20 Aug 2026 (24)
 
 Snapshot 20 Aug 2026. `ListConnectors` returns current state — re-check before
 relying on this. The **enabled in chat** column is the one that bites: a
