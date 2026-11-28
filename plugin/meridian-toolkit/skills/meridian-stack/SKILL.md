@@ -269,6 +269,22 @@ PostHog and Firecrawl are connected; Playwright is the local MCP or a script
 in a cloud session (see above).
 
 
+## Glif — real MCP, duplicates what is connected, paid to use from Claude
+
+Checked 28 Nov 2026 on glif.app and docs.glif.app. Official hosted MCP at
+`https://glif.app/api/mcp`, OAuth: claude.ai → Settings → Connectors → Add
+custom connector, paste the URL, approve the Glif sign-in. Generates images,
+video and audio across 100+ models, billed in Glif credits.
+
+The catch: "Glif MCP inside Claude or ChatGPT" is a **Pro** feature (about
+$30/month, 3,000 credits). A free account gets 50 bonus credits for 30 days,
+usable on glif.app itself, not through the connector.
+
+Position: **not needed.** Higgsfield (connected, Nano Banana included),
+Adobe Firefly, Canva, ElevenLabs, HyperFrames and Descript already cover
+image, video and audio generation. Revisit only if one of those loses a
+model he needs.
+
 ## The 21 "viral Claude plugins" — gap check, 17 Nov 2026
 
 From a @bengusberg TikTok Otis uploaded. Each name was checked at its
