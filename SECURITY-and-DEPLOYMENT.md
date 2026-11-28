@@ -178,7 +178,7 @@ default-src 'self'                          # Only load from same origin
 img-src 'self' https://lh3.googleusercontent.com data:  # Images from approved sources
 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com  # Tailwind + Google Fonts
 script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com  # App + Tailwind CDN
-connect-src 'self' https://api.anthropic.com  # API calls to Anthropic only
+connect-src 'self'                          # Browser talks to our own origin only; only server code calls Anthropic
 ```
 
 **Note:** `unsafe-inline` for styles/scripts is necessary for Tailwind CDN and inline styles. For stricter CSP, build Tailwind to a static file and remove the CDN.
